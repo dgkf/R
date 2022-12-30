@@ -33,6 +33,5 @@ to execute R code.
 I welcome other contributors, but also have not thoughtfully selected
 a long-term license yet. For now there's a CLA in place so that the 
 license can be altered later on. I don't intend to keep it around forever. 
-If you have suggestions, input selecting an appropriate license is 
-appreciated.
-much appreciated.
+If you have suggestions or considerations for selecting an appropriate 
+license, your feedback would be much appreciated.
