@@ -1,0 +1,76 @@
+eoi  = _{ !ANY }  // since EOI does not parse silently, define our own
+WHITESPACE = _{ " " | "\\t" }
+
+// expression basics
+
+    expr = { block | inline }
+        block  = { "{" ~ (inline ~ expr_end)* ~ inline? ~ "}" }
+        inline = { atom ~ (infix ~ NEWLINE+? ~ atom)* }
+        infix = _{ add | subtract | multiply | divide | assign }
+            add = { "+" }
+            subtract = { "-" }
+            multiply = { "*" }
+            divide = { "/" }
+            assign = { "<-" }
+        expr_end = _{ ";" | NEWLINE | eoi }
+        atom = _{ 
+              kw_function
+            | kw_if_else
+            | kw_for
+            | kw_while
+            | kw_repeat
+            | call 
+            | null
+            | boolean_true
+            | boolean_false
+            | integer_expr
+            | number 
+            | string_expr 
+            | symbol 
+            | "(" ~ expr ~ ")" 
+            | block 
+        }
+
+// keyworded (kw) syntax
+
+    kw_function = { "function" ~ list ~ expr }
+    kw_if_else = { "if" ~ "(" ~ expr ~ ")" ~ expr ~ ("else" ~ expr)? }
+    kw_for = { "for" ~ "(" ~ symbol ~ " in " ~ expr ~ ")" ~ expr }
+    kw_while = { "while" ~ "(" ~ expr ~ ")" ~ expr }
+    kw_repeat = { "repeat" ~ expr }
+
+// reserved value types
+
+    null = { "NULL" }
+    boolean_true = { "TRUE" }
+    boolean_false = { "FALSE" }
+
+// atomic value types
+
+    number = @{
+        "-"?
+        ~ ("0" | ASCII_NONZERO_DIGIT ~ ASCII_DIGIT*)
+        ~ ("." ~ ASCII_DIGIT*)?
+    }
+
+    integer_expr = _{ integer ~ "L" }
+        integer = @{ "-"? ~ ASCII_NONZERO_DIGIT ~ ASCII_DIGIT* }
+
+    string_expr = ${ "\"" ~ string ~ "\"" | "'" ~ string ~ "'" }
+        string = @{ char* }
+        char = {
+            !("\"" | "\\") ~ ANY
+            | "\\" ~ ("\"" | "\\" | "/" | "b" | "f" | "n" | "r" | "t")
+            | "\\" ~ ("u" ~ ASCII_HEX_DIGIT{4})
+        }
+
+// symbols & calls
+
+    symbol = _{ symbol_backticked | symbol_ident }
+        symbol_backticked = ${ "`" ~ (!"`" ~ ANY)* ~ "`" }
+        symbol_ident = ${ ( ASCII_ALPHA | "." | "_" ) ~ ( ASCII_ALPHANUMERIC | "." | "_" )* }
+
+    call = { symbol ~ list }
+        list = { "(" ~ ((elem ~ ",")* ~ elem)? ~ ")" }
+        elem = _{ named | symbol | expr }
+        named = { symbol ~ "=" ~ expr }
