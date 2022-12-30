@@ -3,7 +3,7 @@ extern crate pest_derive;
 
 use std::cell::RefCell;
 use std::collections::HashMap;
-use std::fmt::{self, Display};
+use std::fmt::{self, Display, Error, Formatter};
 use std::io::{self, stdout, BufRead, Write};
 use std::rc::Rc;
 
@@ -43,16 +43,20 @@ pub enum RExpr {
     String(String),
     Symbol(String),
     List(RExprList),
-    Function(RExprList, Box<RExpr>),
-    Call(CallTarget, RExprList),
+    Function(RExprList, Box<RExpr>), // TODO: capture environment
+    Call(Box<dyn Callable>, RExprList),
 }
 
-#[derive(Debug, Clone)]
-pub enum CallTarget {
-    Name(String),
-    RExprBlock,
-    InfixAdd,
-    InfixAssign,
+impl fmt::Debug for dyn Callable {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.callable_as_str())
+    }
+}
+
+impl Clone for Box<dyn Callable> {
+    fn clone(&self) -> Self {
+        self.callable_clone()
+    }
 }
 
 // internal callables
@@ -68,8 +72,10 @@ pub struct InfixAdd;
 #[derive(Debug, Clone)]
 pub struct InfixAssign;
 
-trait Callable {
+pub trait Callable {
     fn call(&self, args: RExprList, env: &mut Environment) -> Result<R, RError>;
+    fn callable_clone(&self) -> Box<dyn Callable>;
+    fn callable_as_str(&self) -> &str;
 }
 
 impl Callable for RExprBlock {
@@ -84,6 +90,14 @@ impl Callable for RExprBlock {
         }
         value
     }
+
+    fn callable_clone(&self) -> Box<dyn Callable> {
+        Box::new(self.clone())
+    }
+
+    fn callable_as_str(&self) -> &str {
+        "{"
+    }
 }
 
 impl Callable for InfixAssign {
@@ -95,6 +109,14 @@ impl Callable for InfixAssign {
         } else {
             unimplemented!()
         }
+    }
+
+    fn callable_clone(&self) -> Box<dyn Callable> {
+        Box::new(self.clone())
+    }
+
+    fn callable_as_str(&self) -> &str {
+        "<-"
     }
 }
 
@@ -128,6 +150,14 @@ impl Callable for InfixAdd {
         };
 
         Ok(res)
+    }
+
+    fn callable_clone(&self) -> Box<dyn Callable> {
+        Box::new(self.clone())
+    }
+
+    fn callable_as_str(&self) -> &str {
+        "+"
     }
 }
 
@@ -201,6 +231,14 @@ impl Callable for String {
         } else {
             unimplemented!();
         }
+    }
+
+    fn callable_clone(&self) -> Box<dyn Callable> {
+        Box::new(self.clone())
+    }
+
+    fn callable_as_str(&self) -> &str {
+        self.as_str()
     }
 }
 
@@ -423,7 +461,7 @@ pub fn parse_block(pair: Pair<Rule>) -> RExpr {
         .collect();
 
     // build call from symbol and list
-    RExpr::Call(CallTarget::RExprBlock, exprs)
+    RExpr::Call(Box::new(RExprBlock), exprs)
 }
 
 pub fn parse_named(pair: Pair<Rule>) -> (Option<String>, RExpr) {
@@ -456,7 +494,7 @@ pub fn parse_list(pair: Pair<Rule>) -> RExprList {
 pub fn parse_call(pair: Pair<Rule>) -> RExpr {
     let mut inner = pair.into_inner();
     let name = String::from(inner.next().unwrap().as_str());
-    RExpr::Call(CallTarget::Name(name), parse_list(inner.next().unwrap()))
+    RExpr::Call(Box::new(name), parse_list(inner.next().unwrap()))
 }
 
 pub fn parse_function(pair: Pair<Rule>) -> RExpr {
@@ -491,29 +529,21 @@ pub fn parse_expr(pairs: Pairs<Rule>) -> RExpr {
             rule => unreachable!("Expr::parse expected atom, found {:?}", rule),
         })
         .map_infix(|lhs, op, rhs| {
-            let op = match op.as_rule() {
-                Rule::add => CallTarget::InfixAdd,
-                Rule::subtract => CallTarget::Name("-".to_string()),
-                Rule::multiply => CallTarget::Name("*".to_string()),
-                Rule::divide => CallTarget::Name("/".to_string()),
-                Rule::assign => CallTarget::InfixAssign,
+            // infix operator with two unnamed arguments
+            let args = vec![(None, lhs), (None, rhs)].into();
+
+            let op: Box<dyn Callable> = match op.as_rule() {
+                Rule::add => Box::new(InfixAdd),
+                Rule::subtract => Box::new("-".to_string()),
+                Rule::multiply => Box::new("*".to_string()),
+                Rule::divide => Box::new("/".to_string()),
+                Rule::assign => Box::new(InfixAssign),
                 rule => unreachable!("Expr::parse expected infix operation, found {:?}", rule),
             };
 
-            // infix operator with two unnamed arguments
-            let args = vec![(None, lhs), (None, rhs)].into();
             RExpr::Call(op, args)
         })
         .parse(pairs)
-}
-
-pub fn do_call(what: CallTarget, list: RExprList, env: &mut Environment) -> Result<R, RError> {
-    match what {
-        CallTarget::Name(s) => s.call(list, env),
-        CallTarget::RExprBlock => RExprBlock.call(list, env),
-        CallTarget::InfixAdd => InfixAdd.call(list, env),
-        CallTarget::InfixAssign => InfixAssign.call(list, env),
-    }
 }
 
 pub fn eval(expr: RExpr, env: &mut Environment) -> Result<R, RError> {
@@ -524,7 +554,7 @@ pub fn eval(expr: RExpr, env: &mut Environment) -> Result<R, RError> {
         RExpr::Bool(x) => Ok(R::Logical(vec![x])),
         RExpr::String(x) => Ok(R::Character(vec![x])),
         RExpr::Function(formals, body) => Ok(R::Function(formals, *body)),
-        RExpr::Call(name, list) => Ok(do_call(name, list, env)?),
+        RExpr::Call(what, list) => Ok(what.call(list, env)?),
         RExpr::Symbol(name) => env.get(name),
         _ => unimplemented!(),
     }
