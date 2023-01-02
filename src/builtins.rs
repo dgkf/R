@@ -4,69 +4,73 @@ use crate::lang::*;
 use crate::utils::eval;
 
 use core::fmt;
+use std::cmp::max;
 use std::fmt::Display;
 use std::rc::Rc;
 
-fn op_vectorized_recycled<F, T>(f: F, mut e1: Vec<T>, e2: Vec<T>) -> Vec<T>
+fn op_vectorized_recycled<F, O, T>(f: F, e1: Vec<O>, e2: Vec<T>) -> Vec<O>
 where
-    F: Fn(T, T) -> T,
+    F: Fn((&O, &T)) -> O,
     T: Clone + Display,
 {
-    if e2.len() > e1.len() {
-        return op_vectorized_recycled(f, e2, e1);
-    }
-
-    for i in 0..e1.len() {
-        e1[i] = f(e1[i].clone(), e2[i % e2.len()].clone())
-    }
-
-    e1
+    let n = max(e1.len(), e2.len());
+    e1.iter()
+        .cycle()
+        .zip(e2.iter().cycle())
+        .take(n)
+        .map(f)
+        .collect()
 }
 
-fn match_args(formals: RExprList, args: RExprList) -> RExprList {
-    use RExprListKey::*;
+fn match_args(mut formals: RExprList, mut args: RExprList) -> (RExprList, RExprList) {
+    let mut ellipsis = RExprList::new();
+    let mut matched_args = RExprList::new();
 
-    let mut assigned = vec![false; formals.values.len()];
-    let mut matched_args = formals.clone();
-
-    // assign named args
-    for (k, v) in args.keys.iter().zip(args.values.iter()) {
-        if let Some(argname) = k {
-            let key = Some(Name(argname.clone()));
-            let index = matched_args.insert(key, v.clone());
-            if index >= assigned.len() {
-                assigned.extend(vec![false; index - assigned.len() + 1])
+    // assign named args to corresponding formals
+    let mut i: usize = 0;
+    while i < args.values.len() {
+        match &args.keys[i] {
+            Some(argname) => {
+                if let Some((Some(param), _)) = formals.remove_named(&argname) {
+                    let arg = args.remove_named(&param).expect("Arg not found");
+                    matched_args.push(arg);
+                    continue;
+                }
             }
-            assigned[index] = true;
+            _ => (),
         }
+        i += 1;
     }
 
-    // backfill unnamed args
-    for (k, v) in args.keys.iter().zip(args.values.iter()) {
-        if let None = k {
-            if let Some(next_index) = assigned.iter().position(|&i| !i) {
-                let key = if next_index < formals.keys.len() {
-                    Some(Name(formals.keys[next_index].clone().unwrap()))
+    // remove any Ellipsis param, and any trailing unassigned params
+    formals.pop_trailing();
+
+    // backfill unnamed args, populating ellipsis with overflow
+    for (key, value) in args.into_iter() {
+        match key {
+            // named args go directly to ellipsis, they did not match a formal
+            Some(arg) => {
+                ellipsis.insert_named(arg, value);
+            }
+
+            // unnamed args populate next formal, or ellipsis if formals exhausted
+            None => {
+                if let Some((Some(param), _)) = formals.remove(0) {
+                    matched_args.insert_named(param, value);
                 } else {
-                    Some(Index(next_index))
-                };
-                let index = matched_args.insert(key, v.clone());
-                if index >= assigned.len() {
-                    assigned.extend(vec![false; index - assigned.len() + 1])
+                    ellipsis.push((None, value));
                 }
-                assigned[index] = true;
-            } else {
-                let key = Some(Index(matched_args.values.len()));
-                let index = matched_args.insert(key, v.clone());
-                if index >= assigned.len() {
-                    assigned.extend(vec![false; index - assigned.len() + 1])
-                }
-                assigned[index] = true;
             }
         }
     }
 
-    matched_args
+    // add back in parameter defaults that weren't filled with args
+    for (param, default) in formals.into_iter() {
+        let param = param.expect("Unexpected unnamed formal");
+        matched_args.insert_named(param, default);
+    }
+
+    (matched_args, ellipsis)
 }
 
 impl fmt::Debug for dyn Callable {
@@ -139,30 +143,35 @@ impl Callable for InfixAssign {
 pub struct InfixAdd;
 
 impl Callable for InfixAdd {
-    fn call(&self, args: RExprList, env: &mut Environment) -> Result<R, RError> {
-        let lhs = eval(args.values[0].clone(), env)?;
-        let rhs = eval(args.values[1].clone(), env)?;
-        let op = |l, r| l + r;
+    fn call(&self, mut args: RExprList, env: &mut Environment) -> Result<R, RError> {
+        // TODO: emit proper error
+        let rhs = args.values.pop().unwrap_or(RExpr::Number(0.0));
+        let lhs = args.values.pop().unwrap_or(RExpr::Number(0.0));
+
+        let lhs = eval(lhs, env)?;
+        let rhs = eval(rhs, env)?;
 
         // TODO: improve vector type unification prior to math operations
         let res = match (lhs, rhs) {
-            (R::Numeric(e1), R::Numeric(e2)) => R::Numeric(op_vectorized_recycled(op, e1, e2)),
+            (R::Numeric(e1), R::Numeric(e2)) => {
+                R::Numeric(op_vectorized_recycled(|(&l, &r)| l + r, e1, e2))
+            }
             (R::Numeric(e1), R::Integer(e2)) => {
                 if let R::Numeric(e2) = R::Integer(e2).as_numeric() {
-                    R::Numeric(op_vectorized_recycled(op, e1, e2))
+                    R::Numeric(op_vectorized_recycled(|(&l, &r)| l + r as f32, e1, e2))
                 } else {
                     R::Null
                 }
             }
             (R::Integer(e1), R::Numeric(e2)) => {
                 if let R::Numeric(e1) = R::Integer(e1).as_numeric() {
-                    R::Numeric(op_vectorized_recycled(op, e1, e2))
+                    R::Numeric(op_vectorized_recycled(|(&l, &r)| l as f32 + r, e1, e2))
                 } else {
                     R::Null
                 }
             }
             (R::Integer(e1), R::Integer(e2)) => {
-                R::Integer(op_vectorized_recycled(|l, r| l + r, e1, e2))
+                R::Integer(op_vectorized_recycled(|(&l, &r)| l + r, e1, e2))
             }
             _ => R::Null,
         };
@@ -182,8 +191,33 @@ impl Callable for InfixAdd {
 #[derive(Debug, Clone)]
 pub struct Name(String);
 
+pub fn primitive(
+    name: &str,
+) -> Option<Box<dyn Fn(RExprList, &mut Environment) -> Result<R, RError>>> {
+    match name {
+        "c" => Some(Box::new(c)),
+        _ => None,
+    }
+}
+
+pub fn c(args: RExprList, env: &mut Environment) -> Result<R, RError> {
+    let vals = args.into_iter().map(|(_, v)| eval(v, env).expect("whoops"));
+    let mut output = vec![0.0; 0];
+    for val in vals.into_iter() {
+        match val {
+            R::Numeric(mut v) => output.append(&mut v),
+            _ => unimplemented!(),
+        }
+    }
+    Ok(R::Numeric(output))
+}
+
 impl Callable for String {
     fn call(&self, args: RExprList, env: &mut Environment) -> Result<R, RError> {
+        if let Some(f) = primitive(self) {
+            return f(args, env);
+        }
+
         if let R::Function(formals, body) = env.get(self.clone())? {
             // set up our local scope, a child environment of calling environment
             let local_scope = Environment::new(Env {
@@ -192,7 +226,8 @@ impl Callable for String {
             });
 
             // match arguments against function signature
-            let args = match_args(formals, args);
+            let (args, ellipsis) = match_args(formals, args);
+            println!("`...` = {:?}", ellipsis);
 
             // create promises for matched args, do not evaluate until used
             for (k, expr) in args.keys.iter().zip(args.values.iter()) {

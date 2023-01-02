@@ -1,3 +1,5 @@
+use std::{iter::Zip, slice::IterMut, vec::IntoIter};
+
 use crate::builtins::*;
 
 #[derive(Debug, Clone)]
@@ -11,119 +13,184 @@ pub enum RExpr {
     List(RExprList),
     Function(RExprList, Box<RExpr>), // TODO: capture environment
     Call(Box<dyn Callable>, RExprList),
+    Ellipsis,
 }
 
 #[derive(Debug, Clone, Default)]
 pub struct RExprList {
-    pub keys: Vec<Option<String>>,
+    pub keys: Vec<Option<String>>, // TODO: use Vec<RExprListKey>
     pub values: Vec<RExpr>,
 }
 
 #[derive(Debug, Clone)]
-pub enum RExprListKey {
-    Name(String),
-    Index(usize),
+pub struct RExprListItem(Option<String>, RExpr);
+
+impl IntoIterator for RExprList {
+    type Item = (Option<String>, RExpr);
+    type IntoIter = <Zip<IntoIter<Option<String>>, IntoIter<RExpr>> as IntoIterator>::IntoIter;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.keys.into_iter().zip(self.values.into_iter())
+    }
+}
+
+impl<'a> IntoIterator for &'a mut RExprList {
+    type Item = (&'a mut Option<String>, &'a mut RExpr);
+    type IntoIter =
+        <Zip<IterMut<'a, Option<String>>, IterMut<'a, RExpr>> as IntoIterator>::IntoIter;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.keys.iter_mut().zip(self.values.iter_mut())
+    }
+}
+
+impl FromIterator<(Option<String>, RExpr)> for RExprList {
+    fn from_iter<T>(iter: T) -> Self
+    where
+        T: IntoIterator<Item = (Option<String>, RExpr)>,
+    {
+        let (keys, values) = iter.into_iter().unzip();
+        RExprList { keys, values }
+    }
+}
+
+impl FromIterator<RExpr> for RExprList {
+    fn from_iter<T>(iter: T) -> Self
+    where
+        T: IntoIterator<Item = RExpr>,
+    {
+        let values: Vec<RExpr> = iter.into_iter().collect();
+        RExprList {
+            keys: vec![None; values.len()],
+            values,
+        }
+    }
 }
 
 impl RExprList {
-    pub fn get(&self, key: RExprListKey) -> Option<RExpr> {
-        use RExprListKey::*;
-        match key {
-            Name(s) => {
-                if let Some(index) = self.keys.iter().position(|i| i == &Some(s.clone())) {
-                    Some(self.values[index].clone())
-                } else {
-                    None
-                }
-            }
-            Index(i) => Some(self.values[i].clone()),
+    pub fn new() -> RExprList {
+        RExprList {
+            ..Default::default()
         }
     }
 
-    pub fn insert(&mut self, key: Option<RExprListKey>, value: RExpr) -> usize {
-        use RExprListKey::*;
-        match key {
-            Some(Name(s)) => {
-                if let Some(index) = self.keys.iter().position(|i| i == &Some(s.clone())) {
-                    self.values[index] = value;
-                    index
-                } else {
-                    self.keys.push(Some(s));
-                    self.values.push(value);
-                    self.values.len()
-                }
+    pub fn get_named(&self, key: String) -> Option<RExpr> {
+        let first_name_index = self.keys.iter().position(|i| i == &Some(key.clone()));
+        match first_name_index {
+            Some(index) => Some(self.values[index].clone()),
+            _ => None,
+        }
+    }
+
+    pub fn get(&self, index: usize) -> Option<RExpr> {
+        if index < self.values.len() {
+            Some(self.values[index].clone())
+        } else {
+            None
+        }
+    }
+
+    pub fn pop(&mut self) -> Option<(Option<String>, RExpr)> {
+        if let Some(k) = self.keys.pop() {
+            if let Some(v) = self.values.pop() {
+                return Some((k, v));
             }
-            Some(Index(index)) => {
-                if index < self.values.len() {
-                    self.values[index] = value;
-                    index
-                } else {
-                    let n = index - self.values.len();
-                    self.keys.extend(vec![None; n]);
-                    self.values.extend(vec![RExpr::Null; n - 1]);
-                    self.values.push(value);
-                    self.values.len()
-                }
+        }
+
+        None
+    }
+
+    pub fn push(&mut self, pair: (Option<String>, RExpr)) {
+        let (key, value) = pair;
+        self.keys.push(key);
+        self.values.push(value);
+    }
+
+    pub fn append(&mut self, mut other: Self) -> &mut RExprList {
+        self.keys.append(&mut other.keys);
+        self.values.append(&mut other.values);
+        self
+    }
+
+    pub fn pop_trailing(&mut self) -> RExprList {
+        if let Some(index) = self.values.iter().position(|i| match i {
+            RExpr::Ellipsis => true,
+            _ => false,
+        }) {
+            let keys_trailing = self.keys.drain(index..self.keys.len()).collect();
+            let vals_trailing = self.values.drain(index..self.values.len()).collect();
+
+            RExprList {
+                keys: keys_trailing,
+                values: vals_trailing,
             }
-            None => {
-                self.keys.push(None);
-                self.values.push(value);
-                self.values.len()
-            }
+        } else {
+            RExprList::new()
+        }
+    }
+
+    pub fn remove_named(&mut self, key: &str) -> Option<(Option<String>, RExpr)> {
+        let first_named_index = self.keys.iter().position(|i| i == &Some(key.to_string()));
+        if let Some(index) = first_named_index {
+            Some((self.keys.remove(index), self.values.remove(index)))
+        } else {
+            None
+        }
+    }
+
+    pub fn remove(&mut self, index: usize) -> Option<(Option<String>, RExpr)> {
+        if index < self.keys.len() {
+            Some((self.keys.remove(index), self.values.remove(index)))
+        } else {
+            None
+        }
+    }
+
+    pub fn insert_named(&mut self, key: String, value: RExpr) -> usize {
+        if let Some(index) = self.keys.iter().position(|i| i == &Some(key.clone())) {
+            self.values[index] = value;
+            index
+        } else {
+            self.keys.push(Some(key.to_string()));
+            self.values.push(value);
+            self.values.len()
+        }
+    }
+
+    pub fn insert(&mut self, index: usize, value: RExpr) -> usize {
+        if index < self.values.len() {
+            self.values.insert(index, value);
+            index
+        } else {
+            let n = index - self.values.len();
+            self.keys.extend(vec![None; n]);
+            self.values.extend(vec![RExpr::Null; n - 1]);
+            self.values.push(value);
+            index
         }
     }
 }
 
 impl From<Vec<RExpr>> for RExprList {
     fn from(values: Vec<RExpr>) -> Self {
-        let mut l = RExprList {
-            ..Default::default()
-        };
-        for value in values {
-            l.insert(None, value);
+        RExprList {
+            keys: vec![None; values.len()],
+            values,
         }
-        l
+    }
+}
+
+impl From<RExpr> for RExprList {
+    fn from(value: RExpr) -> Self {
+        RExprList {
+            keys: vec![None],
+            values: vec![value],
+        }
     }
 }
 
 impl From<Vec<(Option<String>, RExpr)>> for RExprList {
     fn from(values: Vec<(Option<String>, RExpr)>) -> Self {
-        let mut l = RExprList {
-            ..Default::default()
-        };
-        for (key, value) in values {
-            match key {
-                Some(s) => l.insert(Some(RExprListKey::Name(s)), value),
-                None => l.insert(None, value),
-            };
-        }
-        l
-    }
-}
-
-impl FromIterator<RExpr> for RExprList {
-    fn from_iter<T: IntoIterator<Item = RExpr>>(iter: T) -> Self {
-        let mut l = RExprList {
-            ..Default::default()
-        };
-        for value in iter {
-            l.insert(None, value);
-        }
-        l
-    }
-}
-
-impl FromIterator<(Option<String>, RExpr)> for RExprList {
-    fn from_iter<T: IntoIterator<Item = (Option<String>, RExpr)>>(iter: T) -> Self {
-        let mut l = RExprList {
-            ..Default::default()
-        };
-        for (key, value) in iter {
-            match key {
-                Some(s) => l.insert(Some(RExprListKey::Name(s)), value),
-                None => l.insert(None, value),
-            };
-        }
-        l
+        RExprList::from_iter(values.into_iter())
     }
 }

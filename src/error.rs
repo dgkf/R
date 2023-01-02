@@ -11,7 +11,7 @@ pub enum RError {
 impl RError {
     fn as_str(&self) -> String {
         match self {
-            RError::VariableNotFound(v) => format!("Variable '{}' not found", v.as_str()),
+            RError::VariableNotFound(v) => format!("Error: object '{}' not found", v.as_str()),
             RError::ParseFailure(e) => format!("Parse failed: {:?}", e),
         }
     }

@@ -54,6 +54,7 @@ pub fn parse_list(pair: Pair<Rule>) -> RExprList {
                 RExpr::Symbol(String::from(i.as_str())),
             ),
             Rule::expr | Rule::inline | Rule::block => (None, parse_expr(i.into_inner())),
+            Rule::ellipsis => (None, RExpr::Ellipsis),
             rule => unreachable!("Expected named or unnamed arguments, found {:?}", rule),
         })
         .collect();
@@ -94,6 +95,7 @@ pub fn parse_expr(pairs: Pairs<Rule>) -> RExpr {
             Rule::string_expr => parse_expr(primary.into_inner()), // TODO: improve grammar to avoid unnecessary parse
             Rule::string => RExpr::String(String::from(primary.as_str())),
             Rule::null => RExpr::Null,
+            Rule::ellipsis => RExpr::Ellipsis,
             Rule::symbol_ident => RExpr::Symbol(String::from(primary.as_str())),
             Rule::symbol_backticked => RExpr::Symbol(String::from(primary.as_str())),
             rule => unreachable!("Expr::parse expected atom, found {:?}", rule),

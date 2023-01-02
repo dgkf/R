@@ -72,5 +72,6 @@ WHITESPACE = _{ " " | "\\t" }
 
     call = { symbol ~ list }
         list = { "(" ~ ((elem ~ ",")* ~ elem)? ~ ")" }
-        elem = _{ named | symbol | expr }
+        ellipsis = { "..." }
+        elem = _{ ellipsis | named | symbol | expr }
         named = { symbol ~ "=" ~ expr }
