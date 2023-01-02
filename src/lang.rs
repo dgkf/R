@@ -3,22 +3,28 @@ use crate::error::*;
 use crate::utils::eval;
 
 use core::fmt;
-use std::iter::repeat;
+use std::cmp::max;
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 #[derive(Debug, Clone)]
 pub enum R {
-    Null,
+    // Atomic types
     Logical(Logical),
     Numeric(Numeric),
     Integer(Integer),
     Character(Character),
+    // Complex(Complex),
+    // Raw(Raw),
+
+    // Data structures
+    Null,
     List(List),
 
+    // Metaprogramming primitives
     Expr(RExpr),
     Closure(RExpr, Environment),
-    Function(RExprList, RExpr),
-    Environment(Rc<Environment>),
+    Function(RExprList, RExpr, Environment),
+    Environment(Environment),
 }
 
 impl R {
@@ -45,26 +51,26 @@ impl R {
         let nlen = format!("{}", n).len();
 
         if n == 0 {
-            write!(f, "numeric(0)")?;
-        } else {
-            let pad: String = repeat(' ').take(nlen - 1).collect();
-            write!(f, "{}[{}] ", pad, "1")?;
+            return write!(f, "numeric(0)");
         }
 
-        let mut col = nlen + 3;
-        for (i, v) in x.iter().enumerate() {
-            let rep = format!("{} ", v);
-            col += rep.len();
-            if col > 80 {
-                col = nlen + 3 + rep.len();
-                let pad: String = repeat(' ').take(nlen - rep.len()).collect();
-                write!(f, "\n{}[{}] {}", pad, i, rep)?;
+        let x_strs = x.iter().map(|xi| format!("{}", xi));
+        let max_len = x_strs.clone().fold(0, |max_len, xi| max(max_len, xi.len()));
+
+        let mut col = 0;
+        x_strs.enumerate().try_for_each(|(i, x_str)| {
+            col += max_len + 1;
+            if i == 0 {
+                write!(f, "{:>3$}[{}] {:>4$} ", "", i + 1, x_str, nlen - 1, max_len)
+            } else if col > 80 - nlen - 3 {
+                col = 0;
+                let i_str = format!("{}", i + 1);
+                let gutter = nlen - i_str.len();
+                write!(f, "\n{:>3$}[{}] {:>4$} ", "", i_str, x_str, gutter, max_len)
             } else {
-                write!(f, "{}", rep)?;
+                write!(f, "{:>1$} ", x_str, max_len)
             }
-        }
-
-        Ok(())
+        })
     }
 }
 
@@ -76,7 +82,11 @@ impl fmt::Display for R {
             R::Numeric(x) => R::format_numeric(f, x),
             R::Integer(x) => write!(f, "[1] {}", x[0]),
             R::Character(x) => write!(f, "[1] \"{}\"", x[0]),
-            // R::Function(formals, _) => write!(f, "<function({})>", formals.keys.len()),
+            R::Environment(x) => write!(f, "<environment {:?}>", x.values.as_ptr()),
+            R::Function(formals, _, parent) => {
+                let parent_env = R::Environment(Rc::clone(parent));
+                write!(f, "function{}\n{}", formals, parent_env)
+            }
             x => write!(f, "{:?}", x),
         }
     }
@@ -116,7 +126,30 @@ impl Env {
         }
     }
 
-    pub fn insert(&self, name: &String, value: R) {
-        self.values.borrow_mut().insert(name.clone(), value);
+    pub fn get_ellipsis(&self) -> Result<R, RError> {
+        if let Ok(ellipsis) = self.get("...".to_string()) {
+            Ok(ellipsis)
+        } else {
+            Err(RError::IncorrectContext("...".to_string()))
+        }
+    }
+
+    pub fn insert(&self, name: String, value: R) {
+        self.values.borrow_mut().insert(name, value);
+    }
+
+    pub fn append(&self, values: R) {
+        match values {
+            R::List(x) => {
+                for (key, value) in x {
+                    if let Some(name) = key {
+                        self.insert(name, value)
+                    } else {
+                        println!("Dont' know what to do with value...")
+                    }
+                }
+            }
+            _ => unimplemented!(),
+        }
     }
 }

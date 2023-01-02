@@ -1,7 +1,7 @@
 use crate::ast::*;
 use crate::error::*;
 use crate::lang::*;
-use crate::utils::eval;
+use crate::utils::*;
 
 use core::fmt;
 use std::cmp::max;
@@ -121,13 +121,13 @@ pub struct InfixAssign;
 
 impl Callable for InfixAssign {
     fn call(&self, args: RExprList, env: &mut Environment) -> Result<R, RError> {
-        if let RExpr::Symbol(s) = &args.values[0] {
-            let value = eval(args.values[1].clone(), env)?;
-            env.insert(&s, value.clone());
-            Ok(value)
-        } else {
+        let (RExpr::Symbol(s), value) = args.unnamed_binary_args() else {
             unimplemented!()
-        }
+        };
+
+        let value = eval(value, env)?;
+        env.insert(s, value.clone());
+        Ok(value)
     }
 
     fn callable_clone(&self) -> Box<dyn Callable> {
@@ -201,24 +201,26 @@ pub fn primitive(
 }
 
 pub fn c(args: RExprList, env: &mut Environment) -> Result<R, RError> {
-    let vals = args.into_iter().map(|(_, v)| eval(v, env).expect("whoops"));
+    let R::List(vals) = eval_rexprlist(args, env)? else {
+        unreachable!()
+    };
+
     let mut output = vec![0.0; 0];
-    for val in vals.into_iter() {
+    for (_, val) in vals {
         match val {
             R::Numeric(mut v) => output.append(&mut v),
             _ => unimplemented!(),
         }
     }
+
     Ok(R::Numeric(output))
 }
 
 impl Callable for String {
     fn call(&self, args: RExprList, env: &mut Environment) -> Result<R, RError> {
         if let Some(f) = primitive(self) {
-            return f(args, env);
-        }
-
-        if let R::Function(formals, body) = env.get(self.clone())? {
+            f(args, env)
+        } else if let R::Function(formals, body, _) = env.get(self.clone())? {
             // set up our local scope, a child environment of calling environment
             let local_scope = Environment::new(Env {
                 parent: Some(Rc::clone(env)),
@@ -226,15 +228,15 @@ impl Callable for String {
             });
 
             // match arguments against function signature
-            let (args, ellipsis) = match_args(formals, args);
-            println!("`...` = {:?}", ellipsis);
+            let (args, ellipsis_exprs) = match_args(formals, args);
 
-            // create promises for matched args, do not evaluate until used
-            for (k, expr) in args.keys.iter().zip(args.values.iter()) {
-                if let Some(formal) = k {
-                    local_scope.insert(&formal, R::Closure(expr.clone(), Rc::clone(env)));
-                }
-            }
+            // convert args, ellipsis exprs to lists of closures
+            let args = eval_rexprlist(args, env)?;
+            let ellipsis = eval(RExpr::List(ellipsis_exprs), env)?;
+
+            // add closures to local scope
+            local_scope.insert("...".to_string(), ellipsis);
+            local_scope.append(args);
 
             // evaluate body in local scope
             eval(body, &mut Rc::clone(&local_scope))

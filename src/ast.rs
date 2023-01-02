@@ -1,3 +1,4 @@
+use core::fmt;
 use std::{iter::Zip, slice::IterMut, vec::IntoIter};
 
 use crate::builtins::*;
@@ -16,10 +17,43 @@ pub enum RExpr {
     Ellipsis,
 }
 
+impl fmt::Display for RExpr {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            RExpr::Null => write!(f, "NULL"),
+            RExpr::Bool(true) => write!(f, "TRUE"),
+            RExpr::Bool(false) => write!(f, "FALSE"),
+            RExpr::Number(x) => write!(f, "{}", x),
+            RExpr::Integer(x) => write!(f, "{}L", x),
+            RExpr::String(x) => write!(f, "\"{}\"", x),
+            RExpr::Symbol(x) => write!(f, "{}", x),
+            RExpr::List(x) => write!(f, "{}", x),
+            RExpr::Ellipsis => write!(f, "..."),
+            x => write!(f, "{:?}", x),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Default)]
 pub struct RExprList {
     pub keys: Vec<Option<String>>, // TODO: use Vec<RExprListKey>
     pub values: Vec<RExpr>,
+}
+
+impl fmt::Display for RExprList {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let pairs: Vec<String> = self
+            .values
+            .iter()
+            .enumerate()
+            .map(|(i, v)| match &self.keys[i] {
+                Some(k) => format!("{} = {}", k, v),
+                None => format!("{}", v),
+            })
+            .collect();
+
+        write!(f, "({})", pairs.join(", "))
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -112,11 +146,15 @@ impl RExprList {
         self
     }
 
-    pub fn pop_trailing(&mut self) -> RExprList {
-        if let Some(index) = self.values.iter().position(|i| match i {
+    pub fn position_ellipsis(&self) -> Option<usize> {
+        self.values.iter().position(|i| match i {
             RExpr::Ellipsis => true,
             _ => false,
-        }) {
+        })
+    }
+
+    pub fn pop_trailing(&mut self) -> RExprList {
+        if let Some(index) = self.position_ellipsis() {
             let keys_trailing = self.keys.drain(index..self.keys.len()).collect();
             let vals_trailing = self.values.drain(index..self.values.len()).collect();
 
@@ -168,6 +206,32 @@ impl RExprList {
             self.values.push(value);
             index
         }
+    }
+
+    pub fn binary_args(self) -> ((Option<String>, RExpr), (Option<String>, RExpr)) {
+        let mut argstream = self.into_iter();
+        let Some(lhs) = argstream.next() else {
+            unimplemented!()
+        };
+
+        let Some(rhs) = argstream.next() else {
+            unimplemented!()
+        };
+
+        (lhs, rhs)
+    }
+
+    pub fn unnamed_binary_args(self) -> (RExpr, RExpr) {
+        let mut argstream = self.into_iter();
+        let Some((_, lhs)) = argstream.next() else {
+            unimplemented!()
+        };
+
+        let Some((_, rhs)) = argstream.next() else {
+            unimplemented!()
+        };
+
+        (lhs, rhs)
     }
 }
 
