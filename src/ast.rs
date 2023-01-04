@@ -29,6 +29,7 @@ impl fmt::Display for RExpr {
             RExpr::Symbol(x) => write!(f, "{}", x),
             RExpr::List(x) => write!(f, "{}", x),
             RExpr::Ellipsis => write!(f, "..."),
+            RExpr::Call(n, args) => write!(f, "{}", n.call_as_str(args)),
             x => write!(f, "{:?}", x),
         }
     }

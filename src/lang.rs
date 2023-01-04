@@ -83,9 +83,9 @@ impl fmt::Display for R {
             R::Integer(x) => write!(f, "[1] {}", x[0]),
             R::Character(x) => write!(f, "[1] \"{}\"", x[0]),
             R::Environment(x) => write!(f, "<environment {:?}>", x.values.as_ptr()),
-            R::Function(formals, _, parent) => {
+            R::Function(formals, body, parent) => {
                 let parent_env = R::Environment(Rc::clone(parent));
-                write!(f, "function{}\n{}", formals, parent_env)
+                write!(f, "function{} {}\n{}", formals, body, parent_env)
             }
             x => write!(f, "{:?}", x),
         }

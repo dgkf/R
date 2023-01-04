@@ -22,18 +22,21 @@ where
         .collect()
 }
 
-fn match_args(mut formals: RExprList, mut args: RExprList) -> (RExprList, RExprList) {
-    let mut ellipsis = RExprList::new();
-    let mut matched_args = RExprList::new();
+fn match_args(
+    mut formals: RExprList,
+    mut args: Vec<(Option<String>, R)>,
+    env: &Environment,
+) -> (Vec<(Option<String>, R)>, Vec<(Option<String>, R)>) {
+    let mut ellipsis: Vec<(Option<String>, R)> = vec![];
+    let mut matched_args: Vec<(Option<String>, R)> = vec![];
 
     // assign named args to corresponding formals
     let mut i: usize = 0;
-    while i < args.values.len() {
-        match &args.keys[i] {
+    while i < args.len() {
+        match &args[i].0 {
             Some(argname) => {
-                if let Some((Some(param), _)) = formals.remove_named(&argname) {
-                    let arg = args.remove_named(&param).expect("Arg not found");
-                    matched_args.push(arg);
+                if let Some((Some(_), _)) = formals.remove_named(&argname) {
+                    matched_args.push(args.remove(i));
                     continue;
                 }
             }
@@ -50,13 +53,13 @@ fn match_args(mut formals: RExprList, mut args: RExprList) -> (RExprList, RExprL
         match key {
             // named args go directly to ellipsis, they did not match a formal
             Some(arg) => {
-                ellipsis.insert_named(arg, value);
+                ellipsis.push((Some(arg), value));
             }
 
             // unnamed args populate next formal, or ellipsis if formals exhausted
             None => {
                 if let Some((Some(param), _)) = formals.remove(0) {
-                    matched_args.insert_named(param, value);
+                    matched_args.push((Some(param), value));
                 } else {
                     ellipsis.push((None, value));
                 }
@@ -66,8 +69,7 @@ fn match_args(mut formals: RExprList, mut args: RExprList) -> (RExprList, RExprL
 
     // add back in parameter defaults that weren't filled with args
     for (param, default) in formals.into_iter() {
-        let param = param.expect("Unexpected unnamed formal");
-        matched_args.insert_named(param, default);
+        matched_args.push((param, R::Closure(default, Rc::clone(env))));
     }
 
     (matched_args, ellipsis)
@@ -89,6 +91,13 @@ pub trait Callable {
     fn call(&self, args: RExprList, env: &mut Environment) -> Result<R, RError>;
     fn callable_clone(&self) -> Box<dyn Callable>;
     fn callable_as_str(&self) -> &str;
+    fn call_as_str(&self, args: &RExprList) -> String;
+}
+
+impl Display for dyn Callable {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.callable_as_str())
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -114,6 +123,17 @@ impl Callable for RExprBlock {
     fn callable_as_str(&self) -> &str {
         "{"
     }
+
+    fn call_as_str(&self, args: &RExprList) -> String {
+        format!(
+            "{{\n{}\n}}",
+            args.clone()
+                .into_iter()
+                .map(|(_, v)| format!("  {}", v))
+                .collect::<Vec<String>>()
+                .join("\n")
+        )
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -136,6 +156,15 @@ impl Callable for InfixAssign {
 
     fn callable_as_str(&self) -> &str {
         "<-"
+    }
+
+    fn call_as_str(&self, args: &RExprList) -> String {
+        format!(
+            "{} {} {}",
+            args.values[0],
+            self.callable_as_str(),
+            args.values[1]
+        )
     }
 }
 
@@ -186,6 +215,15 @@ impl Callable for InfixAdd {
     fn callable_as_str(&self) -> &str {
         "+"
     }
+
+    fn call_as_str(&self, args: &RExprList) -> String {
+        format!(
+            "{} {} {}",
+            args.values[0],
+            self.callable_as_str(),
+            args.values[1]
+        )
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -227,16 +265,16 @@ impl Callable for String {
                 ..Default::default()
             });
 
-            // match arguments against function signature
-            let (args, ellipsis_exprs) = match_args(formals, args);
+            let R::List(args) = eval_rexprlist(args, env)? else {
+                unreachable!();
+            };
 
-            // convert args, ellipsis exprs to lists of closures
-            let args = eval_rexprlist(args, env)?;
-            let ellipsis = eval(RExpr::List(ellipsis_exprs), env)?;
+            // match arguments against function signature
+            let (args, ellipsis) = match_args(formals, args, env);
 
             // add closures to local scope
-            local_scope.insert("...".to_string(), ellipsis);
-            local_scope.append(args);
+            local_scope.insert("...".to_string(), R::List(ellipsis));
+            local_scope.append(R::List(args));
 
             // evaluate body in local scope
             eval(body, &mut Rc::clone(&local_scope))
@@ -251,5 +289,9 @@ impl Callable for String {
 
     fn callable_as_str(&self) -> &str {
         self.as_str()
+    }
+
+    fn call_as_str(&self, args: &RExprList) -> String {
+        format!("{}{}", self.callable_as_str(), args)
     }
 }
