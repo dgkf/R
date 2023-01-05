@@ -75,30 +75,70 @@ pub fn parse_function(pair: Pair<Rule>) -> RExpr {
     RExpr::Function(params, Box::new(body))
 }
 
+pub fn parse_if_else(pair: Pair<Rule>) -> RExpr {
+    let mut inner = pair.into_inner();
+    let cond = parse_expr(inner.next().unwrap().into_inner());
+    let true_expr = parse_expr(inner.next().unwrap().into_inner());
+
+    let false_expr = if let Some(false_block) = inner.next() {
+        parse_expr(false_block.into_inner())
+    } else {
+        RExpr::Null
+    };
+
+    RExpr::Call(
+        Box::new(RExprIf),
+        RExprList::from(vec![(None, cond), (None, true_expr), (None, false_expr)]),
+    )
+}
+
+pub fn parse_symbol(pair: Pair<Rule>) -> RExpr {
+    RExpr::Symbol(String::from(pair.as_str()))
+}
+
+pub fn parse_for(pair: Pair<Rule>) -> RExpr {
+    let mut inner = pair.into_inner();
+
+    let RExpr::Symbol(var) = parse_symbol(inner.next().unwrap()) else {
+        unreachable!();
+    };
+
+    let iter = parse_expr(inner.next().unwrap().into_inner());
+    let body = parse_expr(inner.next().unwrap().into_inner());
+
+    RExpr::Call(
+        Box::new(RExprFor),
+        RExprList::from(vec![(Some(var), iter), (None, body)]),
+    )
+}
+
 pub fn parse_expr(pairs: Pairs<Rule>) -> RExpr {
     PRATT_PARSER
-        .map_primary(|primary| match primary.as_rule() {
-            Rule::kw_function => parse_function(primary),
-            Rule::kw_while => unimplemented!(),
-            Rule::kw_for => unimplemented!(),
-            Rule::kw_if_else => unimplemented!(),
-            Rule::kw_repeat => unimplemented!(),
-            Rule::call => parse_call(primary),
-            Rule::expr => parse_expr(primary.into_inner()),
-            Rule::inline => parse_expr(primary.into_inner()),
-            Rule::block => parse_block(primary),
-            Rule::list => RExpr::List(parse_list(primary)),
-            Rule::boolean_true => RExpr::Bool(true),
-            Rule::boolean_false => RExpr::Bool(false),
-            Rule::number => RExpr::Number(primary.as_str().parse::<f32>().unwrap()),
-            Rule::integer => RExpr::Integer(primary.as_str().parse::<i32>().unwrap()),
-            Rule::string_expr => parse_expr(primary.into_inner()), // TODO: improve grammar to avoid unnecessary parse
-            Rule::string => RExpr::String(String::from(primary.as_str())),
-            Rule::null => RExpr::Null,
-            Rule::ellipsis => RExpr::Ellipsis,
-            Rule::symbol_ident => RExpr::Symbol(String::from(primary.as_str())),
-            Rule::symbol_backticked => RExpr::Symbol(String::from(primary.as_str())),
-            rule => unreachable!("Expr::parse expected atom, found {:?}", rule),
+        .map_primary(|primary| {
+            match primary.as_rule() {
+                Rule::kw_function => parse_function(primary),
+                Rule::kw_while => unimplemented!(),
+                Rule::kw_for => parse_for(primary),
+                Rule::kw_if_else => parse_if_else(primary),
+                Rule::kw_repeat => unimplemented!(),
+                Rule::call => parse_call(primary),
+                Rule::expr => parse_expr(primary.into_inner()),
+                Rule::inline => parse_expr(primary.into_inner()),
+                Rule::block_inline => parse_expr(primary.into_inner()),
+                Rule::block => parse_block(primary),
+                Rule::list => RExpr::List(parse_list(primary)),
+                Rule::boolean_true => RExpr::Bool(true),
+                Rule::boolean_false => RExpr::Bool(false),
+                Rule::number => RExpr::Number(primary.as_str().parse::<f32>().unwrap()),
+                Rule::integer => RExpr::Integer(primary.as_str().parse::<i32>().unwrap()),
+                Rule::string_expr => parse_expr(primary.into_inner()), // TODO: improve grammar to avoid unnecessary parse
+                Rule::string => RExpr::String(String::from(primary.as_str())),
+                Rule::null => RExpr::Null,
+                Rule::ellipsis => RExpr::Ellipsis,
+                Rule::symbol_ident => parse_symbol(primary),
+                Rule::symbol_backticked => RExpr::Symbol(String::from(primary.as_str())),
+                rule => unreachable!("Expr::parse expected atom, found {:?}", rule),
+            }
         })
         .map_infix(|lhs, op, rhs| {
             // infix operator with two unnamed arguments
@@ -119,7 +159,7 @@ pub fn parse_expr(pairs: Pairs<Rule>) -> RExpr {
 }
 
 pub fn parse(s: &str) -> Result<RExpr, RError> {
-    match RParser::parse(Rule::expr, s) {
+    match RParser::parse(Rule::repl, s) {
         Ok(mut pairs) => {
             let inner = pairs.next().unwrap().into_inner();
             Ok(parse_expr(inner))

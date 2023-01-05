@@ -1,12 +1,15 @@
 use crate::parser::*;
 
 use core::fmt;
+use pest::error::LineColLocation::Pos;
 
 #[derive(Debug)]
 pub enum RError {
     VariableNotFound(String),
     IncorrectContext(String),
     ParseFailure(pest::error::Error<Rule>),
+    NotInterpretableAsLogical(),
+    ConditionIsNotScalar(),
 }
 
 impl RError {
@@ -14,7 +17,16 @@ impl RError {
         match self {
             RError::IncorrectContext(x) => format!("Error: '{}' used in an incorrect context", x),
             RError::VariableNotFound(v) => format!("Error: object '{}' not found", v.as_str()),
-            RError::ParseFailure(e) => format!("Parse failed: {:?}", e),
+            RError::ParseFailure(e) => match e.line_col {
+                Pos((line, col)) => format!("Parse failed at Line {}, Column {}", line, col),
+                _ => format!("Parse failed at {:?}", e.line_col),
+            },
+            RError::NotInterpretableAsLogical() => {
+                format!("argument is not interpretable as logical")
+            }
+            RError::ConditionIsNotScalar() => {
+                format!("the condition has length > 1")
+            }
         }
     }
 }

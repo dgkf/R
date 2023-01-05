@@ -46,6 +46,45 @@ impl R {
         }
     }
 
+    pub fn get(&self, index: usize) -> Option<R> {
+        match self {
+            R::Logical(x) => {
+                if let Some(val) = x.get(index) {
+                    Some(R::Logical(vec![*val]))
+                } else {
+                    None
+                }
+            }
+            R::Numeric(x) => {
+                if let Some(val) = x.get(index) {
+                    Some(R::Numeric(vec![*val]))
+                } else {
+                    None
+                }
+            }
+            R::Integer(x) => {
+                if let Some(val) = x.get(index) {
+                    Some(R::Integer(vec![*val]))
+                } else {
+                    None
+                }
+            }
+            R::Character(x) => {
+                if let Some(val) = x.get(index) {
+                    Some(R::Character(vec![val.clone()]))
+                } else {
+                    None
+                }
+            }
+            R::Null => None,
+            R::List(_) => None,
+            R::Expr(_) => None,
+            R::Closure(_, _) => None,
+            R::Function(_, _, _) => None,
+            R::Environment(_) => None,
+        }
+    }
+
     pub fn format_numeric(f: &mut fmt::Formatter<'_>, x: &Numeric) -> fmt::Result {
         let n = x.len();
         let nlen = format!("{}", n).len();
@@ -71,6 +110,30 @@ impl R {
                 write!(f, "{:>1$} ", x_str, max_len)
             }
         })
+    }
+}
+
+impl From<Logical> for R {
+    fn from(v: Logical) -> Self {
+        R::Logical(v)
+    }
+}
+
+impl From<Numeric> for R {
+    fn from(v: Numeric) -> Self {
+        R::Numeric(v)
+    }
+}
+
+impl From<Integer> for R {
+    fn from(v: Integer) -> Self {
+        R::Integer(v)
+    }
+}
+
+impl From<Character> for R {
+    fn from(v: Character) -> Self {
+        R::Character(v)
     }
 }
 

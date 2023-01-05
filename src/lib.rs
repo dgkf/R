@@ -6,4 +6,5 @@ pub mod builtins;
 pub mod error;
 pub mod lang;
 pub mod parser;
+pub mod repl;
 pub mod utils;

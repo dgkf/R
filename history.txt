@@ -1,0 +1,81 @@
+#V2
+dlsfkj sdlfkjdsf
+ljks dflkjdflkjsdf lskjdflkj sdf
+lksjdf
+x <- function(a = 1, ...) a + c(...)
+x(1, 2, 3)
+x <- function(a = 1, ...) a + c(...)
+x(1, 2, 3)
+1 + 2 
+{\n\n\n}
+x <- function(a = 1, ...) { \n  a + c(...)\n}
+x <- function() {\n}
+x <- 1
+x <- 1 + {\n2 \n}
+x <- 1 + {\n2\n}
+x <- function(a = 1, ...) { \n    a + c(...)\n  }
+x(1, 2, 3, 4)
+x <- function(a = 1, ...) {\n    a + c(...)\n  }
+  
+if (TRUE) 1 else 2
+x <- function(a = 1, ...) {\n    if (TRUE) {\n      a\n    } else {\n      c(...)\n    }    \n}\n 
+x <- function(a = 1, ...) {\n    if (TRUE) {\n      a\n    } else {\n      a + c(...)\n    }    \n}\n 
+x <- function(a = 1, ...) {\n    if (TRUE) {\n      a\n    } else {\n      a + c(...)\n      a\n    }    \n}\n 
+a
+x <- function(a = 1, ...) {\n    if (TRUE) {\n      a\n    } else {\n      a + c(...)\n      a\n    }    \n}\n 
+x <- function(a = 1, ...) {\n    if (TRUE) {\n      a\n    } else {\n      a + c(...)\n    }    \n}\n 
+x <- function(a = 1, ...) {\n    if (TRUE) {\n      a\n    } else {\n      a + c(...)\n      a\n    }   \n}\n 
+x <- function(a = 1, ...) {\n    if (TRUE) {\n      a\n    } else {\n      a + c(...)\n      a + 1\n    }   \n}\n 
+{1\n2}
+x <- function(a = 1, ...) {\n    if (TRUE) {\n      a\n    } else {\n      a + c(...)\n      a + 1\n    }   \n}\n 
+{\na\nb\n}
+{\n1\n2\n}
+if (TRUE) {\na\nb\n}
+if (TRUE) { a } else {\n1\n2\n}
+if (TRUE) { 2 } else {\n1\n2\n}
+if (FALSE) { 2 } else {\n1\n2\n}
+if (FALSE) { 2 } else {\n1\n3\n}
+x <- function(a = 1, ...) {\n    if (TRUE) {\n      a\n    } else {\n      a + c(...)\n      a + 1\n    }   \n}
+{\na + 2\na + 1\n}
+{\na + 2\n1\n}
+1
+{\na + 2\n1\n}
+{}
+{1}
+{1\n2}
+{\na + 2\n1\n}
+{\na + 2\n1}
+{a + 2\n1}
+{a+2\n1}
+{1+2\n1}
+{1 + 2\n1}
+{1 +\n1}
+x <- function(a = 1, ...) {\n    if (TRUE) {\n      a\n    } else {\n      a + c(...)\n      a + 1\n    }   \n}
+x(1, 2, 3, 4)
+for (a in 3) { a }
+{ 1 + 2 }
+{\n1 + 2\n3\n}
+{\n1 + (2 + 4)\n3\n}
+{\n1 + (2 + 4 )\n3\n}
+for (a in 3) { a }
+{\n1 + (2 + 4 )\n3\n}
+x <- function(a = 1, ...) {\n    if (TRUE) {\n      a\n    } else {\n      a + c(...)\n      a + 1\n    }   \n}
+x(1, 2, 3)
+x <- function(a = 1, ...) {\n    if (TRUE) {\n      a\n    } else {\n      a + c(...)\n      a + 1\n    }   \n}
+x(1, 2, 3)
+for (a in 3) { a }
+x <- 1
+for (a in 3) { x <- x * 2 }
+x <- x * 2
+x <- x
+x <- x*2
+x <- x+2
+x <- x + 2
+x <- 3
+x <- x + 2
+for (a in 3) { x <- x * 2 }
+for (a in 3) { x <- x + a }
+for (a in c(1, 2, 3)) { \n    x <- x + a\n  }
+x <- function(a = 1, ...) { \n  for (i in c(...)) {\n    a <- a + i\n  }\n}
+x(3, 4, 5, 6)
+exit()

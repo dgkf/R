@@ -1,18 +1,37 @@
 eoi  = _{ !ANY }  // since EOI does not parse silently, define our own
-WHITESPACE = _{ " " | "\\t" }
+expr_end = _{ ";" | NEWLINE | eoi }
+
+// Since newlines are sometimes meaningful syntax, we need to specify what 
+// whitespace is permitted where
+
+// WHITESPACE = _{ " " | "\\t" | NEWLINE }
+// WHITESPACE_NO_NL = _{ " " | "\\t" }
+
+WS_NO_NL = _{ " " | "\\t" }
+WS = _{ WS_NO_NL | NEWLINE }
+
+
+
+// repl
+
+   repl = _{ WS* ~ expr ~ WS* ~ eoi }
 
 // expression basics
 
     expr = { block | inline }
-        block  = { "{" ~ (inline ~ expr_end)* ~ inline? ~ "}" }
-        inline = { atom ~ (infix ~ NEWLINE+? ~ atom)* }
+        block  = { "{" ~ WS* ~ block_inline* ~ WS* ~ inline? ~ WS* ~ "}" }
+
+        // within an expression block, newlines are meaningful syntax
+        block_inline = { inline ~ WS_NO_NL* ~ expr_end } 
+        inline = { atom ~ (WS* ~ infix ~ WS* ~ atom)* }
+
         infix = _{ add | subtract | multiply | divide | assign }
             add = { "+" }
             subtract = { "-" }
             multiply = { "*" }
             divide = { "/" }
             assign = { "<-" }
-        expr_end = _{ ";" | NEWLINE | eoi }
+
         atom = _{ 
               kw_function
             | kw_if_else
@@ -27,17 +46,17 @@ WHITESPACE = _{ " " | "\\t" }
             | number 
             | string_expr 
             | symbol 
-            | "(" ~ expr ~ ")" 
+            | "(" ~ WS* ~ expr ~ WS* ~ ")"
             | block 
         }
 
 // keyworded (kw) syntax
 
-    kw_function = { "function" ~ list ~ expr }
-    kw_if_else = { "if" ~ "(" ~ expr ~ ")" ~ expr ~ ("else" ~ expr)? }
-    kw_for = { "for" ~ "(" ~ symbol ~ " in " ~ expr ~ ")" ~ expr }
-    kw_while = { "while" ~ "(" ~ expr ~ ")" ~ expr }
-    kw_repeat = { "repeat" ~ expr }
+    kw_function = { "function" ~ WS* ~ list ~ WS* ~ expr }
+    kw_if_else = { "if" ~ WS* ~ "(" ~ WS* ~ expr ~ WS* ~ ")" ~ WS* ~ expr ~ WS* ~ ("else" ~ WS* ~ expr)? }
+    kw_for = { "for" ~ WS* ~ "(" ~ WS* ~ symbol ~ WS+ ~ "in" ~ WS+ ~ expr ~ WS* ~ ")" ~ WS* ~ expr }
+    kw_while = { "while" ~ WS* ~ "(" ~ WS* ~ expr ~ WS* ~ ")" ~ WS* ~ expr }
+    kw_repeat = { "repeat" ~ WS* ~ expr }
 
 // reserved value types
 
@@ -70,8 +89,8 @@ WHITESPACE = _{ " " | "\\t" }
         symbol_backticked = ${ "`" ~ (!"`" ~ ANY)* ~ "`" }
         symbol_ident = ${ ( ASCII_ALPHA | "." | "_" ) ~ ( ASCII_ALPHANUMERIC | "." | "_" )* }
 
-    call = { symbol ~ list }
-        list = { "(" ~ ((elem ~ ",")* ~ elem)? ~ ")" }
+    call = { symbol ~ WS* ~ list }
+        list = { "(" ~ ((WS* ~ elem ~ WS* ~ ",")* ~ WS* ~ elem)? ~ WS* ~ ")" }
         ellipsis = { "..." }
         elem = _{ ellipsis | named | symbol | expr }
-        named = { symbol ~ "=" ~ expr }
+        named = { symbol ~ WS* ~ "=" ~ WS* ~ expr }

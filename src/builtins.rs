@@ -101,6 +101,87 @@ impl Display for dyn Callable {
 }
 
 #[derive(Debug, Clone)]
+pub struct RExprIf;
+
+impl Callable for RExprIf {
+    fn call(&self, args: RExprList, env: &mut Environment) -> Result<R, RError> {
+        let mut args = args.values.into_iter();
+        let cond = eval(args.next().unwrap(), env)?;
+        match cond {
+            R::Logical(vec) => match vec[..] {
+                [true] => eval(args.next().unwrap(), env),
+                [false] => eval(args.skip(1).next().unwrap_or(RExpr::Null), env),
+                [_, ..] => Err(RError::ConditionIsNotScalar()),
+                [] => unreachable!(),
+            },
+            _ => Err(RError::NotInterpretableAsLogical()),
+        }
+    }
+
+    fn callable_clone(&self) -> Box<dyn Callable> {
+        Box::new(self.clone())
+    }
+
+    fn callable_as_str(&self) -> &str {
+        "if"
+    }
+
+    fn call_as_str(&self, args: &RExprList) -> String {
+        if let Some(else_expr) = args.values.get(2) {
+            format!(
+                "if ({}) {} else {}",
+                args.values[0], args.values[1], else_expr
+            )
+        } else {
+            format!("if ({}) {}", args.values[0], args.values[1])
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct RExprFor;
+
+impl Callable for RExprFor {
+    fn call(&self, args: RExprList, env: &mut Environment) -> Result<R, RError> {
+        let mut args = args.into_iter();
+
+        let (Some(var), iter_expr) = args.next().unwrap() else {
+            unreachable!()
+        };
+
+        let (_, body) = args.next().unwrap();
+        let iter = eval(iter_expr, env)?;
+
+        let mut result = R::Null;
+        let mut index = 0;
+
+        while let Some(value) = iter.get(index) {
+            env.insert(var.clone(), value);
+            result = eval(body.clone(), env)?;
+            index += 1;
+        }
+
+        Ok(result)
+    }
+
+    fn callable_clone(&self) -> Box<dyn Callable> {
+        Box::new(self.clone())
+    }
+
+    fn callable_as_str(&self) -> &str {
+        "for"
+    }
+
+    fn call_as_str(&self, args: &RExprList) -> String {
+        let Some(sym) = &args.keys[0] else {
+            unreachable!()
+        };
+
+        format!("for ({} in {}) {}", sym, args.values[0], args.values[1])
+    }
+}
+
+#[derive(Debug, Clone)]
 pub struct RExprBlock;
 
 impl Callable for RExprBlock {
