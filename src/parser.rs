@@ -112,15 +112,28 @@ pub fn parse_for(pair: Pair<Rule>) -> RExpr {
     )
 }
 
+fn parse_while(pair: Pair<Rule>) -> RExpr {
+    let mut inner = pair.into_inner();
+    let cond = parse_expr(inner.next().unwrap().into_inner());
+    let body = parse_expr(inner.next().unwrap().into_inner());
+    RExpr::Call(Box::new(RExprWhile), RExprList::from(vec![cond, body]))
+}
+
+fn parse_repeat(pair: Pair<Rule>) -> RExpr {
+    let mut inner = pair.into_inner();
+    let body = parse_expr(inner.next().unwrap().into_inner());
+    RExpr::Call(Box::new(RExprRepeat), RExprList::from(vec![body]))
+}
+
 pub fn parse_expr(pairs: Pairs<Rule>) -> RExpr {
     PRATT_PARSER
         .map_primary(|primary| {
             match primary.as_rule() {
                 Rule::kw_function => parse_function(primary),
-                Rule::kw_while => unimplemented!(),
+                Rule::kw_while => parse_while(primary),
                 Rule::kw_for => parse_for(primary),
                 Rule::kw_if_else => parse_if_else(primary),
-                Rule::kw_repeat => unimplemented!(),
+                Rule::kw_repeat => parse_repeat(primary),
                 Rule::call => parse_call(primary),
                 Rule::expr => parse_expr(primary.into_inner()),
                 Rule::inline => parse_expr(primary.into_inner()),

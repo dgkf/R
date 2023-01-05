@@ -182,6 +182,79 @@ impl Callable for RExprFor {
 }
 
 #[derive(Debug, Clone)]
+pub struct RExprWhile;
+
+impl Callable for RExprWhile {
+    fn call(&self, args: RExprList, env: &mut Environment) -> Result<R, RError> {
+        let mut args = args.values.into_iter();
+        let cond = args.next().unwrap();
+        let body = args.next().unwrap();
+
+        let mut result = R::Null;
+        loop {
+            let cond_result = eval(cond.clone(), env)?;
+            if let R::Logical(vec) = cond_result {
+                match vec[..] {
+                    [true] => {
+                        result = eval(body.clone(), env)?;
+                        continue;
+                    }
+                    [false] => break,
+                    _ => (),
+                }
+            }
+
+            return Err(RError::ConditionIsNotScalar());
+        }
+
+        Ok(result)
+    }
+
+    fn callable_clone(&self) -> Box<dyn Callable> {
+        Box::new(self.clone())
+    }
+
+    fn callable_as_str(&self) -> &str {
+        "while"
+    }
+
+    fn call_as_str(&self, args: &RExprList) -> String {
+        format!("while ({}) {}", args.values[0], args.values[1])
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct RExprRepeat;
+
+impl Callable for RExprRepeat {
+    fn call(&self, args: RExprList, env: &mut Environment) -> Result<R, RError> {
+        let mut args = args.values.into_iter();
+        let body = args.next().unwrap();
+
+        let mut result = R::Null;
+        loop {
+            result = eval(body.clone(), env)?;
+            match result {
+                // Need to add break/continue before we can handle escaping from loops
+                _ => todo!(),
+            }
+        }
+    }
+
+    fn callable_clone(&self) -> Box<dyn Callable> {
+        Box::new(self.clone())
+    }
+
+    fn callable_as_str(&self) -> &str {
+        "repeat"
+    }
+
+    fn call_as_str(&self, args: &RExprList) -> String {
+        format!("repeat {}", args.values[1])
+    }
+}
+
+#[derive(Debug, Clone)]
 pub struct RExprBlock;
 
 impl Callable for RExprBlock {
