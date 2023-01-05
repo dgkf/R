@@ -6,6 +6,8 @@ use crate::builtins::*;
 #[derive(Debug, Clone)]
 pub enum RExpr {
     Null,
+    Continue,
+    Break,
     Bool(bool),
     Number(f32),
     Integer(i32),
@@ -21,6 +23,8 @@ impl fmt::Display for RExpr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             RExpr::Null => write!(f, "NULL"),
+            RExpr::Break => write!(f, "break"),
+            RExpr::Continue => write!(f, "continue"),
             RExpr::Bool(true) => write!(f, "TRUE"),
             RExpr::Bool(false) => write!(f, "FALSE"),
             RExpr::Number(x) => write!(f, "{}", x),

@@ -2,10 +2,9 @@ use std::rc::Rc;
 
 // TODO: move eval to builtin accepting R::Expr to remove ast dependence, using just lang
 use crate::ast::{RExpr, RExprList};
-use crate::error::*;
 use crate::lang::*;
 
-pub fn eval(expr: RExpr, env: &mut Environment) -> Result<R, RError> {
+pub fn eval(expr: RExpr, env: &mut Environment) -> EvalResult {
     match expr {
         RExpr::Null => Ok(R::Null),
         RExpr::Number(x) => Ok(R::Numeric(vec![x])),
@@ -16,29 +15,13 @@ pub fn eval(expr: RExpr, env: &mut Environment) -> Result<R, RError> {
         RExpr::Call(what, list) => Ok(what.call(list, env)?),
         RExpr::Symbol(name) => env.get(name),
         RExpr::List(x) => Ok(eval_rexprlist(x, &mut Rc::clone(env))?),
+        RExpr::Break => Err(RSignal::Condition(Cond::Break)),
+        RExpr::Continue => Err(RSignal::Condition(Cond::Continue)),
         x => unimplemented!("eval({})", x),
     }
 }
 
-// pub fn expand_ellipsis(args: R, env: &Environment) -> Result<RExprList, RError> {
-//     if let Some(i) = args.position_ellipsis() {
-//         let mut args = args.clone();
-//         args.remove(i);
-//
-//         let R::List(ellipsis) = env.get_ellipsis()? else {
-//             unreachable!();
-//         };
-//
-//         args.keys.splice(i..i, ellipsis.keys);
-//         args.values.splice(i..i, ellipsis.values);
-//
-//         Ok(args)
-//     } else {
-//         Ok(args)
-//     }
-// }
-
-pub fn eval_rexprlist(x: RExprList, env: &mut Environment) -> Result<R, RError> {
+pub fn eval_rexprlist(x: RExprList, env: &mut Environment) -> EvalResult {
     Ok(R::List(
         x.into_iter()
             .flat_map(|pair| match pair {

@@ -4,7 +4,10 @@ use crate::utils::eval;
 
 use core::fmt;
 use std::cmp::max;
+use std::fmt::Display;
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
+
+pub type EvalResult = Result<R, RSignal>;
 
 #[derive(Debug, Clone)]
 pub enum R {
@@ -25,6 +28,28 @@ pub enum R {
     Closure(RExpr, Environment),
     Function(RExprList, RExpr, Environment),
     Environment(Environment),
+}
+
+#[derive(Debug, Clone)]
+pub enum Cond {
+    Break,
+    Continue,
+    Return(R),
+}
+
+#[derive(Debug, Clone)]
+pub enum RSignal {
+    Condition(Cond),
+    Error(RError),
+}
+
+impl Display for RSignal {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            RSignal::Condition(_) => write!(f, "Signal used at top level"),
+            RSignal::Error(e) => write!(f, "{}", e),
+        }
+    }
 }
 
 impl R {
@@ -113,6 +138,37 @@ impl R {
     }
 }
 
+impl TryInto<bool> for R {
+    type Error = RSignal;
+
+    fn try_into(self) -> Result<bool, Self::Error> {
+        match self {
+            R::Logical(vec) => match vec[..] {
+                [true] => Ok(true),
+                [false] => Ok(false),
+                _ => Err(RSignal::Error(RError::ConditionIsNotScalar)),
+            },
+            R::Numeric(vec) => match vec[..] {
+                [i] if i == 0.0 => Ok(true),
+                [_] => Ok(false),
+                _ => Err(RSignal::Error(RError::ConditionIsNotScalar)),
+            },
+            R::Integer(vec) => match vec[..] {
+                [0] => Ok(true),
+                [_] => Ok(false),
+                _ => Err(RSignal::Error(RError::ConditionIsNotScalar)),
+            },
+            R::Character(vec) => match &vec[..] {
+                [x] if x.as_str() == "TRUE" => Ok(true),
+                [x] if x.as_str() == "FALSE" => Ok(false),
+                [_] => Ok(false), // by R standards, this is "NA"
+                _ => Err(RSignal::Error(RError::ConditionIsNotScalar)),
+            },
+            _ => Err(RSignal::Error(RError::CannotBeCoercedToLogical)),
+        }
+    }
+}
+
 impl From<Logical> for R {
     fn from(v: Logical) -> Self {
         R::Logical(v)
@@ -155,6 +211,26 @@ impl fmt::Display for R {
     }
 }
 
+// // TODO: allow different internal types?
+//
+// pub enum MaybeNA<T> {
+//     NA,
+//     A(T)
+// }
+//
+// pub enum MaybeFinite<T> {
+//     NA,
+//     NaN,
+//     Inf,
+//     NegInf,
+//     Finite(T),
+// }
+//
+// pub enum Numeric<T> {
+//     Scalar(    MaybeNA<MaybeFinite<T>> ),
+//     Vector(Vec<MaybeNA<MaybeFinite<T>>>),
+// }
+
 pub type Logical = Vec<bool>;
 pub type Numeric = Vec<f32>;
 pub type Integer = Vec<i32>;
@@ -170,7 +246,7 @@ pub struct Env {
 }
 
 impl Env {
-    pub fn get(&self, name: String) -> Result<R, RError> {
+    pub fn get(&self, name: String) -> EvalResult {
         // search in this environment for value by name
         if let Some(value) = self.values.borrow().get(&name) {
             let result = value.clone();
@@ -185,15 +261,15 @@ impl Env {
 
         // otherwise, throw error
         } else {
-            Err(RError::VariableNotFound(name))
+            Err(RSignal::Error(RError::VariableNotFound(name)))
         }
     }
 
-    pub fn get_ellipsis(&self) -> Result<R, RError> {
+    pub fn get_ellipsis(&self) -> EvalResult {
         if let Ok(ellipsis) = self.get("...".to_string()) {
             Ok(ellipsis)
         } else {
-            Err(RError::IncorrectContext("...".to_string()))
+            Err(RSignal::Error(RError::IncorrectContext("...".to_string())))
         }
     }
 

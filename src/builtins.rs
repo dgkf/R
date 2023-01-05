@@ -88,7 +88,7 @@ impl Clone for Box<dyn Callable> {
 }
 
 pub trait Callable {
-    fn call(&self, args: RExprList, env: &mut Environment) -> Result<R, RError>;
+    fn call(&self, args: RExprList, env: &mut Environment) -> EvalResult;
     fn callable_clone(&self) -> Box<dyn Callable>;
     fn callable_as_str(&self) -> &str;
     fn call_as_str(&self, args: &RExprList) -> String;
@@ -104,17 +104,17 @@ impl Display for dyn Callable {
 pub struct RExprIf;
 
 impl Callable for RExprIf {
-    fn call(&self, args: RExprList, env: &mut Environment) -> Result<R, RError> {
+    fn call(&self, args: RExprList, env: &mut Environment) -> EvalResult {
         let mut args = args.values.into_iter();
         let cond = eval(args.next().unwrap(), env)?;
         match cond {
             R::Logical(vec) => match vec[..] {
                 [true] => eval(args.next().unwrap(), env),
                 [false] => eval(args.skip(1).next().unwrap_or(RExpr::Null), env),
-                [_, ..] => Err(RError::ConditionIsNotScalar()),
+                [_, ..] => Err(RSignal::Error(RError::ConditionIsNotScalar)),
                 [] => unreachable!(),
             },
-            _ => Err(RError::NotInterpretableAsLogical()),
+            _ => Err(RSignal::Error(RError::NotInterpretableAsLogical)),
         }
     }
 
@@ -142,7 +142,7 @@ impl Callable for RExprIf {
 pub struct RExprFor;
 
 impl Callable for RExprFor {
-    fn call(&self, args: RExprList, env: &mut Environment) -> Result<R, RError> {
+    fn call(&self, args: RExprList, env: &mut Environment) -> EvalResult {
         let mut args = args.into_iter();
 
         let (Some(var), iter_expr) = args.next().unwrap() else {
@@ -152,13 +152,25 @@ impl Callable for RExprFor {
         let (_, body) = args.next().unwrap();
         let iter = eval(iter_expr, env)?;
 
+        let mut eval_result: EvalResult;
         let mut result = R::Null;
         let mut index = 0;
 
         while let Some(value) = iter.get(index) {
-            env.insert(var.clone(), value);
-            result = eval(body.clone(), env)?;
             index += 1;
+
+            env.insert(var.clone(), value);
+            eval_result = eval(body.clone(), env);
+
+            match eval_result {
+                Err(RSignal::Condition(Cond::Break)) => break,
+                Err(RSignal::Condition(Cond::Continue)) => continue,
+                Err(RSignal::Condition(Cond::Return(_))) => return eval_result,
+                Err(RSignal::Error(_)) => return eval_result,
+                _ => (),
+            }
+
+            result = eval_result.expect("unhandled eval err");
         }
 
         Ok(result)
@@ -185,26 +197,34 @@ impl Callable for RExprFor {
 pub struct RExprWhile;
 
 impl Callable for RExprWhile {
-    fn call(&self, args: RExprList, env: &mut Environment) -> Result<R, RError> {
+    fn call(&self, args: RExprList, env: &mut Environment) -> EvalResult {
         let mut args = args.values.into_iter();
         let cond = args.next().unwrap();
         let body = args.next().unwrap();
 
+        let mut eval_result: EvalResult;
         let mut result = R::Null;
+
         loop {
+            // handle while condition
             let cond_result = eval(cond.clone(), env)?;
-            if let R::Logical(vec) = cond_result {
-                match vec[..] {
-                    [true] => {
-                        result = eval(body.clone(), env)?;
-                        continue;
-                    }
-                    [false] => break,
-                    _ => (),
-                }
+            if cond_result.try_into()? {
+                eval_result = eval(body.clone(), env);
+            } else {
+                break;
             }
 
-            return Err(RError::ConditionIsNotScalar());
+            // handle control flow signals during execution
+            match eval_result {
+                Err(RSignal::Condition(Cond::Break)) => break,
+                Err(RSignal::Condition(Cond::Continue)) => continue,
+                Err(RSignal::Condition(Cond::Return(_))) => return eval_result,
+                Err(RSignal::Error(_)) => return eval_result,
+                _ => (),
+            }
+
+            // update result
+            result = eval_result.expect("unhandled eval err");
         }
 
         Ok(result)
@@ -227,18 +247,30 @@ impl Callable for RExprWhile {
 pub struct RExprRepeat;
 
 impl Callable for RExprRepeat {
-    fn call(&self, args: RExprList, env: &mut Environment) -> Result<R, RError> {
+    fn call(&self, args: RExprList, env: &mut Environment) -> EvalResult {
         let mut args = args.values.into_iter();
         let body = args.next().unwrap();
 
+        let mut eval_result: EvalResult;
         let mut result = R::Null;
+
         loop {
-            result = eval(body.clone(), env)?;
-            match result {
-                // Need to add break/continue before we can handle escaping from loops
-                _ => todo!(),
+            eval_result = eval(body.clone(), env);
+
+            // handle control flow signals during execution
+            match eval_result {
+                Err(RSignal::Condition(Cond::Break)) => break,
+                Err(RSignal::Condition(Cond::Continue)) => continue,
+                Err(RSignal::Condition(Cond::Return(_))) => return eval_result,
+                Err(RSignal::Error(_)) => return eval_result,
+                _ => (),
             }
+
+            // update result
+            result = eval_result.expect("unhandled eval err");
         }
+
+        Ok(result)
     }
 
     fn callable_clone(&self) -> Box<dyn Callable> {
@@ -258,7 +290,7 @@ impl Callable for RExprRepeat {
 pub struct RExprBlock;
 
 impl Callable for RExprBlock {
-    fn call(&self, args: RExprList, env: &mut Environment) -> Result<R, RError> {
+    fn call(&self, args: RExprList, env: &mut Environment) -> EvalResult {
         let mut value = Ok(R::Null);
         for expr in args.values {
             let result = eval(expr, env);
@@ -294,7 +326,7 @@ impl Callable for RExprBlock {
 pub struct InfixAssign;
 
 impl Callable for InfixAssign {
-    fn call(&self, args: RExprList, env: &mut Environment) -> Result<R, RError> {
+    fn call(&self, args: RExprList, env: &mut Environment) -> EvalResult {
         let (RExpr::Symbol(s), value) = args.unnamed_binary_args() else {
             unimplemented!()
         };
@@ -326,7 +358,7 @@ impl Callable for InfixAssign {
 pub struct InfixAdd;
 
 impl Callable for InfixAdd {
-    fn call(&self, mut args: RExprList, env: &mut Environment) -> Result<R, RError> {
+    fn call(&self, mut args: RExprList, env: &mut Environment) -> EvalResult {
         // TODO: emit proper error
         let rhs = args.values.pop().unwrap_or(RExpr::Number(0.0));
         let lhs = args.values.pop().unwrap_or(RExpr::Number(0.0));
@@ -383,16 +415,14 @@ impl Callable for InfixAdd {
 #[derive(Debug, Clone)]
 pub struct Name(String);
 
-pub fn primitive(
-    name: &str,
-) -> Option<Box<dyn Fn(RExprList, &mut Environment) -> Result<R, RError>>> {
+pub fn primitive(name: &str) -> Option<Box<dyn Fn(RExprList, &mut Environment) -> EvalResult>> {
     match name {
         "c" => Some(Box::new(c)),
         _ => None,
     }
 }
 
-pub fn c(args: RExprList, env: &mut Environment) -> Result<R, RError> {
+pub fn c(args: RExprList, env: &mut Environment) -> EvalResult {
     let R::List(vals) = eval_rexprlist(args, env)? else {
         unreachable!()
     };
@@ -409,7 +439,7 @@ pub fn c(args: RExprList, env: &mut Environment) -> Result<R, RError> {
 }
 
 impl Callable for String {
-    fn call(&self, args: RExprList, env: &mut Environment) -> Result<R, RError> {
+    fn call(&self, args: RExprList, env: &mut Environment) -> EvalResult {
         if let Some(f) = primitive(self) {
             f(args, env)
         } else if let R::Function(formals, body, _) = env.get(self.clone())? {

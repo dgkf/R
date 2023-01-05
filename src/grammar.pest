@@ -18,11 +18,11 @@ WS = _{ WS_NO_NL | NEWLINE }
 
 // expression basics
 
-    expr = { block | inline }
+    expr = { block | block_inline | inline }
         block  = { "{" ~ WS* ~ block_inline* ~ WS* ~ inline? ~ WS* ~ "}" }
 
         // within an expression block, newlines are meaningful syntax
-        block_inline = { inline ~ WS_NO_NL* ~ expr_end } 
+        block_inline = { inline ~ WS_NO_NL* ~ expr_end ~ WS* } 
         inline = { atom ~ (WS* ~ infix ~ WS* ~ atom)* }
 
         infix = _{ add | subtract | multiply | divide | assign }
@@ -34,6 +34,8 @@ WS = _{ WS_NO_NL | NEWLINE }
 
         atom = _{ 
               kw_function
+            | kw_break
+            | kw_continue
             | kw_if_else
             | kw_for
             | kw_while
@@ -57,6 +59,8 @@ WS = _{ WS_NO_NL | NEWLINE }
     kw_for = { "for" ~ WS* ~ "(" ~ WS* ~ symbol ~ WS+ ~ "in" ~ WS+ ~ expr ~ WS* ~ ")" ~ WS* ~ expr }
     kw_while = { "while" ~ WS* ~ "(" ~ WS* ~ expr ~ WS* ~ ")" ~ WS* ~ expr }
     kw_repeat = { "repeat" ~ WS* ~ expr }
+    kw_break = { "break" }
+    kw_continue = { "continue" }
 
 // reserved value types
 

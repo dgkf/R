@@ -1,15 +1,17 @@
+use crate::lang::*;
 use crate::parser::*;
 
 use core::fmt;
 use pest::error::LineColLocation::Pos;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum RError {
     VariableNotFound(String),
     IncorrectContext(String),
     ParseFailure(pest::error::Error<Rule>),
-    NotInterpretableAsLogical(),
-    ConditionIsNotScalar(),
+    NotInterpretableAsLogical,
+    ConditionIsNotScalar,
+    CannotBeCoercedToLogical,
 }
 
 impl RError {
@@ -21,11 +23,14 @@ impl RError {
                 Pos((line, col)) => format!("Parse failed at Line {}, Column {}", line, col),
                 _ => format!("Parse failed at {:?}", e.line_col),
             },
-            RError::NotInterpretableAsLogical() => {
+            RError::NotInterpretableAsLogical => {
                 format!("argument is not interpretable as logical")
             }
-            RError::ConditionIsNotScalar() => {
+            RError::ConditionIsNotScalar => {
                 format!("the condition has length > 1")
+            }
+            RError::CannotBeCoercedToLogical => {
+                format!("object cannot be coerced to type 'logical'")
             }
         }
     }

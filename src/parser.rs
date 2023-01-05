@@ -129,6 +129,10 @@ pub fn parse_expr(pairs: Pairs<Rule>) -> RExpr {
     PRATT_PARSER
         .map_primary(|primary| {
             match primary.as_rule() {
+                Rule::kw_break => RExpr::Break,
+                Rule::kw_continue => RExpr::Continue,
+                Rule::null => RExpr::Null,
+                Rule::ellipsis => RExpr::Ellipsis,
                 Rule::kw_function => parse_function(primary),
                 Rule::kw_while => parse_while(primary),
                 Rule::kw_for => parse_for(primary),
@@ -146,8 +150,6 @@ pub fn parse_expr(pairs: Pairs<Rule>) -> RExpr {
                 Rule::integer => RExpr::Integer(primary.as_str().parse::<i32>().unwrap()),
                 Rule::string_expr => parse_expr(primary.into_inner()), // TODO: improve grammar to avoid unnecessary parse
                 Rule::string => RExpr::String(String::from(primary.as_str())),
-                Rule::null => RExpr::Null,
-                Rule::ellipsis => RExpr::Ellipsis,
                 Rule::symbol_ident => parse_symbol(primary),
                 Rule::symbol_backticked => RExpr::Symbol(String::from(primary.as_str())),
                 rule => unreachable!("Expr::parse expected atom, found {:?}", rule),
