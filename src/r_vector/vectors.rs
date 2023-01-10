@@ -113,8 +113,8 @@ impl TryInto<bool> for RVector {
         use RVector::*;
         match self {
             Numeric(v) => match v[..] {
-                [Some(vi)] if vi == 0_f64 => Ok(true),
-                [Some(_)] => Ok(false),
+                [Some(vi)] if vi == 0_f64 => Ok(false),
+                [Some(_)] => Ok(true),
                 [NA] => Err(()), // missing value where TRUE/FALSE needed
                 [] => Err(()),   // argument is of length zero
                 _ => Err(()),    // condition has length > 1
