@@ -1,16 +1,17 @@
-eoi  = _{ !ANY }  // since EOI does not parse silently, define our own
-expr_end = _{ ";" | NEWLINE | eoi }
-
+//
 // Since newlines are sometimes meaningful syntax, we need to specify what 
-// whitespace is permitted where
+// whitespace is permitted where. 
+//
+// This might be easier in future versions of `pest`, though the addition of 
+// this feature has not moved much since the middle of 2022:
+// https://github.com/pest-parser/pest/issues/271
+//
 
-// WHITESPACE = _{ " " | "\\t" | NEWLINE }
-// WHITESPACE_NO_NL = _{ " " | "\\t" }
+// whitespace helpers
 
-WS_NO_NL = _{ " " | "\\t" }
-WS = _{ WS_NO_NL | NEWLINE }
-
-
+    WS_NO_NL = _{ " " | "\\t" }
+    WS = _{ WS_NO_NL | NEWLINE }
+    eoi  = _{ !ANY }  // since EOI does not parse silently, define our own
 
 // repl
 
@@ -24,6 +25,7 @@ WS = _{ WS_NO_NL | NEWLINE }
         // within an expression block, newlines are meaningful syntax
         block_inline = { inline ~ WS_NO_NL* ~ expr_end ~ WS* } 
         inline = { atom ~ (WS* ~ infix ~ WS* ~ atom)* }
+        expr_end = _{ ";" | NEWLINE | eoi }
 
         infix = _{ add | subtract | multiply | divide | assign }
             add = { "+" }
@@ -42,6 +44,8 @@ WS = _{ WS_NO_NL | NEWLINE }
             | kw_repeat
             | call 
             | null
+            | na
+            | inf
             | boolean_true
             | boolean_false
             | integer_expr
@@ -65,6 +69,8 @@ WS = _{ WS_NO_NL | NEWLINE }
 // reserved value types
 
     null = { "NULL" }
+    na = { "NA" }
+    inf = { "Inf" }
     boolean_true = { "TRUE" }
     boolean_false = { "FALSE" }
 
@@ -96,5 +102,5 @@ WS = _{ WS_NO_NL | NEWLINE }
     call = { symbol ~ WS* ~ list }
         list = { "(" ~ ((WS* ~ elem ~ WS* ~ ",")* ~ WS* ~ elem)? ~ WS* ~ ")" }
         ellipsis = { "..." }
-        elem = _{ ellipsis | named | symbol | expr }
+        elem = _{ ellipsis | named | expr }
         named = { symbol ~ WS* ~ "=" ~ WS* ~ expr }

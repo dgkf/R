@@ -45,14 +45,6 @@ pub fn parse_list(pair: Pair<Rule>) -> RExprList {
         .into_inner()
         .map(|i| match i.as_rule() {
             Rule::named => parse_named(i),
-            Rule::symbol_backticked => (
-                Some(String::from(i.to_string())),
-                RExpr::Symbol(String::from(i.as_str())),
-            ),
-            Rule::symbol_ident => (
-                Some(String::from(i.as_str())),
-                RExpr::Symbol(String::from(i.as_str())),
-            ),
             Rule::expr | Rule::inline | Rule::block => (None, parse_expr(i.into_inner())),
             Rule::ellipsis => (None, RExpr::Ellipsis),
             rule => unreachable!("Expected named or unnamed arguments, found {:?}", rule),
@@ -132,6 +124,7 @@ pub fn parse_expr(pairs: Pairs<Rule>) -> RExpr {
                 Rule::kw_break => RExpr::Break,
                 Rule::kw_continue => RExpr::Continue,
                 Rule::null => RExpr::Null,
+                Rule::na => RExpr::NA,
                 Rule::ellipsis => RExpr::Ellipsis,
                 Rule::kw_function => parse_function(primary),
                 Rule::kw_while => parse_while(primary),
@@ -146,7 +139,7 @@ pub fn parse_expr(pairs: Pairs<Rule>) -> RExpr {
                 Rule::list => RExpr::List(parse_list(primary)),
                 Rule::boolean_true => RExpr::Bool(true),
                 Rule::boolean_false => RExpr::Bool(false),
-                Rule::number => RExpr::Number(primary.as_str().parse::<f32>().unwrap()),
+                Rule::number => RExpr::Number(primary.as_str().parse::<f64>().unwrap()),
                 Rule::integer => RExpr::Integer(primary.as_str().parse::<i32>().unwrap()),
                 Rule::string_expr => parse_expr(primary.into_inner()), // TODO: improve grammar to avoid unnecessary parse
                 Rule::string => RExpr::String(String::from(primary.as_str())),
@@ -161,9 +154,9 @@ pub fn parse_expr(pairs: Pairs<Rule>) -> RExpr {
 
             let op: Box<dyn Callable> = match op.as_rule() {
                 Rule::add => Box::new(InfixAdd),
-                Rule::subtract => Box::new("-".to_string()),
-                Rule::multiply => Box::new("*".to_string()),
-                Rule::divide => Box::new("/".to_string()),
+                Rule::subtract => Box::new(InfixSub),
+                Rule::multiply => Box::new(InfixMul),
+                Rule::divide => Box::new(InfixDiv),
                 Rule::assign => Box::new(InfixAssign),
                 rule => unreachable!("Expr::parse expected infix operation, found {:?}", rule),
             };

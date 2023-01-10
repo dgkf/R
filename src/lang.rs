@@ -1,9 +1,9 @@
 use crate::ast::*;
 use crate::error::*;
+use crate::r_vector::vectors::*;
 use crate::utils::eval;
 
 use core::fmt;
-use std::cmp::max;
 use std::fmt::Display;
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
@@ -11,15 +11,8 @@ pub type EvalResult = Result<R, RSignal>;
 
 #[derive(Debug, Clone)]
 pub enum R {
-    // Atomic types
-    Logical(Logical),
-    Numeric(Numeric),
-    Integer(Integer),
-    Character(Character),
-    // Complex(Complex),
-    // Raw(Raw),
-
     // Data structures
+    Vector(RVector),
     Null,
     List(List),
 
@@ -55,48 +48,23 @@ impl Display for RSignal {
 impl R {
     pub fn as_integer(self) -> R {
         match self {
-            R::Integer(_) => self,
-            R::Logical(v) => R::Integer(v.iter().map(|&i| i as i32).collect()),
-            R::Numeric(v) => R::Integer(v.iter().map(|&i| i as i32).collect()),
+            R::Vector(v) => R::Vector(v.as_integer()),
             atom => unreachable!("{:?} cannot be coerced to integer", atom),
         }
     }
 
     pub fn as_numeric(self) -> R {
         match self {
-            R::Numeric(_) => self,
-            R::Logical(v) => R::Numeric(v.iter().map(|&i| i as i32 as f32).collect()),
-            R::Integer(v) => R::Numeric(v.iter().map(|&i| i as f32).collect()),
+            R::Vector(v) => R::Vector(v.as_numeric()),
             atom => unreachable!("{:?} cannot be coerced to numeric", atom),
         }
     }
 
     pub fn get(&self, index: usize) -> Option<R> {
         match self {
-            R::Logical(x) => {
-                if let Some(val) = x.get(index) {
-                    Some(R::Logical(vec![*val]))
-                } else {
-                    None
-                }
-            }
-            R::Numeric(x) => {
-                if let Some(val) = x.get(index) {
-                    Some(R::Numeric(vec![*val]))
-                } else {
-                    None
-                }
-            }
-            R::Integer(x) => {
-                if let Some(val) = x.get(index) {
-                    Some(R::Integer(vec![*val]))
-                } else {
-                    None
-                }
-            }
-            R::Character(x) => {
-                if let Some(val) = x.get(index) {
-                    Some(R::Character(vec![val.clone()]))
+            R::Vector(v) => {
+                if let Some(v) = v.get(index) {
+                    Some(R::Vector(v))
                 } else {
                     None
                 }
@@ -109,33 +77,6 @@ impl R {
             R::Environment(_) => None,
         }
     }
-
-    pub fn format_numeric(f: &mut fmt::Formatter<'_>, x: &Numeric) -> fmt::Result {
-        let n = x.len();
-        let nlen = format!("{}", n).len();
-
-        if n == 0 {
-            return write!(f, "numeric(0)");
-        }
-
-        let x_strs = x.iter().map(|xi| format!("{}", xi));
-        let max_len = x_strs.clone().fold(0, |max_len, xi| max(max_len, xi.len()));
-
-        let mut col = 0;
-        x_strs.enumerate().try_for_each(|(i, x_str)| {
-            col += max_len + 1;
-            if i == 0 {
-                write!(f, "{:>3$}[{}] {:>4$} ", "", i + 1, x_str, nlen - 1, max_len)
-            } else if col > 80 - nlen - 3 {
-                col = 0;
-                let i_str = format!("{}", i + 1);
-                let gutter = nlen - i_str.len();
-                write!(f, "\n{:>3$}[{}] {:>4$} ", "", i_str, x_str, gutter, max_len)
-            } else {
-                write!(f, "{:>1$} ", x_str, max_len)
-            }
-        })
-    }
 }
 
 impl TryInto<bool> for R {
@@ -143,64 +84,20 @@ impl TryInto<bool> for R {
 
     fn try_into(self) -> Result<bool, Self::Error> {
         match self {
-            R::Logical(vec) => match vec[..] {
-                [true] => Ok(true),
-                [false] => Ok(false),
-                _ => Err(RSignal::Error(RError::ConditionIsNotScalar)),
-            },
-            R::Numeric(vec) => match vec[..] {
-                [i] if i == 0.0 => Ok(true),
-                [_] => Ok(false),
-                _ => Err(RSignal::Error(RError::ConditionIsNotScalar)),
-            },
-            R::Integer(vec) => match vec[..] {
-                [0] => Ok(true),
-                [_] => Ok(false),
-                _ => Err(RSignal::Error(RError::ConditionIsNotScalar)),
-            },
-            R::Character(vec) => match &vec[..] {
-                [x] if x.as_str() == "TRUE" => Ok(true),
-                [x] if x.as_str() == "FALSE" => Ok(false),
-                [_] => Ok(false), // by R standards, this is "NA"
-                _ => Err(RSignal::Error(RError::ConditionIsNotScalar)),
+            R::Vector(v) => match TryInto::<bool>::try_into(v) {
+                Err(_) => Err(RSignal::Error(RError::CannotBeCoercedToLogical)),
+                Ok(ok) => Ok(ok),
             },
             _ => Err(RSignal::Error(RError::CannotBeCoercedToLogical)),
         }
     }
 }
 
-impl From<Logical> for R {
-    fn from(v: Logical) -> Self {
-        R::Logical(v)
-    }
-}
-
-impl From<Numeric> for R {
-    fn from(v: Numeric) -> Self {
-        R::Numeric(v)
-    }
-}
-
-impl From<Integer> for R {
-    fn from(v: Integer) -> Self {
-        R::Integer(v)
-    }
-}
-
-impl From<Character> for R {
-    fn from(v: Character) -> Self {
-        R::Character(v)
-    }
-}
-
 impl fmt::Display for R {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            R::Vector(v) => write!(f, "{}", v),
             R::Null => write!(f, "NULL"),
-            R::Logical(x) => write!(f, "[1] {}", x[0]),
-            R::Numeric(x) => R::format_numeric(f, x),
-            R::Integer(x) => write!(f, "[1] {}", x[0]),
-            R::Character(x) => write!(f, "[1] \"{}\"", x[0]),
             R::Environment(x) => write!(f, "<environment {:?}>", x.values.as_ptr()),
             R::Function(formals, body, parent) => {
                 let parent_env = R::Environment(Rc::clone(parent));

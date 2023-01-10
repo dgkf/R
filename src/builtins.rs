@@ -1,26 +1,10 @@
 use crate::ast::*;
-use crate::error::*;
 use crate::lang::*;
 use crate::utils::*;
 
 use core::fmt;
-use std::cmp::max;
 use std::fmt::Display;
 use std::rc::Rc;
-
-fn op_vectorized_recycled<F, O, T>(f: F, e1: Vec<O>, e2: Vec<T>) -> Vec<O>
-where
-    F: Fn((&O, &T)) -> O,
-    T: Clone + Display,
-{
-    let n = max(e1.len(), e2.len());
-    e1.iter()
-        .cycle()
-        .zip(e2.iter().cycle())
-        .take(n)
-        .map(f)
-        .collect()
-}
 
 fn match_args(
     mut formals: RExprList,
@@ -106,15 +90,14 @@ pub struct RExprIf;
 impl Callable for RExprIf {
     fn call(&self, args: RExprList, env: &mut Environment) -> EvalResult {
         let mut args = args.values.into_iter();
+
         let cond = eval(args.next().unwrap(), env)?;
-        match cond {
-            R::Logical(vec) => match vec[..] {
-                [true] => eval(args.next().unwrap(), env),
-                [false] => eval(args.skip(1).next().unwrap_or(RExpr::Null), env),
-                [_, ..] => Err(RSignal::Error(RError::ConditionIsNotScalar)),
-                [] => unreachable!(),
-            },
-            _ => Err(RSignal::Error(RError::NotInterpretableAsLogical)),
+        let cond: bool = cond.try_into()?;
+
+        if cond {
+            eval(args.next().unwrap(), env)
+        } else {
+            eval(args.skip(1).next().unwrap_or(RExpr::Null), env)
         }
     }
 
@@ -162,6 +145,7 @@ impl Callable for RExprFor {
             env.insert(var.clone(), value);
             eval_result = eval(body.clone(), env);
 
+            // TODO: use std::ops::ControlFlow?
             match eval_result {
                 Err(RSignal::Condition(Cond::Break)) => break,
                 Err(RSignal::Condition(Cond::Continue)) => continue,
@@ -366,28 +350,8 @@ impl Callable for InfixAdd {
         let lhs = eval(lhs, env)?;
         let rhs = eval(rhs, env)?;
 
-        // TODO: improve vector type unification prior to math operations
         let res = match (lhs, rhs) {
-            (R::Numeric(e1), R::Numeric(e2)) => {
-                R::Numeric(op_vectorized_recycled(|(&l, &r)| l + r, e1, e2))
-            }
-            (R::Numeric(e1), R::Integer(e2)) => {
-                if let R::Numeric(e2) = R::Integer(e2).as_numeric() {
-                    R::Numeric(op_vectorized_recycled(|(&l, &r)| l + r as f32, e1, e2))
-                } else {
-                    R::Null
-                }
-            }
-            (R::Integer(e1), R::Numeric(e2)) => {
-                if let R::Numeric(e1) = R::Integer(e1).as_numeric() {
-                    R::Numeric(op_vectorized_recycled(|(&l, &r)| l as f32 + r, e1, e2))
-                } else {
-                    R::Null
-                }
-            }
-            (R::Integer(e1), R::Integer(e2)) => {
-                R::Integer(op_vectorized_recycled(|(&l, &r)| l + r, e1, e2))
-            }
+            (R::Vector(l), R::Vector(r)) => R::Vector(l + r),
             _ => R::Null,
         };
 
@@ -413,6 +377,120 @@ impl Callable for InfixAdd {
 }
 
 #[derive(Debug, Clone)]
+pub struct InfixSub;
+
+impl Callable for InfixSub {
+    fn call(&self, mut args: RExprList, env: &mut Environment) -> EvalResult {
+        // TODO: emit proper error
+        let rhs = args.values.pop().unwrap_or(RExpr::Number(0.0));
+        let lhs = args.values.pop().unwrap_or(RExpr::Number(0.0));
+
+        let lhs = eval(lhs, env)?;
+        let rhs = eval(rhs, env)?;
+
+        let res = match (lhs, rhs) {
+            (R::Vector(l), R::Vector(r)) => R::Vector(l - r),
+            _ => R::Null,
+        };
+
+        Ok(res)
+    }
+
+    fn callable_clone(&self) -> Box<dyn Callable> {
+        Box::new(self.clone())
+    }
+
+    fn callable_as_str(&self) -> &str {
+        "-"
+    }
+
+    fn call_as_str(&self, args: &RExprList) -> String {
+        format!(
+            "{} {} {}",
+            args.values[0],
+            self.callable_as_str(),
+            args.values[1]
+        )
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct InfixMul;
+
+impl Callable for InfixMul {
+    fn call(&self, mut args: RExprList, env: &mut Environment) -> EvalResult {
+        // TODO: emit proper error
+        let rhs = args.values.pop().unwrap_or(RExpr::Number(0.0));
+        let lhs = args.values.pop().unwrap_or(RExpr::Number(0.0));
+
+        let lhs = eval(lhs, env)?;
+        let rhs = eval(rhs, env)?;
+
+        let res = match (lhs, rhs) {
+            (R::Vector(l), R::Vector(r)) => R::Vector(l * r),
+            _ => R::Null,
+        };
+
+        Ok(res)
+    }
+
+    fn callable_clone(&self) -> Box<dyn Callable> {
+        Box::new(self.clone())
+    }
+
+    fn callable_as_str(&self) -> &str {
+        "*"
+    }
+
+    fn call_as_str(&self, args: &RExprList) -> String {
+        format!(
+            "{} {} {}",
+            args.values[0],
+            self.callable_as_str(),
+            args.values[1]
+        )
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct InfixDiv;
+
+impl Callable for InfixDiv {
+    fn call(&self, mut args: RExprList, env: &mut Environment) -> EvalResult {
+        // TODO: emit proper error
+        let rhs = args.values.pop().unwrap_or(RExpr::Number(0.0));
+        let lhs = args.values.pop().unwrap_or(RExpr::Number(0.0));
+
+        let lhs = eval(lhs, env)?;
+        let rhs = eval(rhs, env)?;
+
+        let res = match (lhs, rhs) {
+            (R::Vector(l), R::Vector(r)) => R::Vector(l / r),
+            _ => R::Null,
+        };
+
+        Ok(res)
+    }
+
+    fn callable_clone(&self) -> Box<dyn Callable> {
+        Box::new(self.clone())
+    }
+
+    fn callable_as_str(&self) -> &str {
+        "/"
+    }
+
+    fn call_as_str(&self, args: &RExprList) -> String {
+        format!(
+            "{} {} {}",
+            args.values[0],
+            self.callable_as_str(),
+            args.values[1]
+        )
+    }
+}
+
+#[derive(Debug, Clone)]
 pub struct Name(String);
 
 pub fn primitive(name: &str) -> Option<Box<dyn Fn(RExprList, &mut Environment) -> EvalResult>> {
@@ -423,19 +501,89 @@ pub fn primitive(name: &str) -> Option<Box<dyn Fn(RExprList, &mut Environment) -
 }
 
 pub fn c(args: RExprList, env: &mut Environment) -> EvalResult {
+    /// this can be cleaned up quite a bit, but I just need it working with
+    /// more types for now to test vectorized operators using different types
+    use crate::r_vector::vectors::OptionNA;
+    use crate::r_vector::vectors::RVector;
+
     let R::List(vals) = eval_rexprlist(args, env)? else {
         unreachable!()
     };
 
-    let mut output = vec![0.0; 0];
-    for (_, val) in vals {
-        match val {
-            R::Numeric(mut v) => output.append(&mut v),
-            _ => unimplemented!(),
-        }
-    }
+    // force any closures that were created during call
+    let vals: Vec<_> = vals
+        .into_iter()
+        .map(|(k, v)| (k, force(v).unwrap_or(R::Null))) // TODO: raise this error
+        .collect();
 
-    Ok(R::Numeric(output))
+    // until there's a better way of handling type hierarchy, this will do
+    let t: u8 = vals
+        .iter()
+        .map(|(_, v)| match v {
+            R::Null => 0,
+            R::Vector(vec) => match vec {
+                RVector::Logical(_) => 1,
+                RVector::Integer(_) => 2,
+                RVector::Numeric(_) => 3,
+                RVector::Character(_) => 4,
+            },
+            R::List(_) => 5,
+            _ => 0,
+        })
+        .fold(0, std::cmp::max);
+
+    match t {
+        0 => Ok(R::Null),
+        // Coerce everything into logical
+        1 => {
+            let mut output = vec![OptionNA::Some(true); 0];
+            for (_, val) in vals {
+                match val {
+                    R::Null => continue,
+                    R::Vector(RVector::Logical(mut v)) => output.append(&mut v),
+                    _ => unimplemented!(),
+                }
+            }
+            Ok(R::Vector(RVector::Logical(output)))
+        }
+        // Coerce everything into integer
+        2 => {
+            let mut output = vec![OptionNA::Some(0); 0];
+            for (_, val) in vals {
+                match val {
+                    R::Null => continue,
+                    R::Vector(RVector::Integer(mut v)) => output.append(&mut v),
+                    R::Vector(RVector::Logical(v)) => {
+                        output.append(&mut RVector::vec_coerce::<bool, i32>(&v))
+                    }
+                    _ => unimplemented!(),
+                }
+            }
+            Ok(R::Vector(RVector::Integer(output)))
+        }
+        // Coerce everything into numeric
+        3 => {
+            let mut output = vec![OptionNA::Some(0.0); 0];
+            for (_, val) in vals {
+                match val {
+                    R::Null => continue,
+                    R::Vector(RVector::Numeric(mut v)) => output.append(&mut v),
+                    R::Vector(RVector::Integer(v)) => {
+                        output.append(&mut RVector::vec_coerce::<i32, f64>(&v))
+                    }
+                    R::Vector(RVector::Logical(v)) => {
+                        output.append(&mut RVector::vec_coerce::<bool, f64>(&v))
+                    }
+                    _ => {
+                        println!("{:#?}", val);
+                        unimplemented!()
+                    }
+                }
+            }
+            Ok(R::Vector(RVector::Numeric(output)))
+        }
+        _ => Ok(R::Null),
+    }
 }
 
 impl Callable for String {

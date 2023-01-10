@@ -3,21 +3,30 @@ use std::rc::Rc;
 // TODO: move eval to builtin accepting R::Expr to remove ast dependence, using just lang
 use crate::ast::{RExpr, RExprList};
 use crate::lang::*;
+use crate::r_vector::vectors::*;
 
 pub fn eval(expr: RExpr, env: &mut Environment) -> EvalResult {
     match expr {
         RExpr::Null => Ok(R::Null),
-        RExpr::Number(x) => Ok(R::Numeric(vec![x])),
-        RExpr::Integer(x) => Ok(R::Integer(vec![x])),
-        RExpr::Bool(x) => Ok(R::Logical(vec![x])),
-        RExpr::String(x) => Ok(R::Character(vec![x])),
+        RExpr::NA => Ok(R::Vector(RVector::Logical(vec![OptionNA::NA]))),
+        RExpr::Number(x) => Ok(R::Vector(RVector::from(vec![x]))),
+        RExpr::Integer(x) => Ok(R::Vector(RVector::from(vec![x]))),
+        RExpr::Bool(x) => Ok(R::Vector(RVector::Logical(vec![OptionNA::Some(x)]))),
+        RExpr::String(x) => Ok(R::Vector(RVector::Character(vec![OptionNA::Some(x)]))),
         RExpr::Function(formals, body) => Ok(R::Function(formals, *body, Rc::clone(env))),
-        RExpr::Call(what, list) => Ok(what.call(list, env)?),
+        RExpr::Call(what, args) => Ok(what.call(args, env)?),
         RExpr::Symbol(name) => env.get(name),
         RExpr::List(x) => Ok(eval_rexprlist(x, &mut Rc::clone(env))?),
         RExpr::Break => Err(RSignal::Condition(Cond::Break)),
         RExpr::Continue => Err(RSignal::Condition(Cond::Continue)),
         x => unimplemented!("eval({})", x),
+    }
+}
+
+pub fn force(val: R) -> EvalResult {
+    match val {
+        R::Closure(expr, mut env) => eval(expr, &mut env),
+        _ => Ok(val),
     }
 }
 

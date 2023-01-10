@@ -6,10 +6,12 @@ use crate::builtins::*;
 #[derive(Debug, Clone)]
 pub enum RExpr {
     Null,
+    NA,
+    Inf,
     Continue,
     Break,
     Bool(bool),
-    Number(f32),
+    Number(f64),
     Integer(i32),
     String(String),
     Symbol(String),

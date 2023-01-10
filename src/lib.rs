@@ -8,3 +8,6 @@ pub mod lang;
 pub mod parser;
 pub mod repl;
 pub mod utils;
+// pub mod vectors;
+
+pub mod r_vector;
