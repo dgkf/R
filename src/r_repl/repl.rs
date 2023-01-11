@@ -3,13 +3,14 @@ use std::path::Path;
 
 use rustyline::completion::FilenameCompleter;
 use rustyline::error::ReadlineError;
-use rustyline::highlight::{Highlighter, MatchingBracketHighlighter};
+use rustyline::highlight::Highlighter;
 use rustyline::validate::MatchingBracketValidator;
 use rustyline::{Cmd, Editor, EventHandler, KeyCode, KeyEvent, Modifiers};
 use rustyline_derive::{Completer, Helper, Hinter, Validator};
 
+use super::highlight::RHighlighter;
 use crate::lang::Environment;
-use crate::parser::parse;
+use crate::parser::{parse, parse_highlights, parse_hl};
 use crate::utils::eval;
 
 #[derive(Completer, Helper, Hinter, Validator)]
@@ -18,7 +19,7 @@ pub struct REPLHelper {
     brackets: MatchingBracketValidator,
     #[rustyline(Completer)]
     completer: FilenameCompleter,
-    highlighter: MatchingBracketHighlighter,
+    highlighter: RHighlighter,
 }
 
 impl Highlighter for REPLHelper {
@@ -51,7 +52,7 @@ where
     let h = REPLHelper {
         brackets: MatchingBracketValidator::new(),
         completer: FilenameCompleter::new(),
-        highlighter: MatchingBracketHighlighter::new(),
+        highlighter: RHighlighter::new(),
     };
 
     let mut rl = Editor::new()?;

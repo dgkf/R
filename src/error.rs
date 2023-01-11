@@ -7,7 +7,9 @@ use pest::error::LineColLocation::Pos;
 pub enum RError {
     VariableNotFound(String),
     IncorrectContext(String),
+    ParseFailureVerbose(pest::error::Error<Rule>),
     ParseFailure(pest::error::Error<Rule>),
+    ParseUnexpected(Rule),
     NotInterpretableAsLogical,
     ConditionIsNotScalar,
     CannotBeCoercedToLogical,
@@ -18,10 +20,14 @@ impl RError {
         match self {
             RError::IncorrectContext(x) => format!("Error: '{}' used in an incorrect context", x),
             RError::VariableNotFound(v) => format!("Error: object '{}' not found", v.as_str()),
+            RError::ParseFailureVerbose(e) => format!("{}", e),
             RError::ParseFailure(e) => match e.line_col {
                 Pos((line, col)) => format!("Parse failed at Line {}, Column {}", line, col),
                 _ => format!("Parse failed at {:?}", e.line_col),
             },
+            RError::ParseUnexpected(rule) => {
+                format!("Parse failed. Found {:#?}", rule)
+            }
             RError::NotInterpretableAsLogical => {
                 format!("argument is not interpretable as logical")
             }

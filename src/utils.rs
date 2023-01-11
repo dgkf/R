@@ -6,14 +6,18 @@ use crate::lang::*;
 use crate::r_vector::vectors::*;
 
 pub fn eval(expr: RExpr, env: &mut Environment) -> EvalResult {
+    use RVector::*;
+    use R::*;
+
     match expr {
-        RExpr::Null => Ok(R::Null),
-        RExpr::NA => Ok(R::Vector(RVector::Logical(vec![OptionNA::NA]))),
-        RExpr::Number(x) => Ok(R::Vector(RVector::from(vec![x]))),
-        RExpr::Integer(x) => Ok(R::Vector(RVector::from(vec![x]))),
-        RExpr::Bool(x) => Ok(R::Vector(RVector::Logical(vec![OptionNA::Some(x)]))),
-        RExpr::String(x) => Ok(R::Vector(RVector::Character(vec![OptionNA::Some(x)]))),
-        RExpr::Function(formals, body) => Ok(R::Function(formals, *body, Rc::clone(env))),
+        RExpr::Null => Ok(Null),
+        RExpr::NA => Ok(Vector(Logical(vec![OptionNA::NA]))),
+        RExpr::Inf => Ok(Vector(Numeric(vec![OptionNA::Some(f64::INFINITY)]))),
+        RExpr::Number(x) => Ok(Vector(RVector::from(vec![x]))),
+        RExpr::Integer(x) => Ok(Vector(RVector::from(vec![x]))),
+        RExpr::Bool(x) => Ok(Vector(Logical(vec![OptionNA::Some(x)]))),
+        RExpr::String(x) => Ok(Vector(Character(vec![OptionNA::Some(x)]))),
+        RExpr::Function(formals, body) => Ok(Function(formals, *body, Rc::clone(env))),
         RExpr::Call(what, args) => Ok(what.call(args, env)?),
         RExpr::Symbol(name) => env.get(name),
         RExpr::List(x) => Ok(eval_rexprlist(x, &mut Rc::clone(env))?),

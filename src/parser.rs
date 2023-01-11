@@ -1,6 +1,7 @@
 use crate::ast::*;
 use crate::builtins::*;
 use crate::error::RError;
+use crate::r_repl::highlight::RHighlights;
 
 use pest::iterators::{Pair, Pairs};
 use pest::pratt_parser::PrattParser;
@@ -121,10 +122,12 @@ pub fn parse_expr(pairs: Pairs<Rule>) -> RExpr {
     PRATT_PARSER
         .map_primary(|primary| {
             match primary.as_rule() {
+                // language parsing rules
                 Rule::kw_break => RExpr::Break,
                 Rule::kw_continue => RExpr::Continue,
                 Rule::null => RExpr::Null,
                 Rule::na => RExpr::NA,
+                Rule::inf => RExpr::Inf,
                 Rule::ellipsis => RExpr::Ellipsis,
                 Rule::kw_function => parse_function(primary),
                 Rule::kw_while => parse_while(primary),
@@ -145,6 +148,8 @@ pub fn parse_expr(pairs: Pairs<Rule>) -> RExpr {
                 Rule::string => RExpr::String(String::from(primary.as_str())),
                 Rule::symbol_ident => parse_symbol(primary),
                 Rule::symbol_backticked => RExpr::Symbol(String::from(primary.as_str())),
+
+                // otherwise fail
                 rule => unreachable!("Expr::parse expected atom, found {:?}", rule),
             }
         })
@@ -172,6 +177,26 @@ pub fn parse(s: &str) -> Result<RExpr, RError> {
             let inner = pairs.next().unwrap().into_inner();
             Ok(parse_expr(inner))
         }
-        Err(e) => Err(RError::ParseFailure(e)),
+        Err(e) => Err(RError::ParseFailureVerbose(e)),
+    }
+}
+
+pub fn parse_hl(pairs: Pairs<Rule>) -> RHighlights {
+    println!("{:#?}", pairs);
+    PRATT_PARSER
+        .map_primary(|primary| match primary.as_rule() {
+            Rule::hl_num => RHighlights::Number,
+            _ => RHighlights::None,
+        })
+        .parse(pairs)
+}
+
+pub fn parse_highlights(s: &str) -> Result<RHighlights, RError> {
+    match RParser::parse(Rule::hl, s) {
+        Ok(mut pairs) => {
+            let inner = pairs.next().unwrap().into_inner();
+            Ok(parse_hl(inner))
+        }
+        Err(e) => Err(RError::ParseFailureVerbose(e)),
     }
 }

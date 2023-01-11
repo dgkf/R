@@ -6,8 +6,8 @@ pub mod builtins;
 pub mod error;
 pub mod lang;
 pub mod parser;
-pub mod repl;
 pub mod utils;
 // pub mod vectors;
 
+pub mod r_repl;
 pub mod r_vector;

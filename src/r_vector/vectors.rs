@@ -19,6 +19,7 @@ pub enum RVector {
     // Complex(Complex),
     // Raw(Raw),
 }
+
 impl RVector {
     pub fn get(&self, index: usize) -> Option<RVector> {
         use RVector::*;

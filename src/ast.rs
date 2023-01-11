@@ -19,6 +19,7 @@ pub enum RExpr {
     Function(RExprList, Box<RExpr>), // TODO: capture environment
     Call(Box<dyn Callable>, RExprList),
     Ellipsis,
+    Undefined,
 }
 
 impl fmt::Display for RExpr {
