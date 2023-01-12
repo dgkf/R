@@ -10,7 +10,7 @@ use rustyline_derive::{Completer, Helper, Hinter, Validator};
 
 use super::highlight::RHighlighter;
 use crate::lang::Environment;
-use crate::parser::{parse, parse_highlights, parse_hl};
+use crate::parser::parse;
 use crate::utils::eval;
 
 #[derive(Completer, Helper, Hinter, Validator)]

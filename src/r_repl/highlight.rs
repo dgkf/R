@@ -1,13 +1,7 @@
-use rustyline::highlight::Highlighter;
 use std::borrow::Cow::{self, Borrowed, Owned};
-use std::cell::Cell;
 
-// terminal color scheme
-use colored::Color;
-use colored::ColoredString;
 use colored::Colorize;
-use colored::Style;
-use colored::Styles;
+use rustyline::highlight::Highlighter;
 
 // use crate::{ast::RExpr};
 use crate::parser::RParser;
@@ -28,16 +22,11 @@ pub enum RHighlights {
     None,
 }
 
-pub struct RHighlighter {
-    valid: Cell<bool>,
-}
-
+pub struct RHighlighter {}
 impl RHighlighter {
     #[must_use]
     pub fn new() -> Self {
-        Self {
-            valid: Cell::new(true),
-        }
+        Self {}
     }
 }
 
@@ -73,6 +62,3 @@ impl Highlighter for RHighlighter {
         true
     }
 }
-
-// fn highlight_hl(expr: RExpr, out: &mut str) {
-// }
