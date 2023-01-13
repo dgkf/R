@@ -1,7 +1,6 @@
-use std::borrow::Cow::{self, Borrowed, Owned};
-
-use colored::Colorize;
-use rustyline::highlight::Highlighter;
+use nu_ansi_term::{Color, Style};
+use reedline::Highlighter;
+use reedline::StyledText;
 
 // use crate::{ast::RExpr};
 use crate::parser::RParser;
@@ -31,34 +30,33 @@ impl RHighlighter {
 }
 
 impl Highlighter for RHighlighter {
-    fn highlight<'l>(&self, line: &'l str, _pos: usize) -> Cow<'l, str> {
+    fn highlight<'l>(&self, line: &'l str, _pos: usize) -> StyledText {
+        let mut styled_text = StyledText::new();
         match RParser::parse(Rule::hl, line) {
             Ok(pairs) => {
-                let mut out = String::new();
                 for pair in pairs.into_iter() {
-                    let next = match pair.as_rule() {
-                        Rule::hl_sym => pair.as_str().white().bold(),
-                        Rule::hl_callname => pair.as_str().truecolor(122, 162, 247).italic(),
-                        Rule::hl_value => pair.as_str().truecolor(255, 158, 101),
-                        Rule::hl_num => pair.as_str().truecolor(240, 158, 130),
-                        Rule::hl_str => pair.as_str().truecolor(158, 206, 106),
+                    let style = match pair.as_rule() {
+                        Rule::hl_sym => Style::new().fg(Color::White).bold(),
+                        Rule::hl_callname => Style::new().fg(Color::Rgb(122, 162, 247)).italic(),
+                        Rule::hl_value => Style::new().fg(Color::Rgb(255, 158, 101)),
+                        Rule::hl_num => Style::new().fg(Color::Rgb(240, 158, 130)),
+                        Rule::hl_str => Style::new().fg(Color::Rgb(158, 206, 106)),
                         Rule::hl_reserved | Rule::hl_control => {
-                            pair.as_str().truecolor(187, 154, 246).italic()
+                            Style::new().fg(Color::Rgb(187, 154, 246)).italic()
                         }
                         Rule::hl_open | Rule::hl_brackets | Rule::hl_ops | Rule::hl_infix => {
-                            pair.as_str().truecolor(170, 170, 190)
+                            Style::new().fg(Color::Rgb(170, 170, 190))
                         }
-                        _ => pair.as_str().white(),
+                        _ => Style::new().fg(Color::White),
                     };
-                    out.push_str(&next.to_string());
+                    styled_text.push((style, pair.as_str().to_string()));
                 }
-                Owned(out)
+                styled_text
             }
-            Err(_) => Borrowed(line),
+            Err(_) => {
+                styled_text.push((Style::new(), line.to_string()));
+                styled_text
+            }
         }
-    }
-
-    fn highlight_char(&self, _line: &str, _pos: usize) -> bool {
-        true
     }
 }
