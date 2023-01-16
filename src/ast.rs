@@ -1,7 +1,11 @@
 use core::fmt;
-use std::{iter::Zip, slice::IterMut, vec::IntoIter};
+use std::{
+    iter::Zip,
+    slice::{IterMut, SliceIndex},
+    vec::IntoIter,
+};
 
-use crate::builtins::*;
+use crate::builtins::Callable;
 
 #[derive(Debug, Clone)]
 pub enum RExpr {
@@ -16,10 +20,28 @@ pub enum RExpr {
     String(String),
     Symbol(String),
     List(RExprList),
-    Function(RExprList, Box<RExpr>), // TODO: capture environment
-    Call(Box<dyn Callable>, RExprList),
+    Function(RExprList, Box<RExpr>),
+    Call(Box<RExpr>, RExprList),
+    Primitive(Box<dyn Callable>),
     Ellipsis,
     Undefined,
+}
+
+impl RExpr {
+    pub fn as_primitive<T>(x: T) -> Self
+    where
+        T: Callable + 'static,
+    {
+        Self::Primitive(Box::new(x))
+    }
+
+    pub fn new_primitive_call<T>(x: T, args: RExprList) -> Self
+    where
+        T: Callable + 'static,
+    {
+        let p = Self::as_primitive(x);
+        Self::Call(Box::new(p), args)
+    }
 }
 
 impl fmt::Display for RExpr {
@@ -36,7 +58,10 @@ impl fmt::Display for RExpr {
             RExpr::Symbol(x) => write!(f, "{}", x),
             RExpr::List(x) => write!(f, "{}", x),
             RExpr::Ellipsis => write!(f, "..."),
-            RExpr::Call(n, args) => write!(f, "{}", n.call_as_str(args)),
+            RExpr::Call(what, args) => match &**what {
+                RExpr::Primitive(p) => write!(f, "{}", p.call_as_str(args)),
+                rexpr => write!(f, "{}({})", rexpr, args),
+            },
             x => write!(f, "{:?}", x),
         }
     }
@@ -60,7 +85,7 @@ impl fmt::Display for RExprList {
             })
             .collect();
 
-        write!(f, "({})", pairs.join(", "))
+        write!(f, "{}", pairs.join(", "))
     }
 }
 
@@ -205,6 +230,7 @@ impl RExprList {
 
     pub fn insert(&mut self, index: usize, value: RExpr) -> usize {
         if index < self.values.len() {
+            self.keys.insert(index, None);
             self.values.insert(index, value);
             index
         } else {

@@ -27,11 +27,11 @@
         hl_kws = _{ hl_infix | hl_reserved | hl_control | hl_value | hl_call | hl_sym | hl_str | hl_ops | hl_brackets | hl_num | hl_other }
         hl_control = { "if" | "else" | "for" | "while" | "repeat" | "return" }
         hl_reserved = { "function" }
-        hl_value = { null | na | inf | boolean_true | boolean_false }
+        hl_value = { val_null | val_na | val_inf | val_true | val_false }
         hl_call = _{ hl_callname ~ CAPTURE_WS* ~ hl_open }
         hl_callname = { hl_sym | hl_str }
         hl_sym = { hl_symbol_backticked | symbol_ident }
-            hl_symbol_backticked = ${ "`" ~ (!"`" ~ ANY)* ~ ( "`" | eoi ) }
+        hl_symbol_backticked = ${ "`" ~ (!"`" ~ ANY)* ~ ( "`" | eoi ) }
         hl_str = ${ "\"" ~ string ~ ( "\"" | eoi ) | "'" ~ string ~ ( "'" | eoi ) }
         hl_num = { number ~ "L"? }
         hl_infix = { infix }
@@ -47,42 +47,82 @@
 
 // expression basics
 
-    expr = { block | block_inline | inline }
-        block  = { "{" ~ WS* ~ block_inline* ~ WS* ~ inline? ~ WS* ~ "}" }
+    expr = _{ atomic ~ WS* ~ ( infix ~ WS* ~ atomic ~ WS* )* }
 
-        // within an expression block, newlines are meaningful syntax
-        block_inline = { inline ~ WS_NO_NL* ~ expr_end ~ WS* } 
-        expr_end = _{ ";" | NEWLINE | eoi }
-        paren_expr = _{ "(" ~ WS* ~ expr ~ WS* ~ ")" }
-        atom_expr = _{ atom | paren_expr }
-        inline = { atom_expr ~ ( WS* ~ infix ~ WS* ~ atom_expr )* }
+        atomic = _{ prefixed }
+            prefixed = { prefix* ~ postfixed }
+            postfixed = { atom ~ postfix* }
 
-        infix = _{ add | subtract | multiply | divide | assign }
+        infix = _{ 
+                assign | 
+                add | subtract | multiply | divide | modulo | power | 
+                gt | gte | eq | neq | lt | lte | 
+                or | vor | and | vand | 
+                special | pipe 
+            }
+
+            // numerics
             add = { "+" }
             subtract = { "-" }
             multiply = { "*" }
             divide = { "/" }
+            modulo = { "%%" }
+            power = { "^" }
+
+            // comparison
+            gt = { ">" }
+            gte = { ">=" }
+            eq = { "==" }
+            neq = { "!=" }
+            lt = { "<" }
+            lte = { "<=" }
+            or = { "||" }
+            vor = { "|" }
+            and = { "&&" }
+            vand = { "&" }
+
+            // assignment
             assign = { "<-" }
 
+            // special
+            special = { "%" ~ !("%") ~ "%" }
+            pipe = { "|>" }
+
+        prefix = _{ subtract }
+
+        postfix = _{ call | index | vector_index }
+            call         = { "("  ~ pairs ~  ")" }
+            index        = { "[[" ~ pairs ~ "]]" }
+            vector_index = { "["  ~ pairs ~  "]" }           
+
+        block  = { "{" ~ WS* ~ inline* ~ WS* ~ expr? ~ WS* ~ "}" }
+            inline = _{ expr ~ WS_NO_NL* ~ inline_term ~ WS* } 
+            inline_term = _{ ";" | NEWLINE | eoi }
+
+        paren_expr = _{ "(" ~ WS* ~ expr ~ WS* ~ ")" }
+
         atom = _{ 
-              kw_function
+              block
+            | call
+            | paren_expr
+            | kw_function
             | kw_break
             | kw_continue
             | kw_if_else
             | kw_for
             | kw_while
             | kw_repeat
-            | call 
-            | null
-            | na
-            | inf
-            | boolean_true
-            | boolean_false
+            | val_null
+            | val_na
+            | val_inf
+            | val_true
+            | val_false
             | integer_expr
-            | number 
             | string_expr 
+            | number 
             | symbol 
-            | block 
+            | list
+            | vec
         }
 
 // keyworded (kw) syntax
@@ -95,13 +135,13 @@
     kw_break = { "break" }
     kw_continue = { "continue" }
 
-// reserved value types
+// reserved value (val) types
 
-    null = { "NULL" }
-    na = { "NA" }
-    inf = { "Inf" }
-    boolean_true = { "TRUE" }
-    boolean_false = { "FALSE" }
+    val_null = { "NULL" | "null" }
+    val_na = { "NA" | "na" }
+    val_inf = { "Inf" | "inf" }
+    val_true = { "TRUE" | "true" }
+    val_false = { "FALSE" | "false" }
 
 // atomic value types
 
@@ -114,7 +154,7 @@
     integer_expr = _{ integer ~ "L" }
         integer = @{ "-"? ~ ASCII_NONZERO_DIGIT ~ ASCII_DIGIT* }
 
-    string_expr = ${ "\"" ~ string ~ "\"" | "'" ~ string ~ "'" }
+    string_expr = _{ "\"" ~ string ~ "\"" | "'" ~ string ~ "'" }
         string = @{ char* }
         char = {
             !("\"" | "\\") ~ ANY
@@ -122,14 +162,14 @@
             | "\\" ~ ("u" ~ ASCII_HEX_DIGIT{4})
         }
 
-// symbols & calls
-
     symbol = _{ symbol_backticked | symbol_ident }
         symbol_backticked = ${ "`" ~ (!"`" ~ ANY)* ~ "`" }
         symbol_ident = ${ ( ASCII_ALPHA | "." | "_" ) ~ ( ASCII_ALPHANUMERIC | "." | "_" )* }
 
-    call = { symbol ~ WS* ~ list }
-        list = { "(" ~ ((WS* ~ elem ~ WS* ~ ",")* ~ WS* ~ elem)? ~ WS* ~ ")" }
+    list = { "(" ~ pairs ~ ")" }
+        pairs = _{ ( ( WS* ~ elem? ~ WS* ~ "," )* ~ WS* ~ elem? )? ~ WS* }
         ellipsis = { "..." }
         elem = _{ ellipsis | named | expr }
-        named = { symbol ~ WS* ~ "=" ~ WS* ~ expr }
+        named = { symbol ~ WS* ~ "=" ~ WS* ~ expr? }
+
+    vec = { "[" ~ pairs ~ "]" }

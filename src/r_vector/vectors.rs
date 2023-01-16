@@ -29,7 +29,7 @@ impl RVector {
             T: Clone,
             RVector: From<Vec<T>>,
         {
-            if let Some(value) = v.get(index) {
+            if let Some(value) = v.get(index - 1) {
                 Some(RVector::from(vec![value.clone()]))
             } else {
                 None
@@ -289,6 +289,20 @@ where
     }
 }
 
+impl<T> std::ops::Neg for OptionNA<T>
+where
+    T: std::ops::Neg<Output = T>,
+{
+    type Output = OptionNA<T>;
+    fn neg(self) -> Self::Output {
+        use OptionNA::*;
+        match self {
+            Some(x) => Some(x.neg()),
+            _ => NA,
+        }
+    }
+}
+
 impl<T> std::ops::Mul for OptionNA<T>
 where
     T: std::ops::Mul<Output = T>,
@@ -312,6 +326,54 @@ where
         use OptionNA::*;
         match (self, rhs) {
             (Some(l), Some(r)) => Some(l / r),
+            _ => NA,
+        }
+    }
+}
+
+pub trait Pow {
+    type Output;
+    /// raise self to the rhs power
+    fn power(self, rhs: Self) -> Self::Output;
+}
+
+impl Pow for i32 {
+    type Output = i32;
+    fn power(self, rhs: Self) -> Self::Output {
+        i32::pow(self, rhs as u32)
+    }
+}
+
+impl Pow for f64 {
+    type Output = f64;
+    fn power(self, rhs: Self) -> Self::Output {
+        f64::powf(self, rhs)
+    }
+}
+
+impl<T> Pow for OptionNA<T>
+where
+    T: Pow,
+{
+    type Output = OptionNA<<T as Pow>::Output>;
+    fn power(self, rhs: Self) -> Self::Output {
+        use OptionNA::*;
+        match (self, rhs) {
+            (Some(l), Some(r)) => Some(T::power(l, r)),
+            _ => NA,
+        }
+    }
+}
+
+impl<T> std::ops::Rem for OptionNA<T>
+where
+    T: std::ops::Rem,
+{
+    type Output = OptionNA<<T as std::ops::Rem>::Output>;
+    fn rem(self, rhs: Self) -> Self::Output {
+        use OptionNA::*;
+        match (self, rhs) {
+            (Some(l), Some(r)) => Some(l.rem(r)),
             _ => NA,
         }
     }
@@ -389,6 +451,34 @@ impl std::ops::Sub for RVector {
     }
 }
 
+impl std::ops::Neg for RVector {
+    type Output = RVector;
+
+    fn neg(self) -> Self::Output {
+        use RVector::*;
+
+        fn f<T, TNum>(x: Vec<T>) -> RVector
+        where
+            T: IntoNumeric<TNum>,
+            RVector: From<Vec<<TNum as std::ops::Neg>::Output>>,
+            TNum: std::ops::Neg,
+        {
+            RVector::from(
+                x.into_iter()
+                    .map(|i| i.as_numeric().neg())
+                    .collect::<Vec<_>>(),
+            )
+        }
+
+        match self {
+            Numeric(x) => f(x),
+            Integer(x) => f(x),
+            Logical(x) => f(x),
+            _ => todo!(),
+        }
+    }
+}
+
 impl std::ops::Mul for RVector {
     type Output = RVector;
 
@@ -442,6 +532,78 @@ impl std::ops::Div for RVector {
             RVector::from(
                 map_common_mul_numeric(zip_recycle(l, r))
                     .map(|(l, r)| l / r)
+                    .collect::<Vec<_>>(),
+            )
+        }
+
+        match (self, rhs) {
+            (Numeric(l), Numeric(r)) => f(l, r),
+            (Numeric(l), Integer(r)) => f(l, r),
+            (Numeric(l), Logical(r)) => f(l, r),
+            (Integer(l), Numeric(r)) => f(l, r),
+            (Integer(l), Integer(r)) => f(l, r),
+            (Integer(l), Logical(r)) => f(l, r),
+            (Logical(l), Numeric(r)) => f(l, r),
+            (Logical(l), Integer(r)) => f(l, r),
+            (Logical(l), Logical(r)) => f(l, r),
+            _ => todo!(),
+        }
+    }
+}
+
+impl Pow for RVector {
+    type Output = RVector;
+
+    fn power(self, rhs: Self) -> Self::Output {
+        use RVector::*;
+
+        fn f<L, R, LNum, RNum, LRNum>(l: Vec<L>, r: Vec<R>) -> RVector
+        where
+            L: IntoNumeric<LNum> + Clone,
+            R: IntoNumeric<RNum> + Clone,
+            (LNum, RNum): CommonNum<LRNum>,
+            RVector: From<Vec<<LRNum as Pow>::Output>>,
+            LRNum: Pow,
+        {
+            RVector::from(
+                map_common_mul_numeric(zip_recycle(l, r))
+                    .map(|(l, r)| LRNum::power(l, r))
+                    .collect::<Vec<_>>(),
+            )
+        }
+
+        match (self, rhs) {
+            (Numeric(l), Numeric(r)) => f(l, r),
+            (Numeric(l), Integer(r)) => f(l, r),
+            (Numeric(l), Logical(r)) => f(l, r),
+            (Integer(l), Numeric(r)) => f(l, r),
+            (Integer(l), Integer(r)) => f(l, r),
+            (Integer(l), Logical(r)) => f(l, r),
+            (Logical(l), Numeric(r)) => f(l, r),
+            (Logical(l), Integer(r)) => f(l, r),
+            (Logical(l), Logical(r)) => f(l, r),
+            _ => todo!(),
+        }
+    }
+}
+
+impl std::ops::Rem for RVector {
+    type Output = RVector;
+
+    fn rem(self, rhs: Self) -> Self::Output {
+        use RVector::*;
+
+        fn f<L, R, LNum, RNum, LRNum>(l: Vec<L>, r: Vec<R>) -> RVector
+        where
+            L: IntoNumeric<LNum> + Clone,
+            R: IntoNumeric<RNum> + Clone,
+            (LNum, RNum): CommonNum<LRNum>,
+            RVector: From<Vec<<LRNum as std::ops::Rem>::Output>>,
+            LRNum: std::ops::Rem,
+        {
+            RVector::from(
+                map_common_mul_numeric(zip_recycle(l, r))
+                    .map(|(l, r)| l.rem(r))
                     .collect::<Vec<_>>(),
             )
         }

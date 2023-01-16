@@ -13,6 +13,9 @@ pub enum RError {
     NotInterpretableAsLogical,
     ConditionIsNotScalar,
     CannotBeCoercedToLogical,
+    CannotBeCoercedToInteger,
+
+    Other(String),
 }
 
 impl RError {
@@ -36,6 +39,12 @@ impl RError {
             }
             RError::CannotBeCoercedToLogical => {
                 format!("object cannot be coerced to type 'logical'")
+            }
+            RError::CannotBeCoercedToInteger => {
+                format!("object cannot be coerced to type 'integer'")
+            }
+            RError::Other(s) => {
+                format!("{}", s)
             }
         }
     }

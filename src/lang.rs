@@ -46,10 +46,10 @@ impl Display for RSignal {
 }
 
 impl R {
-    pub fn as_integer(self) -> R {
+    pub fn as_integer(self) -> EvalResult {
         match self {
-            R::Vector(v) => R::Vector(v.as_integer()),
-            atom => unreachable!("{:?} cannot be coerced to integer", atom),
+            R::Vector(v) => Ok(R::Vector(v.as_integer())),
+            _ => Err(RSignal::Error(RError::CannotBeCoercedToInteger)),
         }
     }
 
@@ -57,6 +57,29 @@ impl R {
         match self {
             R::Vector(v) => R::Vector(v.as_numeric()),
             atom => unreachable!("{:?} cannot be coerced to numeric", atom),
+        }
+    }
+
+    pub fn into_usize(&self) -> Result<usize, RSignal> {
+        use OptionNA::*;
+        use RVector::*;
+        match self {
+            R::Vector(rvec) => match rvec {
+                Numeric(v) => match v[..] {
+                    [Some(x)] => Ok(x as usize),
+                    _ => Err(RSignal::Error(RError::CannotBeCoercedToInteger)),
+                },
+                Integer(v) => match v[..] {
+                    [Some(x)] => Ok(x as usize),
+                    _ => Err(RSignal::Error(RError::CannotBeCoercedToInteger)),
+                },
+                Logical(v) => match v[..] {
+                    [Some(true)] => Ok(1 as usize),
+                    _ => Err(RSignal::Error(RError::CannotBeCoercedToInteger)),
+                },
+                _ => Err(RSignal::Error(RError::CannotBeCoercedToInteger)),
+            },
+            _ => todo!(), // emit an appropriate error message
         }
     }
 
@@ -75,6 +98,17 @@ impl R {
             R::Closure(_, _) => None,
             R::Function(_, _, _) => None,
             R::Environment(_) => None,
+        }
+    }
+
+    pub(crate) fn try_get(&self, index: R) -> EvalResult {
+        let i = index.into_usize()?;
+        match self {
+            R::Vector(rvec) => match rvec.get(i) {
+                Some(v) => Ok(R::Vector(v)),
+                None => Err(RSignal::Error(RError::Other("out of bounds".to_string()))),
+            },
+            _ => todo!(),
         }
     }
 }
@@ -101,37 +135,13 @@ impl fmt::Display for R {
             R::Environment(x) => write!(f, "<environment {:?}>", x.values.as_ptr()),
             R::Function(formals, body, parent) => {
                 let parent_env = R::Environment(Rc::clone(parent));
-                write!(f, "function{} {}\n{}", formals, body, parent_env)
+                write!(f, "function({}) {}\n{}", formals, body, parent_env)
             }
             x => write!(f, "{:?}", x),
         }
     }
 }
 
-// // TODO: allow different internal types?
-//
-// pub enum MaybeNA<T> {
-//     NA,
-//     A(T)
-// }
-//
-// pub enum MaybeFinite<T> {
-//     NA,
-//     NaN,
-//     Inf,
-//     NegInf,
-//     Finite(T),
-// }
-//
-// pub enum Numeric<T> {
-//     Scalar(    MaybeNA<MaybeFinite<T>> ),
-//     Vector(Vec<MaybeNA<MaybeFinite<T>>>),
-// }
-
-pub type Logical = Vec<bool>;
-pub type Numeric = Vec<f32>;
-pub type Integer = Vec<i32>;
-pub type Character = Vec<String>;
 pub type List = Vec<(Option<String>, R)>;
 
 pub type Environment = Rc<Env>;

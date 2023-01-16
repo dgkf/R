@@ -2,6 +2,7 @@ use std::rc::Rc;
 
 // TODO: move eval to builtin accepting R::Expr to remove ast dependence, using just lang
 use crate::ast::{RExpr, RExprList};
+use crate::builtins::Callable;
 use crate::lang::*;
 use crate::r_vector::vectors::*;
 
@@ -18,11 +19,15 @@ pub fn eval(expr: RExpr, env: &mut Environment) -> EvalResult {
         RExpr::Bool(x) => Ok(Vector(Logical(vec![OptionNA::Some(x)]))),
         RExpr::String(x) => Ok(Vector(Character(vec![OptionNA::Some(x)]))),
         RExpr::Function(formals, body) => Ok(Function(formals, *body, Rc::clone(env))),
-        RExpr::Call(what, args) => Ok(what.call(args, env)?),
         RExpr::Symbol(name) => env.get(name),
         RExpr::List(x) => Ok(eval_rexprlist(x, &mut Rc::clone(env))?),
         RExpr::Break => Err(RSignal::Condition(Cond::Break)),
         RExpr::Continue => Err(RSignal::Condition(Cond::Continue)),
+        RExpr::Call(what, args) => match *what {
+            RExpr::Primitive(what) => Ok(what.call(args, env)?),
+            RExpr::String(what) | RExpr::Symbol(what) => Ok(what.call(args, env)?),
+            rexpr => (eval(rexpr, env)?).call(args, env),
+        },
         x => unimplemented!("eval({})", x),
     }
 }
