@@ -26,6 +26,8 @@ lazy_static::lazy_static! {
         // Precedence is defined lowest to highest
         PrattParser::new()
             .op(Op::infix(assign, Right))
+            .op(Op::infix(or, Left) | Op::infix(vor, Left))
+            .op(Op::infix(and, Left) | Op::infix(vand, Left))
             .op(Op::infix(add, Left) | Op::infix(subtract, Left))
             .op(Op::infix(multiply, Left) | Op::infix(divide, Left))
             .op(Op::infix(modulo, Left) | Op::infix(special, Left) | Op::infix(pipe, Left))
@@ -55,6 +57,10 @@ fn parse_expr(pairs: Pairs<Rule>) -> RExpr {
                 Rule::power => Box::new(InfixPow),
                 Rule::modulo => Box::new(InfixMod),
                 Rule::assign => Box::new(InfixAssign),
+                Rule::or => Box::new(InfixOr),
+                Rule::and => Box::new(InfixAnd),
+                Rule::vor => Box::new(InfixVectorOr),
+                Rule::vand => Box::new(InfixVectorAnd),
                 rule => unreachable!("Expr::parse expected infix operation, found {:?}", rule),
             };
 

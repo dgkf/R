@@ -16,7 +16,7 @@ where
     println!("R version 0.0.1 -- \"Why Not?\"");
 
     let line_editor = Reedline::create()
-        // .with_validator(Box::new(RValidator))
+        .with_validator(Box::new(RValidator))
         .with_highlighter(Box::new(RHighlighter::new()));
 
     let mut line_editor = if let Some(_history_path) = history {

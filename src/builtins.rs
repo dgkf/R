@@ -3,8 +3,6 @@ use crate::lang::*;
 use crate::r_vector::vectors::*;
 use crate::utils::*;
 
-use core::fmt;
-use std::fmt::Display;
 use std::rc::Rc;
 
 fn match_args(
@@ -60,9 +58,9 @@ fn match_args(
     (matched_args, ellipsis)
 }
 
-impl fmt::Debug for dyn Callable {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.callable_as_str())
+impl std::fmt::Debug for Box<dyn Callable> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "<callable>")
     }
 }
 
@@ -74,15 +72,8 @@ impl Clone for Box<dyn Callable> {
 
 pub trait Callable {
     fn call(&self, args: RExprList, env: &mut Environment) -> EvalResult;
-    fn callable_as_str(&self) -> &str;
     fn call_as_str(&self, args: &RExprList) -> String;
     fn callable_clone(&self) -> Box<dyn Callable>;
-}
-
-impl Display for dyn Callable {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.callable_as_str())
-    }
 }
 
 #[derive(Debug, Clone)]
@@ -104,10 +95,6 @@ impl Callable for RExprIf {
 
     fn callable_clone(&self) -> Box<dyn Callable> {
         Box::new(self.clone())
-    }
-
-    fn callable_as_str(&self) -> &str {
-        "if"
     }
 
     fn call_as_str(&self, args: &RExprList) -> String {
@@ -165,10 +152,6 @@ impl Callable for RExprFor {
         Box::new(self.clone())
     }
 
-    fn callable_as_str(&self) -> &str {
-        "for"
-    }
-
     fn call_as_str(&self, args: &RExprList) -> String {
         let Some(sym) = &args.keys[0] else {
             unreachable!()
@@ -219,10 +202,6 @@ impl Callable for RExprWhile {
         Box::new(self.clone())
     }
 
-    fn callable_as_str(&self) -> &str {
-        "while"
-    }
-
     fn call_as_str(&self, args: &RExprList) -> String {
         format!("while ({}) {}", args.values[0], args.values[1])
     }
@@ -262,10 +241,6 @@ impl Callable for RExprRepeat {
         Box::new(self.clone())
     }
 
-    fn callable_as_str(&self) -> &str {
-        "repeat"
-    }
-
     fn call_as_str(&self, args: &RExprList) -> String {
         format!("repeat {}", args.values[1])
     }
@@ -289,10 +264,6 @@ impl Callable for RExprBlock {
 
     fn callable_clone(&self) -> Box<dyn Callable> {
         Box::new(self.clone())
-    }
-
-    fn callable_as_str(&self) -> &str {
-        "{"
     }
 
     fn call_as_str(&self, args: &RExprList) -> String {
@@ -325,17 +296,8 @@ impl Callable for InfixAssign {
         Box::new(self.clone())
     }
 
-    fn callable_as_str(&self) -> &str {
-        "<-"
-    }
-
     fn call_as_str(&self, args: &RExprList) -> String {
-        format!(
-            "{} {} {}",
-            args.values[0],
-            self.callable_as_str(),
-            args.values[1]
-        )
+        format!("{} <- {}", args.values[0], args.values[1])
     }
 }
 
@@ -363,17 +325,8 @@ impl Callable for InfixAdd {
         Box::new(self.clone())
     }
 
-    fn callable_as_str(&self) -> &str {
-        "+"
-    }
-
     fn call_as_str(&self, args: &RExprList) -> String {
-        format!(
-            "{} {} {}",
-            args.values[0],
-            self.callable_as_str(),
-            args.values[1]
-        )
+        format!("{} + {}", args.values[0], args.values[1])
     }
 }
 
@@ -401,17 +354,8 @@ impl Callable for InfixSub {
         Box::new(self.clone())
     }
 
-    fn callable_as_str(&self) -> &str {
-        "-"
-    }
-
     fn call_as_str(&self, args: &RExprList) -> String {
-        format!(
-            "{} {} {}",
-            args.values[0],
-            self.callable_as_str(),
-            args.values[1]
-        )
+        format!("{} - {}", args.values[0], args.values[1])
     }
 }
 
@@ -435,12 +379,8 @@ impl Callable for PrefixSub {
         Box::new(self.clone())
     }
 
-    fn callable_as_str(&self) -> &str {
-        "-"
-    }
-
     fn call_as_str(&self, args: &RExprList) -> String {
-        format!("{}{}", self.callable_as_str(), args.values[0])
+        format!("-{}", args.values[0])
     }
 }
 
@@ -468,17 +408,8 @@ impl Callable for InfixMul {
         Box::new(self.clone())
     }
 
-    fn callable_as_str(&self) -> &str {
-        "*"
-    }
-
     fn call_as_str(&self, args: &RExprList) -> String {
-        format!(
-            "{} {} {}",
-            args.values[0],
-            self.callable_as_str(),
-            args.values[1]
-        )
+        format!("{} * {}", args.values[0], args.values[1])
     }
 }
 
@@ -506,17 +437,8 @@ impl Callable for InfixDiv {
         Box::new(self.clone())
     }
 
-    fn callable_as_str(&self) -> &str {
-        "/"
-    }
-
     fn call_as_str(&self, args: &RExprList) -> String {
-        format!(
-            "{} {} {}",
-            args.values[0],
-            self.callable_as_str(),
-            args.values[1]
-        )
+        format!("{} / {}", args.values[0], args.values[1])
     }
 }
 
@@ -544,17 +466,8 @@ impl Callable for InfixPow {
         Box::new(self.clone())
     }
 
-    fn callable_as_str(&self) -> &str {
-        "^"
-    }
-
     fn call_as_str(&self, args: &RExprList) -> String {
-        format!(
-            "{}{}{}",
-            args.values[0],
-            self.callable_as_str(),
-            args.values[1]
-        )
+        format!("{}^{}", args.values[0], args.values[1])
     }
 }
 
@@ -582,17 +495,132 @@ impl Callable for InfixMod {
         Box::new(self.clone())
     }
 
-    fn callable_as_str(&self) -> &str {
-        "%%"
+    fn call_as_str(&self, args: &RExprList) -> String {
+        format!("{} %% {}", args.values[0], args.values[1])
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct InfixOr;
+
+impl Callable for InfixOr {
+    fn call(&self, mut args: RExprList, env: &mut Environment) -> EvalResult {
+        // TODO: emit proper errors
+        let rhs = args.values.pop().unwrap();
+        let lhs = args.values.pop().unwrap();
+
+        let lhs = eval(lhs, env)?;
+        let rhs = eval(rhs, env)?;
+
+        let res = match (lhs, rhs) {
+            (R::Vector(l), R::Vector(r)) => {
+                let Ok(lhs) = l.try_into() else { todo!() };
+                let Ok(rhs) = r.try_into() else { todo!() };
+                R::Vector(RVector::Logical(vec![OptionNA::Some(lhs || rhs)]))
+            }
+            _ => R::Null,
+        };
+
+        Ok(res)
+    }
+
+    fn callable_clone(&self) -> Box<dyn Callable> {
+        Box::new(self.clone())
     }
 
     fn call_as_str(&self, args: &RExprList) -> String {
-        format!(
-            "{} {} {}",
-            args.values[0],
-            self.callable_as_str(),
-            args.values[1]
-        )
+        format!("{} || {}", args.values[0], args.values[1])
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct InfixAnd;
+
+impl Callable for InfixAnd {
+    fn call(&self, mut args: RExprList, env: &mut Environment) -> EvalResult {
+        // TODO: emit proper errors
+        let rhs = args.values.pop().unwrap();
+        let lhs = args.values.pop().unwrap();
+
+        let lhs = eval(lhs, env)?;
+        let rhs = eval(rhs, env)?;
+
+        let res = match (lhs, rhs) {
+            (R::Vector(l), R::Vector(r)) => {
+                let Ok(lhs) = l.try_into() else { todo!() };
+                let Ok(rhs) = r.try_into() else { todo!() };
+                R::Vector(RVector::Logical(vec![OptionNA::Some(lhs && rhs)]))
+            }
+            _ => R::Null,
+        };
+
+        Ok(res)
+    }
+
+    fn callable_clone(&self) -> Box<dyn Callable> {
+        Box::new(self.clone())
+    }
+
+    fn call_as_str(&self, args: &RExprList) -> String {
+        format!("{} && {}", args.values[0], args.values[1])
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct InfixVectorOr;
+
+impl Callable for InfixVectorOr {
+    fn call(&self, mut args: RExprList, env: &mut Environment) -> EvalResult {
+        // TODO: emit proper errors
+        let rhs = args.values.pop().unwrap();
+        let lhs = args.values.pop().unwrap();
+
+        let lhs = eval(lhs, env)?;
+        let rhs = eval(rhs, env)?;
+
+        let res = match (lhs, rhs) {
+            (R::Vector(l), R::Vector(r)) => R::Vector(l | r),
+            _ => R::Null,
+        };
+
+        Ok(res)
+    }
+
+    fn callable_clone(&self) -> Box<dyn Callable> {
+        Box::new(self.clone())
+    }
+
+    fn call_as_str(&self, args: &RExprList) -> String {
+        format!("{} | {}", args.values[0], args.values[1])
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct InfixVectorAnd;
+
+impl Callable for InfixVectorAnd {
+    fn call(&self, mut args: RExprList, env: &mut Environment) -> EvalResult {
+        // TODO: emit proper errors
+        let rhs = args.values.pop().unwrap();
+        let lhs = args.values.pop().unwrap();
+
+        let lhs = eval(lhs, env)?;
+        let rhs = eval(rhs, env)?;
+
+        let res = match (lhs, rhs) {
+            (R::Vector(l), R::Vector(r)) => R::Vector(l & r),
+            _ => R::Null,
+        };
+
+        Ok(res)
+    }
+
+    fn callable_clone(&self) -> Box<dyn Callable> {
+        Box::new(self.clone())
+    }
+
+    fn call_as_str(&self, args: &RExprList) -> String {
+        format!("{} & {}", args.values[0], args.values[1])
     }
 }
 
@@ -609,10 +637,6 @@ impl Callable for PostfixIndex {
         let index = eval(index, env)?;
 
         what.try_get(index)
-    }
-
-    fn callable_as_str(&self) -> &str {
-        "[["
     }
 
     fn call_as_str(&self, args: &RExprList) -> String {
@@ -644,10 +668,6 @@ impl Callable for PostfixVecIndex {
         let index = eval(index, env)?;
 
         what.try_get(index)
-    }
-
-    fn callable_as_str(&self) -> &str {
-        "["
     }
 
     fn call_as_str(&self, args: &RExprList) -> String {
@@ -766,12 +786,8 @@ impl Callable for String {
         Box::new(self.clone())
     }
 
-    fn callable_as_str(&self) -> &str {
-        self.as_str()
-    }
-
     fn call_as_str(&self, args: &RExprList) -> String {
-        format!("{}{}", self.callable_as_str(), args)
+        format!("{}{}", self, args)
     }
 }
 
@@ -803,11 +819,7 @@ impl Callable for R {
         eval(body.clone(), &mut Rc::clone(&local_scope))
     }
 
-    fn callable_as_str(&self) -> &str {
-        todo!()
-    }
-
-    fn call_as_str(&self, args: &RExprList) -> String {
+    fn call_as_str(&self, _args: &RExprList) -> String {
         todo!()
     }
 

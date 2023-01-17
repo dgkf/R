@@ -105,6 +105,19 @@ impl RVector {
             }
         }
     }
+
+    pub(crate) fn as_logical(self) -> RVector {
+        use RVector::*;
+        match self {
+            Numeric(v) => Logical(v.into_iter().map(|i| i.as_logical()).collect::<Vec<_>>()),
+            Integer(v) => Logical(v.into_iter().map(|i| i.as_logical()).collect::<Vec<_>>()),
+            Logical(v) => Logical(v),
+            Character(v) => {
+                let (_any_new_nas, v) = Self::vec_parse::<bool>(&v);
+                Logical(v)
+            }
+        }
+    }
 }
 
 impl TryInto<bool> for RVector {
@@ -618,6 +631,48 @@ impl std::ops::Rem for RVector {
             (Logical(l), Numeric(r)) => f(l, r),
             (Logical(l), Integer(r)) => f(l, r),
             (Logical(l), Logical(r)) => f(l, r),
+            _ => todo!(),
+        }
+    }
+}
+
+impl std::ops::BitOr for RVector {
+    type Output = RVector;
+
+    fn bitor(self, rhs: Self) -> Self::Output {
+        use OptionNA::*;
+        use RVector::*;
+
+        match (self.as_logical(), rhs.as_logical()) {
+            (Logical(l), Logical(r)) => RVector::Logical(
+                zip_recycle(l.into_iter(), r.into_iter())
+                    .map(|(l, r)| match (l, r) {
+                        (Some(l), Some(r)) => Some(l || r),
+                        _ => NA,
+                    })
+                    .collect::<Vec<_>>(),
+            ),
+            _ => todo!(),
+        }
+    }
+}
+
+impl std::ops::BitAnd for RVector {
+    type Output = RVector;
+
+    fn bitand(self, rhs: Self) -> Self::Output {
+        use OptionNA::*;
+        use RVector::*;
+
+        match (self.as_logical(), rhs.as_logical()) {
+            (Logical(l), Logical(r)) => RVector::Logical(
+                zip_recycle(l.into_iter(), r.into_iter())
+                    .map(|(l, r)| match (l, r) {
+                        (Some(l), Some(r)) => Some(l && r),
+                        _ => NA,
+                    })
+                    .collect::<Vec<_>>(),
+            ),
             _ => todo!(),
         }
     }

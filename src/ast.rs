@@ -1,9 +1,5 @@
 use core::fmt;
-use std::{
-    iter::Zip,
-    slice::{IterMut, SliceIndex},
-    vec::IntoIter,
-};
+use std::{iter::Zip, slice::IterMut, vec::IntoIter};
 
 use crate::builtins::Callable;
 

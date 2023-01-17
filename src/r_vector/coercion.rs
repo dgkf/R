@@ -105,6 +105,74 @@ impl IntoNumeric<f64> for f64 {
     }
 }
 
+pub trait IntoLogical<T> {
+    fn as_logical(self) -> T;
+}
+
+impl<T, U> IntoLogical<OptionNA<T>> for OptionNA<U>
+where
+    U: IntoLogical<T>,
+{
+    fn as_logical(self) -> OptionNA<T> {
+        use OptionNA::*;
+        match self {
+            Some(x) => Some(U::as_logical(x)),
+            _ => NA,
+        }
+    }
+}
+
+impl IntoLogical<bool> for bool {
+    fn as_logical(self) -> bool {
+        self
+    }
+}
+
+impl IntoLogical<bool> for i32 {
+    fn as_logical(self) -> bool {
+        match self {
+            0 => false,
+            _ => true,
+        }
+    }
+}
+
+impl IntoLogical<bool> for i64 {
+    fn as_logical(self) -> bool {
+        match self {
+            0 => false,
+            _ => true,
+        }
+    }
+}
+
+impl IntoLogical<bool> for i128 {
+    fn as_logical(self) -> bool {
+        match self {
+            0 => false,
+            _ => true,
+        }
+    }
+}
+
+impl IntoLogical<bool> for f32 {
+    fn as_logical(self) -> bool {
+        match self.partial_cmp(&0.0) {
+            Some(std::cmp::Ordering::Equal) => false,
+            _ => true,
+        }
+    }
+}
+
+impl IntoLogical<bool> for f64 {
+    fn as_logical(self) -> bool {
+        match self.partial_cmp(&0.0) {
+            Some(std::cmp::Ordering::Equal) => false,
+            _ => true,
+        }
+    }
+}
+
 pub trait CommonNum<T>: Sized {
     fn as_common(self) -> (T, T);
 }
