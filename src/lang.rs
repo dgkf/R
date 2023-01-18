@@ -1,4 +1,5 @@
 use crate::ast::*;
+use crate::builtins::Callable;
 use crate::error::*;
 use crate::r_vector::vectors::*;
 use crate::utils::eval;
@@ -12,8 +13,8 @@ pub type EvalResult = Result<R, RSignal>;
 #[derive(Debug, Clone)]
 pub enum R {
     // Data structures
-    Vector(RVector),
     Null,
+    Vector(RVector),
     List(List),
 
     // Metaprogramming primitives
@@ -49,14 +50,24 @@ impl R {
     pub fn as_integer(self) -> EvalResult {
         match self {
             R::Vector(v) => Ok(R::Vector(v.as_integer())),
+            R::Null => Ok(R::Vector(RVector::Integer(vec![]))),
             _ => Err(RSignal::Error(RError::CannotBeCoercedToInteger)),
         }
     }
 
-    pub fn as_numeric(self) -> R {
+    pub fn as_numeric(self) -> EvalResult {
         match self {
-            R::Vector(v) => R::Vector(v.as_numeric()),
+            R::Vector(v) => Ok(R::Vector(v.as_numeric())),
+            R::Null => Ok(R::Vector(RVector::Numeric(vec![]))),
             atom => unreachable!("{:?} cannot be coerced to numeric", atom),
+        }
+    }
+
+    pub fn as_logical(self) -> EvalResult {
+        match self {
+            R::Vector(v) => Ok(R::Vector(v.as_logical())),
+            R::Null => Ok(R::Vector(RVector::Logical(vec![]))),
+            atom => unreachable!("{:?} cannot be coerced to logical", atom),
         }
     }
 
@@ -113,6 +124,12 @@ impl R {
     }
 }
 
+impl Default for R {
+    fn default() -> Self {
+        R::Null
+    }
+}
+
 impl TryInto<bool> for R {
     type Error = RSignal;
 
@@ -138,6 +155,105 @@ impl fmt::Display for R {
                 write!(f, "function({}) {}\n{}", formals, body, parent_env)
             }
             x => write!(f, "{:?}", x),
+        }
+    }
+}
+
+impl std::ops::Add for R {
+    type Output = EvalResult;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        match (self.as_numeric()?, rhs.as_numeric()?) {
+            (R::Vector(l), R::Vector(r)) => Ok(R::Vector(l + r)),
+            _ => unreachable!(),
+        }
+    }
+}
+
+impl std::ops::Sub for R {
+    type Output = EvalResult;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        match (self.as_numeric()?, rhs.as_numeric()?) {
+            (R::Vector(l), R::Vector(r)) => Ok(R::Vector(l - r)),
+            _ => unreachable!(),
+        }
+    }
+}
+
+impl std::ops::Neg for R {
+    type Output = EvalResult;
+
+    fn neg(self) -> Self::Output {
+        match self.as_numeric()? {
+            R::Vector(x) => Ok(R::Vector(-x)),
+            _ => unreachable!(),
+        }
+    }
+}
+
+impl std::ops::Mul for R {
+    type Output = EvalResult;
+
+    fn mul(self, rhs: Self) -> Self::Output {
+        match (self.as_numeric()?, rhs.as_numeric()?) {
+            (R::Vector(l), R::Vector(r)) => Ok(R::Vector(l * r)),
+            _ => unreachable!(),
+        }
+    }
+}
+
+impl std::ops::Div for R {
+    type Output = EvalResult;
+
+    fn div(self, rhs: Self) -> Self::Output {
+        match (self.as_numeric()?, rhs.as_numeric()?) {
+            (R::Vector(l), R::Vector(r)) => Ok(R::Vector(l / r)),
+            _ => unreachable!(),
+        }
+    }
+}
+
+impl super::r_vector::vectors::Pow for R {
+    type Output = EvalResult;
+
+    fn power(self, rhs: Self) -> Self::Output {
+        match (self.as_numeric()?, rhs.as_numeric()?) {
+            (R::Vector(l), R::Vector(r)) => Ok(R::Vector(l.power(r))),
+            _ => unreachable!(),
+        }
+    }
+}
+
+impl std::ops::Rem for R {
+    type Output = EvalResult;
+
+    fn rem(self, rhs: Self) -> Self::Output {
+        match (self.as_numeric()?, rhs.as_numeric()?) {
+            (R::Vector(l), R::Vector(r)) => Ok(R::Vector(l % r)),
+            _ => unreachable!(),
+        }
+    }
+}
+
+impl std::ops::BitOr for R {
+    type Output = EvalResult;
+
+    fn bitor(self, rhs: Self) -> Self::Output {
+        match (self.as_logical()?, rhs.as_logical()?) {
+            (R::Vector(l), R::Vector(r)) => Ok(R::Vector(l | r)),
+            _ => unreachable!(),
+        }
+    }
+}
+
+impl std::ops::BitAnd for R {
+    type Output = EvalResult;
+
+    fn bitand(self, rhs: Self) -> Self::Output {
+        match (self.as_logical()?, rhs.as_logical()?) {
+            (R::Vector(l), R::Vector(r)) => Ok(R::Vector(l & r)),
+            _ => unreachable!(),
         }
     }
 }
@@ -197,5 +313,70 @@ impl Env {
             }
             _ => unimplemented!(),
         }
+    }
+}
+
+pub trait Context {
+    fn eval(&mut self, expr: RExpr) -> EvalResult;
+    fn eval_binary(&mut self, exprs: (RExpr, RExpr)) -> Result<(R, R), RSignal>;
+    fn eval_list(&mut self, l: RExprList) -> EvalResult;
+}
+
+impl Context for Environment {
+    fn eval(&mut self, expr: RExpr) -> EvalResult {
+        use RVector::*;
+        use R::*;
+
+        match expr {
+            RExpr::Null => Ok(Null),
+            RExpr::NA => Ok(Vector(Logical(vec![OptionNA::NA]))),
+            RExpr::Inf => Ok(Vector(Numeric(vec![OptionNA::Some(f64::INFINITY)]))),
+            RExpr::Number(x) => Ok(Vector(RVector::from(vec![x]))),
+            RExpr::Integer(x) => Ok(Vector(RVector::from(vec![x]))),
+            RExpr::Bool(x) => Ok(Vector(Logical(vec![OptionNA::Some(x)]))),
+            RExpr::String(x) => Ok(Vector(Character(vec![OptionNA::Some(x)]))),
+            RExpr::Function(formals, body) => Ok(Function(formals, *body, Rc::clone(self))),
+            RExpr::Symbol(name) => self.get(name),
+            RExpr::List(x) => Ok(self.eval_list(x)?),
+            RExpr::Break => Err(RSignal::Condition(Cond::Break)),
+            RExpr::Continue => Err(RSignal::Condition(Cond::Continue)),
+            RExpr::Call(what, args) => match *what {
+                RExpr::Primitive(what) => Ok(what.call(args, self)?),
+                RExpr::String(what) | RExpr::Symbol(what) => Ok(what.call(args, self)?),
+                rexpr => (eval(rexpr, self)?).call(args, self),
+            },
+            x => unimplemented!("eval({})", x),
+        }
+    }
+
+    fn eval_binary(&mut self, exprs: (RExpr, RExpr)) -> Result<(R, R), RSignal> {
+        Ok((self.eval(exprs.0)?, self.eval(exprs.1)?))
+    }
+
+    fn eval_list(&mut self, l: RExprList) -> EvalResult {
+        Ok(R::List(
+            l.into_iter()
+                .flat_map(|pair| match pair {
+                    (_, RExpr::Ellipsis) => {
+                        if let Ok(R::List(ellipsis)) = self.get_ellipsis() {
+                            ellipsis.into_iter()
+                        } else {
+                            vec![].into_iter()
+                        }
+                    }
+                    (k, e @ (RExpr::Call(..) | RExpr::Symbol(..))) => {
+                        let elem = vec![(k, R::Closure(e, Rc::clone(self)))];
+                        elem.into_iter()
+                    }
+                    (k, v) => {
+                        if let Ok(elem) = eval(v, &mut Rc::clone(self)) {
+                            vec![(k, elem)].into_iter()
+                        } else {
+                            unreachable!()
+                        }
+                    }
+                })
+                .collect(),
+        ))
     }
 }

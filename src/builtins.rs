@@ -1,3 +1,7 @@
+extern crate r_derive;
+
+use r_derive::Primitive;
+
 use crate::ast::*;
 use crate::lang::*;
 use crate::r_vector::vectors::*;
@@ -41,7 +45,8 @@ fn match_args(
 
             // unnamed args populate next formal, or ellipsis if formals exhausted
             None => {
-                if let Some((Some(param), _)) = formals.remove(0) {
+                let next_unassigned_formal = formals.remove(0);
+                if let Some((Some(param), _)) = next_unassigned_formal {
                     matched_args.push((Some(param), value));
                 } else {
                     ellipsis.push((None, value));
@@ -64,20 +69,100 @@ impl std::fmt::Debug for Box<dyn Callable> {
     }
 }
 
-impl Clone for Box<dyn Callable> {
-    fn clone(&self) -> Self {
+impl std::fmt::Debug for Box<dyn Primitive> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "")
+    }
+}
+
+impl Clone for Box<dyn Primitive> {
+    fn clone(&self) -> Box<dyn Primitive> {
         self.callable_clone()
     }
 }
 
-pub trait Callable {
-    fn call(&self, args: RExprList, env: &mut Environment) -> EvalResult;
-    fn call_as_str(&self, args: &RExprList) -> String;
-    fn callable_clone(&self) -> Box<dyn Callable>;
+pub trait CallableClone: Callable {
+    fn callable_clone(&self) -> Box<dyn Primitive>;
 }
 
-#[derive(Debug, Clone)]
+pub trait Callable {
+    fn call(&self, args: RExprList, env: &mut Environment) -> EvalResult;
+}
+
+pub struct FormatState {
+    // character width of indentation
+    indent_size: usize,
+    // current number of indentations
+    indent_count: usize,
+    // current column for format start
+    start: usize,
+    // width of desired formatted code
+    width: usize,
+}
+
+impl Default for FormatState {
+    fn default() -> Self {
+        FormatState {
+            indent_size: 2,
+            indent_count: 0,
+            start: 0,
+            width: 80,
+        }
+    }
+}
+
+pub trait Format {
+    fn rfmt_infix(s: &str, args: &RExprList) -> String
+    where
+        Self: Sized,
+    {
+        let state = FormatState::default();
+        Self::rfmt_infix_with(s, state, args)
+    }
+
+    fn rfmt_infix_with(s: &str, _state: FormatState, args: &RExprList) -> String
+    where
+        Self: Sized,
+    {
+        format!("{} {s} {}", args.values[0], args.values[1])
+    }
+
+    fn rfmt(&self) -> String {
+        let state = FormatState::default();
+        self.rfmt_with(state)
+    }
+
+    fn rfmt_with(&self, _state: FormatState) -> String {
+        "".to_string()
+    }
+
+    fn rfmt_call(&self, args: &RExprList) -> String {
+        let state = FormatState::default();
+        self.rfmt_call_with(state, args)
+    }
+
+    fn rfmt_call_with(&self, _state: FormatState, _args: &RExprList) -> String {
+        "".to_string()
+    }
+}
+
+pub trait Primitive: Callable + CallableClone + Format {}
+
+#[derive(Debug, Clone, Primitive)]
 pub struct RExprIf;
+
+impl Format for RExprIf {
+    fn rfmt_call_with(&self, _state: FormatState, args: &RExprList) -> String {
+        if let Some(else_expr) = args.values.get(2) {
+            format!(
+                "if ({}) {} else {}",
+                args.values[0], args.values[1], else_expr
+            )
+        } else {
+            format!("if ({}) {}", args.values[0], args.values[1])
+        }
+    }
+}
 
 impl Callable for RExprIf {
     fn call(&self, args: RExprList, env: &mut Environment) -> EvalResult {
@@ -92,25 +177,20 @@ impl Callable for RExprIf {
             eval(args.skip(1).next().unwrap_or(RExpr::Null), env)
         }
     }
-
-    fn callable_clone(&self) -> Box<dyn Callable> {
-        Box::new(self.clone())
-    }
-
-    fn call_as_str(&self, args: &RExprList) -> String {
-        if let Some(else_expr) = args.values.get(2) {
-            format!(
-                "if ({}) {} else {}",
-                args.values[0], args.values[1], else_expr
-            )
-        } else {
-            format!("if ({}) {}", args.values[0], args.values[1])
-        }
-    }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Primitive)]
 pub struct RExprFor;
+
+impl Format for RExprFor {
+    fn rfmt_call_with(&self, _state: FormatState, args: &RExprList) -> String {
+        let Some(sym) = &args.keys[0] else {
+            unreachable!()
+        };
+
+        format!("for ({} in {}) {}", sym, args.values[0], args.values[1])
+    }
+}
 
 impl Callable for RExprFor {
     fn call(&self, args: RExprList, env: &mut Environment) -> EvalResult {
@@ -147,25 +227,22 @@ impl Callable for RExprFor {
 
         Ok(result)
     }
+}
 
-    fn callable_clone(&self) -> Box<dyn Callable> {
-        Box::new(self.clone())
-    }
+#[derive(Debug, Clone, Primitive)]
+pub struct RExprWhile;
 
-    fn call_as_str(&self, args: &RExprList) -> String {
-        let Some(sym) = &args.keys[0] else {
-            unreachable!()
-        };
-
-        format!("for ({} in {}) {}", sym, args.values[0], args.values[1])
+impl Format for RExprWhile {
+    fn rfmt_call_with(&self, _state: FormatState, args: &RExprList) -> String {
+        format!("while ({}) {}", args.values[0], args.values[1])
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct RExprWhile;
-
 impl Callable for RExprWhile {
     fn call(&self, args: RExprList, env: &mut Environment) -> EvalResult {
+        use Cond::*;
+        use RSignal::*;
+
         let mut args = args.values.into_iter();
         let cond = args.next().unwrap();
         let body = args.next().unwrap();
@@ -184,10 +261,10 @@ impl Callable for RExprWhile {
 
             // handle control flow signals during execution
             match eval_result {
-                Err(RSignal::Condition(Cond::Break)) => break,
-                Err(RSignal::Condition(Cond::Continue)) => continue,
-                Err(RSignal::Condition(Cond::Return(_))) => return eval_result,
-                Err(RSignal::Error(_)) => return eval_result,
+                Err(Condition(Break)) => break,
+                Err(Condition(Continue)) => continue,
+                Err(Condition(Return(_))) => return eval_result,
+                Err(Error(_)) => return eval_result,
                 _ => (),
             }
 
@@ -197,18 +274,16 @@ impl Callable for RExprWhile {
 
         Ok(result)
     }
-
-    fn callable_clone(&self) -> Box<dyn Callable> {
-        Box::new(self.clone())
-    }
-
-    fn call_as_str(&self, args: &RExprList) -> String {
-        format!("while ({}) {}", args.values[0], args.values[1])
-    }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Primitive)]
 pub struct RExprRepeat;
+
+impl Format for RExprRepeat {
+    fn rfmt_call_with(&self, _state: FormatState, args: &RExprList) -> String {
+        format!("repeat {}", args.values[1])
+    }
+}
 
 impl Callable for RExprRepeat {
     fn call(&self, args: RExprList, env: &mut Environment) -> EvalResult {
@@ -236,18 +311,23 @@ impl Callable for RExprRepeat {
 
         Ok(result)
     }
-
-    fn callable_clone(&self) -> Box<dyn Callable> {
-        Box::new(self.clone())
-    }
-
-    fn call_as_str(&self, args: &RExprList) -> String {
-        format!("repeat {}", args.values[1])
-    }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Primitive)]
 pub struct RExprBlock;
+
+impl Format for RExprBlock {
+    fn rfmt_call_with(&self, _state: FormatState, args: &RExprList) -> String {
+        format!(
+            "{{\n{}\n}}",
+            args.clone()
+                .into_iter()
+                .map(|(_, v)| format!("  {}", v))
+                .collect::<Vec<String>>()
+                .join("\n")
+        )
+    }
+}
 
 impl Callable for RExprBlock {
     fn call(&self, args: RExprList, env: &mut Environment) -> EvalResult {
@@ -261,25 +341,16 @@ impl Callable for RExprBlock {
         }
         value
     }
-
-    fn callable_clone(&self) -> Box<dyn Callable> {
-        Box::new(self.clone())
-    }
-
-    fn call_as_str(&self, args: &RExprList) -> String {
-        format!(
-            "{{\n{}\n}}",
-            args.clone()
-                .into_iter()
-                .map(|(_, v)| format!("  {}", v))
-                .collect::<Vec<String>>()
-                .join("\n")
-        )
-    }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Primitive)]
 pub struct InfixAssign;
+
+impl Format for InfixAssign {
+    fn rfmt_call_with(&self, _state: FormatState, args: &RExprList) -> String {
+        format!("{} <- {}", args.values[0], args.values[1])
+    }
+}
 
 impl Callable for InfixAssign {
     fn call(&self, args: RExprList, env: &mut Environment) -> EvalResult {
@@ -291,227 +362,130 @@ impl Callable for InfixAssign {
         env.insert(s, value.clone());
         Ok(value)
     }
-
-    fn callable_clone(&self) -> Box<dyn Callable> {
-        Box::new(self.clone())
-    }
-
-    fn call_as_str(&self, args: &RExprList) -> String {
-        format!("{} <- {}", args.values[0], args.values[1])
-    }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Primitive)]
 pub struct InfixAdd;
 
-impl Callable for InfixAdd {
-    fn call(&self, mut args: RExprList, env: &mut Environment) -> EvalResult {
-        // TODO: emit proper error
-        let rhs = args.values.pop().unwrap_or(RExpr::Number(0.0));
-        let lhs = args.values.pop().unwrap_or(RExpr::Number(0.0));
-
-        let lhs = eval(lhs, env)?;
-        let rhs = eval(rhs, env)?;
-
-        let res = match (lhs, rhs) {
-            (R::Vector(l), R::Vector(r)) => R::Vector(l + r),
-            _ => R::Null,
-        };
-
-        Ok(res)
-    }
-
-    fn callable_clone(&self) -> Box<dyn Callable> {
-        Box::new(self.clone())
-    }
-
-    fn call_as_str(&self, args: &RExprList) -> String {
-        format!("{} + {}", args.values[0], args.values[1])
+impl Format for InfixAdd {
+    fn rfmt_call_with(&self, state: FormatState, args: &RExprList) -> String {
+        Self::rfmt_infix_with("+", state, args)
     }
 }
 
-#[derive(Debug, Clone)]
+impl Callable for InfixAdd {
+    fn call(&self, args: RExprList, env: &mut Environment) -> EvalResult {
+        let (lhs, rhs) = env.eval_binary(args.unnamed_binary_args())?;
+        lhs + rhs
+    }
+}
+
+#[derive(Debug, Clone, Primitive)]
 pub struct InfixSub;
 
-impl Callable for InfixSub {
-    fn call(&self, mut args: RExprList, env: &mut Environment) -> EvalResult {
-        // TODO: emit proper error
-        let rhs = args.values.pop().unwrap_or(RExpr::Number(0.0));
-        let lhs = args.values.pop().unwrap_or(RExpr::Number(0.0));
-
-        let lhs = eval(lhs, env)?;
-        let rhs = eval(rhs, env)?;
-
-        let res = match (lhs, rhs) {
-            (R::Vector(l), R::Vector(r)) => R::Vector(l - r),
-            _ => R::Null,
-        };
-
-        Ok(res)
-    }
-
-    fn callable_clone(&self) -> Box<dyn Callable> {
-        Box::new(self.clone())
-    }
-
-    fn call_as_str(&self, args: &RExprList) -> String {
-        format!("{} - {}", args.values[0], args.values[1])
+impl Format for InfixSub {
+    fn rfmt_call_with(&self, state: FormatState, args: &RExprList) -> String {
+        Self::rfmt_infix_with("-", state, args)
     }
 }
 
-#[derive(Debug, Clone)]
+impl Callable for InfixSub {
+    fn call(&self, args: RExprList, env: &mut Environment) -> EvalResult {
+        let (lhs, rhs) = env.eval_binary(args.unnamed_binary_args())?;
+        lhs - rhs
+    }
+}
+
+#[derive(Debug, Clone, Primitive)]
 pub struct PrefixSub;
 
-impl Callable for PrefixSub {
-    fn call(&self, mut args: RExprList, env: &mut Environment) -> EvalResult {
-        // TODO: emit proper error
-        let what = args.values.pop().unwrap();
-        let what = eval(what, env)?;
-        let res = match what {
-            R::Vector(l) => R::Vector(-l),
-            _ => R::Null,
-        };
-
-        Ok(res)
-    }
-
-    fn callable_clone(&self) -> Box<dyn Callable> {
-        Box::new(self.clone())
-    }
-
-    fn call_as_str(&self, args: &RExprList) -> String {
+impl Format for PrefixSub {
+    fn rfmt_call_with(&self, _state: FormatState, args: &RExprList) -> String {
         format!("-{}", args.values[0])
     }
 }
 
-#[derive(Debug, Clone)]
+impl Callable for PrefixSub {
+    fn call(&self, args: RExprList, env: &mut Environment) -> EvalResult {
+        let what = env.eval(args.unnamed_unary_arg())?;
+        -what
+    }
+}
+
+#[derive(Debug, Clone, Primitive)]
 pub struct InfixMul;
 
-impl Callable for InfixMul {
-    fn call(&self, mut args: RExprList, env: &mut Environment) -> EvalResult {
-        // TODO: emit proper error
-        let rhs = args.values.pop().unwrap_or(RExpr::Number(0.0));
-        let lhs = args.values.pop().unwrap_or(RExpr::Number(0.0));
-
-        let lhs = eval(lhs, env)?;
-        let rhs = eval(rhs, env)?;
-
-        let res = match (lhs, rhs) {
-            (R::Vector(l), R::Vector(r)) => R::Vector(l * r),
-            _ => R::Null,
-        };
-
-        Ok(res)
-    }
-
-    fn callable_clone(&self) -> Box<dyn Callable> {
-        Box::new(self.clone())
-    }
-
-    fn call_as_str(&self, args: &RExprList) -> String {
+impl Format for InfixMul {
+    fn rfmt_call_with(&self, _state: FormatState, args: &RExprList) -> String {
         format!("{} * {}", args.values[0], args.values[1])
     }
 }
 
-#[derive(Debug, Clone)]
+impl Callable for InfixMul {
+    fn call(&self, args: RExprList, env: &mut Environment) -> EvalResult {
+        let (lhs, rhs) = env.eval_binary(args.unnamed_binary_args())?;
+        lhs * rhs
+    }
+}
+
+#[derive(Debug, Clone, Primitive)]
 pub struct InfixDiv;
 
-impl Callable for InfixDiv {
-    fn call(&self, mut args: RExprList, env: &mut Environment) -> EvalResult {
-        // TODO: emit proper error
-        let rhs = args.values.pop().unwrap_or(RExpr::Number(0.0));
-        let lhs = args.values.pop().unwrap_or(RExpr::Number(0.0));
-
-        let lhs = eval(lhs, env)?;
-        let rhs = eval(rhs, env)?;
-
-        let res = match (lhs, rhs) {
-            (R::Vector(l), R::Vector(r)) => R::Vector(l / r),
-            _ => R::Null,
-        };
-
-        Ok(res)
-    }
-
-    fn callable_clone(&self) -> Box<dyn Callable> {
-        Box::new(self.clone())
-    }
-
-    fn call_as_str(&self, args: &RExprList) -> String {
+impl Format for InfixDiv {
+    fn rfmt_call_with(&self, _state: FormatState, args: &RExprList) -> String {
         format!("{} / {}", args.values[0], args.values[1])
     }
 }
+impl Callable for InfixDiv {
+    fn call(&self, args: RExprList, env: &mut Environment) -> EvalResult {
+        let (lhs, rhs) = env.eval_binary(args.unnamed_binary_args())?;
+        lhs / rhs
+    }
+}
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Primitive)]
 pub struct InfixPow;
 
-impl Callable for InfixPow {
-    fn call(&self, mut args: RExprList, env: &mut Environment) -> EvalResult {
-        // TODO: emit proper error
-        let rhs = args.values.pop().unwrap_or(RExpr::Number(0.0));
-        let lhs = args.values.pop().unwrap_or(RExpr::Number(0.0));
-
-        let lhs = eval(lhs, env)?;
-        let rhs = eval(rhs, env)?;
-
-        let res = match (lhs, rhs) {
-            (R::Vector(l), R::Vector(r)) => R::Vector(l.power(r)),
-            _ => R::Null,
-        };
-
-        Ok(res)
-    }
-
-    fn callable_clone(&self) -> Box<dyn Callable> {
-        Box::new(self.clone())
-    }
-
-    fn call_as_str(&self, args: &RExprList) -> String {
+impl Format for InfixPow {
+    fn rfmt_call_with(&self, _state: FormatState, args: &RExprList) -> String {
         format!("{}^{}", args.values[0], args.values[1])
     }
 }
-
-#[derive(Debug, Clone)]
-pub struct InfixMod;
-
-impl Callable for InfixMod {
-    fn call(&self, mut args: RExprList, env: &mut Environment) -> EvalResult {
-        // TODO: emit proper error
-        let rhs = args.values.pop().unwrap_or(RExpr::Number(0.0));
-        let lhs = args.values.pop().unwrap_or(RExpr::Number(0.0));
-
-        let lhs = eval(lhs, env)?;
-        let rhs = eval(rhs, env)?;
-
-        let res = match (lhs, rhs) {
-            (R::Vector(l), R::Vector(r)) => R::Vector(l % r),
-            _ => R::Null,
-        };
-
-        Ok(res)
-    }
-
-    fn callable_clone(&self) -> Box<dyn Callable> {
-        Box::new(self.clone())
-    }
-
-    fn call_as_str(&self, args: &RExprList) -> String {
-        format!("{} %% {}", args.values[0], args.values[1])
+impl Callable for InfixPow {
+    fn call(&self, args: RExprList, env: &mut Environment) -> EvalResult {
+        let (lhs, rhs) = env.eval_binary(args.unnamed_binary_args())?;
+        lhs.power(rhs)
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Primitive)]
+pub struct InfixMod;
+
+impl Format for InfixMod {
+    fn rfmt_call_with(&self, _state: FormatState, args: &RExprList) -> String {
+        format!("{} % {}", args.values[0], args.values[1])
+    }
+}
+
+impl Callable for InfixMod {
+    fn call(&self, args: RExprList, env: &mut Environment) -> EvalResult {
+        let (lhs, rhs) = env.eval_binary(args.unnamed_binary_args())?;
+        lhs % rhs
+    }
+}
+
+#[derive(Debug, Clone, Primitive)]
 pub struct InfixOr;
 
+impl Format for InfixOr {
+    fn rfmt_call_with(&self, _state: FormatState, args: &RExprList) -> String {
+        format!("{} || {}", args.values[0], args.values[1])
+    }
+}
+
 impl Callable for InfixOr {
-    fn call(&self, mut args: RExprList, env: &mut Environment) -> EvalResult {
-        // TODO: emit proper errors
-        let rhs = args.values.pop().unwrap();
-        let lhs = args.values.pop().unwrap();
-
-        let lhs = eval(lhs, env)?;
-        let rhs = eval(rhs, env)?;
-
+    fn call(&self, args: RExprList, env: &mut Environment) -> EvalResult {
+        let (lhs, rhs) = env.eval_binary(args.unnamed_binary_args())?;
         let res = match (lhs, rhs) {
             (R::Vector(l), R::Vector(r)) => {
                 let Ok(lhs) = l.try_into() else { todo!() };
@@ -523,28 +497,20 @@ impl Callable for InfixOr {
 
         Ok(res)
     }
+}
 
-    fn callable_clone(&self) -> Box<dyn Callable> {
-        Box::new(self.clone())
-    }
+#[derive(Debug, Clone, Primitive)]
+pub struct InfixAnd;
 
-    fn call_as_str(&self, args: &RExprList) -> String {
-        format!("{} || {}", args.values[0], args.values[1])
+impl Format for InfixAnd {
+    fn rfmt_call_with(&self, _state: FormatState, args: &RExprList) -> String {
+        format!("{} && {}", args.values[0], args.values[1])
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct InfixAnd;
-
 impl Callable for InfixAnd {
-    fn call(&self, mut args: RExprList, env: &mut Environment) -> EvalResult {
-        // TODO: emit proper errors
-        let rhs = args.values.pop().unwrap();
-        let lhs = args.values.pop().unwrap();
-
-        let lhs = eval(lhs, env)?;
-        let rhs = eval(rhs, env)?;
-
+    fn call(&self, args: RExprList, env: &mut Environment) -> EvalResult {
+        let (lhs, rhs) = env.eval_binary(args.unnamed_binary_args())?;
         let res = match (lhs, rhs) {
             (R::Vector(l), R::Vector(r)) => {
                 let Ok(lhs) = l.try_into() else { todo!() };
@@ -556,90 +522,45 @@ impl Callable for InfixAnd {
 
         Ok(res)
     }
-
-    fn callable_clone(&self) -> Box<dyn Callable> {
-        Box::new(self.clone())
-    }
-
-    fn call_as_str(&self, args: &RExprList) -> String {
-        format!("{} && {}", args.values[0], args.values[1])
-    }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Primitive)]
 pub struct InfixVectorOr;
 
-impl Callable for InfixVectorOr {
-    fn call(&self, mut args: RExprList, env: &mut Environment) -> EvalResult {
-        // TODO: emit proper errors
-        let rhs = args.values.pop().unwrap();
-        let lhs = args.values.pop().unwrap();
-
-        let lhs = eval(lhs, env)?;
-        let rhs = eval(rhs, env)?;
-
-        let res = match (lhs, rhs) {
-            (R::Vector(l), R::Vector(r)) => R::Vector(l | r),
-            _ => R::Null,
-        };
-
-        Ok(res)
-    }
-
-    fn callable_clone(&self) -> Box<dyn Callable> {
-        Box::new(self.clone())
-    }
-
-    fn call_as_str(&self, args: &RExprList) -> String {
+impl Format for InfixVectorOr {
+    fn rfmt_call_with(&self, _state: FormatState, args: &RExprList) -> String {
         format!("{} | {}", args.values[0], args.values[1])
     }
 }
 
-#[derive(Debug, Clone)]
+impl Callable for InfixVectorOr {
+    fn call(&self, args: RExprList, env: &mut Environment) -> EvalResult {
+        let (lhs, rhs) = env.eval_binary(args.unnamed_binary_args())?;
+        lhs | rhs
+    }
+}
+
+#[derive(Debug, Clone, Primitive)]
 pub struct InfixVectorAnd;
 
-impl Callable for InfixVectorAnd {
-    fn call(&self, mut args: RExprList, env: &mut Environment) -> EvalResult {
-        // TODO: emit proper errors
-        let rhs = args.values.pop().unwrap();
-        let lhs = args.values.pop().unwrap();
-
-        let lhs = eval(lhs, env)?;
-        let rhs = eval(rhs, env)?;
-
-        let res = match (lhs, rhs) {
-            (R::Vector(l), R::Vector(r)) => R::Vector(l & r),
-            _ => R::Null,
-        };
-
-        Ok(res)
-    }
-
-    fn callable_clone(&self) -> Box<dyn Callable> {
-        Box::new(self.clone())
-    }
-
-    fn call_as_str(&self, args: &RExprList) -> String {
+impl Format for InfixVectorAnd {
+    fn rfmt_call_with(&self, _state: FormatState, args: &RExprList) -> String {
         format!("{} & {}", args.values[0], args.values[1])
     }
 }
 
-#[derive(Debug, Clone)]
+impl Callable for InfixVectorAnd {
+    fn call(&self, args: RExprList, env: &mut Environment) -> EvalResult {
+        let (lhs, rhs) = env.eval_binary(args.unnamed_binary_args())?;
+        lhs & rhs
+    }
+}
+
+#[derive(Debug, Clone, Primitive)]
 pub struct PostfixIndex;
 
-impl Callable for PostfixIndex {
-    fn call(&self, args: RExprList, env: &mut Environment) -> EvalResult {
-        let mut args = args.into_iter();
-        let (_, what) = args.next().unwrap();
-        let (_, index) = args.next().unwrap();
-
-        let what = eval(what, env)?;
-        let index = eval(index, env)?;
-
-        what.try_get(index)
-    }
-
-    fn call_as_str(&self, args: &RExprList) -> String {
+impl Format for PostfixIndex {
+    fn rfmt_call_with(&self, _state: FormatState, args: &RExprList) -> String {
         let what = &args.values[0];
 
         let args = RExprList {
@@ -649,33 +570,28 @@ impl Callable for PostfixIndex {
 
         format!("{}[[{}]]", what, args)
     }
+}
 
-    fn callable_clone(&self) -> Box<dyn Callable> {
-        Box::new(self.clone())
+impl Callable for PostfixIndex {
+    fn call(&self, args: RExprList, env: &mut Environment) -> EvalResult {
+        let (what, index) = env.eval_binary(args.unnamed_binary_args())?;
+        what.try_get(index)
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Primitive)]
 pub struct PostfixVecIndex;
+
+impl Format for PostfixVecIndex {
+    fn rfmt_call_with(&self, _state: FormatState, args: &RExprList) -> String {
+        format!("{}[{}]", args.values[0], args.values[1])
+    }
+}
 
 impl Callable for PostfixVecIndex {
     fn call(&self, args: RExprList, env: &mut Environment) -> EvalResult {
-        let mut args = args.into_iter();
-        let (_, what) = args.next().unwrap();
-        let (_, index) = args.next().unwrap();
-
-        let what = eval(what, env)?;
-        let index = eval(index, env)?;
-
+        let (what, index) = env.eval_binary(args.unnamed_binary_args())?;
         what.try_get(index)
-    }
-
-    fn call_as_str(&self, args: &RExprList) -> String {
-        format!("{}[{}]", args.values[0], args.values[1])
-    }
-
-    fn callable_clone(&self) -> Box<dyn Callable> {
-        Box::new(self.clone())
     }
 }
 
@@ -773,6 +689,12 @@ pub fn c(args: RExprList, env: &mut Environment) -> EvalResult {
     }
 }
 
+impl Format for String {
+    fn rfmt_call_with(&self, _state: FormatState, args: &RExprList) -> String {
+        format!("{}({})", self, args)
+    }
+}
+
 impl Callable for String {
     fn call(&self, args: RExprList, env: &mut Environment) -> EvalResult {
         if let Some(f) = primitive(self) {
@@ -781,15 +703,9 @@ impl Callable for String {
 
         (env.get(self.clone())?).call(args, env)
     }
-
-    fn callable_clone(&self) -> Box<dyn Callable> {
-        Box::new(self.clone())
-    }
-
-    fn call_as_str(&self, args: &RExprList) -> String {
-        format!("{}{}", self, args)
-    }
 }
+
+impl Format for R {}
 
 impl Callable for R {
     fn call(&self, args: RExprList, env: &mut Environment) -> EvalResult {
@@ -817,13 +733,5 @@ impl Callable for R {
 
         // evaluate body in local scope
         eval(body.clone(), &mut Rc::clone(&local_scope))
-    }
-
-    fn call_as_str(&self, _args: &RExprList) -> String {
-        todo!()
-    }
-
-    fn callable_clone(&self) -> Box<dyn Callable> {
-        todo!()
     }
 }

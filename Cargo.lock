@@ -485,7 +485,16 @@ dependencies = [
  "nu-ansi-term",
  "pest",
  "pest_derive",
+ "r_derive",
  "reedline",
+]
+
+[[package]]
+name = "r_derive"
+version = "0.1.0"
+dependencies = [
+ "quote",
+ "syn",
 ]
 
 [[package]]

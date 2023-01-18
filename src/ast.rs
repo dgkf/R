@@ -1,7 +1,7 @@
 use core::fmt;
 use std::{iter::Zip, slice::IterMut, vec::IntoIter};
 
-use crate::builtins::Callable;
+use crate::builtins::Primitive;
 
 #[derive(Debug, Clone)]
 pub enum RExpr {
@@ -10,6 +10,8 @@ pub enum RExpr {
     Inf,
     Continue,
     Break,
+    Ellipsis,
+    Missing,
     Bool(bool),
     Number(f64),
     Integer(i32),
@@ -18,22 +20,20 @@ pub enum RExpr {
     List(RExprList),
     Function(RExprList, Box<RExpr>),
     Call(Box<RExpr>, RExprList),
-    Primitive(Box<dyn Callable>),
-    Ellipsis,
-    Undefined,
+    Primitive(Box<dyn Primitive>),
 }
 
 impl RExpr {
     pub fn as_primitive<T>(x: T) -> Self
     where
-        T: Callable + 'static,
+        T: Primitive + 'static,
     {
         Self::Primitive(Box::new(x))
     }
 
     pub fn new_primitive_call<T>(x: T, args: RExprList) -> Self
     where
-        T: Callable + 'static,
+        T: Primitive + 'static,
     {
         let p = Self::as_primitive(x);
         Self::Call(Box::new(p), args)
@@ -44,6 +44,7 @@ impl fmt::Display for RExpr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             RExpr::Null => write!(f, "NULL"),
+            RExpr::Missing => write!(f, ""),
             RExpr::Break => write!(f, "break"),
             RExpr::Continue => write!(f, "continue"),
             RExpr::Bool(true) => write!(f, "TRUE"),
@@ -55,7 +56,7 @@ impl fmt::Display for RExpr {
             RExpr::List(x) => write!(f, "{}", x),
             RExpr::Ellipsis => write!(f, "..."),
             RExpr::Call(what, args) => match &**what {
-                RExpr::Primitive(p) => write!(f, "{}", p.call_as_str(args)),
+                RExpr::Primitive(p) => write!(f, "{}", p.rfmt_call(args)),
                 rexpr => write!(f, "{}({})", rexpr, args),
             },
             x => write!(f, "{:?}", x),
@@ -75,9 +76,10 @@ impl fmt::Display for RExprList {
             .values
             .iter()
             .enumerate()
-            .map(|(i, v)| match &self.keys[i] {
-                Some(k) => format!("{} = {}", k, v),
-                None => format!("{}", v),
+            .map(|(i, v)| match (&self.keys[i], v) {
+                (Some(k), RExpr::Missing) => format!("{}", k),
+                (Some(k), _) => format!("{} = {}", k, v),
+                (None, v) => format!("{}", v),
             })
             .collect();
 
@@ -262,6 +264,25 @@ impl RExprList {
         };
 
         (lhs, rhs)
+    }
+
+    pub fn unnamed_unary_arg(self) -> RExpr {
+        let mut argstream = self.into_iter();
+        let Some((_, lhs)) = argstream.next() else {
+            unimplemented!()
+        };
+
+        lhs
+    }
+
+    /// Converts unnamed value symbols into missing named parameters
+    pub fn as_formals(self) -> RExprList {
+        self.into_iter()
+            .map(|(k, v)| match (k, v) {
+                (None, RExpr::Symbol(param)) => (Some(param), RExpr::Missing),
+                other => other,
+            })
+            .collect()
     }
 }
 

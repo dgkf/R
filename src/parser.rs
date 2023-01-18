@@ -49,7 +49,7 @@ fn parse_expr(pairs: Pairs<Rule>) -> RExpr {
             // infix operator with two unnamed arguments
             let args = vec![(None, lhs), (None, rhs)].into();
 
-            let op: Box<dyn Callable> = match op.as_rule() {
+            let op: Box<dyn Primitive> = match op.as_rule() {
                 Rule::add => Box::new(InfixAdd),
                 Rule::subtract => Box::new(InfixSub),
                 Rule::multiply => Box::new(InfixMul),
@@ -155,7 +155,7 @@ fn parse_call(pair: Pair<Rule>) -> RExpr {
 
 fn parse_function(pair: Pair<Rule>) -> RExpr {
     let mut inner = pair.into_inner();
-    let params = parse_list(inner.next().unwrap());
+    let params = parse_list(inner.next().unwrap()).as_formals();
     let body = parse_expr(inner);
     RExpr::Function(params, Box::new(body))
 }
@@ -212,7 +212,7 @@ fn parse_postfix(pair: Pair<Rule>) -> (RExpr, RExprList) {
     use RExpr::*;
 
     match pair.as_rule() {
-        Rule::call => (Undefined, parse_list(pair)),
+        Rule::call => (Missing, parse_list(pair)),
         Rule::index => {
             let args = parse_list(pair);
             (RExpr::as_primitive(PostfixIndex), args)
@@ -230,7 +230,7 @@ fn parse_postfixed(pair: Pair<Rule>) -> RExpr {
         let (what, mut args) = parse_postfix(next);
         result = match what {
             // if postfix is parenthesized pairlist, it's a call to result
-            RExpr::Undefined => RExpr::Call(Box::new(result), args),
+            RExpr::Missing => RExpr::Call(Box::new(result), args),
 
             // otherwise call to a postfix operator with result as the first arg
             _ => {

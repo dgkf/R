@@ -12,3 +12,4 @@ nu-ansi-term = "0.46.0"
 pest = "2.5.2"
 pest_derive = "2.5.2"
 reedline = "0.14.0"
+r_derive = { path = "r_derive" }
