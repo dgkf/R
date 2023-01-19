@@ -71,6 +71,14 @@ impl R {
         }
     }
 
+    pub fn as_vector(self) -> EvalResult {
+        match self {
+            R::Null => Ok(R::Vector(RVector::Logical(vec![]))),
+            R::Vector(_) => Ok(self),
+            _ => unimplemented!("cannot coerce object into vector"),
+        }
+    }
+
     pub fn into_usize(&self) -> Result<usize, RSignal> {
         use OptionNA::*;
         use RVector::*;
@@ -112,13 +120,14 @@ impl R {
         }
     }
 
-    pub(crate) fn try_get(&self, index: R) -> EvalResult {
+    pub fn try_get(&self, index: R) -> EvalResult {
         let i = index.into_usize()?;
         match self {
             R::Vector(rvec) => match rvec.get(i) {
                 Some(v) => Ok(R::Vector(v)),
                 None => Err(RSignal::Error(RError::Other("out of bounds".to_string()))),
             },
+            R::List(lvec) => Ok(lvec[i - 1].1.clone()),
             _ => todo!(),
         }
     }
@@ -154,9 +163,39 @@ impl fmt::Display for R {
                 let parent_env = R::Environment(Rc::clone(parent));
                 write!(f, "function({}) {}\n{}", formals, body, parent_env)
             }
+            R::List(vals) => display_list(vals, f, None),
             x => write!(f, "{:?}", x),
         }
     }
+}
+
+fn display_list(x: &List, f: &mut fmt::Formatter<'_>, bc: Option<String>) -> fmt::Result {
+    for (i, (name, value)) in x.iter().enumerate() {
+        if i > 0 {
+            write!(f, "\n")?
+        }
+
+        let bc_elem = if let Some(name) = name {
+            format!("${}", name)
+        } else {
+            format!("[[{}]]", i + 1)
+        };
+
+        let breadcrumbs = match bc.clone() {
+            Some(bc_prev) => format!("{}{}", bc_prev, bc_elem),
+            _ => bc_elem,
+        };
+
+        match value {
+            R::List(nested_values) => {
+                write!(f, "{}\n", breadcrumbs)?;
+                display_list(nested_values, f, Some(breadcrumbs))?
+            }
+            _ => write!(f, "{}\n{}\n", breadcrumbs, value)?,
+        }
+    }
+
+    Ok(())
 }
 
 impl std::ops::Add for R {
@@ -253,6 +292,68 @@ impl std::ops::BitAnd for R {
     fn bitand(self, rhs: Self) -> Self::Output {
         match (self.as_logical()?, rhs.as_logical()?) {
             (R::Vector(l), R::Vector(r)) => Ok(R::Vector(l & r)),
+            _ => unreachable!(),
+        }
+    }
+}
+
+impl VecPartialCmp for R {
+    type CmpOutput = Vec<Option<std::cmp::Ordering>>;
+    type Output = EvalResult;
+
+    fn vec_partial_cmp(self, rhs: Self) -> Self::CmpOutput {
+        let Ok(sv) = self.as_vector() else {
+            unimplemented!()
+        };
+
+        let Ok(rv) = rhs.as_vector() else {
+            unimplemented!()
+        };
+
+        match (sv, rv) {
+            (R::Vector(l), R::Vector(r)) => l.vec_partial_cmp(r),
+            _ => unimplemented!(),
+        }
+    }
+
+    fn vec_gt(self, rhs: Self) -> Self::Output {
+        match (self.as_vector()?, rhs.as_vector()?) {
+            (R::Vector(l), R::Vector(r)) => Ok(R::Vector(l.vec_gt(r))),
+            _ => unreachable!(),
+        }
+    }
+
+    fn vec_gte(self, rhs: Self) -> Self::Output {
+        match (self.as_vector()?, rhs.as_vector()?) {
+            (R::Vector(l), R::Vector(r)) => Ok(R::Vector(l.vec_gte(r))),
+            _ => unreachable!(),
+        }
+    }
+
+    fn vec_lt(self, rhs: Self) -> Self::Output {
+        match (self.as_vector()?, rhs.as_vector()?) {
+            (R::Vector(l), R::Vector(r)) => Ok(R::Vector(l.vec_lt(r))),
+            _ => unreachable!(),
+        }
+    }
+
+    fn vec_lte(self, rhs: Self) -> Self::Output {
+        match (self.as_vector()?, rhs.as_vector()?) {
+            (R::Vector(l), R::Vector(r)) => Ok(R::Vector(l.vec_lte(r))),
+            _ => unreachable!(),
+        }
+    }
+
+    fn vec_eq(self, rhs: Self) -> Self::Output {
+        match (self.as_vector()?, rhs.as_vector()?) {
+            (R::Vector(l), R::Vector(r)) => Ok(R::Vector(l.vec_eq(r))),
+            _ => unreachable!(),
+        }
+    }
+
+    fn vec_neq(self, rhs: Self) -> Self::Output {
+        match (self.as_vector()?, rhs.as_vector()?) {
+            (R::Vector(l), R::Vector(r)) => Ok(R::Vector(l.vec_neq(r))),
             _ => unreachable!(),
         }
     }

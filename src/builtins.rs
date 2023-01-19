@@ -90,23 +90,23 @@ pub trait Callable {
 }
 
 pub struct FormatState {
-    // character width of indentation
-    indent_size: usize,
-    // current number of indentations
-    indent_count: usize,
-    // current column for format start
-    start: usize,
-    // width of desired formatted code
-    width: usize,
+    // // character width of indentation
+    // indent_size: usize,
+    // // current number of indentations
+    // indent_count: usize,
+    // // current column for format start
+    // start: usize,
+    // // width of desired formatted code
+    // width: usize,
 }
 
 impl Default for FormatState {
     fn default() -> Self {
         FormatState {
-            indent_size: 2,
-            indent_count: 0,
-            start: 0,
-            width: 80,
+            // indent_size: 2,
+            // indent_count: 0,
+            // start: 0,
+            // width: 80,
         }
     }
 }
@@ -147,11 +147,12 @@ pub trait Format {
 }
 
 pub trait Primitive: Callable + CallableClone + Format {}
+pub trait Op: Primitive {}
 
 #[derive(Debug, Clone, Primitive)]
-pub struct RExprIf;
+pub struct ExprIf;
 
-impl Format for RExprIf {
+impl Format for ExprIf {
     fn rfmt_call_with(&self, _state: FormatState, args: &RExprList) -> String {
         if let Some(else_expr) = args.values.get(2) {
             format!(
@@ -164,7 +165,7 @@ impl Format for RExprIf {
     }
 }
 
-impl Callable for RExprIf {
+impl Callable for ExprIf {
     fn call(&self, args: RExprList, env: &mut Environment) -> EvalResult {
         let mut args = args.values.into_iter();
 
@@ -180,9 +181,9 @@ impl Callable for RExprIf {
 }
 
 #[derive(Debug, Clone, Primitive)]
-pub struct RExprFor;
+pub struct ExprFor;
 
-impl Format for RExprFor {
+impl Format for ExprFor {
     fn rfmt_call_with(&self, _state: FormatState, args: &RExprList) -> String {
         let Some(sym) = &args.keys[0] else {
             unreachable!()
@@ -192,7 +193,7 @@ impl Format for RExprFor {
     }
 }
 
-impl Callable for RExprFor {
+impl Callable for ExprFor {
     fn call(&self, args: RExprList, env: &mut Environment) -> EvalResult {
         let mut args = args.into_iter();
 
@@ -230,15 +231,15 @@ impl Callable for RExprFor {
 }
 
 #[derive(Debug, Clone, Primitive)]
-pub struct RExprWhile;
+pub struct ExprWhile;
 
-impl Format for RExprWhile {
+impl Format for ExprWhile {
     fn rfmt_call_with(&self, _state: FormatState, args: &RExprList) -> String {
         format!("while ({}) {}", args.values[0], args.values[1])
     }
 }
 
-impl Callable for RExprWhile {
+impl Callable for ExprWhile {
     fn call(&self, args: RExprList, env: &mut Environment) -> EvalResult {
         use Cond::*;
         use RSignal::*;
@@ -277,15 +278,15 @@ impl Callable for RExprWhile {
 }
 
 #[derive(Debug, Clone, Primitive)]
-pub struct RExprRepeat;
+pub struct ExprRepeat;
 
-impl Format for RExprRepeat {
+impl Format for ExprRepeat {
     fn rfmt_call_with(&self, _state: FormatState, args: &RExprList) -> String {
         format!("repeat {}", args.values[1])
     }
 }
 
-impl Callable for RExprRepeat {
+impl Callable for ExprRepeat {
     fn call(&self, args: RExprList, env: &mut Environment) -> EvalResult {
         let mut args = args.values.into_iter();
         let body = args.next().unwrap();
@@ -314,9 +315,9 @@ impl Callable for RExprRepeat {
 }
 
 #[derive(Debug, Clone, Primitive)]
-pub struct RExprBlock;
+pub struct ExprBlock;
 
-impl Format for RExprBlock {
+impl Format for ExprBlock {
     fn rfmt_call_with(&self, _state: FormatState, args: &RExprList) -> String {
         format!(
             "{{\n{}\n}}",
@@ -329,7 +330,7 @@ impl Format for RExprBlock {
     }
 }
 
-impl Callable for RExprBlock {
+impl Callable for ExprBlock {
     fn call(&self, args: RExprList, env: &mut Environment) -> EvalResult {
         let mut value = Ok(R::Null);
         for expr in args.values {
@@ -355,7 +356,7 @@ impl Format for InfixAssign {
 impl Callable for InfixAssign {
     fn call(&self, args: RExprList, env: &mut Environment) -> EvalResult {
         let (RExpr::Symbol(s), value) = args.unnamed_binary_args() else {
-            unimplemented!()
+            unreachable!()
         };
 
         let value = eval(value, env)?;
@@ -557,6 +558,102 @@ impl Callable for InfixVectorAnd {
 }
 
 #[derive(Debug, Clone, Primitive)]
+pub struct InfixGreater;
+
+impl Format for InfixGreater {
+    fn rfmt_call_with(&self, _state: FormatState, args: &RExprList) -> String {
+        format!("{} > {}", args.values[0], args.values[1])
+    }
+}
+
+impl Callable for InfixGreater {
+    fn call(&self, args: RExprList, env: &mut Environment) -> EvalResult {
+        let (lhs, rhs) = env.eval_binary(args.unnamed_binary_args())?;
+        lhs.vec_gt(rhs)
+    }
+}
+
+#[derive(Debug, Clone, Primitive)]
+pub struct InfixGreaterEqual;
+
+impl Format for InfixGreaterEqual {
+    fn rfmt_call_with(&self, _state: FormatState, args: &RExprList) -> String {
+        format!("{} >= {}", args.values[0], args.values[1])
+    }
+}
+
+impl Callable for InfixGreaterEqual {
+    fn call(&self, args: RExprList, env: &mut Environment) -> EvalResult {
+        let (lhs, rhs) = env.eval_binary(args.unnamed_binary_args())?;
+        lhs.vec_gte(rhs)
+    }
+}
+
+#[derive(Debug, Clone, Primitive)]
+pub struct InfixLess;
+
+impl Format for InfixLess {
+    fn rfmt_call_with(&self, _state: FormatState, args: &RExprList) -> String {
+        format!("{} < {}", args.values[0], args.values[1])
+    }
+}
+
+impl Callable for InfixLess {
+    fn call(&self, args: RExprList, env: &mut Environment) -> EvalResult {
+        let (lhs, rhs) = env.eval_binary(args.unnamed_binary_args())?;
+        lhs.vec_lt(rhs)
+    }
+}
+
+#[derive(Debug, Clone, Primitive)]
+pub struct InfixLessEqual;
+
+impl Format for InfixLessEqual {
+    fn rfmt_call_with(&self, _state: FormatState, args: &RExprList) -> String {
+        format!("{} > {}", args.values[0], args.values[1])
+    }
+}
+
+impl Callable for InfixLessEqual {
+    fn call(&self, args: RExprList, env: &mut Environment) -> EvalResult {
+        let (lhs, rhs) = env.eval_binary(args.unnamed_binary_args())?;
+        lhs.vec_lte(rhs)
+    }
+}
+
+#[derive(Debug, Clone, Primitive)]
+pub struct InfixEqual;
+
+impl Format for InfixEqual {
+    fn rfmt_call_with(&self, _state: FormatState, args: &RExprList) -> String {
+        format!("{} > {}", args.values[0], args.values[1])
+    }
+}
+
+impl Callable for InfixEqual {
+    fn call(&self, args: RExprList, env: &mut Environment) -> EvalResult {
+        let (lhs, rhs) = env.eval_binary(args.unnamed_binary_args())?;
+        lhs.vec_eq(rhs)
+    }
+}
+
+#[derive(Debug, Clone, Primitive)]
+pub struct InfixNotEqual;
+
+impl Format for InfixNotEqual {
+    fn rfmt_call_with(&self, _state: FormatState, args: &RExprList) -> String {
+        format!("{} > {}", args.values[0], args.values[1])
+    }
+}
+
+impl Callable for InfixNotEqual {
+    fn call(&self, args: RExprList, env: &mut Environment) -> EvalResult {
+        let (lhs, rhs) = env.eval_binary(args.unnamed_binary_args())?;
+        lhs.vec_neq(rhs)
+    }
+}
+
+#[derive(Debug, Clone, Primitive)]
 pub struct PostfixIndex;
 
 impl Format for PostfixIndex {
@@ -595,17 +692,61 @@ impl Callable for PostfixVecIndex {
     }
 }
 
+#[derive(Debug, Clone, Primitive)]
+pub struct ExprVec;
+
+impl Format for ExprVec {
+    fn rfmt_call_with(&self, _state: FormatState, args: &RExprList) -> String {
+        format!("({})", args)
+    }
+}
+
+impl Callable for ExprVec {
+    fn call(&self, args: RExprList, env: &mut Environment) -> EvalResult {
+        // for now just use c()
+        primitive_c(args, env)
+    }
+}
+
+#[derive(Debug, Clone, Primitive)]
+pub struct ExprList;
+
+impl Format for ExprList {
+    fn rfmt_call_with(&self, _state: FormatState, args: &RExprList) -> String {
+        format!("[{}]", args)
+    }
+}
+
+impl Callable for ExprList {
+    fn call(&self, args: RExprList, env: &mut Environment) -> EvalResult {
+        let vals: Result<Vec<_>, _> = args
+            .into_iter()
+            .map(|(n, v)| match env.eval(v) {
+                Ok(val) => Ok((n, val)),
+                Err(err) => Err(err),
+            })
+            .collect();
+
+        Ok(R::List(vals?))
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct Name(String);
 
 pub fn primitive(name: &str) -> Option<Box<dyn Fn(RExprList, &mut Environment) -> EvalResult>> {
     match name {
-        "c" => Some(Box::new(c)),
+        "c" => Some(Box::new(primitive_c)),
+        "list" => Some(Box::new(primitive_list)),
         _ => None,
     }
 }
 
-pub fn c(args: RExprList, env: &mut Environment) -> EvalResult {
+pub fn primitive_list(args: RExprList, env: &mut Environment) -> EvalResult {
+    ExprList::call(&ExprList, args, env)
+}
+
+pub fn primitive_c(args: RExprList, env: &mut Environment) -> EvalResult {
     // this can be cleaned up quite a bit, but I just need it working with
     // more types for now to test vectorized operators using different types
 
@@ -684,6 +825,30 @@ pub fn c(args: RExprList, env: &mut Environment) -> EvalResult {
                 }
             }
             Ok(R::Vector(RVector::Numeric(output)))
+        }
+        // coerce everything into strings
+        4 => {
+            let mut output = vec![OptionNA::Some("".to_string()); 0];
+            for (_, val) in vals {
+                match val {
+                    R::Null => continue,
+                    R::Vector(RVector::Numeric(v)) => {
+                        output.append(&mut RVector::vec_coerce::<f64, String>(&v))
+                    }
+                    R::Vector(RVector::Integer(v)) => {
+                        output.append(&mut RVector::vec_coerce::<i32, String>(&v))
+                    }
+                    R::Vector(RVector::Logical(v)) => {
+                        output.append(&mut RVector::vec_coerce::<bool, String>(&v))
+                    }
+                    R::Vector(RVector::Character(mut v)) => output.append(&mut v),
+                    _ => {
+                        println!("{:#?}", val);
+                        unimplemented!()
+                    }
+                }
+            }
+            Ok(R::Vector(RVector::Character(output)))
         }
         _ => Ok(R::Null),
     }

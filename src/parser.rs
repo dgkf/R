@@ -28,6 +28,7 @@ lazy_static::lazy_static! {
             .op(Op::infix(assign, Right))
             .op(Op::infix(or, Left) | Op::infix(vor, Left))
             .op(Op::infix(and, Left) | Op::infix(vand, Left))
+            .op(Op::infix(lt, Left) | Op::infix(gt, Left) | Op::infix(lte, Left) | Op::infix(gte, Left) | Op::infix(eq, Left) | Op::infix(neq, Left))
             .op(Op::infix(add, Left) | Op::infix(subtract, Left))
             .op(Op::infix(multiply, Left) | Op::infix(divide, Left))
             .op(Op::infix(modulo, Left) | Op::infix(special, Left) | Op::infix(pipe, Left))
@@ -43,6 +44,7 @@ pub fn parse(s: &str) -> Result<RExpr, RError> {
 }
 
 fn parse_expr(pairs: Pairs<Rule>) -> RExpr {
+    // println!("{:#?}", pairs);
     PRATT_PARSER
         .map_primary(parse_primary)
         .map_infix(|lhs, op, rhs| {
@@ -61,6 +63,12 @@ fn parse_expr(pairs: Pairs<Rule>) -> RExpr {
                 Rule::and => Box::new(InfixAnd),
                 Rule::vor => Box::new(InfixVectorOr),
                 Rule::vand => Box::new(InfixVectorAnd),
+                Rule::gt => Box::new(InfixGreater),
+                Rule::lt => Box::new(InfixLess),
+                Rule::gte => Box::new(InfixGreaterEqual),
+                Rule::lte => Box::new(InfixLessEqual),
+                Rule::eq => Box::new(InfixEqual),
+                Rule::neq => Box::new(InfixNotEqual),
                 rule => unreachable!("Expr::parse expected infix operation, found {:?}", rule),
             };
 
@@ -70,8 +78,6 @@ fn parse_expr(pairs: Pairs<Rule>) -> RExpr {
 }
 
 fn parse_primary(pair: Pair<Rule>) -> RExpr {
-    // println!("{:#?}", pair.as_rule());
-
     match pair.as_rule() {
         // prefix and postfix notation
         Rule::postfixed => parse_postfixed(pair),
@@ -79,6 +85,7 @@ fn parse_primary(pair: Pair<Rule>) -> RExpr {
 
         // bracketed expression block
         Rule::block => parse_block(pair),
+        Rule::expr => parse_expr(pair.into_inner()),
 
         // keyworded composite expressions
         Rule::kw_function => parse_function(pair),
@@ -104,6 +111,10 @@ fn parse_primary(pair: Pair<Rule>) -> RExpr {
         Rule::integer => RExpr::Integer(pair.as_str().parse::<i32>().unwrap()),
         Rule::string => RExpr::String(String::from(pair.as_str())),
 
+        // structured values
+        Rule::vec => parse_vec(pair),
+        Rule::list => parse_list(pair),
+
         // calls and symbols
         Rule::call => parse_call(pair),
         Rule::symbol_ident => parse_symbol(pair),
@@ -122,7 +133,7 @@ fn parse_block(pair: Pair<Rule>) -> RExpr {
         .collect();
 
     // build call from symbol and list
-    RExpr::new_primitive_call(RExprBlock, exprs)
+    RExpr::new_primitive_call(ExprBlock, exprs)
 }
 
 fn parse_named(pair: Pair<Rule>) -> (Option<String>, RExpr) {
@@ -131,7 +142,7 @@ fn parse_named(pair: Pair<Rule>) -> (Option<String>, RExpr) {
     (Some(name), parse_expr(inner))
 }
 
-fn parse_list(pair: Pair<Rule>) -> RExprList {
+fn parse_pairlist(pair: Pair<Rule>) -> RExprList {
     let exprs = pair
         .into_inner()
         .map(|i| match i.as_rule() {
@@ -149,13 +160,13 @@ fn parse_call(pair: Pair<Rule>) -> RExpr {
     let name = String::from(inner.next().unwrap().as_str());
     RExpr::Call(
         Box::new(RExpr::String(name)),
-        parse_list(inner.next().unwrap()),
+        parse_pairlist(inner.next().unwrap()),
     )
 }
 
 fn parse_function(pair: Pair<Rule>) -> RExpr {
     let mut inner = pair.into_inner();
-    let params = parse_list(inner.next().unwrap()).as_formals();
+    let params = parse_pairlist(inner.next().unwrap()).as_formals();
     let body = parse_expr(inner);
     RExpr::Function(params, Box::new(body))
 }
@@ -172,7 +183,7 @@ fn parse_if_else(pair: Pair<Rule>) -> RExpr {
     };
 
     let args = RExprList::from(vec![cond, true_expr, false_expr]);
-    RExpr::new_primitive_call(RExprIf, args)
+    RExpr::new_primitive_call(ExprIf, args)
 }
 
 fn parse_symbol(pair: Pair<Rule>) -> RExpr {
@@ -190,7 +201,7 @@ fn parse_for(pair: Pair<Rule>) -> RExpr {
     let body = parse_expr(inner.next().unwrap().into_inner());
 
     let args = RExprList::from(vec![(Some(var), iter), (None, body)]);
-    RExpr::new_primitive_call(RExprFor, args)
+    RExpr::new_primitive_call(ExprFor, args)
 }
 
 fn parse_while(pair: Pair<Rule>) -> RExpr {
@@ -198,26 +209,26 @@ fn parse_while(pair: Pair<Rule>) -> RExpr {
     let cond = parse_expr(inner.next().unwrap().into_inner());
     let body = parse_expr(inner.next().unwrap().into_inner());
     let args = RExprList::from(vec![cond, body]);
-    RExpr::new_primitive_call(RExprWhile, args)
+    RExpr::new_primitive_call(ExprWhile, args)
 }
 
 fn parse_repeat(pair: Pair<Rule>) -> RExpr {
     let mut inner = pair.into_inner();
     let body = parse_expr(inner.next().unwrap().into_inner());
     let args = RExprList::from(vec![body]);
-    RExpr::new_primitive_call(RExprRepeat, args)
+    RExpr::new_primitive_call(ExprRepeat, args)
 }
 
 fn parse_postfix(pair: Pair<Rule>) -> (RExpr, RExprList) {
     use RExpr::*;
 
     match pair.as_rule() {
-        Rule::call => (Missing, parse_list(pair)),
+        Rule::call => (Missing, parse_pairlist(pair)),
         Rule::index => {
-            let args = parse_list(pair);
+            let args = parse_pairlist(pair);
             (RExpr::as_primitive(PostfixIndex), args)
         }
-        Rule::vector_index => (RExpr::as_primitive(PostfixVecIndex), parse_list(pair)),
+        Rule::vector_index => (RExpr::as_primitive(PostfixVecIndex), parse_pairlist(pair)),
         atom => unreachable!("invalid postfix operator '{:#?}'", atom),
     }
 }
@@ -260,4 +271,14 @@ fn parse_prefixed(pair: Pair<Rule>) -> RExpr {
     }
 
     result
+}
+
+fn parse_vec(pair: Pair<Rule>) -> RExpr {
+    let args = parse_pairlist(pair);
+    RExpr::new_primitive_call(ExprVec, args)
+}
+
+fn parse_list(pair: Pair<Rule>) -> RExpr {
+    let args = parse_pairlist(pair);
+    RExpr::new_primitive_call(ExprList, args)
 }

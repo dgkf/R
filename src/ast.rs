@@ -284,6 +284,10 @@ impl RExprList {
             })
             .collect()
     }
+
+    pub fn len(&self) -> usize {
+        self.values.len()
+    }
 }
 
 impl From<Vec<RExpr>> for RExprList {

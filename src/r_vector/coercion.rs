@@ -278,6 +278,10 @@ register!(CommonNum, (bool, i32) => i32);
 register!(CommonNum, (bool, f64) => f64);
 register!(CommonNum, (i32 , f64) => f64);
 
+register!(CommonCmp, bool => bool);
+register!(CommonCmp, i32 => i32);
+register!(CommonCmp, f64 => f64);
+register!(CommonCmp, String => String);
 register!(CommonCmp, (bool, i32) => i32);
 register!(CommonCmp, (bool, f64) => f64);
 register!(CommonCmp, (i32, f64) => f64);

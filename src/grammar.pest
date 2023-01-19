@@ -47,7 +47,7 @@
 
 // expression basics
 
-    expr = _{ atomic ~ WS* ~ ( infix ~ WS* ~ atomic ~ WS* )* }
+    expr = { atomic ~ WS* ~ ( infix ~ WS* ~ atomic ~ WS* )* }
 
         atomic = _{ prefixed }
             prefixed = { prefix* ~ postfixed }
@@ -56,7 +56,7 @@
         infix = _{ 
                 assign | 
                 add | subtract | multiply | divide | modulo | power | 
-                gt | gte | eq | neq | lt | lte | 
+                gte | lte | gt | eq | neq | lt | 
                 or | vor | and | vand | 
                 special | pipe 
             }
@@ -88,7 +88,8 @@
             special = { "%" ~ !("%") ~ "%" }
             pipe = { "|>" }
 
-        prefix = _{ subtract }
+        prefix = _{ subtract | negate }
+            negate = { "!" }
 
         postfix = _{ call | index | vector_index }
             call         = { "("  ~ pairs ~  ")" }
@@ -103,7 +104,6 @@
 
         atom = _{ 
               block
-            | call
             | paren_expr
             | kw_function
             | kw_break

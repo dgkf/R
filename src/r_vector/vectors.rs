@@ -106,7 +106,7 @@ impl RVector {
         }
     }
 
-    pub(crate) fn as_logical(self) -> RVector {
+    pub fn as_logical(self) -> RVector {
         use RVector::*;
         match self {
             Numeric(v) => Logical(v.into_iter().map(|i| i.as_logical()).collect::<Vec<_>>()),
@@ -116,6 +116,26 @@ impl RVector {
                 let (_any_new_nas, v) = Self::vec_parse::<bool>(&v);
                 Logical(v)
             }
+        }
+    }
+
+    pub fn len(self) -> usize {
+        use RVector::*;
+        match self {
+            Numeric(v) => v.len(),
+            Integer(v) => v.len(),
+            Logical(v) => v.len(),
+            Character(v) => v.len(),
+        }
+    }
+
+    pub fn reserve(self, additional: usize) {
+        use RVector::*;
+        match self {
+            Numeric(mut v) => v.reserve(additional),
+            Integer(mut v) => v.reserve(additional),
+            Logical(mut v) => v.reserve(additional),
+            Character(mut v) => v.reserve(additional),
         }
     }
 }
@@ -265,11 +285,21 @@ impl Display for RVector {
             })
         }
 
+        fn fmt_strs(x: &Vec<OptionNA<String>>) -> Vec<String> {
+            use OptionNA::*;
+            x.into_iter()
+                .map(|i| match i {
+                    Some(x) => format!("\"{}\"", x),
+                    NA => "NA".to_string(),
+                })
+                .collect()
+        }
+
         match self {
             RVector::Numeric(x) => fmt_vec(x, f),
             RVector::Integer(x) => fmt_vec(x, f),
             RVector::Logical(x) => fmt_vec(x, f),
-            RVector::Character(x) => fmt_vec(x, f),
+            RVector::Character(x) => fmt_vec(&fmt_strs(x), f),
         }
     }
 }
@@ -394,7 +424,6 @@ where
 
 impl std::ops::Add for RVector {
     type Output = RVector;
-
     fn add(self, rhs: Self) -> Self::Output {
         use RVector::*;
 
@@ -430,7 +459,6 @@ impl std::ops::Add for RVector {
 
 impl std::ops::Sub for RVector {
     type Output = RVector;
-
     fn sub(self, rhs: Self) -> Self::Output {
         use RVector::*;
 
@@ -466,7 +494,6 @@ impl std::ops::Sub for RVector {
 
 impl std::ops::Neg for RVector {
     type Output = RVector;
-
     fn neg(self) -> Self::Output {
         use RVector::*;
 
@@ -494,7 +521,6 @@ impl std::ops::Neg for RVector {
 
 impl std::ops::Mul for RVector {
     type Output = RVector;
-
     fn mul(self, rhs: Self) -> Self::Output {
         use RVector::*;
 
@@ -530,7 +556,6 @@ impl std::ops::Mul for RVector {
 
 impl std::ops::Div for RVector {
     type Output = RVector;
-
     fn div(self, rhs: Self) -> Self::Output {
         use RVector::*;
 
@@ -566,7 +591,6 @@ impl std::ops::Div for RVector {
 
 impl Pow for RVector {
     type Output = RVector;
-
     fn power(self, rhs: Self) -> Self::Output {
         use RVector::*;
 
@@ -600,9 +624,151 @@ impl Pow for RVector {
     }
 }
 
-impl std::ops::Rem for RVector {
+pub trait VecPartialCmp {
+    type CmpOutput;
+    type Output;
+    fn vec_partial_cmp(self, rhs: Self) -> Self::CmpOutput;
+    fn vec_gt(self, rhs: Self) -> Self::Output;
+    fn vec_gte(self, rhs: Self) -> Self::Output;
+    fn vec_lt(self, rhs: Self) -> Self::Output;
+    fn vec_lte(self, rhs: Self) -> Self::Output;
+    fn vec_eq(self, rhs: Self) -> Self::Output;
+    fn vec_neq(self, rhs: Self) -> Self::Output;
+}
+
+impl VecPartialCmp for RVector {
+    type CmpOutput = Vec<Option<std::cmp::Ordering>>;
     type Output = RVector;
 
+    fn vec_partial_cmp(self, rhs: Self) -> Self::CmpOutput {
+        use RVector::*;
+
+        fn f<L, R, LR>(l: Vec<OptionNA<L>>, r: Vec<OptionNA<R>>) -> Vec<Option<std::cmp::Ordering>>
+        where
+            L: CoercibleInto<LR> + Clone,
+            R: CoercibleInto<LR> + Clone,
+            (L, R): CommonCmp<LR>,
+            LR: PartialOrd,
+        {
+            zip_recycle(l.into_iter(), r.into_iter())
+                .map(|pair| match pair {
+                    (OptionNA::Some(l), OptionNA::Some(r)) => {
+                        let l = CoercibleInto::<LR>::coerce_into(l);
+                        let r = CoercibleInto::<LR>::coerce_into(r);
+                        l.partial_cmp(&r)
+                    }
+                    _ => None,
+                })
+                .collect()
+        }
+
+        match (self, rhs) {
+            (Numeric(l), Numeric(r)) => f(l, r),
+            (Numeric(l), Integer(r)) => f(l, r),
+            (Numeric(l), Logical(r)) => f(l, r),
+            (Numeric(l), Character(r)) => f(l, r),
+            (Integer(l), Numeric(r)) => f(l, r),
+            (Integer(l), Integer(r)) => f(l, r),
+            (Integer(l), Logical(r)) => f(l, r),
+            (Integer(l), Character(r)) => f(l, r),
+            (Logical(l), Numeric(r)) => f(l, r),
+            (Logical(l), Integer(r)) => f(l, r),
+            (Logical(l), Logical(r)) => f(l, r),
+            (Logical(l), Character(r)) => f(l, r),
+            (Character(l), Numeric(r)) => f(l, r),
+            (Character(l), Integer(r)) => f(l, r),
+            (Character(l), Logical(r)) => f(l, r),
+            (Character(l), Character(r)) => f(l, r),
+        }
+    }
+
+    fn vec_gt(self, rhs: Self) -> Self::Output {
+        use std::cmp::Ordering::*;
+        RVector::Logical(
+            self.vec_partial_cmp(rhs)
+                .into_iter()
+                .map(|i| match i {
+                    Some(Greater) => OptionNA::Some(true),
+                    Some(_) => OptionNA::Some(false),
+                    None => OptionNA::NA,
+                })
+                .collect(),
+        )
+    }
+
+    fn vec_gte(self, rhs: Self) -> Self::Output {
+        use std::cmp::Ordering::*;
+        RVector::Logical(
+            self.vec_partial_cmp(rhs)
+                .into_iter()
+                .map(|i| match i {
+                    Some(Greater | Equal) => OptionNA::Some(true),
+                    Some(_) => OptionNA::Some(false),
+                    None => OptionNA::NA,
+                })
+                .collect(),
+        )
+    }
+
+    fn vec_lt(self, rhs: Self) -> Self::Output {
+        use std::cmp::Ordering::*;
+        RVector::Logical(
+            self.vec_partial_cmp(rhs)
+                .into_iter()
+                .map(|i| match i {
+                    Some(Less) => OptionNA::Some(true),
+                    Some(_) => OptionNA::Some(false),
+                    None => OptionNA::NA,
+                })
+                .collect(),
+        )
+    }
+
+    fn vec_lte(self, rhs: Self) -> Self::Output {
+        use std::cmp::Ordering::*;
+        RVector::Logical(
+            self.vec_partial_cmp(rhs)
+                .into_iter()
+                .map(|i| match i {
+                    Some(Less | Equal) => OptionNA::Some(true),
+                    Some(_) => OptionNA::Some(false),
+                    None => OptionNA::NA,
+                })
+                .collect(),
+        )
+    }
+
+    fn vec_eq(self, rhs: Self) -> Self::Output {
+        use std::cmp::Ordering::*;
+        RVector::Logical(
+            self.vec_partial_cmp(rhs)
+                .into_iter()
+                .map(|i| match i {
+                    Some(Equal) => OptionNA::Some(true),
+                    Some(_) => OptionNA::Some(false),
+                    None => OptionNA::NA,
+                })
+                .collect(),
+        )
+    }
+
+    fn vec_neq(self, rhs: Self) -> Self::Output {
+        use std::cmp::Ordering::*;
+        RVector::Logical(
+            self.vec_partial_cmp(rhs)
+                .into_iter()
+                .map(|i| match i {
+                    Some(Equal) => OptionNA::Some(false),
+                    Some(_) => OptionNA::Some(true),
+                    None => OptionNA::NA,
+                })
+                .collect(),
+        )
+    }
+}
+
+impl std::ops::Rem for RVector {
+    type Output = RVector;
     fn rem(self, rhs: Self) -> Self::Output {
         use RVector::*;
 
@@ -638,7 +804,6 @@ impl std::ops::Rem for RVector {
 
 impl std::ops::BitOr for RVector {
     type Output = RVector;
-
     fn bitor(self, rhs: Self) -> Self::Output {
         use OptionNA::*;
         use RVector::*;
@@ -659,7 +824,6 @@ impl std::ops::BitOr for RVector {
 
 impl std::ops::BitAnd for RVector {
     type Output = RVector;
-
     fn bitand(self, rhs: Self) -> Self::Output {
         use OptionNA::*;
         use RVector::*;
