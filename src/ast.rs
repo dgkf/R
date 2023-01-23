@@ -4,7 +4,7 @@ use std::{iter::Zip, slice::IterMut, vec::IntoIter};
 use crate::builtins::Primitive;
 
 #[derive(Debug, Clone)]
-pub enum RExpr {
+pub enum Expr {
     Null,
     NA,
     Inf,
@@ -17,13 +17,13 @@ pub enum RExpr {
     Integer(i32),
     String(String),
     Symbol(String),
-    List(RExprList),
-    Function(RExprList, Box<RExpr>),
-    Call(Box<RExpr>, RExprList),
+    List(ExprList),
+    Function(ExprList, Box<Expr>),
+    Call(Box<Expr>, ExprList),
     Primitive(Box<dyn Primitive>),
 }
 
-impl RExpr {
+impl Expr {
     pub fn as_primitive<T>(x: T) -> Self
     where
         T: Primitive + 'static,
@@ -31,7 +31,7 @@ impl RExpr {
         Self::Primitive(Box::new(x))
     }
 
-    pub fn new_primitive_call<T>(x: T, args: RExprList) -> Self
+    pub fn new_primitive_call<T>(x: T, args: ExprList) -> Self
     where
         T: Primitive + 'static,
     {
@@ -40,23 +40,23 @@ impl RExpr {
     }
 }
 
-impl fmt::Display for RExpr {
+impl fmt::Display for Expr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            RExpr::Null => write!(f, "NULL"),
-            RExpr::Missing => write!(f, ""),
-            RExpr::Break => write!(f, "break"),
-            RExpr::Continue => write!(f, "continue"),
-            RExpr::Bool(true) => write!(f, "TRUE"),
-            RExpr::Bool(false) => write!(f, "FALSE"),
-            RExpr::Number(x) => write!(f, "{}", x),
-            RExpr::Integer(x) => write!(f, "{}L", x),
-            RExpr::String(x) => write!(f, "\"{}\"", x),
-            RExpr::Symbol(x) => write!(f, "{}", x),
-            RExpr::List(x) => write!(f, "{}", x),
-            RExpr::Ellipsis => write!(f, "..."),
-            RExpr::Call(what, args) => match &**what {
-                RExpr::Primitive(p) => write!(f, "{}", p.rfmt_call(args)),
+            Expr::Null => write!(f, "NULL"),
+            Expr::Missing => write!(f, ""),
+            Expr::Break => write!(f, "break"),
+            Expr::Continue => write!(f, "continue"),
+            Expr::Bool(true) => write!(f, "TRUE"),
+            Expr::Bool(false) => write!(f, "FALSE"),
+            Expr::Number(x) => write!(f, "{}", x),
+            Expr::Integer(x) => write!(f, "{}L", x),
+            Expr::String(x) => write!(f, "\"{}\"", x),
+            Expr::Symbol(x) => write!(f, "{}", x),
+            Expr::List(x) => write!(f, "{}", x),
+            Expr::Ellipsis => write!(f, "..."),
+            Expr::Call(what, args) => match &**what {
+                Expr::Primitive(p) => write!(f, "{}", p.rfmt_call(args)),
                 rexpr => write!(f, "{}({})", rexpr, args),
             },
             x => write!(f, "{:?}", x),
@@ -65,19 +65,19 @@ impl fmt::Display for RExpr {
 }
 
 #[derive(Debug, Clone, Default)]
-pub struct RExprList {
+pub struct ExprList {
     pub keys: Vec<Option<String>>, // TODO: use Vec<RExprListKey>
-    pub values: Vec<RExpr>,
+    pub values: Vec<Expr>,
 }
 
-impl fmt::Display for RExprList {
+impl fmt::Display for ExprList {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let pairs: Vec<String> = self
             .values
             .iter()
             .enumerate()
             .map(|(i, v)| match (&self.keys[i], v) {
-                (Some(k), RExpr::Missing) => format!("{}", k),
+                (Some(k), Expr::Missing) => format!("{}", k),
                 (Some(k), _) => format!("{} = {}", k, v),
                 (None, v) => format!("{}", v),
             })
@@ -88,66 +88,65 @@ impl fmt::Display for RExprList {
 }
 
 #[derive(Debug, Clone)]
-pub struct RExprListItem(Option<String>, RExpr);
+pub struct RExprListItem(Option<String>, Expr);
 
-impl IntoIterator for RExprList {
-    type Item = (Option<String>, RExpr);
-    type IntoIter = <Zip<IntoIter<Option<String>>, IntoIter<RExpr>> as IntoIterator>::IntoIter;
+impl IntoIterator for ExprList {
+    type Item = (Option<String>, Expr);
+    type IntoIter = <Zip<IntoIter<Option<String>>, IntoIter<Expr>> as IntoIterator>::IntoIter;
 
     fn into_iter(self) -> Self::IntoIter {
         self.keys.into_iter().zip(self.values.into_iter())
     }
 }
 
-impl<'a> IntoIterator for &'a mut RExprList {
-    type Item = (&'a mut Option<String>, &'a mut RExpr);
-    type IntoIter =
-        <Zip<IterMut<'a, Option<String>>, IterMut<'a, RExpr>> as IntoIterator>::IntoIter;
+impl<'a> IntoIterator for &'a mut ExprList {
+    type Item = (&'a mut Option<String>, &'a mut Expr);
+    type IntoIter = <Zip<IterMut<'a, Option<String>>, IterMut<'a, Expr>> as IntoIterator>::IntoIter;
 
     fn into_iter(self) -> Self::IntoIter {
         self.keys.iter_mut().zip(self.values.iter_mut())
     }
 }
 
-impl FromIterator<(Option<String>, RExpr)> for RExprList {
+impl FromIterator<(Option<String>, Expr)> for ExprList {
     fn from_iter<T>(iter: T) -> Self
     where
-        T: IntoIterator<Item = (Option<String>, RExpr)>,
+        T: IntoIterator<Item = (Option<String>, Expr)>,
     {
         let (keys, values) = iter.into_iter().unzip();
-        RExprList { keys, values }
+        ExprList { keys, values }
     }
 }
 
-impl FromIterator<RExpr> for RExprList {
+impl FromIterator<Expr> for ExprList {
     fn from_iter<T>(iter: T) -> Self
     where
-        T: IntoIterator<Item = RExpr>,
+        T: IntoIterator<Item = Expr>,
     {
-        let values: Vec<RExpr> = iter.into_iter().collect();
-        RExprList {
+        let values: Vec<Expr> = iter.into_iter().collect();
+        ExprList {
             keys: vec![None; values.len()],
             values,
         }
     }
 }
 
-impl RExprList {
-    pub fn new() -> RExprList {
-        RExprList {
+impl ExprList {
+    pub fn new() -> ExprList {
+        ExprList {
             ..Default::default()
         }
     }
 
-    pub fn get_named(&self, key: String) -> Option<RExpr> {
-        let first_name_index = self.keys.iter().position(|i| i == &Some(key.clone()));
+    pub fn get_named(&self, key: &String) -> Option<Expr> {
+        let first_name_index = self.keys.iter().position(|i| i.as_ref() == Some(key));
         match first_name_index {
             Some(index) => Some(self.values[index].clone()),
             _ => None,
         }
     }
 
-    pub fn get(&self, index: usize) -> Option<RExpr> {
+    pub fn get(&self, index: usize) -> Option<Expr> {
         if index < self.values.len() {
             Some(self.values[index].clone())
         } else {
@@ -155,7 +154,7 @@ impl RExprList {
         }
     }
 
-    pub fn pop(&mut self) -> Option<(Option<String>, RExpr)> {
+    pub fn pop(&mut self) -> Option<(Option<String>, Expr)> {
         if let Some(k) = self.keys.pop() {
             if let Some(v) = self.values.pop() {
                 return Some((k, v));
@@ -165,13 +164,13 @@ impl RExprList {
         None
     }
 
-    pub fn push(&mut self, pair: (Option<String>, RExpr)) {
+    pub fn push(&mut self, pair: (Option<String>, Expr)) {
         let (key, value) = pair;
         self.keys.push(key);
         self.values.push(value);
     }
 
-    pub fn append(&mut self, mut other: Self) -> &mut RExprList {
+    pub fn append(&mut self, mut other: Self) -> &mut ExprList {
         self.keys.append(&mut other.keys);
         self.values.append(&mut other.values);
         self
@@ -179,26 +178,26 @@ impl RExprList {
 
     pub fn position_ellipsis(&self) -> Option<usize> {
         self.values.iter().position(|i| match i {
-            RExpr::Ellipsis => true,
+            Expr::Ellipsis => true,
             _ => false,
         })
     }
 
-    pub fn pop_trailing(&mut self) -> RExprList {
+    pub fn pop_trailing(&mut self) -> ExprList {
         if let Some(index) = self.position_ellipsis() {
             let keys_trailing = self.keys.drain(index..self.keys.len()).collect();
             let vals_trailing = self.values.drain(index..self.values.len()).collect();
 
-            RExprList {
+            ExprList {
                 keys: keys_trailing,
                 values: vals_trailing,
             }
         } else {
-            RExprList::new()
+            ExprList::new()
         }
     }
 
-    pub fn remove_named(&mut self, key: &str) -> Option<(Option<String>, RExpr)> {
+    pub fn remove_named(&mut self, key: &str) -> Option<(Option<String>, Expr)> {
         let first_named_index = self.keys.iter().position(|i| i == &Some(key.to_string()));
         if let Some(index) = first_named_index {
             Some((self.keys.remove(index), self.values.remove(index)))
@@ -207,7 +206,7 @@ impl RExprList {
         }
     }
 
-    pub fn remove(&mut self, index: usize) -> Option<(Option<String>, RExpr)> {
+    pub fn remove(&mut self, index: usize) -> Option<(Option<String>, Expr)> {
         if index < self.keys.len() {
             Some((self.keys.remove(index), self.values.remove(index)))
         } else {
@@ -215,7 +214,7 @@ impl RExprList {
         }
     }
 
-    pub fn insert_named(&mut self, key: String, value: RExpr) -> usize {
+    pub fn insert_named(&mut self, key: String, value: Expr) -> usize {
         if let Some(index) = self.keys.iter().position(|i| i == &Some(key.clone())) {
             self.values[index] = value;
             index
@@ -226,21 +225,21 @@ impl RExprList {
         }
     }
 
-    pub fn insert(&mut self, index: usize, value: RExpr) -> usize {
+    pub fn insert(&mut self, index: usize, value: Expr) -> usize {
         if index < self.values.len() {
             self.keys.insert(index, None);
             self.values.insert(index, value);
             index
         } else {
             let n = index - self.values.len();
-            self.keys.extend(vec![None; n]);
-            self.values.extend(vec![RExpr::Null; n - 1]);
+            self.keys.extend(vec![None; n + 1]);
+            self.values.extend(vec![Expr::Null; n]);
             self.values.push(value);
             index
         }
     }
 
-    pub fn binary_args(self) -> ((Option<String>, RExpr), (Option<String>, RExpr)) {
+    pub fn binary_args(self) -> ((Option<String>, Expr), (Option<String>, Expr)) {
         let mut argstream = self.into_iter();
         let Some(lhs) = argstream.next() else {
             unimplemented!()
@@ -253,7 +252,7 @@ impl RExprList {
         (lhs, rhs)
     }
 
-    pub fn unnamed_binary_args(self) -> (RExpr, RExpr) {
+    pub fn unnamed_binary_args(self) -> (Expr, Expr) {
         let mut argstream = self.into_iter();
         let Some((_, lhs)) = argstream.next() else {
             unimplemented!()
@@ -266,7 +265,7 @@ impl RExprList {
         (lhs, rhs)
     }
 
-    pub fn unnamed_unary_arg(self) -> RExpr {
+    pub fn unnamed_unary_arg(self) -> Expr {
         let mut argstream = self.into_iter();
         let Some((_, lhs)) = argstream.next() else {
             unimplemented!()
@@ -276,10 +275,10 @@ impl RExprList {
     }
 
     /// Converts unnamed value symbols into missing named parameters
-    pub fn as_formals(self) -> RExprList {
+    pub fn as_formals(self) -> ExprList {
         self.into_iter()
             .map(|(k, v)| match (k, v) {
-                (None, RExpr::Symbol(param)) => (Some(param), RExpr::Missing),
+                (None, Expr::Symbol(param)) => (Some(param), Expr::Missing),
                 other => other,
             })
             .collect()
@@ -290,26 +289,26 @@ impl RExprList {
     }
 }
 
-impl From<Vec<RExpr>> for RExprList {
-    fn from(values: Vec<RExpr>) -> Self {
-        RExprList {
+impl From<Vec<Expr>> for ExprList {
+    fn from(values: Vec<Expr>) -> Self {
+        ExprList {
             keys: vec![None; values.len()],
             values,
         }
     }
 }
 
-impl From<RExpr> for RExprList {
-    fn from(value: RExpr) -> Self {
-        RExprList {
+impl From<Expr> for ExprList {
+    fn from(value: Expr) -> Self {
+        ExprList {
             keys: vec![None],
             values: vec![value],
         }
     }
 }
 
-impl From<Vec<(Option<String>, RExpr)>> for RExprList {
-    fn from(values: Vec<(Option<String>, RExpr)>) -> Self {
-        RExprList::from_iter(values.into_iter())
+impl From<Vec<(Option<String>, Expr)>> for ExprList {
+    fn from(values: Vec<(Option<String>, Expr)>) -> Self {
+        ExprList::from_iter(values.into_iter())
     }
 }

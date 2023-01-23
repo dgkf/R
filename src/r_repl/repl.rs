@@ -4,9 +4,8 @@ use std::path::Path;
 use super::highlight::RHighlighter;
 use super::prompt::RPrompt;
 use super::validator::RValidator;
-use crate::lang::Environment;
+use crate::lang::{Context, Environment};
 use crate::parser::parse;
-use crate::utils::eval;
 
 pub fn repl<P>(history: Option<&P>) -> Result<(), ()>
 where
@@ -52,7 +51,7 @@ where
                 let parse_res = parse(&line);
                 match parse_res {
                     Ok(expr) => {
-                        let res = eval(expr, &mut global_env);
+                        let res = global_env.eval(expr);
                         match res {
                             Ok(val) => println!("{}", val),
                             Err(e) => println!("{}", e),

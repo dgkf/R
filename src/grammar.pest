@@ -56,9 +56,10 @@
         infix = _{ 
                 assign | 
                 add | subtract | multiply | divide | modulo | power | 
+                pipe | 
                 gte | lte | gt | eq | neq | lt | 
                 or | vor | and | vand | 
-                special | pipe 
+                special
             }
 
             // numerics
