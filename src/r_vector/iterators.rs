@@ -6,9 +6,11 @@ use crate::r_vector::coercion::*;
 /// recycled even if they do not repeat an even number of times.
 ///
 /// ```rust
+/// use r::r_vector::iterators::zip_recycle;
+///
 /// let x = vec![1, 2, 3, 4];
 /// let y = vec![2, 4];
-/// let z: Vec<_> = zip_recycle(x, y).collect()
+/// let z: Vec<_> = zip_recycle(x, y).collect();
 /// ````
 ///
 pub fn zip_recycle<'a, L, R, LIter, LItem, RIter, RItem>(
