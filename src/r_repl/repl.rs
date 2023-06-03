@@ -54,10 +54,8 @@ where
                         let res = global_env.eval(expr);
                         match res {
                             Ok(val) => println!("{}", val),
-                            Err(e) => match e {
-                                RSignal::Condition(Cond::Terminate) => break,
-                                ref other_error => println!("{}", other_error),
-                            },
+                            Err(RSignal::Condition(Cond::Terminate)) => break,
+                            Err(e) => println!("{}", e),
                         }
                     }
                     Err(e) => {
