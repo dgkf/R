@@ -27,6 +27,7 @@ pub enum R {
 pub enum Cond {
     Break,
     Continue,
+    Terminate,
     Return(R),
 }
 

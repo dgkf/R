@@ -772,8 +772,13 @@ pub fn primitive(name: &str) -> Option<Box<dyn Fn(ExprList, &mut Environment) ->
     match name {
         "c" => Some(Box::new(primitive_c)),
         "list" => Some(Box::new(primitive_list)),
+        "q" => Some(Box::new(primitive_q)),
         _ => None,
     }
+}
+
+pub fn primitive_q(_args: ExprList, _env: &mut Environment) -> EvalResult {
+    Err(RSignal::Condition(Cond::Terminate))
 }
 
 pub fn primitive_list(args: ExprList, env: &mut Environment) -> EvalResult {
