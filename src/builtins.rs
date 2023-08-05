@@ -779,8 +779,29 @@ pub fn primitive(name: &str) -> Option<Box<dyn Fn(ExprList, &mut Environment) ->
 }
 
 pub fn primitive_paste(_args: ExprList, _env: &mut Environment) -> EvalResult {
-    let output = vec![OptionNA::Some("zzz".to_string()); 1];
+    // TODO
+    // Need to coerce inputs to character
+    let output = vec![
+        OptionNA::Some("2".to_string()),
+        OptionNA::Some("1".to_string()),
+    ];
+    dbg!(&_args);
+    dbg!(&_env);
     Ok(R::Vector(Vector::Character(output)))
+}
+
+#[test]
+fn test_primitive_test() {
+    let mut env = Environment::default();
+
+    let args = ExprList {
+        keys: vec![None],
+        values: vec![Expr::Number(1.0)],
+    };
+
+    let output = primitive_paste(args, &mut env);
+
+    dbg!(output.unwrap());
 }
 
 pub fn primitive_q(_args: ExprList, _env: &mut Environment) -> EvalResult {
