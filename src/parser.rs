@@ -230,7 +230,8 @@ fn parse_postfix(pair: Pair<Rule>) -> (Expr, ExprList) {
             (Expr::as_primitive(PostfixIndex), args)
         }
         Rule::vector_index => (Expr::as_primitive(PostfixVecIndex), parse_pairlist(pair)),
-        atom => unreachable!("invalid postfix operator '{:#?}'", atom),
+        Rule::atom => unreachable!("invalid postfix operator '{:#?}'", Rule::atom),
+        _ => todo!(),
     }
 }
 

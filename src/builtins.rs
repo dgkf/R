@@ -773,8 +773,14 @@ pub fn primitive(name: &str) -> Option<Box<dyn Fn(ExprList, &mut Environment) ->
         "c" => Some(Box::new(primitive_c)),
         "list" => Some(Box::new(primitive_list)),
         "q" => Some(Box::new(primitive_q)),
+        "paste" => Some(Box::new(primitive_paste)),
         _ => None,
     }
+}
+
+pub fn primitive_paste(_args: ExprList, _env: &mut Environment) -> EvalResult {
+    let output = vec![OptionNA::Some("zzz".to_string()); 1];
+    Ok(R::Vector(Vector::Character(output)))
 }
 
 pub fn primitive_q(_args: ExprList, _env: &mut Environment) -> EvalResult {
