@@ -819,8 +819,6 @@ pub fn primitive_paste(args: ExprList, env: &mut Environment) -> EvalResult {
             .collect();
     }
 
-    dbg!(&iter);
-
     Ok(R::Vector(iter.into()))
 }
 
