@@ -779,12 +779,8 @@ pub fn primitive(name: &str) -> Option<Box<dyn Fn(ExprList, &mut Environment) ->
 }
 
 pub fn primitive_paste(args: ExprList, env: &mut Environment) -> EvalResult {
-    // Currently we only support vectors
-
     // TODO
     // Support lists
-
-    dbg!(&args.values);
 
     let R::List(vals) = env.eval_list(args)? else {
         unreachable!()
@@ -795,20 +791,16 @@ pub fn primitive_paste(args: ExprList, env: &mut Environment) -> EvalResult {
         .map(|(k, v)| (k, v.force().unwrap_or(R::Null))) // TODO: raise this error
         .collect();
 
-    // coerce everything into strings
-    let mut output = vec![OptionNA::Some("".to_string()); 0];
-    for (_, val) in vals {
+    // Coerce everything into strings
+    let char_vals: Vec<R> = vals
+        .iter()
+        .map(|x| x.clone().1.as_character().unwrap())
+        .collect();
+
+    let mut output: Vec<OptionNA<String>> = Vec::new();
+
+    for val in char_vals {
         match val {
-            R::Null => continue,
-            R::Vector(Vector::Numeric(v)) => {
-                output.append(&mut Vector::vec_coerce::<f64, String>(&v))
-            }
-            R::Vector(Vector::Integer(v)) => {
-                output.append(&mut Vector::vec_coerce::<i32, String>(&v))
-            }
-            R::Vector(Vector::Logical(v)) => {
-                output.append(&mut Vector::vec_coerce::<bool, String>(&v))
-            }
             R::Vector(Vector::Character(mut v)) => output.append(&mut v),
             _ => {
                 println!("{:#?}", val);
@@ -816,35 +808,72 @@ pub fn primitive_paste(args: ExprList, env: &mut Environment) -> EvalResult {
             }
         }
     }
+
     Ok(R::Vector(Vector::Character(output)))
 }
 
+#[cfg(test)]
+mod test_primitive_paste {
+    use super::*;
+
+    #[test]
+    fn test_primitive_paste() {
+        let mut env = Environment::default();
+
+        // Making a value of args parameter of primitive_paste corresponding to R
+        // c(1.1, 2, FALSE, "a", c(1, 2))
+        let args = ExprList {
+            keys: vec![None; 6],
+            values: vec![
+                Expr::Number(1.1),
+                Expr::Null,
+                Expr::Integer(2),
+                Expr::Bool(false),
+                Expr::String("a".to_string()),
+                Expr::Call(
+                    Box::new(Expr::Symbol("c".to_string())),
+                    ExprList {
+                        keys: vec![None; 2],
+                        values: vec![Expr::Number(1.0), Expr::Number(2.0)],
+                    },
+                ),
+            ],
+        };
+
+        let _observed = primitive_paste(args, &mut env).unwrap().get_vec_string();
+        let _expected: Vec<_> = vec!["1.1", "2", "false", "a", "1", "2"]
+            .iter()
+            .map(|s| s.to_string())
+            .collect();
+
+        assert_eq!(_observed, _expected);
+    }
+}
+
+fn _do_it() {
+    let v = vec![vec!["a"], vec!["1", "2"], vec!["!", "@", "#"]];
+
+    // Need the length of longest vector to create an empty vector that others
+    // will go through and re-cycle values as needed
+    let n = v.iter().max_by_key(|x| x.len()).unwrap().len();
+    let mut iter = vec!["".to_string(); n];
+
+    for i in 0..v.len() {
+        iter = iter
+            .iter()
+            // Any shorter vector will re-cycle its values to the length of
+            // longest one
+            .zip(v[i].iter().cycle())
+            .map(|(x, y)| format!("{}{}", x, y))
+            .collect();
+    }
+
+    println!("{iter:?}");
+}
+
 #[test]
-fn test_primitive_paste() {
-    let mut env = Environment::default();
-
-    // Making a value of args parameter for primitive_paste corresponding to R
-    // c(1.1, 2, FALSE, "a", c(1, 2))
-    let args = ExprList {
-        keys: vec![None; 4],
-        values: vec![
-            Expr::Number(1.1),
-            Expr::Integer(2),
-            Expr::Bool(false),
-            Expr::String("a".to_string()),
-            Expr::Call(
-                Box::new(Expr::Symbol("c".to_string())),
-                ExprList {
-                    keys: vec![None; 2],
-                    values: vec![Expr::Number(1.0), Expr::Number(2.0)],
-                },
-            ),
-        ],
-    };
-
-    let output = primitive_paste(args, &mut env);
-
-    dbg!(output.unwrap());
+fn test_do_it() {
+    _do_it()
 }
 
 pub fn primitive_q(_args: ExprList, _env: &mut Environment) -> EvalResult {

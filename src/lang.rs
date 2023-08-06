@@ -78,6 +78,14 @@ impl R {
         }
     }
 
+    pub fn as_character(self) -> EvalResult {
+        match self {
+            R::Vector(v) => Ok(R::Vector(v.as_character())),
+            R::Null => Ok(R::Vector(Vector::Character(vec![]))),
+            atom => unreachable!("{:?} cannot be coerced to character", atom),
+        }
+    }
+
     pub fn as_vector(self) -> EvalResult {
         match self {
             R::Null => Ok(R::Vector(Vector::Logical(vec![]))),
@@ -135,6 +143,13 @@ impl R {
                 None => Err(RSignal::Error(RError::Other("out of bounds".to_string()))),
             },
             R::List(lvec) => Ok(lvec[i - 1].1.clone()),
+            _ => todo!(),
+        }
+    }
+
+    pub fn get_vec_string(&self) -> Vec<String> {
+        match self {
+            R::Vector(v) => v.clone().into(),
             _ => todo!(),
         }
     }
