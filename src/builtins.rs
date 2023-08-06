@@ -778,25 +778,68 @@ pub fn primitive(name: &str) -> Option<Box<dyn Fn(ExprList, &mut Environment) ->
     }
 }
 
-pub fn primitive_paste(_args: ExprList, _env: &mut Environment) -> EvalResult {
+pub fn primitive_paste(args: ExprList, env: &mut Environment) -> EvalResult {
+    // Currently we only support vectors
+
     // TODO
-    // Need to coerce inputs to character
-    let output = vec![
-        OptionNA::Some("2".to_string()),
-        OptionNA::Some("1".to_string()),
-    ];
-    dbg!(&_args);
-    dbg!(&_env);
+    // Support lists
+
+    dbg!(&args.values);
+
+    let R::List(vals) = env.eval_list(args)? else {
+        unreachable!()
+    };
+
+    let vals: Vec<_> = vals
+        .into_iter()
+        .map(|(k, v)| (k, v.force().unwrap_or(R::Null))) // TODO: raise this error
+        .collect();
+
+    // coerce everything into strings
+    let mut output = vec![OptionNA::Some("".to_string()); 0];
+    for (_, val) in vals {
+        match val {
+            R::Null => continue,
+            R::Vector(Vector::Numeric(v)) => {
+                output.append(&mut Vector::vec_coerce::<f64, String>(&v))
+            }
+            R::Vector(Vector::Integer(v)) => {
+                output.append(&mut Vector::vec_coerce::<i32, String>(&v))
+            }
+            R::Vector(Vector::Logical(v)) => {
+                output.append(&mut Vector::vec_coerce::<bool, String>(&v))
+            }
+            R::Vector(Vector::Character(mut v)) => output.append(&mut v),
+            _ => {
+                println!("{:#?}", val);
+                unimplemented!()
+            }
+        }
+    }
     Ok(R::Vector(Vector::Character(output)))
 }
 
 #[test]
-fn test_primitive_test() {
+fn test_primitive_paste() {
     let mut env = Environment::default();
 
+    // Making a value of args parameter for primitive_paste corresponding to R
+    // c(1.1, 2, FALSE, "a", c(1, 2))
     let args = ExprList {
-        keys: vec![None],
-        values: vec![Expr::Number(1.0)],
+        keys: vec![None; 4],
+        values: vec![
+            Expr::Number(1.1),
+            Expr::Integer(2),
+            Expr::Bool(false),
+            Expr::String("a".to_string()),
+            Expr::Call(
+                Box::new(Expr::Symbol("c".to_string())),
+                ExprList {
+                    keys: vec![None; 2],
+                    values: vec![Expr::Number(1.0), Expr::Number(2.0)],
+                },
+            ),
+        ],
     };
 
     let output = primitive_paste(args, &mut env);
