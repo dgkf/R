@@ -797,19 +797,31 @@ pub fn primitive_paste(args: ExprList, env: &mut Environment) -> EvalResult {
         .map(|x| x.clone().1.as_character().unwrap())
         .collect();
 
-    let mut output: Vec<OptionNA<String>> = Vec::new();
+    let vec_of_vectors: Vec<_> = char_vals
+        .iter()
+        .map(|v| v.get_vec_string())
+        // Filtering out Null values
+        .filter(|v| v.len() != 0)
+        .collect();
 
-    for val in char_vals {
-        match val {
-            R::Vector(Vector::Character(mut v)) => output.append(&mut v),
-            _ => {
-                println!("{:#?}", val);
-                unimplemented!()
-            }
-        }
+    // Need the length of longest vector to create an empty vector that others
+    // will go through and re-cycle values as needed
+    let n = vec_of_vectors.iter().max_by_key(|x| x.len()).unwrap().len();
+    let mut iter = vec!["".to_string(); n];
+
+    for i in 0..vec_of_vectors.len() {
+        iter = iter
+            .iter()
+            // Any shorter vector will re-cycle its values to the length of
+            // longest one
+            .zip(vec_of_vectors[i].iter().cycle())
+            .map(|(x, y)| format!("{}{}", x, y))
+            .collect();
     }
 
-    Ok(R::Vector(Vector::Character(output)))
+    dbg!(&iter);
+
+    Ok(R::Vector(iter.into()))
 }
 
 #[cfg(test)]
@@ -841,7 +853,7 @@ mod test_primitive_paste {
         };
 
         let _observed = primitive_paste(args, &mut env).unwrap().get_vec_string();
-        let _expected: Vec<_> = vec!["1.1", "2", "false", "a", "1", "2"]
+        let _expected: Vec<_> = vec!["1.12falsea1", "1.12falsea2"]
             .iter()
             .map(|s| s.to_string())
             .collect();
@@ -851,7 +863,7 @@ mod test_primitive_paste {
 }
 
 fn _do_it() {
-    let v = vec![vec!["a"], vec!["1", "2"], vec!["!", "@", "#"]];
+    let v = vec![vec!["1"], vec!["2"], vec!["3"], vec!["a", "B"]];
 
     // Need the length of longest vector to create an empty vector that others
     // will go through and re-cycle values as needed
