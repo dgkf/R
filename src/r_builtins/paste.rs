@@ -4,56 +4,56 @@ use crate::lang::*;
 use crate::r_vector::vectors::*;
 
 pub fn primitive_paste(args: ExprList, env: &mut Environment) -> EvalResult {
-    // Need the sep and collapse parameters
-    let sep_i = &args.keys.iter().position(|k| k == &Some("sep".to_string()));
-    let collapse_i = &args
+    // Need to make sure that collapse is specified since we can not assign a
+    // default value as with sep
+    let collapse_is_specified = &args
         .keys
         .iter()
         .position(|k| k == &Some("collapse".to_string()));
 
-    let R::List(mut vals) = env.eval_list(args)? else {
+    let R::List(vals) = env.eval_list(args)? else {
         unreachable!()
     };
 
-    // Try with retain
-    let sep_c = match sep_i {
-        Some(i) => {
-            let val = vals.remove(*i);
-            match val {
-                (_, R::Vector(Vector::Character(s_v))) => s_v.get(0).unwrap().clone().to_string(),
-                _ => {
-                    return Err(RSignal::Error(RError::Other(
-                        "sep parameter must be character string!".to_string(),
-                    )))
+    let mut stack_vals: Vec<(_, _)> = vec![];
+    let mut sep = " ".to_string();
+    let mut collapse = String::new();
+
+    for (k, v) in &vals {
+        let k_clone = k.clone().unwrap_or("".to_string());
+        let _sep_string = String::from("sep");
+
+        match k_clone.as_str() {
+            "sep" => {
+                sep = match v {
+                    R::Vector(Vector::Character(s_v)) => s_v.get(0).unwrap().clone().to_string(),
+                    _ => {
+                        return Err(RSignal::Error(RError::Other(
+                            "sep parameter must be a character string!".to_string(),
+                        )))
+                    }
                 }
             }
-        }
-        // Default value for sep parameter is a space
-        None => " ".to_string(),
-    };
-
-    let collapse_c = match collapse_i {
-        Some(i) => {
-            let val = vals.remove(*i);
-            match val {
-                (_, R::Vector(Vector::Character(s_v))) => s_v.get(0).unwrap().clone().to_string(),
-                _ => {
-                    return Err(RSignal::Error(RError::Other(
-                        "collapse parameter must be character string!".to_string(),
-                    )))
+            "collapse" => {
+                collapse = match v {
+                    R::Vector(Vector::Character(s_v)) => s_v.get(0).unwrap().clone().to_string(),
+                    _ => {
+                        return Err(RSignal::Error(RError::Other(
+                            "collapse parameter must be a character string!".to_string(),
+                        )))
+                    }
                 }
             }
+            _ => stack_vals.push((k, v)),
         }
-        // Default value for collapse parameter is a NULL
-        None => String::new(),
-    };
+    }
 
-    let vals: Vec<_> = vals
+    let stack_vals: Vec<_> = stack_vals
         .into_iter()
-        .map(|(k, v)| (k, v.force().unwrap_or(R::Null))) // TODO: raise this error
+        .map(|(k, v)| (k, v.clone().force().unwrap_or(R::Null))) // TODO: raise this error
         .collect();
 
-    for (_, v) in &vals {
+    for (_, v) in &stack_vals {
         match v {
             R::List(_) => {
                 return Err(RSignal::Error(RError::Other(
@@ -65,7 +65,7 @@ pub fn primitive_paste(args: ExprList, env: &mut Environment) -> EvalResult {
     }
 
     // Coerce everything into strings
-    let char_vals: Vec<R> = vals
+    let char_vals: Vec<R> = stack_vals
         .iter()
         .map(|(_, v)| v.clone().as_character().unwrap())
         .collect();
@@ -98,13 +98,13 @@ pub fn primitive_paste(args: ExprList, env: &mut Environment) -> EvalResult {
                 if i == 0 {
                     return y.clone();
                 }
-                format!("{x}{sep_c}{y}")
+                format!("{x}{sep}{y}")
             })
             .collect();
     }
 
-    if collapse_i.is_some() {
-        output = vec![output.join(&collapse_c)];
+    if collapse_is_specified.is_some() {
+        output = vec![output.join(&collapse)];
     }
 
     Ok(R::Vector(output.into()))
@@ -316,6 +316,44 @@ mod test_primitive_paste {
 
         let observed = primitive_paste(args, &mut env).unwrap().get_vec_string();
         let expected: Vec<_> = vec!["1 2 3"].iter().map(|s| s.to_string()).collect();
+
+        assert_eq!(observed, expected);
+    }
+
+    #[test]
+    fn test_primitive_paste_09() {
+        let mut env = Environment::default();
+
+        // Making a value of args parameter of primitive_paste corresponding to
+        // R paste(c(1, 2), 3, 4, 5, sep = "-", collapse = "+")
+        let mut keys = vec![None; 4];
+        keys.push(Some("sep".to_string()));
+        keys.push(Some("collapse".to_string()));
+        let args = ExprList {
+            keys,
+            values: vec![
+                Expr::Call(
+                    Box::new(Expr::Symbol("c".to_string())),
+                    ExprList {
+                        keys: vec![None; 2],
+                        values: vec![Expr::Integer(1), Expr::Integer(2)],
+                    },
+                ),
+                Expr::Integer(3),
+                Expr::Integer(4),
+                Expr::Integer(5),
+                // sep parameter
+                Expr::String("-".to_string()),
+                // collapse parameter
+                Expr::String("+".to_string()),
+            ],
+        };
+
+        let observed = primitive_paste(args, &mut env).unwrap().get_vec_string();
+        let expected: Vec<_> = vec!["1-3-4-5+2-3-4-5"]
+            .iter()
+            .map(|s| s.to_string())
+            .collect();
 
         assert_eq!(observed, expected);
     }
