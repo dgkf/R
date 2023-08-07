@@ -80,8 +80,8 @@ mod test_primitive_paste {
     fn test_primitive_paste_01() {
         let mut env = Environment::default();
 
-        // Making a value of args parameter of primitive_paste corresponding to R
-        // c(NULL)
+        // Making a value of args parameter of primitive_paste corresponding to
+        // R c(NULL)
         let args = ExprList {
             keys: vec![None],
             values: vec![Expr::Null],
@@ -97,8 +97,8 @@ mod test_primitive_paste {
     fn test_primitive_paste_02() {
         let mut env = Environment::default();
 
-        // Making a value of args parameter of primitive_paste corresponding to R
-        // c(1.1, 2, FALSE, "a", c(1, 2), sep = "+")
+        // Making a value of args parameter of primitive_paste corresponding to
+        // R c(1.1, 2, FALSE, "a", c(1, 2), sep = "+")
         let args = ExprList {
             keys: vec![None, None, None, None, None, None, Some("sep".to_string())],
             values: vec![
@@ -132,8 +132,8 @@ mod test_primitive_paste {
     fn test_primitive_paste_03() {
         let mut env = Environment::default();
 
-        // Making a value of args parameter of primitive_paste corresponding to R
-        // c(1.1, 2, FALSE, "a", c(1, 2))
+        // Making a value of args parameter of primitive_paste corresponding to
+        // R c(1.1, 2, FALSE, "a", c(1, 2))
         let args = ExprList {
             keys: vec![None; 6],
             values: vec![
