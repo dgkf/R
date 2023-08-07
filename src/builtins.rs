@@ -782,7 +782,7 @@ pub fn primitive_paste(args: ExprList, env: &mut Environment) -> EvalResult {
     // TODO
     // Support lists
 
-    // Need the sep and collapse parameter
+    // Need the sep and collapse parameters
     let sep_i = &args.keys.iter().position(|k| k == &Some("sep".to_string()));
 
     let R::List(mut vals) = env.eval_list(args)? else {
@@ -822,29 +822,25 @@ pub fn primitive_paste(args: ExprList, env: &mut Environment) -> EvalResult {
     // Need the length of longest vector to create an empty vector that others
     // will go through and re-cycle values as needed
     let n = vec_of_vectors.iter().max_by_key(|x| x.len()).unwrap().len();
-    let mut iter = vec!["".to_string(); n];
+    let mut output = vec!["".to_string(); n];
 
     for i in 0..vec_of_vectors.len() {
-        iter = iter
+        output = output
             .iter()
             // Any shorter vector will re-cycle its values to the length of
             // longest one
             .zip(vec_of_vectors[i].iter().cycle())
-            .map(|(x, y)| format!("{x}{sep_c}{y}"))
+            .map(|(x, y)| {
+                // No need for a sep in the beginning
+                if i == 0 {
+                    return y.clone();
+                }
+                format!("{x}{sep_c}{y}")
+            })
             .collect();
     }
 
-    iter = iter
-        .iter()
-        .map(|x| {
-            let mut new_x = x.clone();
-            // Need to remove the sep character from the beginning
-            new_x.remove(0);
-            new_x
-        })
-        .collect::<Vec<String>>();
-
-    Ok(R::Vector(iter.into()))
+    Ok(R::Vector(output.into()))
 }
 
 #[cfg(test)]
@@ -918,32 +914,6 @@ mod test_primitive_paste {
 
         assert_eq!(_observed, _expected);
     }
-}
-
-fn _do_it() {
-    let v = vec![vec!["1"], vec!["2"], vec!["3"], vec!["a", "B"]];
-
-    // Need the length of longest vector to create an empty vector that others
-    // will go through and re-cycle values as needed
-    let n = v.iter().max_by_key(|x| x.len()).unwrap().len();
-    let mut iter = vec!["".to_string(); n];
-
-    for i in 0..v.len() {
-        iter = iter
-            .iter()
-            // Any shorter vector will re-cycle its values to the length of
-            // longest one
-            .zip(v[i].iter().cycle())
-            .map(|(x, y)| format!("{}{}", x, y))
-            .collect();
-    }
-
-    println!("{iter:?}");
-}
-
-#[test]
-fn test_do_it() {
-    _do_it()
 }
 
 pub fn primitive_q(_args: ExprList, _env: &mut Environment) -> EvalResult {
