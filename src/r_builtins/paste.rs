@@ -21,7 +21,11 @@ pub fn primitive_paste(args: ExprList, env: &mut Environment) -> EvalResult {
             let val = vals.remove(*i);
             match val {
                 (_, R::Vector(Vector::Character(s_v))) => s_v.get(0).unwrap().clone().to_string(),
-                _ => unreachable!(),
+                _ => {
+                    return Err(RSignal::Error(RError::Other(
+                        "sep parameter must be character string!".to_string(),
+                    )))
+                }
             }
         }
         // Default value for sep parameter is a space
@@ -33,7 +37,11 @@ pub fn primitive_paste(args: ExprList, env: &mut Environment) -> EvalResult {
             let val = vals.remove(*i);
             match val {
                 (_, R::Vector(Vector::Character(s_v))) => s_v.get(0).unwrap().clone().to_string(),
-                _ => unreachable!(),
+                _ => {
+                    return Err(RSignal::Error(RError::Other(
+                        "collapse parameter must be character string!".to_string(),
+                    )))
+                }
             }
         }
         // Default value for collapse parameter is a NULL
