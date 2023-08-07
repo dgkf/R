@@ -1,11 +1,9 @@
 use crate::ast::*;
+use crate::error::*;
 use crate::lang::*;
 use crate::r_vector::vectors::*;
 
 pub fn primitive_paste(args: ExprList, env: &mut Environment) -> EvalResult {
-    // TODO
-    // Support lists
-
     // Need the sep and collapse parameters
     let sep_i = &args.keys.iter().position(|k| k == &Some("sep".to_string()));
 
@@ -29,6 +27,17 @@ pub fn primitive_paste(args: ExprList, env: &mut Environment) -> EvalResult {
         .into_iter()
         .map(|(k, v)| (k, v.force().unwrap_or(R::Null))) // TODO: raise this error
         .collect();
+
+    for (_, v) in &vals {
+        match v {
+            R::List(_) => {
+                return Err(RSignal::Error(RError::Other(
+                    "list is not supported in paste() yet!".to_string(),
+                )))
+            }
+            _ => continue,
+        }
+    }
 
     // Coerce everything into strings
     let char_vals: Vec<R> = vals
