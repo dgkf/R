@@ -42,7 +42,7 @@ pub fn primitive_paste(args: ExprList, env: &mut Environment) -> EvalResult {
     // Coerce everything into strings
     let char_vals: Vec<R> = vals
         .iter()
-        .map(|v| v.clone().1.as_character().unwrap())
+        .map(|(_, v)| v.clone().as_character().unwrap())
         .collect();
 
     let vec_of_vectors: Vec<_> = char_vals
@@ -163,6 +163,63 @@ mod test_primitive_paste {
 
         let observed = primitive_paste(args, &mut env).unwrap().get_vec_string();
         let expected: Vec<_> = vec!["1.1 2 false a 1", "1.1 2 false a 2"]
+            .iter()
+            .map(|s| s.to_string())
+            .collect();
+
+        assert_eq!(observed, expected);
+    }
+
+    #[test]
+    fn test_primitive_paste_04() {
+        let mut env = Environment::default();
+
+        // Making a value of args parameter of primitive_paste corresponding to
+        // R paste(c(1, 2, 3, 4, 5), c("st", "nd", "rd", c("th", "th")), sep = "")
+        let args = ExprList {
+            keys: vec![None, None, Some("sep".to_string())],
+            values: vec![
+                Expr::Call(
+                    Box::new(Expr::Symbol("c".to_string())),
+                    ExprList {
+                        keys: vec![None; 5],
+                        values: vec![
+                            Expr::Integer(1),
+                            Expr::Integer(2),
+                            Expr::Integer(3),
+                            Expr::Integer(4),
+                            Expr::Integer(5),
+                        ],
+                    },
+                ),
+                Expr::Call(
+                    Box::new(Expr::Symbol("c".to_string())),
+                    ExprList {
+                        keys: vec![None; 4],
+                        values: vec![
+                            Expr::String("st".to_string()),
+                            Expr::String("nd".to_string()),
+                            Expr::String("rd".to_string()),
+                            Expr::Call(
+                                Box::new(Expr::Symbol("c".to_string())),
+                                ExprList {
+                                    keys: vec![None; 2],
+                                    values: vec![
+                                        Expr::String("th".to_string()),
+                                        Expr::String("th".to_string()),
+                                    ],
+                                },
+                            ),
+                        ],
+                    },
+                ),
+                // sep parameter
+                Expr::String("".to_string()),
+            ],
+        };
+
+        let observed = primitive_paste(args, &mut env).unwrap().get_vec_string();
+        let expected: Vec<_> = vec!["1st", "2nd", "3rd", "4th", "5th"]
             .iter()
             .map(|s| s.to_string())
             .collect();
