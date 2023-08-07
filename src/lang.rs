@@ -1,6 +1,6 @@
 use crate::ast::*;
-use crate::builtins::Callable;
 use crate::error::*;
+use crate::r_builtins::builtins::Callable;
 use crate::r_vector::vectors::*;
 
 use core::fmt;

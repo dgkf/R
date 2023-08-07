@@ -7,8 +7,8 @@
 /// `RExprList`s or tuples of parsed expressions.
 ///
 use crate::ast::*;
-use crate::builtins::*;
 use crate::error::RError;
+use crate::r_builtins::builtins::*;
 
 use pest::iterators::{Pair, Pairs};
 use pest::pratt_parser::PrattParser;
