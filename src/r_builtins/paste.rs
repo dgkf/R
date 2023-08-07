@@ -6,21 +6,38 @@ use crate::r_vector::vectors::*;
 pub fn primitive_paste(args: ExprList, env: &mut Environment) -> EvalResult {
     // Need the sep and collapse parameters
     let sep_i = &args.keys.iter().position(|k| k == &Some("sep".to_string()));
+    let collapse_i = &args
+        .keys
+        .iter()
+        .position(|k| k == &Some("collapse".to_string()));
 
     let R::List(mut vals) = env.eval_list(args)? else {
         unreachable!()
     };
 
+    // Try with retain
     let sep_c = match sep_i {
         Some(i) => {
-            let sep_val = vals.remove(*i);
-            match sep_val {
-                (_, R::Vector(Vector::Character(s_v))) => s_v.get(0).unwrap().clone(),
+            let val = vals.remove(*i);
+            match val {
+                (_, R::Vector(Vector::Character(s_v))) => s_v.get(0).unwrap().clone().to_string(),
                 _ => unreachable!(),
             }
         }
         // Default value for sep parameter is a space
-        _ => OptionNA::Some(" ".to_string()),
+        None => " ".to_string(),
+    };
+
+    let collapse_c = match collapse_i {
+        Some(i) => {
+            let val = vals.remove(*i);
+            match val {
+                (_, R::Vector(Vector::Character(s_v))) => s_v.get(0).unwrap().clone().to_string(),
+                _ => unreachable!(),
+            }
+        }
+        // Default value for collapse parameter is a NULL
+        None => String::new(),
     };
 
     let vals: Vec<_> = vals
@@ -78,6 +95,10 @@ pub fn primitive_paste(args: ExprList, env: &mut Environment) -> EvalResult {
             .collect();
     }
 
+    if collapse_i.is_some() {
+        output = vec![output.join(&collapse_c)];
+    }
+
     Ok(R::Vector(output.into()))
 }
 
@@ -108,8 +129,10 @@ mod test_primitive_paste {
 
         // Making a value of args parameter of primitive_paste corresponding to
         // R c(1.1, 2, FALSE, "a", c(1, 2), sep = "+")
+        let mut keys = vec![None; 6];
+        keys.push(Some("sep".to_string()));
         let args = ExprList {
-            keys: vec![None, None, None, None, None, None, Some("sep".to_string())],
+            keys,
             values: vec![
                 Expr::Number(1.1),
                 Expr::Null,
@@ -223,6 +246,68 @@ mod test_primitive_paste {
             .iter()
             .map(|s| s.to_string())
             .collect();
+
+        assert_eq!(observed, expected);
+    }
+
+    #[test]
+    fn test_primitive_paste_07() {
+        let mut env = Environment::default();
+
+        // Making a value of args parameter of primitive_paste corresponding to
+        // R c(1.1, 2, FALSE, "a", c(1, 2), collapse = "+")
+        let mut keys = vec![None; 6];
+        keys.push(Some("collapse".to_string()));
+        let args = ExprList {
+            keys,
+            values: vec![
+                Expr::Number(1.1),
+                Expr::Null,
+                Expr::Integer(2),
+                Expr::Bool(false),
+                Expr::String("a".to_string()),
+                Expr::Call(
+                    Box::new(Expr::Symbol("c".to_string())),
+                    ExprList {
+                        keys: vec![None; 2],
+                        values: vec![Expr::Number(1.0), Expr::Number(2.0)],
+                    },
+                ),
+                // collapse parameter
+                Expr::String("+".to_string()),
+            ],
+        };
+
+        let observed = primitive_paste(args, &mut env).unwrap().get_vec_string();
+        let expected: Vec<_> = vec!["1.1 2 false a 1+1.1 2 false a 2"]
+            .iter()
+            .map(|s| s.to_string())
+            .collect();
+
+        assert_eq!(observed, expected);
+    }
+
+    #[test]
+    fn test_primitive_paste_08() {
+        let mut env = Environment::default();
+
+        // Making a value of args parameter of primitive_paste corresponding to
+        // R c(1, 2, 3, collapse = "+")
+        let mut keys = vec![None; 3];
+        keys.push(Some("collapse".to_string()));
+        let args = ExprList {
+            keys,
+            values: vec![
+                Expr::Integer(1),
+                Expr::Integer(2),
+                Expr::Integer(3),
+                // collapse parameter
+                Expr::String("+".to_string()),
+            ],
+        };
+
+        let observed = primitive_paste(args, &mut env).unwrap().get_vec_string();
+        let expected: Vec<_> = vec!["1 2 3"].iter().map(|s| s.to_string()).collect();
 
         assert_eq!(observed, expected);
     }
