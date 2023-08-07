@@ -45,7 +45,12 @@ pub fn primitive_paste(args: ExprList, env: &mut Environment) -> EvalResult {
 
     // Need the length of longest vector to create an empty vector that others
     // will go through and re-cycle values as needed
-    let n = vec_of_vectors.iter().max_by_key(|x| x.len()).unwrap().len();
+    let n = vec_of_vectors
+        .iter()
+        .max_by_key(|x| x.len())
+        .unwrap_or(&vec![])
+        .len();
+
     let mut output = vec!["".to_string(); n];
 
     for i in 0..vec_of_vectors.len() {
@@ -76,6 +81,23 @@ mod test_primitive_paste {
         let mut env = Environment::default();
 
         // Making a value of args parameter of primitive_paste corresponding to R
+        // c(NULL)
+        let args = ExprList {
+            keys: vec![None],
+            values: vec![Expr::Null],
+        };
+
+        let observed = primitive_paste(args, &mut env).unwrap().get_vec_string();
+        let expected: Vec<String> = vec![];
+
+        assert_eq!(observed, expected);
+    }
+
+    #[test]
+    fn test_primitive_paste_02() {
+        let mut env = Environment::default();
+
+        // Making a value of args parameter of primitive_paste corresponding to R
         // c(1.1, 2, FALSE, "a", c(1, 2), sep = "+")
         let args = ExprList {
             keys: vec![None, None, None, None, None, None, Some("sep".to_string())],
@@ -97,17 +119,17 @@ mod test_primitive_paste {
             ],
         };
 
-        let _observed = primitive_paste(args, &mut env).unwrap().get_vec_string();
-        let _expected: Vec<_> = vec!["1.1+2+false+a+1", "1.1+2+false+a+2"]
+        let observed = primitive_paste(args, &mut env).unwrap().get_vec_string();
+        let expected: Vec<_> = vec!["1.1+2+false+a+1", "1.1+2+false+a+2"]
             .iter()
             .map(|s| s.to_string())
             .collect();
 
-        assert_eq!(_observed, _expected);
+        assert_eq!(observed, expected);
     }
 
     #[test]
-    fn test_primitive_paste_02() {
+    fn test_primitive_paste_03() {
         let mut env = Environment::default();
 
         // Making a value of args parameter of primitive_paste corresponding to R
@@ -130,12 +152,12 @@ mod test_primitive_paste {
             ],
         };
 
-        let _observed = primitive_paste(args, &mut env).unwrap().get_vec_string();
-        let _expected: Vec<_> = vec!["1.1 2 false a 1", "1.1 2 false a 2"]
+        let observed = primitive_paste(args, &mut env).unwrap().get_vec_string();
+        let expected: Vec<_> = vec!["1.1 2 false a 1", "1.1 2 false a 2"]
             .iter()
             .map(|s| s.to_string())
             .collect();
 
-        assert_eq!(_observed, _expected);
+        assert_eq!(observed, expected);
     }
 }
