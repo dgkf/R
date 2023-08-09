@@ -281,7 +281,7 @@ impl From<Vec<String>> for Vector {
 
 impl Into<Vec<String>> for Vector {
     fn into(self) -> Vec<String> {
-        match self {
+        match self.as_character() {
             Vector::Character(v) => v
                 .iter()
                 .map(|x| match x {
