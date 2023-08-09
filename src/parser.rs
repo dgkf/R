@@ -110,7 +110,8 @@ fn parse_primary(pair: Pair<Rule>) -> Expr {
         // atomic values
         Rule::number => Expr::Number(pair.as_str().parse::<f64>().unwrap()),
         Rule::integer => Expr::Integer(pair.as_str().parse::<i32>().unwrap()),
-        Rule::string => Expr::String(String::from(pair.as_str())),
+        Rule::single_quoted_string => Expr::String(String::from(pair.as_str())),
+        Rule::double_quoted_string => Expr::String(String::from(pair.as_str())),
 
         // structured values
         Rule::vec => parse_vec(pair),
