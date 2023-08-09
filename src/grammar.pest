@@ -32,7 +32,7 @@
         hl_callname = { hl_sym | hl_str }
         hl_sym = { hl_symbol_backticked | symbol_ident }
         hl_symbol_backticked = ${ "`" ~ (!"`" ~ ANY)* ~ ( "`" | eoi ) }
-        hl_str = ${ "\"" ~ string ~ ( "\"" | eoi ) | "'" ~ string ~ ( "'" | eoi ) }
+        hl_str = ${ "\"" ~ double_quoted_string ~ ( "\"" | eoi ) | "'" ~ single_quoted_string ~ ( "'" | eoi ) }
         hl_num = { number ~ "L"? }
         hl_infix = { infix }
         hl_open = { "(" }
@@ -156,16 +156,19 @@
     integer_expr = _{ integer ~ "L" }
         integer = @{ "-"? ~ ASCII_NONZERO_DIGIT ~ ASCII_DIGIT* }
 
-    string_expr = _{ "\"" ~ string ~ "\"" | "'" ~ string ~ "'" }
-        string = @{ char* }
-        char = {
-            !("\"" | "\\") ~ ANY
-            | "\\" ~ ("\"" | "\\" | "/" | "b" | "f" | "n" | "r" | "t")
+    string_expr = _{ "\"" ~ double_quoted_string ~ "\"" | "'" ~ single_quoted_string ~ "'" }
+        single_quoted_string = @{ single_quoted_string_char* }
+        double_quoted_string = @{ double_quoted_string_char* }
+        single_quoted_string_char = _{ !("'"  | "\\") ~ ANY | escaped_char }
+        double_quoted_string_char = _{ !("\"" | "\\") ~ ANY | escaped_char }
+        escaped_char = _{
+              "\\" ~ ("\"" | "'" | "\\" | "/" | "b" | "f" | "n" | "r" | "t")
             | "\\" ~ ("u" ~ ASCII_HEX_DIGIT{4})
         }
 
-    symbol = _{ symbol_backticked | symbol_ident }
-        symbol_backticked = ${ "`" ~ (!"`" ~ ANY)* ~ "`" }
+    symbol = _{ symbol_with_backticks | symbol_ident }
+        symbol_with_backticks = _{ "`" ~ symbol_backticked ~ "`" }
+        symbol_backticked = ${ ( !"`" ~ ANY )* }
         symbol_ident = ${ ( ASCII_ALPHA | "." | "_" ) ~ ( ASCII_ALPHANUMERIC | "." | "_" )* }
 
     list = { "(" ~ pairs ~ ")" }
