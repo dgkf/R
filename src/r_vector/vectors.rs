@@ -289,7 +289,7 @@ impl Into<Vec<String>> for Vector {
                     OptionNA::NA => "NA".to_string(),
                 })
                 .collect(),
-            _ => todo!(),
+            _ => unreachable!(),
         }
     }
 }
