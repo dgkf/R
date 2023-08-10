@@ -43,6 +43,13 @@ pub fn parse(s: &str) -> Result<Expr, RError> {
     }
 }
 
+pub fn parse_args(s: &str) -> Result<ExprList, RError> {
+    match RParser::parse(Rule::repl, s) {
+        Ok(mut pairs) => Ok(parse_pairlist(pairs.next().unwrap())),
+        Err(e) => Err(RError::ParseFailureVerbose(e)),
+    }
+}
+
 fn parse_expr(pairs: Pairs<Rule>) -> Expr {
     // println!("{:#?}", pairs);
     PRATT_PARSER
