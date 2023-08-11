@@ -110,7 +110,8 @@ fn parse_primary(pair: Pair<Rule>) -> Expr {
         // atomic values
         Rule::number => Expr::Number(pair.as_str().parse::<f64>().unwrap()),
         Rule::integer => Expr::Integer(pair.as_str().parse::<i32>().unwrap()),
-        Rule::string => Expr::String(String::from(pair.as_str())),
+        Rule::single_quoted_string => Expr::String(String::from(pair.as_str())),
+        Rule::double_quoted_string => Expr::String(String::from(pair.as_str())),
 
         // structured values
         Rule::vec => parse_vec(pair),
@@ -230,8 +231,7 @@ fn parse_postfix(pair: Pair<Rule>) -> (Expr, ExprList) {
             (Expr::as_primitive(PostfixIndex), args)
         }
         Rule::vector_index => (Expr::as_primitive(PostfixVecIndex), parse_pairlist(pair)),
-        Rule::atom => unreachable!("invalid postfix operator '{:#?}'", Rule::atom),
-        _ => todo!(),
+        rule => unreachable!("invalid postfix operator '{:#?}'", rule),
     }
 }
 
