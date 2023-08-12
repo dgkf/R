@@ -18,6 +18,7 @@ pub fn primitive_paste(args: ExprList, env: &mut Environment) -> EvalResult {
     let mut vec_s_vec: Vec<Vec<String>> = vec![];
     let mut sep = " ".to_string();
     let mut collapse = String::new();
+    let mut _max_len: usize = 0;
 
     // Extract sep and collapse parameters, leave the rest for processing
     for (k, v) in vals {
@@ -55,11 +56,16 @@ pub fn primitive_paste(args: ExprList, env: &mut Environment) -> EvalResult {
                         "list is not supported in paste() yet!".to_string(),
                     )));
                 }
+
+                if let R::Null = v {
+                    continue;
+                }
+
                 // Leave the rest for processing. Coerce everything into character.
                 let s_vec = v.clone().as_character().unwrap().get_vec_string();
-                if !s_vec.is_empty() {
-                    vec_s_vec.push(s_vec)
-                }
+                let _s_l = s_vec.len();
+
+                vec_s_vec.push(s_vec);
             }
         }
     }
