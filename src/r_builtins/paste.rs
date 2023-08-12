@@ -19,7 +19,7 @@ pub fn primitive_paste(args: ExprList, env: &mut Environment) -> EvalResult {
     let mut sep = " ".to_string();
     let mut collapse = String::new();
 
-    for (k, v) in &vals {
+    for (k, v) in vals {
         let k_clone = k.clone().unwrap_or("".to_string());
 
         match k_clone.as_str() {
@@ -59,10 +59,10 @@ pub fn primitive_paste(args: ExprList, env: &mut Environment) -> EvalResult {
         }
     }
 
-    // Coerce everything into strings
+    // Coerce everything into character
     let char_vals: Vec<R> = stack_vals
         .iter()
-        .map(|(_, v)| v.clone().clone().as_character().unwrap())
+        .map(|(_, v)| v.clone().as_character().unwrap())
         .collect();
 
     let vec_of_vectors: Vec<_> = char_vals
