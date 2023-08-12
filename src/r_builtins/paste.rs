@@ -4,13 +4,6 @@ use crate::lang::*;
 use crate::r_vector::vectors::*;
 
 pub fn primitive_paste(args: ExprList, env: &mut Environment) -> EvalResult {
-    // Need to make sure that collapse is specified since we can not assign a
-    // default value as with sep
-    let collapse_is_specified = &args
-        .keys
-        .iter()
-        .position(|k| k == &Some("collapse".to_string()));
-
     let R::List(vals) = env.eval_list(args)? else {
         unreachable!()
     };
@@ -103,7 +96,7 @@ pub fn primitive_paste(args: ExprList, env: &mut Environment) -> EvalResult {
             .collect();
     }
 
-    if collapse_is_specified.is_some() {
+    if collapse.len() > 0 {
         output = vec![output.join(&collapse)];
     }
 
@@ -115,18 +108,28 @@ mod test_primitive_paste {
     use super::*;
     use crate::parser::parse_args;
 
+    // #[test]
+    // fn test_primitive_paste_01() {
+    //     let mut env = Environment::default();
+    //     let args = parse_args("paste(1, 2, collapse = NULL)").unwrap();
+    //     let observed = primitive_paste(args, &mut env).unwrap().get_vec_string();
+    //     let expected: Vec<_> = vec!["a b"];
+
+    //     assert_eq!(observed, expected);
+    // }
+
     #[test]
-    fn test_primitive_paste_01() {
+    fn test_primitive_paste_02() {
         let mut env = Environment::default();
         let args = parse_args("paste(null)").unwrap();
         let observed = primitive_paste(args, &mut env).unwrap().get_vec_string();
-        let expected: Vec<String> = vec![];
+        let expected: Vec<&str> = vec![];
 
         assert_eq!(observed, expected);
     }
 
     #[test]
-    fn test_primitive_paste_02() {
+    fn test_primitive_paste_03() {
         let mut env = Environment::default();
         let args = parse_args("paste(1.1, null, 2, false, 'a', c(1.0, 2.0), sep = '+')").unwrap();
         let observed = primitive_paste(args, &mut env).unwrap().get_vec_string();
@@ -139,7 +142,7 @@ mod test_primitive_paste {
     }
 
     #[test]
-    fn test_primitive_paste_03() {
+    fn test_primitive_paste_04() {
         let mut env = Environment::default();
         let args = parse_args("paste(1.1, null, 2, false, 'a', c(1.0, 2.0))").unwrap();
         let observed = primitive_paste(args, &mut env).unwrap().get_vec_string();
@@ -152,7 +155,7 @@ mod test_primitive_paste {
     }
 
     #[test]
-    fn test_primitive_paste_04() {
+    fn test_primitive_paste_05() {
         let mut env = Environment::default();
         let args =
             parse_args("paste(c(1, 2, 3, 4, 5), c('st', 'nd', 'rd', c('th', 'th')), sep = '')")
@@ -167,7 +170,7 @@ mod test_primitive_paste {
     }
 
     #[test]
-    fn test_primitive_paste_07() {
+    fn test_primitive_paste_06() {
         let mut env = Environment::default();
         let args =
             parse_args("paste(1.1, null, 2, false, 'a', c(1.0, 2.0), , collapse = '+')").unwrap();
@@ -181,7 +184,7 @@ mod test_primitive_paste {
     }
 
     #[test]
-    fn test_primitive_paste_08() {
+    fn test_primitive_paste_07() {
         let mut env = Environment::default();
         let args = parse_args("paste(1, 2, 3, collapse = '+')").unwrap();
         let observed = primitive_paste(args, &mut env).unwrap().get_vec_string();
@@ -191,7 +194,7 @@ mod test_primitive_paste {
     }
 
     #[test]
-    fn test_primitive_paste_09() {
+    fn test_primitive_paste_08() {
         let mut env = Environment::default();
         let args = parse_args("paste(c(1, 2), 3, 4, 5, sep = '-', collapse = '+')").unwrap();
         let observed = primitive_paste(args, &mut env).unwrap().get_vec_string();
