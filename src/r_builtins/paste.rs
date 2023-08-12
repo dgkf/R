@@ -25,7 +25,7 @@ pub fn primitive_paste(args: ExprList, env: &mut Environment) -> EvalResult {
         match k_clone.as_str() {
             "sep" => {
                 sep = match v {
-                    R::Vector(Vector::Character(s_v)) => s_v.get(0).unwrap().clone().to_string(),
+                    R::Vector(Vector::Character(v)) => v.get(0).unwrap().clone().to_string(),
                     _ => {
                         return Err(RSignal::Error(RError::Other(
                             "sep parameter must be a character string!".to_string(),
@@ -36,7 +36,7 @@ pub fn primitive_paste(args: ExprList, env: &mut Environment) -> EvalResult {
             "collapse" => {
                 collapse = match v {
                     R::Null => continue,
-                    R::Vector(Vector::Character(s_v)) => s_v.get(0).unwrap().clone().to_string(),
+                    R::Vector(Vector::Character(v)) => v.get(0).unwrap().clone().to_string(),
                     _ => {
                         return Err(RSignal::Error(RError::Other(
                             "collapse parameter must be NULL or a character string!".to_string(),
