@@ -18,7 +18,6 @@ pub fn primitive_paste(args: ExprList, env: &mut Environment) -> EvalResult {
         match k_clone.as_str() {
             "sep" => {
                 sep = match v {
-                    // R::Null =>
                     R::Vector(Vector::Character(s_v)) => s_v.get(0).unwrap().clone().to_string(),
                     _ => {
                         return Err(RSignal::Error(RError::Other(
@@ -29,10 +28,11 @@ pub fn primitive_paste(args: ExprList, env: &mut Environment) -> EvalResult {
             }
             "collapse" => {
                 collapse = match v {
+                    R::Null => continue,
                     R::Vector(Vector::Character(s_v)) => s_v.get(0).unwrap().clone().to_string(),
                     _ => {
                         return Err(RSignal::Error(RError::Other(
-                            "collapse parameter must be a character string!".to_string(),
+                            "collapse parameter must be NULL or a character string!".to_string(),
                         )))
                     }
                 }
@@ -108,15 +108,15 @@ mod test_primitive_paste {
     use super::*;
     use crate::parser::parse_args;
 
-    // #[test]
-    // fn test_primitive_paste_01() {
-    //     let mut env = Environment::default();
-    //     let args = parse_args("paste(1, 2, collapse = NULL)").unwrap();
-    //     let observed = primitive_paste(args, &mut env).unwrap().get_vec_string();
-    //     let expected: Vec<_> = vec!["1 2"];
+    #[test]
+    fn test_primitive_paste_01() {
+        let mut env = Environment::default();
+        let args = parse_args("paste(1, 2, collapse = NULL)").unwrap();
+        let observed = primitive_paste(args, &mut env).unwrap().get_vec_string();
+        let expected: Vec<_> = vec!["1 2"];
 
-    //     assert_eq!(observed, expected);
-    // }
+        assert_eq!(observed, expected);
+    }
 
     #[test]
     fn test_primitive_paste_02() {
