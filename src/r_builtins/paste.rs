@@ -25,6 +25,10 @@ pub fn primitive_paste(args: ExprList, env: &mut Environment) -> EvalResult {
         match k_clone.as_str() {
             "sep" => {
                 sep = match v {
+                    // We need to check whether the supplied sep value is a
+                    // character. R does not accept non-character values. If
+                    // we use R::Vector(v) => R::Vector(v.as_character()) then
+                    // this will coerce non-valid sep value to a character
                     R::Vector(Vector::Character(v)) => v.get(0).unwrap().clone().to_string(),
                     _ => {
                         return Err(RSignal::Error(RError::Other(
