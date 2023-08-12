@@ -8,6 +8,13 @@ pub fn primitive_paste(args: ExprList, env: &mut Environment) -> EvalResult {
         unreachable!()
     };
 
+    // Force any closures that were created during call. This helps with using
+    // variables as argument for sep and collapse parameters.
+    let vals: Vec<_> = vals
+        .into_iter()
+        .map(|(k, v)| (k, v.clone().force().unwrap_or(R::Null))) // TODO: raise this error
+        .collect();
+
     let mut stack_vals: Vec<(_, _)> = vec![];
     let mut sep = " ".to_string();
     let mut collapse = String::new();
@@ -41,11 +48,6 @@ pub fn primitive_paste(args: ExprList, env: &mut Environment) -> EvalResult {
         }
     }
 
-    let stack_vals: Vec<_> = stack_vals
-        .into_iter()
-        .map(|(k, v)| (k, v.clone().force().unwrap_or(R::Null))) // TODO: raise this error
-        .collect();
-
     for (_, v) in &stack_vals {
         match v {
             R::List(_) => {
@@ -60,7 +62,7 @@ pub fn primitive_paste(args: ExprList, env: &mut Environment) -> EvalResult {
     // Coerce everything into strings
     let char_vals: Vec<R> = stack_vals
         .iter()
-        .map(|(_, v)| v.clone().as_character().unwrap())
+        .map(|(_, v)| v.clone().clone().as_character().unwrap())
         .collect();
 
     let vec_of_vectors: Vec<_> = char_vals
