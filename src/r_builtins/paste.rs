@@ -15,7 +15,7 @@ pub fn primitive_paste(args: ExprList, env: &mut Environment) -> EvalResult {
         .map(|(k, v)| (k, v.clone().force().unwrap_or(R::Null))) // TODO: raise this error
         .collect();
 
-    let mut vec_of_char_vectors: Vec<_> = vec![];
+    let mut vec_s_vec: Vec<Vec<String>> = vec![];
     let mut sep = " ".to_string();
     let mut collapse = String::new();
 
@@ -56,9 +56,9 @@ pub fn primitive_paste(args: ExprList, env: &mut Environment) -> EvalResult {
                     )));
                 }
                 // Leave the rest for processing. Coerce everything into character.
-                let int_v = v.clone().as_character().unwrap().get_vec_string();
-                if int_v.len() > 0 {
-                    vec_of_char_vectors.push(int_v)
+                let s_vec = v.clone().as_character().unwrap().get_vec_string();
+                if !s_vec.is_empty() {
+                    vec_s_vec.push(s_vec)
                 }
             }
         }
@@ -66,7 +66,7 @@ pub fn primitive_paste(args: ExprList, env: &mut Environment) -> EvalResult {
 
     // Need the length of longest vector to create an empty vector that others
     // will go through and re-cycle values as needed
-    let n = vec_of_char_vectors
+    let n = vec_s_vec
         .iter()
         .max_by_key(|x| x.len())
         .unwrap_or(&vec![])
@@ -74,12 +74,12 @@ pub fn primitive_paste(args: ExprList, env: &mut Environment) -> EvalResult {
 
     let mut output = vec!["".to_string(); n];
 
-    for i in 0..vec_of_char_vectors.len() {
+    for i in 0..vec_s_vec.len() {
         output = output
             .iter()
             // Any shorter vector will re-cycle its values to the length of
             // longest one
-            .zip(vec_of_char_vectors[i].iter().cycle())
+            .zip(vec_s_vec[i].iter().cycle())
             .map(|(x, y)| {
                 // No need for a sep in the beginning
                 if i == 0 {
