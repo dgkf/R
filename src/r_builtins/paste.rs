@@ -14,11 +14,11 @@ pub fn primitive_paste(args: ExprList, env: &mut Environment) -> EvalResult {
 
     for (k, v) in &vals {
         let k_clone = k.clone().unwrap_or("".to_string());
-        let _sep_string = String::from("sep");
 
         match k_clone.as_str() {
             "sep" => {
                 sep = match v {
+                    // R::Null =>
                     R::Vector(Vector::Character(s_v)) => s_v.get(0).unwrap().clone().to_string(),
                     _ => {
                         return Err(RSignal::Error(RError::Other(
@@ -113,7 +113,7 @@ mod test_primitive_paste {
     //     let mut env = Environment::default();
     //     let args = parse_args("paste(1, 2, collapse = NULL)").unwrap();
     //     let observed = primitive_paste(args, &mut env).unwrap().get_vec_string();
-    //     let expected: Vec<_> = vec!["a b"];
+    //     let expected: Vec<_> = vec!["1 2"];
 
     //     assert_eq!(observed, expected);
     // }
