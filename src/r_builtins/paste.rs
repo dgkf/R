@@ -61,7 +61,7 @@ pub fn primitive_paste(args: ExprList, env: &mut Environment) -> EvalResult {
         }
     }
 
-    let vec_of_vectors: Vec<_> = char_vals
+    let vec_of_char_vectors: Vec<_> = char_vals
         .iter()
         .map(|v| v.as_ref().unwrap().get_vec_string())
         // Filtering out Null values
@@ -70,7 +70,7 @@ pub fn primitive_paste(args: ExprList, env: &mut Environment) -> EvalResult {
 
     // Need the length of longest vector to create an empty vector that others
     // will go through and re-cycle values as needed
-    let n = vec_of_vectors
+    let n = vec_of_char_vectors
         .iter()
         .max_by_key(|x| x.len())
         .unwrap_or(&vec![])
@@ -78,12 +78,12 @@ pub fn primitive_paste(args: ExprList, env: &mut Environment) -> EvalResult {
 
     let mut output = vec!["".to_string(); n];
 
-    for i in 0..vec_of_vectors.len() {
+    for i in 0..vec_of_char_vectors.len() {
         output = output
             .iter()
             // Any shorter vector will re-cycle its values to the length of
             // longest one
-            .zip(vec_of_vectors[i].iter().cycle())
+            .zip(vec_of_char_vectors[i].iter().cycle())
             .map(|(x, y)| {
                 // No need for a sep in the beginning
                 if i == 0 {
