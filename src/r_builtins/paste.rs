@@ -56,17 +56,13 @@ pub fn primitive_paste(args: ExprList, env: &mut Environment) -> EvalResult {
                     )));
                 }
                 // Leave the rest for processing. Coerce everything into character.
-                vec_of_char_vectors.push(v.clone().as_character())
+                let int_v = v.clone().as_character().unwrap().get_vec_string();
+                if int_v.len() > 0 {
+                    vec_of_char_vectors.push(int_v)
+                }
             }
         }
     }
-
-    let vec_of_char_vectors: Vec<_> = vec_of_char_vectors
-        .iter()
-        .map(|v| v.as_ref().unwrap().get_vec_string())
-        // Filtering out Null values
-        .filter(|v| v.len() != 0)
-        .collect();
 
     // Need the length of longest vector to create an empty vector that others
     // will go through and re-cycle values as needed
