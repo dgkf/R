@@ -15,10 +15,11 @@ pub fn primitive_paste(args: ExprList, env: &mut Environment) -> EvalResult {
         .map(|(k, v)| (k, v.clone().force().unwrap_or(R::Null))) // TODO: raise this error
         .collect();
 
-    let mut stack_vals: Vec<(_, _)> = vec![];
+    let mut char_vals: Vec<_> = vec![];
     let mut sep = " ".to_string();
     let mut collapse = String::new();
 
+    // Extract sep and collapse parameters, leave the rest for processing
     for (k, v) in vals {
         let k_clone = k.clone().unwrap_or("".to_string());
 
@@ -48,30 +49,21 @@ pub fn primitive_paste(args: ExprList, env: &mut Environment) -> EvalResult {
                     }
                 }
             }
-            _ => stack_vals.push((k, v)),
-        }
-    }
-
-    for (_, v) in &stack_vals {
-        match v {
-            R::List(_) => {
-                return Err(RSignal::Error(RError::Other(
-                    "list is not supported in paste() yet!".to_string(),
-                )))
+            _ => {
+                if let R::List(_) = v {
+                    return Err(RSignal::Error(RError::Other(
+                        "list is not supported in paste() yet!".to_string(),
+                    )));
+                }
+                // Leave the rest for processing. Coerce everything into character.
+                char_vals.push(v.clone().as_character())
             }
-            _ => continue,
         }
     }
-
-    // Coerce everything into character
-    let char_vals: Vec<R> = stack_vals
-        .iter()
-        .map(|(_, v)| v.clone().as_character().unwrap())
-        .collect();
 
     let vec_of_vectors: Vec<_> = char_vals
         .iter()
-        .map(|v| v.get_vec_string())
+        .map(|v| v.as_ref().unwrap().get_vec_string())
         // Filtering out Null values
         .filter(|v| v.len() != 0)
         .collect();
