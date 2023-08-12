@@ -15,7 +15,7 @@ pub fn primitive_paste(args: ExprList, env: &mut Environment) -> EvalResult {
         .map(|(k, v)| (k, v.clone().force().unwrap_or(R::Null))) // TODO: raise this error
         .collect();
 
-    let mut char_vals: Vec<_> = vec![];
+    let mut vec_of_char_vectors: Vec<_> = vec![];
     let mut sep = " ".to_string();
     let mut collapse = String::new();
 
@@ -56,12 +56,12 @@ pub fn primitive_paste(args: ExprList, env: &mut Environment) -> EvalResult {
                     )));
                 }
                 // Leave the rest for processing. Coerce everything into character.
-                char_vals.push(v.clone().as_character())
+                vec_of_char_vectors.push(v.clone().as_character())
             }
         }
     }
 
-    let vec_of_char_vectors: Vec<_> = char_vals
+    let vec_of_char_vectors: Vec<_> = vec_of_char_vectors
         .iter()
         .map(|v| v.as_ref().unwrap().get_vec_string())
         // Filtering out Null values
