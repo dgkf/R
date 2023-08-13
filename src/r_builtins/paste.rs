@@ -1,6 +1,7 @@
 use crate::ast::*;
 use crate::error::*;
 use crate::lang::*;
+use crate::r_builtins::builtins::force_closures;
 use crate::r_vector::vectors::*;
 
 pub fn primitive_paste(args: ExprList, env: &mut Environment) -> EvalResult {
@@ -8,12 +9,7 @@ pub fn primitive_paste(args: ExprList, env: &mut Environment) -> EvalResult {
         unreachable!()
     };
 
-    // Force any closures that were created during call. This helps with using
-    // variables as argument for sep and collapse parameters.
-    let vals: Vec<_> = vals
-        .into_iter()
-        .map(|(k, v)| (k, v.clone().force().unwrap_or(R::Null))) // TODO: raise this error
-        .collect();
+    let vals = force_closures(vals);
 
     let mut vec_s_vec: Vec<Vec<String>> = vec![];
     let mut sep = " ".to_string();

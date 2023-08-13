@@ -787,6 +787,14 @@ pub fn primitive_list(args: ExprList, env: &mut Environment) -> EvalResult {
     PrimList::call(&PrimList, args, env)
 }
 
+pub fn force_closures(vals: Vec<(Option<String>, R)>) -> Vec<(Option<String>, R)> {
+    // Force any closures that were created during call. This helps with using
+    // variables as argument for sep and collapse parameters.
+    vals.into_iter()
+        .map(|(k, v)| (k, v.clone().force().unwrap_or(R::Null))) // TODO: raise this error
+        .collect()
+}
+
 pub fn primitive_c(args: ExprList, env: &mut Environment) -> EvalResult {
     // this can be cleaned up quite a bit, but I just need it working with
     // more types for now to test vectorized operators using different types
@@ -795,11 +803,7 @@ pub fn primitive_c(args: ExprList, env: &mut Environment) -> EvalResult {
         unreachable!()
     };
 
-    // force any closures that were created during call
-    let vals: Vec<_> = vals
-        .into_iter()
-        .map(|(k, v)| (k, v.force().unwrap_or(R::Null))) // TODO: raise this error
-        .collect();
+    let vals = force_closures(vals);
 
     // until there's a better way of handling type hierarchy, this will do
     let t: u8 = vals
