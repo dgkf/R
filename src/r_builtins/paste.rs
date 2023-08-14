@@ -12,7 +12,7 @@ pub fn primitive_paste(args: ExprList, env: &mut Environment) -> EvalResult {
     let vals = force_closures(vals);
 
     let mut vec_s_vec: Vec<Vec<String>> = vec![];
-    let mut sep = " ".to_string();
+    let mut sep = String::from(" ");
     let mut collapse = String::new();
     let mut max_len: usize = 0;
 
@@ -47,6 +47,7 @@ pub fn primitive_paste(args: ExprList, env: &mut Environment) -> EvalResult {
                     }
                 }
             }
+
             _ => match v {
                 R::List(_) => {
                     return Err(RSignal::Error(RError::Other(
