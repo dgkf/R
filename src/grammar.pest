@@ -43,10 +43,11 @@
 
 // repl line feed parsing
 
-    repl = _{ WS* ~ expr ~ WS* ~ eoi }
+    repl = _{ WS* ~ exprs ~ WS* ~ eoi }
 
 // expression basics
 
+    exprs = { expr ~ (WS_NO_NL* ~ ";" ~ WS* ~ expr)* ~ ";"? }
     expr = { atomic ~ WS* ~ ( infix ~ WS* ~ atomic ~ WS* )* }
 
         atomic = _{ prefixed }
