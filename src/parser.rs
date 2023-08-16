@@ -93,6 +93,7 @@ fn parse_primary(pair: Pair<Rule>) -> Expr {
 
         // bracketed expression block
         Rule::block => parse_block(pair),
+        Rule::exprs => parse_block(pair),
         Rule::expr => parse_expr(pair.into_inner()),
 
         // keyworded composite expressions
