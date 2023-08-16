@@ -201,4 +201,22 @@ mod test_primitive_paste {
 
         assert_eq!(observed, expected);
     }
+
+    #[test]
+    fn test_primitive_paste_09() {
+        let mut env = Environment::default();
+        // Passing x vector to the environment so that paste can use it
+        env.insert(
+            "x".to_string(),
+            R::Vector(Vector::Character(vec![OptionNA::Some(
+                "<collapse>".to_string(),
+            )])),
+        );
+        let args = parse_args("paste(c('a', 'b'), collapse = x)").unwrap();
+
+        let observed = primitive_paste(args, &mut env).unwrap().get_vec_string();
+        let expected: Vec<_> = vec!["a<collapse>b"].iter().map(|s| s.to_string()).collect();
+
+        assert_eq!(observed, expected);
+    }
 }
