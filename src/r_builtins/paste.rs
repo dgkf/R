@@ -28,7 +28,6 @@ pub fn primitive_paste(args: ExprList, env: &mut Environment) -> EvalResult {
         let (Some(k), v) = vals.remove(*i) else {
             continue
         };
-
         match (k.as_str(), v) {
             ("sep", R::Vector(Vector::Character(v))) => {
                 sep = v.get(0).unwrap().clone().to_string();
@@ -78,9 +77,6 @@ pub fn primitive_paste(args: ExprList, env: &mut Environment) -> EvalResult {
             if vec_len == 0 {
                 continue;
             }
-            if i > 0 {
-                output[j].push_str(sep.as_str())
-            };
             output[j].push_str(vec_s_vec[i][j % vec_len].as_str())
         }
     }
