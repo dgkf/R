@@ -13,6 +13,7 @@ pub fn primitive_paste(args: ExprList, env: &mut Environment) -> EvalResult {
 
     let mut vec_s_vec: Vec<Vec<String>> = vec![];
     let mut sep = String::from(" ");
+    let mut should_collapse = false;
     let mut collapse = String::new();
     let mut max_len: usize = 0;
 
