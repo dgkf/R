@@ -9,12 +9,12 @@ pub fn primitive_paste(args: ExprList, env: &mut Environment) -> EvalResult {
         unreachable!()
     };
 
-    let vals = force_closures(vals);
+    let mut vals = force_closures(vals);
 
-    let mut vec_s_vec: Vec<Vec<String>> = vec![];
     let mut sep = String::from(" ");
     let mut should_collapse = false;
     let mut collapse = String::new();
+
     // find non-ellipsis arg indices
     let named_indices: Vec<usize> = vals
         .iter()
@@ -64,8 +64,6 @@ pub fn primitive_paste(args: ExprList, env: &mut Environment) -> EvalResult {
     // maximum argument length, what we need to recycle the other args to meet
     let max_len = vec_s_vec.iter().map(|i| i.len()).max().unwrap_or(0);
 
-    let mut output = vec!["".to_string(); max_len];
-
     // NOTE: this _might_ be improved by initializing with String::with_capacity
     // as we should known the exact length of all the output strings, but would
     // have an overhead of pre-calculating sizes.
@@ -73,6 +71,9 @@ pub fn primitive_paste(args: ExprList, env: &mut Environment) -> EvalResult {
     for i in 0..vec_s_vec.len() {
         for j in 0..output.len() {
             let vec_len = vec_s_vec[i].len();
+            if i > 0 {
+                output[j].push_str(sep.as_str())
+            };
             // Need to ignore null
             if vec_len == 0 {
                 continue;
@@ -100,7 +101,8 @@ mod test_primitive_paste {
     fn test_primitive_paste_01() {
         let mut env = Environment::default();
         let args = parse_args("paste(1, 2, collapse = NULL)").unwrap();
-        let observed = primitive_paste(args, &mut env).unwrap().get_vec_string();
+        let R::Vector(observed) = primitive_paste(args, &mut env).unwrap() else {unimplemented!()};
+        let observed: Vec<_> = observed.into();
         let expected: Vec<_> = vec!["1 2"];
 
         assert_eq!(observed, expected);
@@ -110,7 +112,8 @@ mod test_primitive_paste {
     fn test_primitive_paste_02() {
         let mut env = Environment::default();
         let args = parse_args("paste(null)").unwrap();
-        let observed = primitive_paste(args, &mut env).unwrap().get_vec_string();
+        let R::Vector(observed) = primitive_paste(args, &mut env).unwrap() else {unimplemented!()};
+        let observed: Vec<_> = observed.into();
         let expected: Vec<&str> = vec![];
 
         assert_eq!(observed, expected);
@@ -120,8 +123,9 @@ mod test_primitive_paste {
     fn test_primitive_paste_03() {
         let mut env = Environment::default();
         let args = parse_args("paste(1.1, null, 2, false, 'a', c(1.0, 2.0), sep = '+')").unwrap();
-        let observed = primitive_paste(args, &mut env).unwrap().get_vec_string();
-        let expected: Vec<_> = vec!["1.1+2+false+a+1", "1.1+2+false+a+2"]
+        let R::Vector(observed) = primitive_paste(args, &mut env).unwrap() else {unimplemented!()};
+        let observed: Vec<_> = observed.into();
+        let expected: Vec<_> = vec!["1.1++2+false+a+1", "1.1++2+false+a+2"]
             .iter()
             .map(|s| s.to_string())
             .collect();
@@ -133,8 +137,9 @@ mod test_primitive_paste {
     fn test_primitive_paste_04() {
         let mut env = Environment::default();
         let args = parse_args("paste(1.1, null, 2, false, 'a', c(1.0, 2.0))").unwrap();
-        let observed = primitive_paste(args, &mut env).unwrap().get_vec_string();
-        let expected: Vec<_> = vec!["1.1 2 false a 1", "1.1 2 false a 2"]
+        let R::Vector(observed) = primitive_paste(args, &mut env).unwrap() else {unimplemented!()};
+        let observed: Vec<_> = observed.into();
+        let expected: Vec<_> = vec!["1.1  2 false a 1", "1.1  2 false a 2"]
             .iter()
             .map(|s| s.to_string())
             .collect();
@@ -148,7 +153,8 @@ mod test_primitive_paste {
         let args =
             parse_args("paste(c(1, 2, 3, 4, 5), c('st', 'nd', 'rd', c('th', 'th')), sep = '')")
                 .unwrap();
-        let observed = primitive_paste(args, &mut env).unwrap().get_vec_string();
+        let R::Vector(observed) = primitive_paste(args, &mut env).unwrap() else {unimplemented!()};
+        let observed: Vec<_> = observed.into();
         let expected: Vec<_> = vec!["1st", "2nd", "3rd", "4th", "5th"]
             .iter()
             .map(|s| s.to_string())
@@ -162,8 +168,9 @@ mod test_primitive_paste {
         let mut env = Environment::default();
         let args =
             parse_args("paste(1.1, null, 2, false, 'a', c(1.0, 2.0), , collapse = '+')").unwrap();
-        let observed = primitive_paste(args, &mut env).unwrap().get_vec_string();
-        let expected: Vec<_> = vec!["1.1 2 false a 1+1.1 2 false a 2"]
+        let R::Vector(observed) = primitive_paste(args, &mut env).unwrap() else {unimplemented!()};
+        let observed: Vec<_> = observed.into();
+        let expected: Vec<_> = vec!["1.1  2 false a 1+1.1  2 false a 2"]
             .iter()
             .map(|s| s.to_string())
             .collect();
@@ -175,7 +182,8 @@ mod test_primitive_paste {
     fn test_primitive_paste_07() {
         let mut env = Environment::default();
         let args = parse_args("paste(1, 2, 3, collapse = '+')").unwrap();
-        let observed = primitive_paste(args, &mut env).unwrap().get_vec_string();
+        let R::Vector(observed) = primitive_paste(args, &mut env).unwrap() else {unimplemented!()};
+        let observed: Vec<_> = observed.into();
         let expected: Vec<_> = vec!["1 2 3"].iter().map(|s| s.to_string()).collect();
 
         assert_eq!(observed, expected);
@@ -185,7 +193,8 @@ mod test_primitive_paste {
     fn test_primitive_paste_08() {
         let mut env = Environment::default();
         let args = parse_args("paste(c(1, 2), 3, 4, 5, sep = '-', collapse = '+')").unwrap();
-        let observed = primitive_paste(args, &mut env).unwrap().get_vec_string();
+        let R::Vector(observed) = primitive_paste(args, &mut env).unwrap() else {unimplemented!()};
+        let observed: Vec<_> = observed.into();
         let expected: Vec<_> = vec!["1-3-4-5+2-3-4-5"]
             .iter()
             .map(|s| s.to_string())
@@ -206,8 +215,21 @@ mod test_primitive_paste {
         );
         let args = parse_args("paste(c('a', 'b'), collapse = x)").unwrap();
 
-        let observed = primitive_paste(args, &mut env).unwrap().get_vec_string();
+        let R::Vector(observed) = primitive_paste(args, &mut env).unwrap() else {unimplemented!()};
+        let observed: Vec<_> = observed.into();
         let expected: Vec<_> = vec!["a<collapse>b"].iter().map(|s| s.to_string()).collect();
+
+        assert_eq!(observed, expected);
+    }
+
+    #[test]
+    fn test_primitive_paste_10() {
+        let mut env = Environment::default();
+        let args = parse_args("paste('a', c('b', 'c'), collapse = '')").unwrap();
+
+        let R::Vector(observed) = primitive_paste(args, &mut env).unwrap() else {unimplemented!()};
+        let observed: Vec<_> = observed.into();
+        let expected: Vec<_> = vec!["a ba c"].iter().map(|s| s.to_string()).collect();
 
         assert_eq!(observed, expected);
     }
