@@ -51,7 +51,7 @@ pub fn primitive_paste(args: ExprList, env: &mut Environment) -> EvalResult {
             _ => continue,
         }
     }
-    
+
     // coerce all of our remaining arguments into vectors of strings
     let vec_s_vec: Vec<Vec<String>> = vals
         .into_iter()
@@ -73,6 +73,10 @@ pub fn primitive_paste(args: ExprList, env: &mut Environment) -> EvalResult {
     for i in 0..vec_s_vec.len() {
         for j in 0..output.len() {
             let vec_len = vec_s_vec[i].len();
+            // Need to ignore null
+            if vec_len == 0 {
+                continue;
+            }
             if i > 0 {
                 output[j].push_str(sep.as_str())
             };
