@@ -15,65 +15,54 @@ pub fn primitive_paste(args: ExprList, env: &mut Environment) -> EvalResult {
     let mut sep = String::from(" ");
     let mut should_collapse = false;
     let mut collapse = String::new();
-    let mut max_len: usize = 0;
+    // find non-ellipsis arg indices
+    let named_indices: Vec<usize> = vals
+        .iter()
+        .enumerate()
+        .filter(|(_, (k, _))| *k == Some("collapse".to_string()) || *k == Some("sep".to_string()))
+        .map(|(i, _)| i)
+        .collect();
 
-    // Extract sep and collapse parameters, leave the rest for processing
-    for (k, v) in vals {
-        let k_clone = k.clone().unwrap_or("".to_string());
+    // remove named sep and collapse args from our arguments and populate values
+    for i in named_indices.iter().rev() {
+        let (Some(k), v) = vals.remove(*i) else {
+            continue
+        };
 
-        match k_clone.as_str() {
-            "sep" => {
-                sep = match v {
-                    // We need to check whether the supplied sep value is a
-                    // character. R does not accept non-character values. If
-                    // we use R::Vector(v) => R::Vector(v.as_character()) then
-                    // this will coerce non-valid sep value to a character
-                    R::Vector(Vector::Character(v)) => v.get(0).unwrap().clone().to_string(),
-                    _ => {
-                        return Err(RSignal::Error(RError::Other(
-                            "sep parameter must be a character string!".to_string(),
-                        )))
-                    }
-                }
+        match (k.as_str(), v) {
+            ("sep", R::Vector(Vector::Character(v))) => {
+                sep = v.get(0).unwrap().clone().to_string();
             }
-
-            "collapse" => {
-                collapse = match v {
-                    R::Null => continue,
-                    R::Vector(Vector::Character(v)) => v.get(0).unwrap().clone().to_string(),
-                    _ => {
-                        return Err(RSignal::Error(RError::Other(
-                            "collapse parameter must be NULL or a character string!".to_string(),
-                        )))
-                    }
-                }
+            ("sep", _) => {
+                return Err(RSignal::Error(RError::Other(
+                    "sep parameter must be a character value.".to_string(),
+                )));
             }
-
-            _ => match v {
-                R::List(_) => {
-                    return Err(RSignal::Error(RError::Other(
-                        "list is not supported in paste() yet!".to_string(),
-                    )))
-                }
-
-                R::Null => continue,
-
-                _ => {
-                    // Leave the rest for processing. Coerce everything into
-                    // character.
-                    let s_vec = v.clone().as_character().unwrap().get_vec_string();
-                    vec_s_vec.push(s_vec.clone());
-
-                    // Need the length of longest vector to create an empty
-                    // vector that others will go through and re-cycle values as
-                    // needed
-                    if s_vec.len() > max_len {
-                        max_len = s_vec.len()
-                    }
-                }
-            },
+            ("collapse", R::Null) => continue,
+            ("collapse", R::Vector(Vector::Character(v))) => {
+                should_collapse = true;
+                collapse = v.get(0).unwrap().clone().to_string();
+            }
+            ("collapse", _) => {
+                return Err(RSignal::Error(RError::Other(
+                    "collapse parameter must be NULL or a character string.".to_string(),
+                )))
+            }
+            _ => continue,
         }
     }
+    
+    // coerce all of our remaining arguments into vectors of strings
+    let vec_s_vec: Vec<Vec<String>> = vals
+        .into_iter()
+        .map(|(_, v)| match v.as_character()? {
+            R::Vector(v) => Ok(v.into()),
+            _ => unreachable!(),
+        })
+        .collect::<Result<_, _>>()?;
+
+    // maximum argument length, what we need to recycle the other args to meet
+    let max_len = vec_s_vec.iter().map(|i| i.len()).max().unwrap_or(0);
 
     let mut output = vec!["".to_string(); max_len];
 
