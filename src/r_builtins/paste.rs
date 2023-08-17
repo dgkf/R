@@ -92,7 +92,7 @@ pub fn primitive_paste(args: ExprList, env: &mut Environment) -> EvalResult {
             .collect();
     }
 
-    if collapse.len() > 0 {
+    if should_collapse {
         output = vec![output.join(&collapse)];
     }
 
