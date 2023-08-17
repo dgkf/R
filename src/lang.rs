@@ -146,13 +146,6 @@ impl R {
             _ => todo!(),
         }
     }
-
-    pub fn get_vec_string(&self) -> Vec<String> {
-        match self {
-            R::Vector(v) => v.clone().into(),
-            _ => todo!(),
-        }
-    }
 }
 
 impl Default for R {
