@@ -76,20 +76,18 @@ pub fn primitive_paste(args: ExprList, env: &mut Environment) -> EvalResult {
 
     let mut output = vec!["".to_string(); max_len];
 
+    // NOTE: this _might_ be improved by initializing with String::with_capacity
+    // as we should known the exact length of all the output strings, but would
+    // have an overhead of pre-calculating sizes.
+    let mut output = vec!["".to_string(); max_len];
     for i in 0..vec_s_vec.len() {
-        output = output
-            .iter()
-            // Any shorter vector will re-cycle its values to the length of
-            // longest one
-            .zip(vec_s_vec[i].iter().cycle())
-            .map(|(x, y)| {
-                // No need for a sep in the beginning
-                if i == 0 {
-                    return y.clone();
-                }
-                format!("{x}{sep}{y}")
-            })
-            .collect();
+        for j in 0..output.len() {
+            let vec_len = vec_s_vec[i].len();
+            if i > 0 {
+                output[j].push_str(sep.as_str())
+            };
+            output[j].push_str(vec_s_vec[i][j % vec_len].as_str())
+        }
     }
 
     if should_collapse {
