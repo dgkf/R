@@ -1,6 +1,6 @@
 use crate::ast::*;
-use crate::builtins::Callable;
 use crate::error::*;
+use crate::r_builtins::builtins::Callable;
 use crate::r_vector::vectors::*;
 
 use core::fmt;
@@ -75,6 +75,14 @@ impl R {
             R::Vector(v) => Ok(R::Vector(v.as_logical())),
             R::Null => Ok(R::Vector(Vector::Logical(vec![]))),
             atom => unreachable!("{:?} cannot be coerced to logical", atom),
+        }
+    }
+
+    pub fn as_character(self) -> EvalResult {
+        match self {
+            R::Vector(v) => Ok(R::Vector(v.as_character())),
+            R::Null => Ok(R::Vector(Vector::Character(vec![]))),
+            atom => unreachable!("{:?} cannot be coerced to character", atom),
         }
     }
 

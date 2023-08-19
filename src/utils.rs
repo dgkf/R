@@ -2,8 +2,8 @@ use std::rc::Rc;
 
 // TODO: move eval to builtin accepting R::Expr to remove ast dependence, using just lang
 use crate::ast::{RExpr, RExprList};
-use crate::builtins::Callable;
 use crate::lang::*;
+use crate::r_builtins::builtins::Callable;
 use crate::r_vector::vectors::*;
 
 pub fn eval(expr: RExpr, env: &mut Environment) -> EvalResult {

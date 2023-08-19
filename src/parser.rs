@@ -7,8 +7,8 @@
 /// `RExprList`s or tuples of parsed expressions.
 ///
 use crate::ast::*;
-use crate::builtins::*;
 use crate::error::RError;
+use crate::r_builtins::builtins::*;
 
 use pest::iterators::{Pair, Pairs};
 use pest::pratt_parser::PrattParser;
@@ -39,6 +39,13 @@ lazy_static::lazy_static! {
 pub fn parse(s: &str) -> Result<Expr, RError> {
     match RParser::parse(Rule::repl, s) {
         Ok(pairs) => Ok(parse_expr(pairs)),
+        Err(e) => Err(RError::ParseFailureVerbose(e)),
+    }
+}
+
+pub fn parse_args(s: &str) -> Result<ExprList, RError> {
+    match RParser::parse(Rule::repl, s) {
+        Ok(mut pairs) => Ok(parse_pairlist(pairs.next().unwrap())),
         Err(e) => Err(RError::ParseFailureVerbose(e)),
     }
 }

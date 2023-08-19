@@ -279,6 +279,21 @@ impl From<Vec<String>> for Vector {
     }
 }
 
+impl Into<Vec<String>> for Vector {
+    fn into(self) -> Vec<String> {
+        match self.as_character() {
+            Vector::Character(v) => v
+                .iter()
+                .map(|x| match x {
+                    OptionNA::Some(val) => val.clone(),
+                    OptionNA::NA => "NA".to_string(),
+                })
+                .collect(),
+            _ => unreachable!(),
+        }
+    }
+}
+
 impl From<Vec<OptionNA<String>>> for Vector {
     fn from(x: Vec<OptionNA<String>>) -> Self {
         Vector::Character(x)
