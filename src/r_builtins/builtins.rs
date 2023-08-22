@@ -1,17 +1,15 @@
 extern crate r_derive;
 use r_derive::*;
 
+use super::paste::*;
 use crate::ast::*;
 use crate::lang::*;
 use crate::r_vector::vectors::*;
 
-use super::paste::*;
-use std::rc::Rc;
-
 fn match_args(
     mut formals: ExprList,
     mut args: Vec<(Option<String>, R)>,
-    env: &Environment,
+    stack: &CallStack,
 ) -> (Vec<(Option<String>, R)>, Vec<(Option<String>, R)>) {
     let mut ellipsis: Vec<(Option<String>, R)> = vec![];
     let mut matched_args: Vec<(Option<String>, R)> = vec![];
@@ -56,7 +54,7 @@ fn match_args(
 
     // add back in parameter defaults that weren't filled with args
     for (param, default) in formals.into_iter() {
-        matched_args.push((param, R::Closure(default, Rc::clone(env))));
+        matched_args.push((param, R::Closure(default, stack.last_frame().env.clone())));
     }
 
     (matched_args, ellipsis)
@@ -85,11 +83,11 @@ pub trait CallableClone: Callable {
 }
 
 pub trait Callable {
-    fn call_assign(&self, _value: Expr, _args: ExprList, _env: &mut Environment) -> EvalResult {
+    fn call_assign(&self, _value: Expr, _args: ExprList, _stack: &mut CallStack) -> EvalResult {
         unimplemented!();
     }
 
-    fn call(&self, args: ExprList, env: &mut Environment) -> EvalResult;
+    fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult;
 }
 
 pub struct FormatState {
@@ -181,16 +179,15 @@ impl Format for PrimIf {
 }
 
 impl Callable for PrimIf {
-    fn call(&self, args: ExprList, env: &mut Environment) -> EvalResult {
+    fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
         let mut args = args.values.into_iter();
-
-        let cond = env.eval(args.next().unwrap())?;
+        let cond = stack.eval(args.next().unwrap())?;
         let cond: bool = cond.try_into()?;
 
         if cond {
-            env.eval(args.next().unwrap())
+            stack.eval(args.next().unwrap())
         } else {
-            env.eval(args.skip(1).next().unwrap_or(Expr::Null))
+            stack.eval(args.skip(1).next().unwrap_or(Expr::Null))
         }
     }
 }
@@ -209,7 +206,7 @@ impl Format for PrimFor {
 }
 
 impl Callable for PrimFor {
-    fn call(&self, args: ExprList, env: &mut Environment) -> EvalResult {
+    fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
         let mut args = args.into_iter();
 
         let (Some(var), iter_expr) = args.next().unwrap() else {
@@ -217,7 +214,7 @@ impl Callable for PrimFor {
         };
 
         let (_, body) = args.next().unwrap();
-        let iter = env.eval(iter_expr)?;
+        let iter = stack.eval(iter_expr)?;
 
         let mut eval_result: EvalResult;
         let mut result = R::Null;
@@ -226,8 +223,8 @@ impl Callable for PrimFor {
         while let Some(value) = iter.get(index) {
             index += 1;
 
-            env.insert(var.clone(), value);
-            eval_result = env.eval(body.clone());
+            stack.last_frame().env.insert(var.clone(), value);
+            eval_result = stack.eval(body.clone());
 
             use Cond::*;
             use RSignal::*;
@@ -256,11 +253,12 @@ impl Format for PrimWhile {
 }
 
 impl Callable for PrimWhile {
-    fn call(&self, args: ExprList, env: &mut Environment) -> EvalResult {
+    fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
         use Cond::*;
         use RSignal::*;
 
         let mut args = args.values.into_iter();
+
         let cond = args.next().unwrap();
         let body = args.next().unwrap();
 
@@ -269,9 +267,9 @@ impl Callable for PrimWhile {
 
         loop {
             // handle while condition
-            let cond_result = env.eval(cond.clone())?;
+            let cond_result = stack.eval(cond.clone())?;
             if cond_result.try_into()? {
-                eval_result = env.eval(body.clone());
+                eval_result = stack.eval(body.clone());
             } else {
                 break;
             }
@@ -303,7 +301,7 @@ impl Format for PrimRepeat {
 }
 
 impl Callable for PrimRepeat {
-    fn call(&self, args: ExprList, env: &mut Environment) -> EvalResult {
+    fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
         let mut args = args.values.into_iter();
         let body = args.next().unwrap();
 
@@ -311,7 +309,7 @@ impl Callable for PrimRepeat {
         let mut result = R::Null;
 
         loop {
-            eval_result = env.eval(body.clone());
+            eval_result = stack.eval(body.clone());
 
             // handle control flow signals during execution
             match eval_result {
@@ -347,10 +345,10 @@ impl Format for PrimBlock {
 }
 
 impl Callable for PrimBlock {
-    fn call(&self, args: ExprList, env: &mut Environment) -> EvalResult {
+    fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
         let mut value = Ok(R::Null);
         for expr in args.values {
-            let result = env.eval(expr);
+            let result = stack.eval(expr);
             match result {
                 Ok(_) => value = result,
                 _ => return result,
@@ -368,22 +366,22 @@ impl Op for InfixAssign {
 }
 
 impl Callable for InfixAssign {
-    fn call(&self, args: ExprList, env: &mut Environment) -> EvalResult {
+    fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
         let (lhs, rhs) = args.unnamed_binary_args();
 
         use Expr::*;
         match lhs {
             String(s) | Symbol(s) => {
-                let value = env.eval(rhs)?;
-                env.insert(s, value.clone());
+                let value = stack.eval(rhs)?;
+                stack.last_frame().env.insert(s, value.clone());
                 Ok(value)
             }
             Call(what, mut args) => match *what {
-                Primitive(prim) => prim.call_assign(rhs, args, env),
+                Primitive(prim) => prim.call_assign(rhs, args, stack),
                 String(s) | Symbol(s) => {
                     args.insert(0, rhs);
                     let s = format!("{}<-", s);
-                    env.eval(Call(Box::new(Symbol(s)), args))
+                    stack.eval(Call(Box::new(Symbol(s)), args))
                 }
                 _ => unreachable!(),
             },
@@ -400,8 +398,8 @@ impl Op for InfixAdd {
 }
 
 impl Callable for InfixAdd {
-    fn call(&self, args: ExprList, env: &mut Environment) -> EvalResult {
-        let (lhs, rhs) = env.eval_binary(args.unnamed_binary_args())?;
+    fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
+        let (lhs, rhs) = stack.eval_binary(args.unnamed_binary_args())?;
         lhs + rhs
     }
 }
@@ -414,8 +412,8 @@ impl Op for InfixSub {
 }
 
 impl Callable for InfixSub {
-    fn call(&self, args: ExprList, env: &mut Environment) -> EvalResult {
-        let (lhs, rhs) = env.eval_binary(args.unnamed_binary_args())?;
+    fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
+        let (lhs, rhs) = stack.eval_binary(args.unnamed_binary_args())?;
         lhs - rhs
     }
 }
@@ -430,8 +428,8 @@ impl Format for PrefixSub {
 }
 
 impl Callable for PrefixSub {
-    fn call(&self, args: ExprList, env: &mut Environment) -> EvalResult {
-        let what = env.eval(args.unnamed_unary_arg())?;
+    fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
+        let what = stack.eval(args.unnamed_unary_arg())?;
         -what
     }
 }
@@ -444,8 +442,8 @@ impl Op for InfixMul {
 }
 
 impl Callable for InfixMul {
-    fn call(&self, args: ExprList, env: &mut Environment) -> EvalResult {
-        let (lhs, rhs) = env.eval_binary(args.unnamed_binary_args())?;
+    fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
+        let (lhs, rhs) = stack.eval_binary(args.unnamed_binary_args())?;
         lhs * rhs
     }
 }
@@ -458,8 +456,8 @@ impl Op for InfixDiv {
 }
 
 impl Callable for InfixDiv {
-    fn call(&self, args: ExprList, env: &mut Environment) -> EvalResult {
-        let (lhs, rhs) = env.eval_binary(args.unnamed_binary_args())?;
+    fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
+        let (lhs, rhs) = stack.eval_binary(args.unnamed_binary_args())?;
         lhs / rhs
     }
 }
@@ -472,8 +470,8 @@ impl Op for InfixPow {
 }
 
 impl Callable for InfixPow {
-    fn call(&self, args: ExprList, env: &mut Environment) -> EvalResult {
-        let (lhs, rhs) = env.eval_binary(args.unnamed_binary_args())?;
+    fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
+        let (lhs, rhs) = stack.eval_binary(args.unnamed_binary_args())?;
         lhs.power(rhs)
     }
 }
@@ -486,8 +484,8 @@ impl Op for InfixMod {
 }
 
 impl Callable for InfixMod {
-    fn call(&self, args: ExprList, env: &mut Environment) -> EvalResult {
-        let (lhs, rhs) = env.eval_binary(args.unnamed_binary_args())?;
+    fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
+        let (lhs, rhs) = stack.eval_binary(args.unnamed_binary_args())?;
         lhs % rhs
     }
 }
@@ -500,8 +498,8 @@ impl Op for InfixOr {
 }
 
 impl Callable for InfixOr {
-    fn call(&self, args: ExprList, env: &mut Environment) -> EvalResult {
-        let (lhs, rhs) = env.eval_binary(args.unnamed_binary_args())?;
+    fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
+        let (lhs, rhs) = stack.eval_binary(args.unnamed_binary_args())?;
         let res = match (lhs, rhs) {
             (R::Vector(l), R::Vector(r)) => {
                 let Ok(lhs) = l.try_into() else { todo!() };
@@ -523,8 +521,8 @@ impl Op for InfixAnd {
 }
 
 impl Callable for InfixAnd {
-    fn call(&self, args: ExprList, env: &mut Environment) -> EvalResult {
-        let (lhs, rhs) = env.eval_binary(args.unnamed_binary_args())?;
+    fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
+        let (lhs, rhs) = stack.eval_binary(args.unnamed_binary_args())?;
         let res = match (lhs, rhs) {
             (R::Vector(l), R::Vector(r)) => {
                 let Ok(lhs) = l.try_into() else { todo!() };
@@ -546,8 +544,8 @@ impl Op for InfixVectorOr {
 }
 
 impl Callable for InfixVectorOr {
-    fn call(&self, args: ExprList, env: &mut Environment) -> EvalResult {
-        let (lhs, rhs) = env.eval_binary(args.unnamed_binary_args())?;
+    fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
+        let (lhs, rhs) = stack.eval_binary(args.unnamed_binary_args())?;
         lhs | rhs
     }
 }
@@ -560,8 +558,8 @@ impl Op for InfixVectorAnd {
 }
 
 impl Callable for InfixVectorAnd {
-    fn call(&self, args: ExprList, env: &mut Environment) -> EvalResult {
-        let (lhs, rhs) = env.eval_binary(args.unnamed_binary_args())?;
+    fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
+        let (lhs, rhs) = stack.eval_binary(args.unnamed_binary_args())?;
         lhs & rhs
     }
 }
@@ -574,8 +572,8 @@ impl Op for InfixGreater {
 }
 
 impl Callable for InfixGreater {
-    fn call(&self, args: ExprList, env: &mut Environment) -> EvalResult {
-        let (lhs, rhs) = env.eval_binary(args.unnamed_binary_args())?;
+    fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
+        let (lhs, rhs) = stack.eval_binary(args.unnamed_binary_args())?;
         lhs.vec_gt(rhs)
     }
 }
@@ -588,8 +586,8 @@ impl Op for InfixGreaterEqual {
 }
 
 impl Callable for InfixGreaterEqual {
-    fn call(&self, args: ExprList, env: &mut Environment) -> EvalResult {
-        let (lhs, rhs) = env.eval_binary(args.unnamed_binary_args())?;
+    fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
+        let (lhs, rhs) = stack.eval_binary(args.unnamed_binary_args())?;
         lhs.vec_gte(rhs)
     }
 }
@@ -602,8 +600,8 @@ impl Op for InfixLess {
 }
 
 impl Callable for InfixLess {
-    fn call(&self, args: ExprList, env: &mut Environment) -> EvalResult {
-        let (lhs, rhs) = env.eval_binary(args.unnamed_binary_args())?;
+    fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
+        let (lhs, rhs) = stack.eval_binary(args.unnamed_binary_args())?;
         lhs.vec_lt(rhs)
     }
 }
@@ -616,8 +614,8 @@ impl Op for InfixLessEqual {
 }
 
 impl Callable for InfixLessEqual {
-    fn call(&self, args: ExprList, env: &mut Environment) -> EvalResult {
-        let (lhs, rhs) = env.eval_binary(args.unnamed_binary_args())?;
+    fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
+        let (lhs, rhs) = stack.eval_binary(args.unnamed_binary_args())?;
         lhs.vec_lte(rhs)
     }
 }
@@ -630,8 +628,8 @@ impl Op for InfixEqual {
 }
 
 impl Callable for InfixEqual {
-    fn call(&self, args: ExprList, env: &mut Environment) -> EvalResult {
-        let (lhs, rhs) = env.eval_binary(args.unnamed_binary_args())?;
+    fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
+        let (lhs, rhs) = stack.eval_binary(args.unnamed_binary_args())?;
         lhs.vec_eq(rhs)
     }
 }
@@ -644,8 +642,8 @@ impl Op for InfixNotEqual {
 }
 
 impl Callable for InfixNotEqual {
-    fn call(&self, args: ExprList, env: &mut Environment) -> EvalResult {
-        let (lhs, rhs) = env.eval_binary(args.unnamed_binary_args())?;
+    fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
+        let (lhs, rhs) = stack.eval_binary(args.unnamed_binary_args())?;
         lhs.vec_neq(rhs)
     }
 }
@@ -658,7 +656,7 @@ impl Op for InfixPipe {
 }
 
 impl Callable for InfixPipe {
-    fn call(&self, args: ExprList, env: &mut Environment) -> EvalResult {
+    fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
         // TODO: reduce call stack nesting here
         let (lhs, rhs) = args.unnamed_binary_args();
 
@@ -667,7 +665,7 @@ impl Callable for InfixPipe {
             Call(what, mut args) => {
                 args.insert(0, lhs);
                 let new_expr = Call(what, args);
-                env.eval(new_expr)
+                stack.eval(new_expr)
             }
             _ => unreachable!(),
         }
@@ -691,14 +689,14 @@ impl Format for PostfixIndex {
 }
 
 impl Callable for PostfixIndex {
-    fn call(&self, args: ExprList, env: &mut Environment) -> EvalResult {
-        let (what, index) = env.eval_binary(args.unnamed_binary_args())?;
+    fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
+        let (what, index) = stack.eval_binary(args.unnamed_binary_args())?;
         what.try_get(index)
     }
 
-    fn call_assign(&self, value: Expr, args: ExprList, env: &mut Environment) -> EvalResult {
-        let value = env.eval(value)?;
-        let (what, index) = env.eval_binary(args.unnamed_binary_args())?;
+    fn call_assign(&self, value: Expr, args: ExprList, stack: &mut CallStack) -> EvalResult {
+        let value = stack.eval(value)?;
+        let (what, index) = stack.eval_binary(args.unnamed_binary_args())?;
 
         use R::*;
         match (what, value, index.as_integer()?) {
@@ -721,8 +719,8 @@ impl Format for PostfixVecIndex {
 }
 
 impl Callable for PostfixVecIndex {
-    fn call(&self, args: ExprList, env: &mut Environment) -> EvalResult {
-        let (what, index) = env.eval_binary(args.unnamed_binary_args())?;
+    fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
+        let (what, index) = stack.eval_binary(args.unnamed_binary_args())?;
         what.try_get(index)
     }
 }
@@ -737,9 +735,9 @@ impl Format for PrimVec {
 }
 
 impl Callable for PrimVec {
-    fn call(&self, args: ExprList, env: &mut Environment) -> EvalResult {
+    fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
         // for now just use c()
-        primitive_c(args, env)
+        primitive_c(args, stack)
     }
 }
 
@@ -753,10 +751,10 @@ impl Format for PrimList {
 }
 
 impl Callable for PrimList {
-    fn call(&self, args: ExprList, env: &mut Environment) -> EvalResult {
+    fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
         let vals: Result<Vec<_>, _> = args
             .into_iter()
-            .map(|(n, v)| match env.eval(v) {
+            .map(|(n, v)| match stack.eval(v) {
                 Ok(val) => Ok((n, val)),
                 Err(err) => Err(err),
             })
@@ -769,7 +767,7 @@ impl Callable for PrimList {
 #[derive(Debug, Clone)]
 pub struct Name(String);
 
-pub fn primitive(name: &str) -> Option<Box<dyn Fn(ExprList, &mut Environment) -> EvalResult>> {
+pub fn primitive(name: &str) -> Option<Box<dyn Fn(ExprList, &mut CallStack) -> EvalResult>> {
     match name {
         "c" => Some(Box::new(primitive_c)),
         "list" => Some(Box::new(primitive_list)),
@@ -779,12 +777,12 @@ pub fn primitive(name: &str) -> Option<Box<dyn Fn(ExprList, &mut Environment) ->
     }
 }
 
-pub fn primitive_q(_args: ExprList, _env: &mut Environment) -> EvalResult {
+pub fn primitive_q(_args: ExprList, _stack: &mut CallStack) -> EvalResult {
     Err(RSignal::Condition(Cond::Terminate))
 }
 
-pub fn primitive_list(args: ExprList, env: &mut Environment) -> EvalResult {
-    PrimList::call(&PrimList, args, env)
+pub fn primitive_list(args: ExprList, stack: &mut CallStack) -> EvalResult {
+    PrimList::call(&PrimList, args, stack)
 }
 
 pub fn force_closures(vals: Vec<(Option<String>, R)>) -> Vec<(Option<String>, R)> {
@@ -795,11 +793,11 @@ pub fn force_closures(vals: Vec<(Option<String>, R)>) -> Vec<(Option<String>, R)
         .collect()
 }
 
-pub fn primitive_c(args: ExprList, env: &mut Environment) -> EvalResult {
+pub fn primitive_c(args: ExprList, stack: &mut CallStack) -> EvalResult {
     // this can be cleaned up quite a bit, but I just need it working with
     // more types for now to test vectorized operators using different types
 
-    let R::List(vals) = env.eval_list(args)? else {
+    let R::List(vals) = stack.eval_list(args)? else {
         unreachable!()
     };
 
@@ -906,42 +904,40 @@ impl Format for String {
 }
 
 impl Callable for String {
-    fn call(&self, args: ExprList, env: &mut Environment) -> EvalResult {
+    fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
         if let Some(f) = primitive(self) {
-            return f(args, env);
+            return f(args, stack);
         }
 
-        (env.get(self.clone())?).call(args, env)
+        (stack.last_frame().env.get(self.clone())?).call(args, stack)
     }
 }
 
 impl Format for R {}
 
 impl Callable for R {
-    fn call(&self, args: ExprList, env: &mut Environment) -> EvalResult {
+    fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
         let R::Function(formals, body, fn_env) = self else {
             unimplemented!("can't call non-function")
         };
 
         // set up our local scope, a child environment of the function environment
-        let mut local_scope = Environment::new(Env {
-            parent: Some(Rc::clone(fn_env)),
-            ..Default::default()
-        });
+        let mut local_frame = stack.last_frame();
+        let mut local_env = local_frame.env;
 
         // evaluate arguments in calling environment
-        let R::List(args) = env.eval_list(args)? else {
+        let R::List(args) = stack.eval_list(args)? else {
             unreachable!();
         };
 
         // match arguments against function signature
-        let (args, ellipsis) = match_args(formals.clone(), args, env);
+        let (args, ellipsis) = match_args(formals.clone(), args, stack);
 
         // add closures to local scope
-        local_scope.insert("...".to_string(), R::List(ellipsis));
-        local_scope.append(R::List(args));
+        local_env.insert("...".to_string(), R::List(ellipsis));
+        local_env.append(R::List(args));
 
         // evaluate body in local scope
-        local_scope.eval(body.clone())
+        local_frame.eval(body.clone())
     }
 }

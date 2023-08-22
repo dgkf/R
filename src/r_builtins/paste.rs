@@ -4,8 +4,8 @@ use crate::lang::*;
 use crate::r_builtins::builtins::force_closures;
 use crate::r_vector::vectors::*;
 
-pub fn primitive_paste(args: ExprList, env: &mut Environment) -> EvalResult {
-    let R::List(vals) = env.eval_list(args)? else {
+pub fn primitive_paste(args: ExprList, stack: &mut CallStack) -> EvalResult {
+    let R::List(vals) = stack.eval_list(args)? else {
         unreachable!()
     };
 

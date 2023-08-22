@@ -4,7 +4,7 @@ use std::path::Path;
 use super::highlight::RHighlighter;
 use super::prompt::RPrompt;
 use super::validator::RValidator;
-use crate::lang::{Cond, Context, Environment, RSignal};
+use crate::lang::{CallStack, Cond, Context, Environment, Frame, RSignal};
 use crate::parser::parse;
 
 pub fn repl<P>(history: Option<&P>) -> Result<(), ()>
@@ -51,7 +51,9 @@ where
                 let parse_res = parse(&line);
                 match parse_res {
                     Ok(expr) => {
-                        let res = global_env.eval(expr);
+                        // start a new callstack for this expression
+                        let mut stack = CallStack::from(Frame::new(expr, global_env));
+                        let res = stack.eval(expr);
                         match res {
                             Ok(val) => println!("{}", val),
                             Err(RSignal::Condition(Cond::Terminate)) => break,

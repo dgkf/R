@@ -18,9 +18,9 @@ pub enum R {
 
     // Metaprogramming structures
     Expr(Expr),
-    Closure(Expr, Environment),
-    Function(ExprList, Expr, Environment),
-    Environment(Environment),
+    Closure(Expr, Rc<Environment>),
+    Function(ExprList, Expr, Rc<Environment>),
+    Environment(Rc<Environment>),
 }
 
 #[derive(Debug, Clone)]
@@ -376,15 +376,70 @@ impl VecPartialCmp for R {
 
 pub type List = Vec<(Option<String>, R)>;
 
-pub type Environment = Rc<Env>;
-
-#[derive(Debug, Default, Clone)]
-pub struct Env {
-    pub values: RefCell<HashMap<String, R>>,
-    pub parent: Option<Environment>,
+#[derive(Debug, Clone)]
+pub struct Frame {
+    pub call: Expr,
+    pub env: Rc<Environment>,
 }
 
-impl Env {
+impl Frame {
+    pub fn new_frame(&self, call: Expr) -> Frame {
+        Self {
+            call,
+            env: Rc::new(self.new_child_env()),
+        }
+    }
+
+    pub fn new_child_env(&self) -> Environment {
+        Environment {
+            parent: Some(self.env.clone()),
+            ..Default::default()
+        }
+    }
+
+    pub fn new(call: Expr, env: Environment) -> Frame {
+        Self {
+            call: call.clone(),
+            env: Rc::new(env),
+        }
+    }
+}
+
+#[derive(Debug, Default, Clone)]
+pub struct CallStack {
+    pub frames: Vec<Frame>,
+}
+
+impl CallStack {
+    pub fn add_frame(&mut self, expr: &Expr) {
+        let next_frame = self.last_frame().new_frame(expr.clone());
+        self.frames.push(next_frame);
+    }
+
+    pub fn last_frame(&self) -> &Frame {
+        if let Some(frame) = self.frames.last() {
+            frame
+        } else {
+            panic!("We've somehow exhausted the entire call stack and are still evaluating")
+        }
+    }
+}
+
+impl From<Frame> for CallStack {
+    fn from(frame: Frame) -> Self {
+        Self {
+            frames: vec![frame],
+        }
+    }
+}
+
+#[derive(Debug, Default, Clone)]
+pub struct Environment {
+    pub values: RefCell<HashMap<String, R>>,
+    pub parent: Option<Rc<Environment>>,
+}
+
+impl Environment {
     pub fn get(&self, name: String) -> EvalResult {
         // search in this environment for value by name
         if let Some(value) = self.values.borrow().get(&name) {
@@ -440,10 +495,40 @@ pub trait Context {
     fn eval_list(&mut self, l: ExprList) -> EvalResult;
 }
 
-impl Context for Environment {
+impl Context for CallStack {
+    fn eval(&mut self, expr: Expr) -> EvalResult {
+        match expr {
+            Expr::List(x) => Ok(self.eval_list(x)?),
+            Expr::Call(what, args) => {
+                self.add_frame(expr.clone());
+                return match *what {
+                    Expr::Primitive(what) => Ok(what.call(args, self)?),
+                    Expr::String(what) | Expr::Symbol(what) => Ok(what.call(args, self)?),
+                    rexpr => (self.eval(rexpr)?).call(args, self),
+                };
+            }
+            _ => self.last_frame().eval(expr),
+        }
+    }
+
+    fn eval_list(&mut self, l: ExprList) -> EvalResult {
+        todo!()
+    }
+}
+
+impl Context for &Frame {
+    fn eval(&mut self, expr: Expr) -> EvalResult {
+        self.env.eval(expr)
+    }
+
+    fn eval_list(&mut self, l: ExprList) -> EvalResult {
+        self.env.eval_list(l)
+    }
+}
+
+impl Context for Rc<Environment> {
     fn eval(&mut self, expr: Expr) -> EvalResult {
         use Vector::*;
-
         match expr {
             Expr::Null => Ok(R::Null),
             Expr::NA => Ok(R::Vector(Logical(vec![OptionNA::NA]))),
@@ -452,22 +537,12 @@ impl Context for Environment {
             Expr::Integer(x) => Ok(R::Vector(Vector::from(vec![x]))),
             Expr::Bool(x) => Ok(R::Vector(Logical(vec![OptionNA::Some(x)]))),
             Expr::String(x) => Ok(R::Vector(Character(vec![OptionNA::Some(x)]))),
-            Expr::Function(formals, body) => Ok(R::Function(formals, *body, Rc::clone(self))),
-            Expr::Symbol(name) => self.get(name),
-            Expr::List(x) => Ok(self.eval_list(x)?),
+            Expr::Function(formals, body) => Ok(R::Function(formals, *body, self.clone())),
+            Expr::Symbol(name) => self.clone().get(name),
             Expr::Break => Err(RSignal::Condition(Cond::Break)),
             Expr::Continue => Err(RSignal::Condition(Cond::Continue)),
-            Expr::Call(what, args) => match *what {
-                Expr::Primitive(what) => Ok(what.call(args, self)?),
-                Expr::String(what) | Expr::Symbol(what) => Ok(what.call(args, self)?),
-                rexpr => (self.eval(rexpr)?).call(args, self),
-            },
-            x => unimplemented!("eval({})", x),
+            x => unimplemented!("Context::eval(Rc<Environment>, {})", x),
         }
-    }
-
-    fn eval_binary(&mut self, exprs: (Expr, Expr)) -> Result<(R, R), RSignal> {
-        Ok((self.eval(exprs.0)?, self.eval(exprs.1)?))
     }
 
     fn eval_list(&mut self, l: ExprList) -> EvalResult {
