@@ -43,7 +43,7 @@
 
 // repl line feed parsing
 
-    repl = _{ WS* ~ exprs ~ WS* ~ eoi }
+    repl = _{ WS* ~ expr ~ WS* ~ eoi | WS* ~ exprs ~ WS* ~ eoi }
 
 // expression basics
 

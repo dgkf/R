@@ -51,7 +51,6 @@ pub fn parse_args(s: &str) -> Result<ExprList, RError> {
 }
 
 fn parse_expr(pairs: Pairs<Rule>) -> Expr {
-    // println!("{:#?}", pairs);
     PRATT_PARSER
         .map_primary(parse_primary)
         .map_infix(|lhs, op, rhs| {

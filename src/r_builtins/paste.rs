@@ -9,8 +9,7 @@ pub fn primitive_paste(args: ExprList, stack: &mut CallStack) -> EvalResult {
         unreachable!()
     };
 
-    let mut vals = force_closures(vals);
-
+    let mut vals = force_closures(vals, stack);
     let mut sep = String::from(" ");
     let mut should_collapse = false;
     let mut collapse = String::new();
@@ -43,8 +42,9 @@ pub fn primitive_paste(args: ExprList, stack: &mut CallStack) -> EvalResult {
                 collapse = v.get(0).unwrap().clone().to_string();
             }
             ("collapse", _) => {
-                return Err(RSignal::Error(RError::Other(
-                    "collapse parameter must be NULL or a character string.".to_string(),
+                return Err(RSignal::Error(RError::WithCallStack(
+                    Box::new(RError::Other("collapse parameter must be NULL or a character string.".to_string())),
+                    stack.clone()
                 )))
             }
             _ => continue,

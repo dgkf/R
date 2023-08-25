@@ -1,7 +1,11 @@
 extern crate r_derive;
+
+use std::rc::Rc;
+
 use r_derive::*;
 
 use super::paste::*;
+use super::callstack::*;
 use crate::ast::*;
 use crate::lang::*;
 use crate::r_vector::vectors::*;
@@ -9,7 +13,7 @@ use crate::r_vector::vectors::*;
 fn match_args(
     mut formals: ExprList,
     mut args: Vec<(Option<String>, R)>,
-    stack: &CallStack,
+    env: &Rc<Environment>,
 ) -> (Vec<(Option<String>, R)>, Vec<(Option<String>, R)>) {
     let mut ellipsis: Vec<(Option<String>, R)> = vec![];
     let mut matched_args: Vec<(Option<String>, R)> = vec![];
@@ -54,7 +58,7 @@ fn match_args(
 
     // add back in parameter defaults that weren't filled with args
     for (param, default) in formals.into_iter() {
-        matched_args.push((param, R::Closure(default, stack.last_frame().env.clone())));
+        matched_args.push((param, R::Closure(default, env.clone())));
     }
 
     (matched_args, ellipsis)
@@ -772,6 +776,7 @@ pub fn primitive(name: &str) -> Option<Box<dyn Fn(ExprList, &mut CallStack) -> E
         "c" => Some(Box::new(primitive_c)),
         "list" => Some(Box::new(primitive_list)),
         "paste" => Some(Box::new(primitive_paste)),
+        "callstack" => Some(Box::new(primitive_callstack)),
         "q" => Some(Box::new(primitive_q)),
         _ => None,
     }
@@ -785,11 +790,11 @@ pub fn primitive_list(args: ExprList, stack: &mut CallStack) -> EvalResult {
     PrimList::call(&PrimList, args, stack)
 }
 
-pub fn force_closures(vals: Vec<(Option<String>, R)>) -> Vec<(Option<String>, R)> {
+pub fn force_closures(vals: Vec<(Option<String>, R)>, stack: &mut CallStack) -> Vec<(Option<String>, R)> {
     // Force any closures that were created during call. This helps with using
     // variables as argument for sep and collapse parameters.
     vals.into_iter()
-        .map(|(k, v)| (k, v.clone().force().unwrap_or(R::Null))) // TODO: raise this error
+        .map(|(k, v)| (k, v.clone().force(stack).unwrap_or(R::Null))) // TODO: raise this error
         .collect()
 }
 
@@ -801,7 +806,7 @@ pub fn primitive_c(args: ExprList, stack: &mut CallStack) -> EvalResult {
         unreachable!()
     };
 
-    let vals = force_closures(vals);
+    let vals = force_closures(vals, stack);
 
     // until there's a better way of handling type hierarchy, this will do
     let t: u8 = vals
@@ -861,10 +866,7 @@ pub fn primitive_c(args: ExprList, stack: &mut CallStack) -> EvalResult {
                     R::Vector(Vector::Logical(v)) => {
                         output.append(&mut Vector::vec_coerce::<bool, f64>(&v))
                     }
-                    _ => {
-                        println!("{:#?}", val);
-                        unimplemented!()
-                    }
+                    _ => unimplemented!("{:#?}", val)
                 }
             }
             Ok(R::Vector(Vector::Numeric(output)))
@@ -885,10 +887,7 @@ pub fn primitive_c(args: ExprList, stack: &mut CallStack) -> EvalResult {
                         output.append(&mut Vector::vec_coerce::<bool, String>(&v))
                     }
                     R::Vector(Vector::Character(mut v)) => output.append(&mut v),
-                    _ => {
-                        println!("{:#?}", val);
-                        unimplemented!()
-                    }
+                    _ => unimplemented!("{:#?}", val)
                 }
             }
             Ok(R::Vector(Vector::Character(output)))
@@ -905,10 +904,6 @@ impl Format for String {
 
 impl Callable for String {
     fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
-        if let Some(f) = primitive(self) {
-            return f(args, stack);
-        }
-
         (stack.last_frame().env.get(self.clone())?).call(args, stack)
     }
 }
@@ -917,27 +912,28 @@ impl Format for R {}
 
 impl Callable for R {
     fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
-        let R::Function(formals, body, fn_env) = self else {
+        let R::Function(formals, body, parent_env) = self else {
             unimplemented!("can't call non-function")
         };
 
-        // set up our local scope, a child environment of the function environment
-        let mut local_frame = stack.last_frame();
-        let mut local_env = local_frame.env;
+        // fetch the calling frame from the stack
+        let Some(mut calling_frame) = stack.frame(-1) else {
+            unreachable!();
+        };
 
-        // evaluate arguments in calling environment
-        let R::List(args) = stack.eval_list(args)? else {
+        // evaluate args in the calling frame environment
+        let R::List(args) = calling_frame.eval_list(args)? else {
             unreachable!();
         };
 
         // match arguments against function signature
-        let (args, ellipsis) = match_args(formals.clone(), args, stack);
+        let (args, ellipsis) = match_args(formals.clone(), args, parent_env);
 
         // add closures to local scope
-        local_env.insert("...".to_string(), R::List(ellipsis));
-        local_env.append(R::List(args));
+        stack.last_frame().env.insert("...".to_string(), R::List(ellipsis));
+        stack.last_frame().env.append(R::List(args));
 
         // evaluate body in local scope
-        local_frame.eval(body.clone())
+        stack.eval(body.clone())
     }
 }
