@@ -1,4 +1,4 @@
-use crate::parser::*;
+use crate::{parser::*, lang::CallStack};
 
 use core::fmt;
 use pest::error::LineColLocation::Pos;
@@ -15,14 +15,16 @@ pub enum RError {
     CannotBeCoercedToLogical,
     CannotBeCoercedToInteger,
 
+    // temporary workaround until we propagate call stack to all error locations
+    WithCallStack(Box<RError>, CallStack),  
     Other(String),
 }
 
 impl RError {
     fn as_str(&self) -> String {
         match self {
-            RError::IncorrectContext(x) => format!("Error: '{}' used in an incorrect context", x),
-            RError::VariableNotFound(v) => format!("Error: object '{}' not found", v.as_str()),
+            RError::IncorrectContext(x) => format!("'{}' used in an incorrect context", x),
+            RError::VariableNotFound(v) => format!("object '{}' not found", v.as_str()),
             RError::ParseFailureVerbose(e) => format!("{}", e),
             RError::ParseFailure(e) => match e.line_col {
                 Pos((line, col)) => format!("Parse failed at Line {}, Column {}", line, col),
@@ -46,12 +48,13 @@ impl RError {
             RError::Other(s) => {
                 format!("{}", s)
             }
+            RError::WithCallStack(e, c) => format!("{}\n{c}", e.as_str()),
         }
     }
 }
 
 impl fmt::Display for RError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.as_str())
+        write!(f, "Error: {}", self.as_str())
     }
 }

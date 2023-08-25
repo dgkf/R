@@ -32,13 +32,6 @@ pub fn eval(expr: RExpr, env: &mut Environment) -> EvalResult {
     }
 }
 
-pub fn force(val: R) -> EvalResult {
-    match val {
-        R::Closure(expr, mut env) => eval(expr, &mut env),
-        _ => Ok(val),
-    }
-}
-
 pub fn eval_rexprlist(x: RExprList, env: &mut Environment) -> EvalResult {
     Ok(R::List(
         x.into_iter()

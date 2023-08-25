@@ -1,4 +1,5 @@
-use nu_ansi_term::{Color, Style};
+use nu_ansi_term::Style;
+use nu_ansi_term::Color;
 use reedline::Highlighter;
 use reedline::StyledText;
 

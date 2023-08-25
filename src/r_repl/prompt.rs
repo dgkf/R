@@ -1,8 +1,7 @@
 use std::borrow::Cow;
 
-use crossterm::style::Color;
 use reedline::{
-    Prompt, PromptEditMode, PromptHistorySearch, PromptHistorySearchStatus, PromptViMode,
+    Prompt, PromptEditMode, PromptHistorySearch, PromptHistorySearchStatus, PromptViMode, Color
 };
 
 #[derive(Clone)]
