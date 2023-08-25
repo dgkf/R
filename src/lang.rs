@@ -52,13 +52,8 @@ impl R {
         match self {
             R::Closure(expr, env) => {
                 stack.add_frame(expr.clone(), env);
-                match stack.eval(expr) {
-                    result @ Ok(..) => {
-                        stack.frames.pop();
-                        result
-                    },
-                    error => error,
-                }
+                let result = stack.eval(expr);
+                stack.pop_frame_after(result)
             },
             _ => Ok(self),
         }
