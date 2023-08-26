@@ -1,7 +1,7 @@
 use core::fmt;
 use std::{iter::Zip, slice::IterMut, vec::IntoIter};
 
-use crate::r_builtins::builtins::Primitive;
+use crate::callable::core::Primitive;
 
 #[derive(Debug, Clone)]
 pub enum Expr {

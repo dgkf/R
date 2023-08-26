@@ -3,7 +3,7 @@ use std::fmt::Display;
 
 use crate::error::RError;
 use crate::lang::RSignal;
-use crate::r_vector::coercion::CoercibleInto;
+use crate::vector::coercion::CoercibleInto;
 
 use super::coercion::*;
 use super::iterators::*;

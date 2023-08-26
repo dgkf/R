@@ -1,4 +1,4 @@
-use crate::r_vector::coercion::*;
+use crate::vector::coercion::*;
 
 /// Zip iterators into recycling vectors, extending to longest length
 ///
