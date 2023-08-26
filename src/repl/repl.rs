@@ -14,7 +14,7 @@ where
     P: AsRef<Path>,
 {
     // print session header
-    println!("R version 0.0.1 -- \"Why Not?\"");
+    println!("R version 0.2.0 -- \"In Bloom\"");
 
     let line_editor = Reedline::create()
         .with_validator(Box::new(RValidator))
