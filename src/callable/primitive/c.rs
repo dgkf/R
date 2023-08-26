@@ -17,11 +17,9 @@ impl Callable for PrimitiveC {
         // this can be cleaned up quite a bit, but I just need it working with
         // more types for now to test vectorized operators using different types
 
-        let R::List(vals) = stack.eval_list(args)? else {
+        let R::List(vals) = stack.eval_list_greedy(args)? else {
             unreachable!()
         };
-
-        let vals = force_closures(vals, stack);
 
         // until there's a better way of handling type hierarchy, this will do
         let t: u8 = vals

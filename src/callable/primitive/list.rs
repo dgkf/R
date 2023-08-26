@@ -13,6 +13,6 @@ impl PrimitiveSYM for PrimitiveList {
 
 impl Callable for PrimitiveList {
     fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
-        stack.eval_list(args)
+        stack.eval_list_greedy(args)
     }
 }

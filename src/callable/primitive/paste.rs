@@ -15,11 +15,10 @@ impl PrimitiveSYM for PrimitivePaste {
 
 impl Callable for PrimitivePaste {
     fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
-        let R::List(vals) = stack.parent_frame().eval_list(args)? else {
+        let R::List(mut vals) = stack.parent_frame().eval_list_greedy(args)? else {
             unreachable!()
         };
 
-        let mut vals = force_closures(vals, stack);
         let mut sep = String::from(" ");
         let mut should_collapse = false;
         let mut collapse = String::new();

@@ -550,7 +550,7 @@ pub trait Context {
         Ok((self.eval(exprs.0)?, self.eval(exprs.1)?))
     }
 
-    fn eval_list(&mut self, l: ExprList) -> EvalResult {
+    fn eval_list_lazy(&mut self, l: ExprList) -> EvalResult {
         Ok(R::List(
             l.into_iter()
                 .flat_map(|pair| match pair {
@@ -576,6 +576,29 @@ pub trait Context {
                 .collect(),
         ))
     }
+
+    fn eval_list_greedy(&mut self, l: ExprList) -> EvalResult {
+        Ok(R::List(
+            l.into_iter()
+                .flat_map(|pair| match pair {
+                    (_, Expr::Ellipsis) => {
+                        if let Ok(R::List(ellipsis)) = self.get_ellipsis() {
+                            ellipsis.into_iter()
+                        } else {
+                            vec![].into_iter()
+                        }
+                    }
+                    (k, v) => {
+                        if let Ok(elem) = self.eval(v) {
+                            vec![(k, elem)].into_iter()
+                        } else {
+                            unreachable!()
+                        }
+                    }
+                })
+                .collect(),
+        ))
+    }
 }
 
 impl Context for CallStack {
@@ -585,7 +608,7 @@ impl Context for CallStack {
 
     fn eval(&mut self, expr: Expr) -> EvalResult {
         if let Expr::List(x) = expr {
-            Ok(self.eval_list(x)?)
+            Ok(self.eval_list_lazy(x)?)
         } else if let Expr::Call(what, args) = expr.clone() {
             match *what {
                 Expr::Primitive(what) => {

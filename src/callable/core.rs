@@ -239,7 +239,7 @@ impl Callable for R {
         };
 
         // evaluate args in the calling frame environment
-        let R::List(args) = calling_frame.eval_list(args)? else {
+        let R::List(args) = calling_frame.eval_list_lazy(args)? else {
             unreachable!();
         };
 
