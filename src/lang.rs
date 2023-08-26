@@ -425,12 +425,13 @@ pub struct CallStack {
 }
 
 impl CallStack {
-    pub fn last_frame(&self) -> &Frame {
-        if let Some(frame) = self.frames.last() {
-            frame
-        } else {
-            panic!("We've somehow exhausted the entire call stack and are still evaluating")
-        }
+    pub fn add_frame(&mut self, call: Expr, env: Rc<Environment>) -> usize {
+        self.frames.push(Frame {
+            call,
+            env: env.clone(),
+        });
+
+        self.frames.len()
     }
 
     pub fn frame(&self, n: i32) -> Option<&Frame> {
@@ -441,13 +442,20 @@ impl CallStack {
         }
     }
 
-    pub fn add_frame(&mut self, call: Expr, env: Rc<Environment>) -> usize {
-        self.frames.push(Frame {
-            call,
-            env: env.clone(),
-        });
+    pub fn last_frame(&self) -> &Frame {
+        if let Some(frame) = self.frames.last() {
+            frame
+        } else {
+            panic!("We've somehow exhausted the entire call stack and are still evaluating")
+        }
+    }
 
-        self.frames.len()
+    pub fn parent_frame(&self) -> &Frame {
+        if let Some(frame) = self.frame(-1) {
+            frame
+        } else {
+            panic!("Attempting access to parent frame at top level")
+        }
     }
 
     pub fn pop_frame_after(&mut self, result: EvalResult) -> EvalResult {
@@ -507,7 +515,7 @@ impl Environment {
 
 impl Display for Environment {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "<environment {:?}>", self.values.as_ptr())?;
+        write!(f, "<environment {:?}", self.values.as_ptr())?;
 
         // // print defined variable names
         // if self.values.borrow().len() > 0 { write!(f, " [")?; }
@@ -516,30 +524,63 @@ impl Display for Environment {
         //     write!(f, "{}", k)?;
         // }
         // if self.values.borrow().len() > 0 { write!(f, "]")?; }
-        // write!(f, ">")?;
 
+        write!(f, ">")?;
         Ok(())
     }
 }
 
 pub trait Context {
-    fn get(&self, name: String) -> EvalResult;
+    fn get(&self, name: String) -> EvalResult {
+        (*self).env().get(name)
+    }
+
     fn get_ellipsis(&self) -> EvalResult {
         let err = Err(RSignal::Error(RError::IncorrectContext("...".to_string())));
         self.get("...".to_string()).or(err)
     }
 
-    fn eval(&mut self, expr: Expr) -> EvalResult;
+    fn env(&self) -> Rc<Environment>;
+
+    fn eval(&mut self, expr: Expr) -> EvalResult {
+        self.env().eval(expr)
+    }
+
     fn eval_binary(&mut self, exprs: (Expr, Expr)) -> Result<(R, R), RSignal> {
         Ok((self.eval(exprs.0)?, self.eval(exprs.1)?))
     }
 
-    fn eval_list(&mut self, l: ExprList) -> EvalResult;
+    fn eval_list(&mut self, l: ExprList) -> EvalResult {
+        Ok(R::List(
+            l.into_iter()
+                .flat_map(|pair| match pair {
+                    (_, Expr::Ellipsis) => {
+                        if let Ok(R::List(ellipsis)) = self.get_ellipsis() {
+                            ellipsis.into_iter()
+                        } else {
+                            vec![].into_iter()
+                        }
+                    }
+                    (k, e @ (Expr::Call(..) | Expr::Symbol(..))) => {
+                        let elem = vec![(k, R::Closure(e, self.env()))];
+                        elem.into_iter()
+                    }
+                    (k, v) => {
+                        if let Ok(elem) = self.eval(v) {
+                            vec![(k, elem)].into_iter()
+                        } else {
+                            unreachable!()
+                        }
+                    }
+                })
+                .collect(),
+        ))
+    }
 }
 
 impl Context for CallStack {
-    fn get(&self, name: String) -> EvalResult {
-        self.last_frame().get(name)
+    fn env(&self) -> Rc<Environment> {
+        self.last_frame().env.clone()
     }
 
     fn eval(&mut self, expr: Expr) -> EvalResult {
@@ -561,7 +602,7 @@ impl Context for CallStack {
                     }
 
                     // look up our call target
-                    let rwhat = self.last_frame().env.get(what.clone())?;
+                    let rwhat = self.env().get(what.clone())?;
 
                     // ensure our call target expression has an encapsulating environment
                     let Some(env) = rwhat.environment() else {
@@ -587,48 +628,17 @@ impl Context for CallStack {
             self.last_frame().eval(expr)
         }
     }
-
-    fn eval_list(&mut self, l: ExprList) -> EvalResult {
-        self.last_frame().eval_list(l)
-    }
 }
 
 impl Context for &Frame {
-    fn eval(&mut self, expr: Expr) -> EvalResult {
-        self.env.clone().eval(expr)
-    }
-
-    fn eval_list(&mut self, l: ExprList) -> EvalResult {
-        self.env.clone().eval_list(l)
-    }
-
-    fn get(&self, name: String) -> EvalResult {
-        self.env.get(name)
+    fn env(&self) -> Rc<Environment> {
+        self.env.clone()
     }
 }
 
 impl Context for Rc<Environment> {
-    fn get(&self, name: String) -> EvalResult {
-        // search in this environment for value by name
-        if let Some(value) = self.values.borrow().get(&name) {
-            let result = value.clone();
-            return match result {
-                R::Closure(expr, mut env) => env.eval(expr),
-                _ => Ok(result),
-            };
-
-        // if not found, search through parent if available
-        } else if let Some(parent) = &self.parent {
-            parent.get(name)
-
-        // if we're at the top level, fall back to primitives if available
-        } else if let Ok(prim) = name.as_str().try_into() {
-            Ok(R::Function(ExprList::new(), Expr::Primitive(prim), self.clone()))
-            
-        // otherwise, throw error
-        } else {
-            Err(RSignal::Error(RError::VariableNotFound(name)))
-        }
+    fn env(&self) -> Rc<Environment> {
+        self.clone()
     }
 
     fn eval(&mut self, expr: Expr) -> EvalResult {
@@ -649,30 +659,26 @@ impl Context for Rc<Environment> {
         }
     }
 
-    fn eval_list(&mut self, l: ExprList) -> EvalResult {
-        Ok(R::List(
-            l.into_iter()
-                .flat_map(|pair| match pair {
-                    (_, Expr::Ellipsis) => {
-                        if let Ok(R::List(ellipsis)) = self.get_ellipsis() {
-                            ellipsis.into_iter()
-                        } else {
-                            vec![].into_iter()
-                        }
-                    }
-                    (k, e @ (Expr::Call(..) | Expr::Symbol(..))) => {
-                        let elem = vec![(k, R::Closure(e, Rc::clone(self)))];
-                        elem.into_iter()
-                    }
-                    (k, v) => {
-                        if let Ok(elem) = self.eval(v) {
-                            vec![(k, elem)].into_iter()
-                        } else {
-                            unreachable!()
-                        }
-                    }
-                })
-                .collect(),
-        ))
+    fn get(&self, name: String) -> EvalResult {
+        // search in this environment for value by name
+        if let Some(value) = self.values.borrow().get(&name) {
+            let result = value.clone();
+            return match result {
+                R::Closure(expr, mut env) => env.eval(expr),
+                _ => Ok(result),
+            };
+
+        // if not found, search through parent if available
+        } else if let Some(parent) = &self.parent {
+            parent.get(name)
+
+        // if we're at the top level, fall back to primitives if available
+        } else if let Ok(prim) = name.as_str().try_into() {
+            Ok(R::Function(ExprList::new(), Expr::Primitive(prim), self.env()))
+            
+        // otherwise, throw error
+        } else {
+            Err(RSignal::Error(RError::VariableNotFound(name)))
+        }
     }
 }

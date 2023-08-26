@@ -15,7 +15,7 @@ impl PrimitiveSYM for PrimitivePaste {
 
 impl Callable for PrimitivePaste {
     fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
-        let R::List(vals) = stack.eval_list(args)? else {
+        let R::List(vals) = stack.parent_frame().eval_list(args)? else {
             unreachable!()
         };
 

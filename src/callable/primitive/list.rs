@@ -13,14 +13,6 @@ impl PrimitiveSYM for PrimitiveList {
 
 impl Callable for PrimitiveList {
     fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
-        let vals: Result<Vec<_>, _> = args
-            .into_iter()
-            .map(|(n, v)| match stack.eval(v) {
-                Ok(val) => Ok((n, val)),
-                Err(err) => Err(err),
-            })
-            .collect();
-
-        Ok(R::List(vals?))
+        stack.eval_list(args)
     }
 }
