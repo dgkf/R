@@ -412,7 +412,7 @@ dependencies = [
 
 [[package]]
 name = "r"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "crossterm 0.27.0",
  "lazy_static",

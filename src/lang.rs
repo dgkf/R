@@ -467,6 +467,10 @@ impl CallStack {
             error => error
         }
     }
+
+    pub fn new() -> CallStack {
+        CallStack::from(Frame { call: Expr::Missing, env: Rc::new(Environment::default())})
+    }
 }
 
 impl Display for CallStack {
@@ -596,7 +600,7 @@ pub trait Context {
                         }
                     }
                 })
-                .collect(),
+                .collect()
         ))
     }
 }
@@ -651,6 +655,13 @@ impl Context for CallStack {
             self.last_frame().eval(expr)
         }
     }
+
+    // NOTE:
+    // eval_list_lazy and force_closures are often used together to greedily
+    // evaluated arguments. This pattern can be specialized in the case of a 
+    // CallStack to cut out the creation of intermediate closures. Need to 
+    // lift EvalResult over Context::eval_list_lazy's flat_map by implementing 
+    // Try. 
 }
 
 impl Context for &Frame {

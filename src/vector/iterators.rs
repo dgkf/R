@@ -6,7 +6,7 @@ use crate::vector::coercion::*;
 /// recycled even if they do not repeat an even number of times.
 ///
 /// ```rust
-/// use r::r_vector::iterators::zip_recycle;
+/// use r::vector::iterators::zip_recycle;
 ///
 /// let x = vec![1, 2, 3, 4];
 /// let y = vec![2, 4];
