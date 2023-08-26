@@ -1,4 +1,4 @@
-use r::r_repl::repl::repl;
+use r::repl::repl;
 
 fn main() -> Result<(), ()> {
     let history = "/tmp/history.txt".to_string();

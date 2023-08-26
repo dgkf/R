@@ -8,7 +8,7 @@
 ///
 use crate::ast::*;
 use crate::error::RError;
-use crate::r_builtins::builtins::*;
+use crate::callable::{core::*, keywords::*, operators::*, primitive::PrimitiveList};
 
 use pest::iterators::{Pair, Pairs};
 use pest::pratt_parser::PrattParser;
@@ -289,5 +289,5 @@ fn parse_vec(pair: Pair<Rule>) -> Expr {
 
 fn parse_list(pair: Pair<Rule>) -> Expr {
     let args = parse_pairlist(pair);
-    Expr::new_primitive_call(PrimList, args)
+    Expr::new_primitive_call(PrimitiveList, args)
 }
