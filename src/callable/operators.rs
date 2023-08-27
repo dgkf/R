@@ -5,7 +5,7 @@ use crate::lang::*;
 use crate::vector::vectors::*;
 use super::core::*;
 
-#[derive(Debug, Clone, Primitive)]
+#[derive(Debug, Clone, Primitive, PartialEq)]
 pub struct InfixAssign;
 
 impl PrimitiveSYM for InfixAssign {
@@ -37,7 +37,7 @@ impl Callable for InfixAssign {
     }
 }
 
-#[derive(Debug, Clone, Primitive)]
+#[derive(Debug, Clone, Primitive, PartialEq)]
 pub struct InfixAdd;
 
 impl PrimitiveSYM for InfixAdd {
@@ -51,7 +51,7 @@ impl Callable for InfixAdd {
     }
 }
 
-#[derive(Debug, Clone, Primitive)]
+#[derive(Debug, Clone, Primitive, PartialEq)]
 pub struct InfixSub;
 
 impl PrimitiveSYM for InfixSub {
@@ -65,7 +65,7 @@ impl Callable for InfixSub {
     }
 }
 
-#[derive(Debug, Clone, Primitive)]
+#[derive(Debug, Clone, Primitive, PartialEq)]
 pub struct PrefixSub;
 
 impl Format for PrefixSub {
@@ -81,7 +81,7 @@ impl Callable for PrefixSub {
     }
 }
 
-#[derive(Debug, Clone, Primitive)]
+#[derive(Debug, Clone, Primitive, PartialEq)]
 pub struct InfixMul;
 
 impl PrimitiveSYM for InfixMul {
@@ -95,7 +95,7 @@ impl Callable for InfixMul {
     }
 }
 
-#[derive(Debug, Clone, Primitive)]
+#[derive(Debug, Clone, Primitive, PartialEq)]
 pub struct InfixDiv;
 
 impl PrimitiveSYM for InfixDiv {
@@ -109,7 +109,7 @@ impl Callable for InfixDiv {
     }
 }
 
-#[derive(Debug, Clone, Primitive)]
+#[derive(Debug, Clone, Primitive, PartialEq)]
 pub struct InfixPow;
 
 impl PrimitiveSYM for InfixPow {
@@ -123,7 +123,7 @@ impl Callable for InfixPow {
     }
 }
 
-#[derive(Debug, Clone, Primitive)]
+#[derive(Debug, Clone, Primitive, PartialEq)]
 pub struct InfixMod;
 
 impl PrimitiveSYM for InfixMod {
@@ -137,7 +137,7 @@ impl Callable for InfixMod {
     }
 }
 
-#[derive(Debug, Clone, Primitive)]
+#[derive(Debug, Clone, Primitive, PartialEq)]
 pub struct InfixOr;
 
 impl PrimitiveSYM for InfixOr {
@@ -160,7 +160,7 @@ impl Callable for InfixOr {
     }
 }
 
-#[derive(Debug, Clone, Primitive)]
+#[derive(Debug, Clone, Primitive, PartialEq)]
 pub struct InfixAnd;
 
 impl PrimitiveSYM for InfixAnd {
@@ -183,7 +183,7 @@ impl Callable for InfixAnd {
     }
 }
 
-#[derive(Debug, Clone, Primitive)]
+#[derive(Debug, Clone, Primitive, PartialEq)]
 pub struct InfixVectorOr;
 
 impl PrimitiveSYM for InfixVectorOr {
@@ -197,7 +197,7 @@ impl Callable for InfixVectorOr {
     }
 }
 
-#[derive(Debug, Clone, Primitive)]
+#[derive(Debug, Clone, Primitive, PartialEq)]
 pub struct InfixVectorAnd;
 
 impl PrimitiveSYM for InfixVectorAnd {
@@ -211,7 +211,7 @@ impl Callable for InfixVectorAnd {
     }
 }
 
-#[derive(Debug, Clone, Primitive)]
+#[derive(Debug, Clone, Primitive, PartialEq)]
 pub struct InfixGreater;
 
 impl PrimitiveSYM for InfixGreater {
@@ -225,7 +225,7 @@ impl Callable for InfixGreater {
     }
 }
 
-#[derive(Debug, Clone, Primitive)]
+#[derive(Debug, Clone, Primitive, PartialEq)]
 pub struct InfixGreaterEqual;
 
 impl PrimitiveSYM for InfixGreaterEqual {
@@ -239,7 +239,7 @@ impl Callable for InfixGreaterEqual {
     }
 }
 
-#[derive(Debug, Clone, Primitive)]
+#[derive(Debug, Clone, Primitive, PartialEq)]
 pub struct InfixLess;
 
 impl PrimitiveSYM for InfixLess {
@@ -253,7 +253,7 @@ impl Callable for InfixLess {
     }
 }
 
-#[derive(Debug, Clone, Primitive)]
+#[derive(Debug, Clone, Primitive, PartialEq)]
 pub struct InfixLessEqual;
 
 impl PrimitiveSYM for InfixLessEqual {
@@ -267,7 +267,7 @@ impl Callable for InfixLessEqual {
     }
 }
 
-#[derive(Debug, Clone, Primitive)]
+#[derive(Debug, Clone, Primitive, PartialEq)]
 pub struct InfixEqual;
 
 impl PrimitiveSYM for InfixEqual {
@@ -281,7 +281,7 @@ impl Callable for InfixEqual {
     }
 }
 
-#[derive(Debug, Clone, Primitive)]
+#[derive(Debug, Clone, Primitive, PartialEq)]
 pub struct InfixNotEqual;
 
 impl PrimitiveSYM for InfixNotEqual {
@@ -295,7 +295,7 @@ impl Callable for InfixNotEqual {
     }
 }
 
-#[derive(Debug, Clone, Primitive)]
+#[derive(Debug, Clone, Primitive, PartialEq)]
 pub struct InfixPipe;
 
 impl PrimitiveSYM for InfixPipe {
@@ -324,7 +324,7 @@ impl Callable for InfixPipe {
     }
 }
 
-#[derive(Debug, Clone, Primitive)]
+#[derive(Debug, Clone, Primitive, PartialEq)]
 pub struct PostfixIndex;
 
 impl Format for PostfixIndex {
@@ -361,7 +361,7 @@ impl Callable for PostfixIndex {
     }
 }
 
-#[derive(Debug, Clone, Primitive)]
+#[derive(Debug, Clone, Primitive, PartialEq)]
 pub struct PostfixVecIndex;
 
 impl Format for PostfixVecIndex {
@@ -377,7 +377,7 @@ impl Callable for PostfixVecIndex {
     }
 }
 
-#[derive(Debug, Clone, Primitive)]
+#[derive(Debug, Clone, Primitive, PartialEq)]
 pub struct PrimVec;
 
 impl Format for PrimVec {

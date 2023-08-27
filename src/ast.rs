@@ -23,6 +23,35 @@ pub enum Expr {
     Primitive(Box<dyn Primitive>),
 }
 
+impl PartialEq for Expr {
+    fn eq(&self, other: &Self) -> bool {
+        use Expr::*;
+        match (self, other) {
+            (Null, Null) => true,
+            (NA, NA) => true,
+            (Inf, Inf) => true,
+            (Continue, Continue) => true,
+            (Break, Break) => true,
+            (Ellipsis, Ellipsis) => true,
+            (Missing, Missing) => true,
+            (Bool(l), Bool(r)) => l == r,
+            (Number(l), Number(r)) => l == r,
+            (Integer(l), Integer(r)) => l == r,
+            (String(l), String(r)) => l == r,
+            (Symbol(l), Symbol(r)) => l == r,
+            (List(l), List(r)) => l == r,
+            (Primitive(l), Primitive(r)) => l == r,
+            (Function(largs, lbody), Function(rargs, rbody)) => {
+                largs == rargs && lbody == rbody
+            },
+            (Call(lwhat, largs), Call(rwhat, rargs)) => {
+                lwhat == rwhat && largs == rargs
+            },
+            _ => false
+        }
+    }
+}
+
 impl Expr {
     pub fn as_primitive<T>(x: T) -> Self
     where
@@ -64,7 +93,7 @@ impl fmt::Display for Expr {
     }
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, PartialEq, Default)]
 pub struct ExprList {
     pub keys: Vec<Option<String>>, // TODO: use Vec<RExprListKey>
     pub values: Vec<Expr>,

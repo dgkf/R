@@ -5,7 +5,7 @@ use crate::lang::*;
 use crate::vector::vectors::*;
 use crate::callable::core::*;
 
-#[derive(Debug, Clone, Primitive)]
+#[derive(Debug, Clone, Primitive, PartialEq)]
 pub struct PrimitiveC;
 
 impl PrimitiveSYM for PrimitiveC {

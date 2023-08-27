@@ -3,7 +3,7 @@ use crate::{parser::*, lang::CallStack};
 use core::fmt;
 use pest::error::LineColLocation::Pos;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum RError {
     VariableNotFound(String),
     IncorrectContext(String),

@@ -3,6 +3,7 @@ extern crate r_derive;
 use std::rc::Rc;
 use crate::ast::*;
 use crate::callable::operators::*;
+use crate::callable::dyncompare::*;
 use crate::lang::*;
 
 fn match_args(
@@ -146,7 +147,13 @@ pub trait Format {
     }
 }
 
-pub trait Primitive: Callable + CallableClone + Format {
+pub trait Primitive: Callable + CallableClone + Format + DynCompare {
+}
+
+impl PartialEq<dyn Primitive> for dyn Primitive {
+    fn eq(&self, other: &dyn Primitive) -> bool {
+        self.as_dyn_compare() == other.as_dyn_compare()
+    }
 }
 
 pub trait PrimitiveSYM {

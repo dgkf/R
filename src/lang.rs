@@ -23,7 +23,28 @@ pub enum R {
     Environment(Rc<Environment>),
 }
 
-#[derive(Debug, Clone)]
+impl PartialEq for R {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (R::Null, R::Null) => true,
+            (R::List(l), R::List(r)) => l.iter().zip(r.iter()).all(|((lk, lv), (rk, rv))| lk == rk && lv == rv),
+            (R::Expr(l), R::Expr(r)) => l == r,
+            (R::Closure(lc, lenv), R::Closure(rc, renv)) => lc == rc && lenv == renv,
+            (R::Function(largs, lbody, lenv), R::Function(rargs, rbody, renv)) => largs == rargs && lbody == rbody && lenv == renv,
+            (R::Environment(l), R::Environment(r)) => l == r,
+            (R::Vector(lv), R::Vector(rv)) => match (lv, rv) {
+                (Vector::Numeric(l), Vector::Numeric(r)) => l == r,
+                (Vector::Integer(l), Vector::Integer(r)) => l == r,
+                (Vector::Logical(l), Vector::Logical(r)) => l == r,
+                (Vector::Character(l), Vector::Character(r)) => l == r,
+                _ => false,
+            },
+            _ => false
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub enum Cond {
     Break,
     Continue,
@@ -31,7 +52,7 @@ pub enum Cond {
     Return(R),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum RSignal {
     Condition(Cond),
     Error(RError),
@@ -391,7 +412,7 @@ impl VecPartialCmp for R {
 
 pub type List = Vec<(Option<String>, R)>;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Frame {
     pub call: Expr,
     pub env: Rc<Environment>,
@@ -419,7 +440,7 @@ impl Display for Frame {
     }
 }
 
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default, Clone, PartialEq)]
 pub struct CallStack {
     pub frames: Vec<Frame>,
 }
@@ -490,7 +511,13 @@ impl From<Frame> for CallStack {
     }
 }
 
-#[derive(Debug, Default, Clone)]
+impl From<Rc<Environment>> for CallStack {
+    fn from(value: Rc<Environment>) -> Self {
+        CallStack { frames: vec![Frame { call: Expr::Missing, env: value }] }
+    }
+}
+
+#[derive(Debug, Default, Clone, PartialEq)]
 pub struct Environment {
     pub values: RefCell<HashMap<String, R>>,
     pub parent: Option<Rc<Environment>>,

@@ -4,7 +4,7 @@ use crate::ast::*;
 use crate::lang::*;
 use crate::callable::core::*;
 
-#[derive(Debug, Clone, Primitive)]
+#[derive(Debug, Clone, Primitive, PartialEq)]
 pub struct PrimitiveQ;
 
 impl PrimitiveSYM for PrimitiveQ {
