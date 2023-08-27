@@ -1,5 +1,6 @@
 #[macro_use]
 extern crate pest_derive;
+mod utils;
 
 pub mod ast;
 pub mod error;

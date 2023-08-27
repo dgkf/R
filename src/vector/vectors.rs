@@ -28,6 +28,7 @@ impl Vector {
     pub fn get(&self, index: usize) -> Option<Vector> {
         use Vector::*;
 
+        #[inline]
         fn f<T>(v: &Vec<T>, index: usize) -> Option<Vector>
         where
             T: Clone,

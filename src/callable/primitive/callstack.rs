@@ -4,7 +4,7 @@ use crate::ast::ExprList;
 use crate::lang::{CallStack, EvalResult, R};
 use crate::callable::core::*;
 
-#[derive(Debug, Clone, Primitive)]
+#[derive(Debug, Clone, Primitive, PartialEq)]
 pub struct PrimitiveCallstack;
 
 impl PrimitiveSYM for PrimitiveCallstack {
