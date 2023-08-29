@@ -22,7 +22,7 @@ jobs:
         run: wasm-pack build --target web --no-default-features --features wasm
 
       - name: Deploy
-      - run: |
+        run: |
           cp -r pkg demo/pkg
           touch demo/.nojekyll
           tree demo
