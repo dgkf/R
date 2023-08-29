@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="en-US">
+  <head>
+    <meta charset="utf-8" />
+    <title>R</title>
+   <style>
+    body {
+      font-family: sans;
+      font-size: 1.25em;
+      padding: 0;
+      margin: 0;
+      background: #222;
+    }
+
+    pre {
+      margin: 0.15rem;
+      white-space: pre-wrap;
+    }
+    
+    .container {
+      position: absolute;
+      left: 20%;
+      right: 20%;
+      bottom: 20%;
+    }
+
+    .history {
+      -webkit-mask-image: -webkit-linear-gradient(bottom, rgba(0,0,0,1) max(10em, 30vh), rgba(0,0,0,0.2) max(20em, 60vh));
+    }
+
+    .history-cell {
+      color: #DDD;
+      padding: 0.25em 0.5em;
+      border-radius: 0.5em;
+      margin: 0.25em 0;
+    }
+
+    .input > pre:before {
+      content: "> ";
+    }
+
+    .input {
+      background: #444;
+    }
+
+    .output {
+      background: #333;
+      color: #AAA;
+    }
+
+    .error {
+      background: #322;
+      color: #CAA;
+    }
+
+    .error > a {
+      color: #844;      
+    }
+
+    .btn {
+      border-radius: 0.5em;
+
+      color: white;
+      font-size: 1.2em;
+      font-weight: bold;
+
+      padding: 0.2em 0.5em;
+      margin: 0.2em 0 0 0;
+
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .submit {
+      float: right;
+      background: #58F;
+    }
+
+    .submit:hover {
+      background: #69F;
+    }
+
+    .submit:active {
+      background: #7AF;
+    }
+
+    .clear {
+      float: left;
+      color: #555;
+      background: none;
+    }
+
+    #prompt {
+      box-sizing: border-box;
+      font-family: mono;
+      width: 100%;
+      resize: vertical;
+      background: #111;
+      color: white;
+      border-radius: 1em;
+      border: 0.2em solid #333;
+      padding: 1em;
+    }
+
+    #prompt:focus {
+      outline: 0;
+      border-color: #555;
+    }
+    
+   </style>
+  </head>
+  <body>
+    <script type="module">
+      import init, { wasm_session_header, wasm_new_session } from "./pkg/r.js";
+      window.r = await init().then(() => { 
+        push("output", wasm_session_header());
+        return wasm_new_session();
+      });
+    </script>
+
+    <script>
+      function push(type, content, elem) {
+        let history = elem || document.getElementById("history");
+        let node = document.createElement("div");
+        let text = document.createElement("pre");
+        node.className = "history-cell " + type;
+        text.textContent = content;
+        node.appendChild(text);
+        history.appendChild(node);
+        return node;
+      }
+
+      function unexpected_error(elem) {
+        let history = elem || document.getElementById("history")
+        let node = document.createElement("div");
+        node.className = "history-cell error";
+
+        var text = document.createElement("pre");
+        text.textContent = "Error: An unexpected error was encountered!";
+        node.appendChild(text);
+
+        var text = document.createElement("span");
+        text.textContent = "Why not ";
+        node.appendChild(text);
+
+        var link = document.createElement("a");
+        link.href = "https://github.com/dgkf/R/issues";
+        link.textContent = "submit an issue";
+        node.appendChild(link);
+        
+        var text = document.createElement("span");
+        text.textContent = "?";
+        node.appendChild(text);
+
+        history.appendChild(node);
+      }
+      
+      function run() {
+        let prompt = document.getElementById("prompt");
+
+        // read code and print to history
+        let code = prompt.value;
+        let input = push("input", code);
+
+        // get result and print to history
+        try { 
+          let result = window.r(code);
+          push("output", result, input);
+        } catch (error) {
+          console.log(error);
+          unexpected_error(input)
+        }
+
+        // clear prompt
+        prompt.value = '';
+
+        // // reset any resizing
+        // prompt.rows = 1;
+        // prompt.style = '';
+      }
+
+      function clear_history() {
+        document.getElementById("history").innerHTML = '';
+      }
+    </script>
+
+    <div class="background">
+      <div class="container">
+        <div class="history" id="history">
+        </div>
+        <textarea id="prompt" name="prompt" cols="40" rows="1"></textarea>
+        <div class="btn clear" onclick="clear_history()">clear</div>
+        <div class="btn submit" onclick="run()">run</div>
+      </div>
+    </div>
+  </body>
+</html>
