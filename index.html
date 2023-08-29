@@ -111,10 +111,10 @@
   </head>
   <body>
     <script type="module">
-      import init, { wasm_session_header, wasm_new_session } from "./pkg/r.js";
+      import init, { wasm_session_header, wasm_env } from "./pkg/r.js";
       window.r = await init().then(() => { 
         push("output", wasm_session_header());
-        return wasm_new_session();
+        return wasm_env();
       });
     </script>
 
