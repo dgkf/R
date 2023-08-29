@@ -2,7 +2,10 @@
 <html lang="en-US">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0"/>
+    <meta name="viewport" content="viewport-fit=cover width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0"/>
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+    <meta name="apple-mobile-web-app-capable" content="yes"/>
+    <meta name=
     <title>dgkf/R</title>
    <style>
     * {
@@ -24,7 +27,7 @@
       margin: 0.15rem;
       white-space: pre-wrap;
     }
-    
+
     .container {
       position: absolute;
       left: 5%;
@@ -215,12 +218,16 @@
     </script>
 
     <div class="background">
-      <div class="container">
-        <div class="history" id="history">
+      <div class="container-scroll">
+        <div class="container-float-bottom">
+          <div class="container">
+            <div class="history" id="history">
+            </div>
+            <textarea id="prompt" name="prompt" cols="40" rows="1" spellcheck="false"></textarea>
+            <div class="btn clear" onclick="clear_history()">clear</div>
+            <div class="btn submit" onclick="run()">run</div>
+          </div>
         </div>
-        <textarea id="prompt" name="prompt" cols="40" rows="1" spellcheck="false"></textarea>
-        <div class="btn clear" onclick="clear_history()">clear</div>
-        <div class="btn submit" onclick="run()">run</div>
       </div>
     </div>
   </body>
