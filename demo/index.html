@@ -45,20 +45,24 @@
 
     .container {
       position: absolute;
-      left: 5%;
-      right: 5%;
-      bottom: 5%;
+      left: 1%;
+      right: 1%;
+      bottom: 0.5%;
     }
 
     body, #prompt {
-      font-size: 1.2rem;
+      font-size: 1rem;
     }
 
     @media only screen and (min-width: 768px) {
+      body, #prompt {
+        font-size: 1.2rem;
+      }
+
       .container {
-        left: 15%;
-        right: 15%;
-        bottom: 15%;
+        left: 10%;
+        right: 10%;
+        bottom: 10%;
       }
     }
 
@@ -162,7 +166,10 @@
       import init, { wasm_session_header, wasm_env } from "./pkg/r.js";
       window.r = await init().then(() => { 
         push("output", wasm_session_header());
-        return wasm_env();
+        return {
+          "eval": wasm_env(),
+          "header": wasm_session_header,          
+        }
       });
     </script>
 
@@ -212,7 +219,7 @@
 
         // get result and print to history
         try { 
-          let result = window.r(code);
+          let result = window.r.eval(code);
           push("output", result, input);
         } catch (error) {
           console.log(error);
@@ -229,6 +236,7 @@
 
       function clear_history() {
         document.getElementById("history").innerHTML = '';
+        push("output", window.r.header());
       }
     </script>
 
