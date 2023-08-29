@@ -2,7 +2,7 @@
 <html lang="en-US">
   <head>
     <meta charset="utf-8" />
-    <title>R</title>
+    <title>dgkf/R</title>
    <style>
     body {
       font-family: sans;
@@ -111,7 +111,7 @@
   </head>
   <body>
     <script type="module">
-      import init, { wasm_session_header, wasm_env } from "./pkg/r.js";
+      import init, { wasm_session_header, wasm_env } from "/pkg/r.js";
       window.r = await init().then(() => { 
         push("output", wasm_session_header());
         return wasm_env();
