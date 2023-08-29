@@ -1,13 +1,13 @@
 name: Deploy Pages Demo
 
-# on:
-#   push:
-#     branches: [main, master, v2-branch]
-#   pull_request:
-#     branches: [main, master, v2-branch]
-#   release:
-#     types: [published]
-#   workflow_dispatch:
+on:
+  push:
+    branches: [main, master, v2-branch]
+  pull_request:
+    branches: [main, master, v2-branch]
+  release:
+    types: [published]
+  workflow_dispatch:
 
 jobs:
   build demo:
@@ -22,13 +22,12 @@ jobs:
         run: wasm-pack build --target web --no-default-features --features wasm
 
       - name: Deploy
-        run: mv demo public
-        run: cp -r pkg public/pkg
+        run: cp -r pkg demo/pkg
       
       - name: Deploy to GitHub pages 🚀
-        # if: github.event_name != 'pull_request'
+        if: github.event_name != 'pull_request'
         uses: JamesIves/github-pages-deploy-action@v4.4.1
         with:
           clean: false
           branch: gh-pages
-          folder: docs
+          folder: demo
