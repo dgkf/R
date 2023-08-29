@@ -1,0 +1,11 @@
+
+{
+  "name": "dgkf/R",
+  "short_name": "R",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#111",
+  "description": "A reimagining of R",
+  "icons": [],
+  "related_applications": []
+}
