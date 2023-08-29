@@ -2,11 +2,19 @@
 <html lang="en-US">
   <head>
     <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0"/>
     <title>dgkf/R</title>
    <style>
+    * {
+      -webkit-transition: all 0.3s ease;
+      -moz-transition: all 0.3s ease;
+      -o-transition: all 0.3s ease;
+      -ms-transition: all 0.3s ease;
+      transition: all 0.3s ease;
+    }
+
     body {
-      font-family: sans;
-      font-size: 1.25em;
+      font-family: sans-serif, sans;
       padding: 0;
       margin: 0;
       background: #222;
@@ -19,9 +27,29 @@
     
     .container {
       position: absolute;
-      left: 20%;
-      right: 20%;
-      bottom: 20%;
+      left: 5%;
+      right: 5%;
+      bottom: 5%;
+    }
+
+    body, #prompt {
+      font-size: 1.2rem;
+    }
+
+    @media only screen and (min-width: 768px) {
+      .container {
+        left: 15%;
+        right: 15%;
+        bottom: 15%;
+      }
+    }
+
+    @media only screen and (min-width: 1200px) {
+      .container {
+        left: 20%;
+        right: 20%;
+        bottom: 20%;
+      }
     }
 
     .history {
@@ -92,11 +120,13 @@
 
     #prompt {
       box-sizing: border-box;
-      font-family: mono;
+      font-family: monospace, mono;
       width: 100%;
       resize: vertical;
+
       background: #111;
       color: white;
+
       border-radius: 1em;
       border: 0.2em solid #333;
       padding: 1em;
@@ -188,7 +218,7 @@
       <div class="container">
         <div class="history" id="history">
         </div>
-        <textarea id="prompt" name="prompt" cols="40" rows="1"></textarea>
+        <textarea id="prompt" name="prompt" cols="40" rows="1" spellcheck="false"></textarea>
         <div class="btn clear" onclick="clear_history()">clear</div>
         <div class="btn submit" onclick="run()">run</div>
       </div>
