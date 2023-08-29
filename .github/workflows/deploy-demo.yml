@@ -1,0 +1,34 @@
+name: Deploy Pages Demo
+
+# on:
+#   push:
+#     branches: [main, master, v2-branch]
+#   pull_request:
+#     branches: [main, master, v2-branch]
+#   release:
+#     types: [published]
+#   workflow_dispatch:
+
+jobs:
+  build demo:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Install
+        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+
+      - name: Build
+        run: wasm-pack build --target web --no-default-features --features wasm
+
+      - name: Deploy
+        run: mv demo public
+        run: cp -r pkg public/pkg
+      
+      - name: Deploy to GitHub pages 🚀
+        # if: github.event_name != 'pull_request'
+        uses: JamesIves/github-pages-deploy-action@v4.4.1
+        with:
+          clean: false
+          branch: gh-pages
+          folder: docs

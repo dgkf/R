@@ -5,6 +5,7 @@ use std::rc::Rc;
 use super::highlight::RHighlighter;
 use super::prompt::RPrompt;
 use super::validator::RValidator;
+use super::release::*;
 use crate::lang::{CallStack, Cond, Context, Environment, RSignal, EvalResult};
 use crate::parser::parse;
 
@@ -12,8 +13,8 @@ pub fn repl<P>(history: Option<&P>) -> Result<(), ()>
 where
     P: AsRef<Path>,
 {
-    // print session header
-    println!("R version 0.2.0 -- \"In Bloom\"");
+    println!("{}", session_header());
+    let global_env = Rc::new(Environment::default());
 
     let line_editor = Reedline::create()
         .with_validator(Box::new(RValidator))
@@ -35,9 +36,6 @@ where
     // initialize our repl prompt
     let prompt = RPrompt::default();
 
-    // start session environment
-    let global_env = Rc::new(Environment::default());
-
     // REPL
     loop {
         let signal = line_editor.read_line(&prompt);
@@ -52,10 +50,8 @@ where
                 let parse_res = parse(&line);
                 match parse_res {
                     Ok(expr) => {
-                        // start new callstack for input, starting with a missing at the global env 
                         let mut stack = CallStack::from(global_env.clone());
-                        let res = stack.eval(expr);
-                        match res {
+                        match stack.eval(expr) {
                             Err(RSignal::Condition(Cond::Terminate)) => break,
                             Ok(val) => println!("{}", val),
                             Err(e) => println!("{}", e),
