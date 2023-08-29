@@ -19,13 +19,9 @@ jobs:
         run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
 
       - name: Build
-        run: wasm-pack build --target web --no-default-features --features wasm
-
-      - name: Deploy
         run: |
+          wasm-pack build --target web --no-default-features --features wasm
           cp -r pkg demo/pkg
-          touch demo/.nojekyll
-          tree demo
       
       - name: Deploy to GitHub pages 🚀
         if: github.event_name != 'pull_request'
