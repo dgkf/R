@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  demo:
+  Pages:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -22,7 +22,10 @@ jobs:
         run: wasm-pack build --target web --no-default-features --features wasm
 
       - name: Deploy
-        run: cp -r pkg demo/pkg
+      - run: |
+          cp -r pkg demo/pkg
+          touch demo/.nojekyll
+          tree demo
       
       - name: Deploy to GitHub pages 🚀
         if: github.event_name != 'pull_request'
