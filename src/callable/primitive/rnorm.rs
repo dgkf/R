@@ -1,5 +1,4 @@
 use r_derive::Primitive;
-use rand::Rng;
 use rand_distr::{Distribution, Normal};
 
 use crate::ast::*;

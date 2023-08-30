@@ -1,4 +1,4 @@
-use crate::{parser::*, lang::{CallStack, EvalResult, RSignal}};
+use crate::{parser::*, lang::{CallStack, RSignal}};
 
 use core::fmt;
 use pest::error::LineColLocation::Pos;
