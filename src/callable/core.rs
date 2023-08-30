@@ -200,6 +200,7 @@ pub fn string_as_primitive(s: &str) -> Result<Box<dyn Primitive>, ()> {
         "list" => Ok(Box::new(PrimitiveList)),
         "paste" => Ok(Box::new(PrimitivePaste)),
         "q" => Ok(Box::new(PrimitiveQ)),
+        "rnorm" => Ok(Box::new(PrimitiveRnorm)),
         "runif" => Ok(Box::new(PrimitiveRunif)),
         _ => Err(()),
     }

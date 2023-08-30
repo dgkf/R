@@ -13,8 +13,8 @@ pub use paste::*;
 mod q;
 pub use q::*;
 
-// mod rnorm;
-// pub use rnorm::*;
+mod rnorm;
+pub use rnorm::*;
 
 mod runif;
 pub use runif::*;

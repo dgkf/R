@@ -338,18 +338,26 @@ impl Display for Vector {
                 return write!(f, "numeric(0)");
             }
 
+            // TODO: iteratively calculate when we hit max print so our
+            // max_len isn't inflated by a value that is omitted
+
             let x_strs = x.iter().map(|xi| format!("{}", xi));
             let max_len = x_strs
                 .clone()
                 .fold(0, |max_len, xi| std::cmp::max(max_len, xi.len()));
 
             let mut col = 0;
-            x_strs.enumerate().try_for_each(|(i, x_str)| {
+            let gutterlen = 2 + nlen + 1;
+
+            // hard coded max print & console width
+            let maxprint = 20 * ((80 - gutterlen) / max_len);
+
+            x_strs.take(maxprint).enumerate().try_for_each(|(i, x_str)| {
                 if i == 0 {
-                    col = 2 + nlen + 1 + max_len;
+                    col = gutterlen + max_len;
                     write!(f, "{:>3$}[{}] {:>4$}", "", i + 1, x_str, nlen - 1, max_len)
-                } else if col + 1 + nlen > 80 {
-                    col = 2 + nlen + 1 + max_len;
+                } else if col + 1 + max_len > 80 {
+                    col = gutterlen + max_len;
                     let i_str = format!("{}", i + 1);
                     let gutter = nlen - i_str.len();
                     write!(f, "\n{:>3$}[{}] {:>4$}", "", i_str, x_str, gutter, max_len)
@@ -357,7 +365,13 @@ impl Display for Vector {
                     col += 1 + max_len;
                     write!(f, " {:>1$}", x_str, max_len)
                 }
-            })
+            })?;
+
+            if n > maxprint {
+                write!(f, "\n[ omitting {} entries ]", n - maxprint)?;
+            }
+
+            Ok(())
         }
 
         fn fmt_strs(x: &Vec<OptionNA<String>>) -> Vec<String> {

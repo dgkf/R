@@ -1,11 +1,12 @@
 use r_derive::Primitive;
+use rand::Rng;
 use rand::distributions::{Distribution, Uniform};
 
 use crate::ast::*;
 use crate::error::RError;
 use crate::lang::*;
 use crate::callable::core::*;
-use crate::vector::vectors::{Vector, OptionNA};
+use crate::vector::vectors::Vector;
 
 #[derive(Debug, Clone, Primitive, PartialEq)]
 pub struct PrimitiveRunif;
@@ -24,6 +25,8 @@ impl Callable for PrimitiveRunif {
     }
 
     fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
+        use RError::ArgumentInvalid;
+
         let R::List(vals) = stack.parent_frame().eval_list_lazy(args)? else {
             unreachable!()
         };
@@ -32,44 +35,38 @@ impl Callable for PrimitiveRunif {
         let vals = force_closures(vals, stack);
         let mut vals = R::List(vals);
 
-        let Some(n) = vals.get_named("n") else {
-            return Err(RSignal::Error(RError::ArgumentMissing(String::from("n"))));
-        };
-
-        let R::Vector(Vector::Integer(n)) = n.as_integer()? else {
-            return Err(RSignal::Error(RError::CannotBeCoercedToNumeric));
-        };
-
-        let Some(min) = vals.get_named("min") else {
-            return Err(RSignal::Error(RError::ArgumentMissing(String::from("min"))));
-        };
-
-        let R::Vector(Vector::Numeric(min)) = min.as_numeric()? else {
-            return Err(RSignal::Error(RError::CannotBeCoercedToNumeric));
-        };
-
-        let Some(max) = vals.get_named("max") else {
-            return Err(RSignal::Error(RError::ArgumentMissing(String::from("max"))));
-        };
-
-        let R::Vector(Vector::Numeric(max)) = max.as_numeric()? else {
-            return Err(RSignal::Error(RError::CannotBeCoercedToNumeric));
-        };
-
-        let Some(&OptionNA::Some(n)) = n.get(0) else {
-            todo!();
-        };
-
-        let Some(&OptionNA::Some(min)) = min.get(0) else {
-            todo!();
-        };
-
-        let Some(&OptionNA::Some(max)) = max.get(0) else {
-            todo!();
-        };
-
-        let between = Uniform::try_from(min..=max).unwrap();
+        let n: i32 = vals.try_get_named("n")?.try_into()?;
+        let min: Vec<f64> = vals.try_get_named("min")?.try_into()?;
+        let max: Vec<f64> = vals.try_get_named("max")?.try_into()?;
+        let len = std::cmp::max(min.len(), max.len());
         let mut rng = rand::thread_rng();
-        Ok(R::Vector(Vector::from((1..=n).into_iter().map(|_| between.sample(&mut rng)).collect::<Vec<f64>>())))
+
+        // TODO: perhaps these branches can be unified by creating a 
+        // run-length-encoding of the iterator?
+
+        // special case when both min and max are length 1, sampling 
+        // all random numbers at once from the same distribution
+        if len == 1 {
+            let min = min.get(0).map_or(ArgumentInvalid(String::from("min")).into(), |x| Ok(x))?;
+            let max = max.get(0).map_or(ArgumentInvalid(String::from("max")).into(), |x| Ok(x))?;
+            let between = Uniform::try_from(*min..=*max).unwrap();
+
+            Ok(R::Vector(Vector::from(
+                (1..=n)
+                    .into_iter()
+                    .map(|_| between.sample(&mut rng))
+                    .collect::<Vec<f64>>()
+            )))
+
+        // otherwise we need to zip through mins and maxes to get distributions
+        } else {
+            Ok(R::Vector(Vector::from(
+                min.into_iter().cycle()
+                    .zip(max.into_iter().cycle())
+                    .take(len)
+                    .map(|(min, max)| rng.gen_range(min..=max))
+                    .collect::<Vec<f64>>()
+            )))
+        }
     }
 }
