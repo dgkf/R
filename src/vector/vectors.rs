@@ -345,16 +345,17 @@ impl Display for Vector {
 
             let mut col = 0;
             x_strs.enumerate().try_for_each(|(i, x_str)| {
-                col += max_len + 1;
                 if i == 0 {
-                    write!(f, "{:>3$}[{}] {:>4$} ", "", i + 1, x_str, nlen - 1, max_len)
-                } else if col > 80 - nlen - 3 {
-                    col = 0;
+                    col = 2 + nlen + 1 + max_len;
+                    write!(f, "{:>3$}[{}] {:>4$}", "", i + 1, x_str, nlen - 1, max_len)
+                } else if col + 1 + nlen > 80 {
+                    col = 2 + nlen + 1 + max_len;
                     let i_str = format!("{}", i + 1);
                     let gutter = nlen - i_str.len();
-                    write!(f, "\n{:>3$}[{}] {:>4$} ", "", i_str, x_str, gutter, max_len)
+                    write!(f, "\n{:>3$}[{}] {:>4$}", "", i_str, x_str, gutter, max_len)
                 } else {
-                    write!(f, "{:>1$} ", x_str, max_len)
+                    col += 1 + max_len;
+                    write!(f, " {:>1$}", x_str, max_len)
                 }
             })
         }

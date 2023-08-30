@@ -68,8 +68,8 @@ impl Callable for PrimitiveRunif {
             todo!();
         };
 
-        let between = Uniform::try_from(min..max).unwrap();
+        let between = Uniform::try_from(min..=max).unwrap();
         let mut rng = rand::thread_rng();
-        Ok(R::Vector(Vector::from((1..n).into_iter().map(|_| between.sample(&mut rng)).collect::<Vec<f64>>())))
+        Ok(R::Vector(Vector::from((1..=n).into_iter().map(|_| between.sample(&mut rng)).collect::<Vec<f64>>())))
     }
 }
