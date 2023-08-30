@@ -37,7 +37,7 @@
         hl_infix = { infix }
         hl_open = { "(" }
         hl_brackets = { hl_open | ")" | "[" | "]" | "{" | "}" }
-        hl_ops = { "," | "+" | "-" | "*" | "/" | "<" | ">" | "=" | "&" | "!" | "^" | "?" }
+        hl_ops = { "," | "+" | "-" | "*" | "/" | "<" | ">" | "=" | "&" | "!" | "^" | ":" | "::" | ":::" | "?" }
         hl_other = { ANY }
 
 
@@ -58,6 +58,7 @@
                 assign | 
                 add | subtract | multiply | divide | modulo | power | 
                 pipe | 
+                colon | doublecolon | triplecolon |
                 gte | lte | gt | eq | neq | lt | 
                 or | vor | and | vand | 
                 special
@@ -89,6 +90,9 @@
             // special
             special = { "%" ~ !("%") ~ "%" }
             pipe = { "|>" }
+            colon = { ":" }
+            doublecolon = { "::" }
+            triplecolon = { ":::" }
 
         prefix = _{ subtract | negate }
             negate = { "!" }

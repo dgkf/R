@@ -325,6 +325,29 @@ impl Callable for InfixPipe {
 }
 
 #[derive(Debug, Clone, Primitive, PartialEq)]
+pub struct InfixColon;
+
+impl PrimitiveSYM for InfixColon {
+    const SYM: &'static str = ":";
+}
+
+impl Callable for InfixColon {
+    fn call(&self, args: ExprList, _stack: &mut CallStack) -> EvalResult {
+        // TODO: reduce call stack nesting here
+        let (lhs, rhs) = args.unnamed_binary_args();
+
+        use Expr::*;
+        match (lhs, rhs) {
+            (Number(l), Number(r)) => Ok(R::Vector(Vector::from(((l as i32)..=(r as i32)).into_iter().collect::<Vec<i32>>()))),
+            (Number(l), Integer(r)) => Ok(R::Vector(Vector::from(((l as i32)..=(r as i32)).into_iter().collect::<Vec<i32>>()))),
+            (Integer(l), Number(r)) => Ok(R::Vector(Vector::from(((l as i32)..=(r as i32)).into_iter().collect::<Vec<i32>>()))),
+            (Integer(l), Integer(r)) => Ok(R::Vector(Vector::from(((l as i32)..=(r as i32)).into_iter().collect::<Vec<i32>>()))),
+            _ => unreachable!(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Primitive, PartialEq)]
 pub struct PostfixIndex;
 
 impl Format for PostfixIndex {
