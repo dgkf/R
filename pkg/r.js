@@ -179,6 +179,17 @@ export function wasm_env() {
     return takeObject(ret);
 }
 
+/**
+* @param {string} input
+* @returns {boolean}
+*/
+export function wasm_parses_successfully(input) {
+    const ptr0 = passStringToWasm0(input, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.wasm_parses_successfully(ptr0, len0);
+    return ret !== 0;
+}
+
 async function __wbg_load(module, imports) {
     if (typeof Response === 'function' && module instanceof Response) {
         if (typeof WebAssembly.instantiateStreaming === 'function') {

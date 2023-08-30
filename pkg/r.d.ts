@@ -8,12 +8,18 @@ export function wasm_session_header(): string;
 * @returns {any}
 */
 export function wasm_env(): any;
+/**
+* @param {string} input
+* @returns {boolean}
+*/
+export function wasm_parses_successfully(input: string): boolean;
 
 export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembly.Module;
 
 export interface InitOutput {
   readonly memory: WebAssembly.Memory;
   readonly wasm_session_header: (a: number) => void;
+  readonly wasm_parses_successfully: (a: number, b: number) => number;
   readonly wasm_env: () => number;
   readonly __wbindgen_export_0: WebAssembly.Table;
   readonly __wbindgen_add_to_stack_pointer: (a: number) => number;
