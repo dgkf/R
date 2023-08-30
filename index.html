@@ -23,6 +23,37 @@
     -->
 
    <style>
+    html {
+      scroll-behavior: smooth;
+    }
+
+    :root {
+      --font-scale: 1;
+
+      --dark-bg: rgb(0, 0, 0);
+      --dark-fg: rgb(224, 224, 224);
+
+      --light-bg: rgb(224, 224, 224);
+      --light-fg: rgb(0, 0, 0);
+
+      --bg: var(--dark-bg);
+      --fg: var(--dark-fg);
+    }
+
+    @media (prefers-color-scheme: light) {
+      :root {
+        --bg: var(--light-bg);
+        --fg: var(--light-fg);
+      }      
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: var(--dark-bg);
+        --fg: var(--dark-fg);
+      }      
+    }
+
     * {
       -webkit-transition: all 0.3s ease;
       -moz-transition: all 0.3s ease;
@@ -35,7 +66,8 @@
       font-family: sans-serif, sans;
       padding: 0;
       margin: 0;
-      background: #222;
+      background: color-mix(in lch, var(--bg) 90%, var(--fg));
+      color: var(--fg);
     }
 
     pre {
@@ -44,21 +76,25 @@
     }
 
     .container {
+      display: flex;
+      flex-direction: column;
       position: absolute;
+      top: 0%;
       left: 1%;
       right: 1%;
       bottom: 0.5%;
     }
 
+    .flex-row {
+      display: flex;
+      justify-content: space-between;
+    }
+
     body, #prompt {
-      font-size: 1rem;
+      font-size: calc(1rem * var(--font-scale));
     }
 
     @media only screen and (min-width: 768px) {
-      body, #prompt {
-        font-size: 1.2rem;
-      }
-
       .container {
         left: 10%;
         right: 10%;
@@ -74,12 +110,20 @@
       }
     }
 
-    .history {
+    .history-scroll {
+      height: 100%;
+      overflow: scroll;
+      scrollbar-width: none;
+      scroll-behavior: smooth;
       -webkit-mask-image: -webkit-linear-gradient(bottom, rgba(0,0,0,1) max(10em, 30vh), rgba(0,0,0,0.2) max(20em, 60vh));
     }
 
+    .history-scroll-pad {
+      height: inherit;
+    }
+
     .history-cell {
-      color: #DDD;
+      color: var(--fg);
       padding: 0.25em 0.5em;
       border-radius: 0.5em;
       margin: 0.25em 0;
@@ -89,28 +133,29 @@
       content: "> ";
     }
 
-    .input {
-      background: #444;
+    .input, .output {
+      background: color-mix(in lch, var(--bg) 85%, var(--fg));
     }
 
     .output {
-      background: #333;
-      color: #AAA;
+      background: color-mix(in lch, var(--bg) 80%, var(--fg));
+      color: color-mix(in lch, var(--bg) 20%, var(--fg));
     }
 
     .error {
-      background: #322;
-      color: #CAA;
+      background: color-mix(in lch, #D11 25%, var(--bg));
+      color: color-mix(in lch, #D11 25%, var(--fg));
     }
 
-    .error > a {
-      color: #844;      
+    .error a {
+      color: color-mix(in lch, #D11 50%, var(--fg));
     }
 
     .btn {
+      display: inline;
       border-radius: 0.5em;
 
-      color: white;
+      color: color-mix(in lch, var(--fg) 75%, var(--bg));
       font-size: 1.2em;
       font-weight: bold;
 
@@ -121,9 +166,19 @@
       user-select: none;
     }
 
+    .btn-group {
+      display: flex;
+      padding: 0.4em 0.5em 0;
+    }
+
+    .btn-slim {
+      padding-left: 0;
+      padding-right: 0;
+    }
+
     .submit {
-      float: right;
       background: #58F;
+      color: white;
     }
 
     .submit:hover {
@@ -135,9 +190,48 @@
     }
 
     .clear {
-      float: left;
-      color: #555;
       background: none;
+    }
+
+    .icon {
+      font-size: 0.5em;
+      padding: 0 1rem;
+      vertical-align: middle;
+      cursor: pointer;
+
+      -webkit-mask-repeat: no-repeat;
+      mask-repeat: no-repeat;
+      -webkit-mask-size: contain;
+      mask-size: contain;
+      -webkit-mask-position: 50% 50%;
+      mask-position: 50% 50%;
+
+      background-color: color-mix(in lch, var(--fg) 75%, var(--bg));
+    }
+
+    .i-moon {
+      -webkit-mask-image: url("assets/moon.svg");
+      mask-image: url("assets/moon.svg");
+    }
+
+    .i-sun {
+      -webkit-mask-image: url("assets/sun.svg");
+      mask-image: url("assets/sun.svg");
+    }
+
+    .i-down-arrow {
+      -webkit-mask-image: url("assets/down-arrow.svg");
+      mask-image: url("assets/down-arrow.svg");
+    }
+
+    .i-up-arrow {
+      -webkit-mask-image: url("assets/up-arrow.svg");
+      mask-image: url("assets/up-arrow.svg");
+    }
+
+    .i-github {
+      -webkit-mask-image: url("assets/github.svg");
+      mask-image: url("assets/github.svg");
     }
 
     #prompt {
@@ -146,11 +240,11 @@
       width: 100%;
       resize: vertical;
 
-      background: #111;
-      color: white;
+      background: var(--bg);
+      color: var(--fg);
 
       border-radius: 1em;
-      border: 0.2em solid #333;
+      border: 0.2em solid color-mix(in lch, var(--bg), var(--fg));
       padding: 1em;
     }
 
@@ -174,6 +268,15 @@
     </script>
 
     <script>
+      addEventListener("DOMContentLoaded", (event) => {
+        let prompt = document.getElementById("prompt");
+        prompt.addEventListener("keydown", prompt_input);
+      });
+
+      function prompt_input(event) {
+        if (event.ctrlKey && event.key == "Enter") run();
+      }
+
       function push(type, content, elem) {
         let history = elem || document.getElementById("history");
         let node = document.createElement("div");
@@ -208,6 +311,7 @@
         node.appendChild(text);
 
         history.appendChild(node);
+        return node;
       }
       
       function run() {
@@ -215,43 +319,103 @@
 
         // read code and print to history
         let code = prompt.value;
+        if (!code.trim()) { return clear_prompt(); }
         let input = push("input", code);
-
+        
         // get result and print to history
         try { 
           let result = window.r.eval(code);
-          push("output", result, input);
+          let node = push("output", result, input);
+          node.scrollIntoView();
         } catch (error) {
           console.log(error);
-          unexpected_error(input)
+          let node = unexpected_error(input);
+          node.scrollIntoView();
         }
 
-        // clear prompt
-        prompt.value = '';
+        // clear prompt & restore focus
+        clear_prompt();
 
         // // reset any resizing
         // prompt.rows = 1;
         // prompt.style = '';
       }
 
+      function clear_prompt() {
+        let prompt = document.getElementById("prompt");
+        prompt.value = '';        
+        prompt.focus();
+      }
+
       function clear_history() {
         document.getElementById("history").innerHTML = '';
         push("output", window.r.header());
       }
+
+      function font_size(value) {
+        let root = document.querySelector(":root");
+        root.style.setProperty("--font-scale", value);
+      }
+
+      function font_size_adjust(perc) {
+        let root = document.querySelector(":root");
+        let rootstyle = getComputedStyle(root);
+        let scale = rootstyle.getPropertyValue("--font-scale");
+        font_size(scale * perc)
+      }
+
+      function theme_light_icon() {
+        return document.getElementById("light-mode");
+      }
+
+      function theme_dark_icon() {
+        return document.getElementById("dark-mode");
+      }
+
+      function theme_light() {
+        let root = document.querySelector(":root");
+        root.style.setProperty("--bg", "var(--light-bg)")
+        root.style.setProperty("--fg", "var(--light-fg)")
+
+        theme_light_icon().style.display = "none";
+        theme_dark_icon().style.display = "initial";
+      }
+
+      function theme_dark() {
+        let root = document.querySelector(":root");
+        root.style.setProperty("--bg", "var(--dark-bg)")
+        root.style.setProperty("--fg", "var(--dark-fg)")
+
+        theme_light_icon().style.display = "initial";
+        theme_dark_icon().style.display = "none";
+      }
     </script>
 
     <div class="background">
-      <div class="container-scroll">
-        <div class="container-float-bottom">
-          <div class="container">
+      <div class="container">
+          <div class="history-scroll" id="history-scroll">
+            <div class="history-scroll-pad"></div>
             <div class="history" id="history">
-            </div>
-            <textarea id="prompt" name="prompt" cols="40" rows="1" 
-              spellcheck="false" autocorrect="off" autocomplete="off" autocapitalize="none"
-            >paste("Hello", "World!", sep = ", ")</textarea>
-            <div class="btn clear" onclick="clear_history()">clear</div>
-            <div class="btn submit" onclick="run()">run</div>
           </div>
+        </div>
+        <textarea id="prompt" name="prompt" cols="40" rows="1" 
+          spellcheck="false" autocorrect="off" autocomplete="off" autocapitalize="none"
+        >paste("Hello", "World!", sep = ", ")</textarea>
+        <div class="flex-row">
+          <div class="btn clear" onclick="clear_history()">clear</div>
+          <div class = "btn-group">
+            <div id="light-mode" class="icon i-sun" onclick="theme_light()" alt="switch to light mode"></div>
+            <div id="dark-mode" class="icon i-moon" onclick="theme_dark()" alt="switch to dark mode" style="display: none;"></div>
+          </div>
+          <div class="btn-group">
+            <div class="btn icon i-github" href="https://github.com/dgkf/R" alt="GitHub"></div>
+          </div>
+          <div class="btn-group">
+            <div class="btn btn-slim icon i-down-arrow" onclick="font_size_adjust(8/9)" alt="decrease font size"></div>
+            <div class="btn btn-slim font-reset" onclick="font_size(1)">Aa</div>
+            <div class="btn btn-slim icon i-up-arrow" onclick="font_size_adjust(9/8)" alt="increase font size"></div>
+          </div>
+          <div class="btn submit" onclick="run()">run</div>
         </div>
       </div>
     </div>
