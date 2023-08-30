@@ -1,4 +1,4 @@
-use crate::{parser::*, lang::CallStack};
+use crate::{parser::*, lang::{CallStack, RSignal}};
 
 use core::fmt;
 use pest::error::LineColLocation::Pos;
@@ -14,10 +14,13 @@ pub enum RError {
     ConditionIsNotScalar,
     CannotBeCoercedToLogical,
     CannotBeCoercedToInteger,
+    CannotBeCoercedToNumeric,
 
     // temporary workaround until we propagate call stack to all error locations
     WithCallStack(Box<RError>, CallStack),  
     Other(String),
+    ArgumentMissing(String),
+    ArgumentInvalid(String),
 }
 
 impl RError {
@@ -45,10 +48,15 @@ impl RError {
             RError::CannotBeCoercedToInteger => {
                 format!("object cannot be coerced to type 'integer'")
             }
+            RError::CannotBeCoercedToNumeric => {
+                format!("object cannot be coerced to type 'numeric'")
+            }
             RError::Other(s) => {
                 format!("{}", s)
             }
             RError::WithCallStack(e, c) => format!("{}\n{c}", e.as_str()),
+            RError::ArgumentMissing(s) => format!("argument '{s}' is missing with no default"),
+            RError::ArgumentInvalid(s) => format!("argument '{s}' is invalid."),
         }
     }
 }
@@ -56,5 +64,17 @@ impl RError {
 impl fmt::Display for RError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "Error: {}", self.as_str())
+    }
+}
+
+impl Into<RSignal> for RError {
+    fn into(self) -> RSignal {
+        RSignal::Error(self)
+    }
+}
+
+impl<T> Into<Result<T, RSignal>> for RError {
+    fn into(self) -> Result<T, RSignal> {
+        Err(RSignal::Error(self))
     }
 }

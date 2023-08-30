@@ -44,6 +44,54 @@ impl PartialEq for R {
     }
 }
 
+impl TryInto<i32> for R {
+    type Error = RSignal;
+    fn try_into(self) -> Result<i32, Self::Error> {
+        use RError::CannotBeCoercedToInteger;
+
+        let R::Vector(Vector::Integer(v)) = self.as_integer()? else {
+            unreachable!();            
+        };
+
+        match v[..] {
+            [OptionNA::Some(i), ..] => Ok(i),
+            _ => Err(CannotBeCoercedToInteger.into()),
+        }
+    }
+}
+
+impl TryInto<f64> for R {
+    type Error = RSignal;
+    fn try_into(self) -> Result<f64, Self::Error> {
+        use RError::CannotBeCoercedToNumeric;
+
+        let R::Vector(Vector::Numeric(v)) = self.as_numeric()? else {
+            unreachable!();            
+        };
+
+        match v[..] {
+            [OptionNA::Some(i), ..] => Ok(i),
+            _ => Err(CannotBeCoercedToNumeric.into()),
+        }
+    }
+}
+
+impl TryInto<Vec<f64>> for R {
+    type Error = RSignal;
+    fn try_into(self) -> Result<Vec<f64>, Self::Error> {
+        let R::Vector(Vector::Numeric(v)) = self.as_numeric()? else {
+            unreachable!();            
+        };
+
+        Ok(v.iter()
+            .map(|vi| match vi {
+                OptionNA::Some(i) => *i,
+                OptionNA::NA => f64::NAN,
+            })
+            .collect())
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum Cond {
     Break,
@@ -160,6 +208,19 @@ impl R {
         }
     }
 
+
+    pub fn get_named(&mut self, name: &str) -> Option<R> {
+        match self {
+            R::List(v) => v.iter().find(|(k, _)| *k == Some(String::from(name))).map(|(_, v)| v.clone()),
+            R::Environment(e) => match e.get(String::from(name)) {
+                Ok(v) => Some(v),
+                Err(_) => None,
+            }
+            _ => None
+        }
+        
+    }
+
     pub fn environment(&self) -> Option<Rc<Environment>> {
         match self {
             R::Closure(_, e) | R::Function(_, _, e) | R::Environment(e) => Some(e.clone()),
@@ -167,12 +228,18 @@ impl R {
         }        
     }
 
+    pub fn try_get_named(&mut self, name: &str) -> EvalResult {
+        use RError::VariableNotFound;
+        self.get_named(name)
+            .map_or(VariableNotFound(String::from(name)).into(), |x| Ok(x))
+    }
+
     pub fn try_get(&self, index: R) -> EvalResult {
         let i = index.into_usize()?;
         match self {
             R::Vector(rvec) => match rvec.get(i) {
                 Some(v) => Ok(R::Vector(v)),
-                None => Err(RSignal::Error(RError::Other("out of bounds".to_string()))),
+                None => RError::Other("out of bounds".to_string()).into(),
             },
             R::List(lvec) => Ok(lvec[i - 1].1.clone()),
             _ => todo!(),

@@ -6,7 +6,7 @@ use crate::callable::operators::*;
 use crate::callable::dyncompare::*;
 use crate::lang::*;
 
-fn match_args(
+pub fn match_args(
     mut formals: ExprList,
     mut args: Vec<(Option<String>, R)>,
     env: &Rc<Environment>,
@@ -83,6 +83,10 @@ pub trait CallableClone: Callable {
 }
 
 pub trait Callable {
+    fn formals(&self) -> ExprList {
+        ExprList::new()
+    }
+
     fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult;
 
     fn call_assign(&self, _value: Expr, _args: ExprList, _stack: &mut CallStack) -> EvalResult {
@@ -192,10 +196,12 @@ pub fn string_as_primitive(s: &str) -> Result<Box<dyn Primitive>, ()> {
     match s {
         "|>" => Ok(Box::new(InfixPipe)),
         "c" => Ok(Box::new(PrimitiveC)),
+        "callstack" => Ok(Box::new(PrimitiveCallstack)),
         "list" => Ok(Box::new(PrimitiveList)),
         "paste" => Ok(Box::new(PrimitivePaste)),
-        "callstack" => Ok(Box::new(PrimitiveCallstack)),
         "q" => Ok(Box::new(PrimitiveQ)),
+        "rnorm" => Ok(Box::new(PrimitiveRnorm)),
+        "runif" => Ok(Box::new(PrimitiveRunif)),
         _ => Err(()),
     }
 }
