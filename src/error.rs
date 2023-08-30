@@ -14,10 +14,12 @@ pub enum RError {
     ConditionIsNotScalar,
     CannotBeCoercedToLogical,
     CannotBeCoercedToInteger,
+    CannotBeCoercedToNumeric,
 
     // temporary workaround until we propagate call stack to all error locations
     WithCallStack(Box<RError>, CallStack),  
     Other(String),
+    ArgumentMissing(String),
 }
 
 impl RError {
@@ -45,10 +47,14 @@ impl RError {
             RError::CannotBeCoercedToInteger => {
                 format!("object cannot be coerced to type 'integer'")
             }
+            RError::CannotBeCoercedToNumeric => {
+                format!("object cannot be coerced to type 'numeric'")
+            }
             RError::Other(s) => {
                 format!("{}", s)
             }
             RError::WithCallStack(e, c) => format!("{}\n{c}", e.as_str()),
+            RError::ArgumentMissing(s) => format!("Argument '{s}' is missing with no default"),
         }
     }
 }

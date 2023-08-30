@@ -160,6 +160,18 @@ impl R {
         }
     }
 
+    pub fn get_named(&mut self, name: &str) -> Option<R> {
+        match self {
+            R::List(v) => v.iter().find(|(k, _)| *k == Some(String::from(name))).map(|(_, v)| v.clone()),
+            R::Environment(e) => match e.get(String::from(name)) {
+                Ok(v) => Some(v),
+                Err(_) => None,
+            }
+            _ => None
+        }
+        
+    }
+
     pub fn environment(&self) -> Option<Rc<Environment>> {
         match self {
             R::Closure(_, e) | R::Function(_, _, e) | R::Environment(e) => Some(e.clone()),
