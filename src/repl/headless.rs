@@ -2,7 +2,8 @@ use wasm_bindgen::prelude::*;
 use std::rc::Rc;
 
 use crate::lang::{CallStack, Context, Environment, RSignal, Cond};
-use crate::parser::parse;
+use pest::Parser;
+use crate::parser::{RParser, parse, Rule};
 use super::release::session_header;
 
 #[wasm_bindgen]
@@ -17,6 +18,11 @@ pub fn wasm_env() -> JsValue {
     let ret = cb.as_ref().clone();
     cb.forget();
     ret
+}
+
+#[wasm_bindgen]
+pub fn wasm_parses_successfully(input: &str) -> bool {
+    RParser::parse(Rule::repl, input).is_ok()
 }
 
 pub fn wasm_eval_in(env: &Rc<Environment>, input: &str) -> Option<String> {
