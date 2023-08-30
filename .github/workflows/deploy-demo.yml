@@ -22,6 +22,8 @@ jobs:
         run: |
           wasm-pack build --target web --out-dir demo/pkg --no-default-features --features wasm
           rm demo/pkg/.gitignore
+          export GIT_SHA_SHORT=`echo ${GITHUB_SHA} | cut -c1-8`
+          echo "export const GIT_SHA_SHORT=${GIT_SHA_SHORT}" | cat demo/pkg/r.js
       
       - name: Deploy to GitHub pages 🚀
         if: github.event_name != 'pull_request'
