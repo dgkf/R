@@ -513,7 +513,7 @@ impl From<Frame> for CallStack {
 
 impl From<Rc<Environment>> for CallStack {
     fn from(value: Rc<Environment>) -> Self {
-        CallStack { frames: vec![Frame { call: Expr::Missing, env: value }] }
+        CallStack { frames: vec![Frame { call: Expr::Missing, env: value.clone() }] }
     }
 }
 
@@ -676,7 +676,11 @@ impl Context for CallStack {
                     let result = rwhat.call(args, self);
                     self.pop_frame_after(result)
                 },
-                _ => (self.eval(*what)?).call(args, self)                    
+                _ => {
+                    self.add_frame(expr, self.last_frame().env.clone());
+                    let result = (self.eval(*what)?).call(args, self);
+                    return self.pop_frame_after(result)
+                }
             }
         } else {
             self.last_frame().eval(expr)
