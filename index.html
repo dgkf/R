@@ -267,13 +267,14 @@
   </head>
   <body>
     <script type="module">
-      import init, { wasm_session_header, wasm_env, wasm_parses_successfully } from "./pkg/r.js";
+      import init, * as r from "./pkg/r.js";
       window.r = await init().then(() => { 
-        push_history("output", wasm_session_header());
+        let header = r.wasm_session_header() + (r.GIT_SHA_SHORT ? " (dev " + r.GIT_SHA_SHORT + ")" : "");
+        push_history("output", header);
         return {
-          "eval": wasm_env(),
-          "header": wasm_session_header,          
-          "validate": wasm_parses_successfully,
+          "eval": r.wasm_env(),
+          "header": header,
+          "validate": r.wasm_parses_successfully,
           "history": {
             "log": [],
             "selected": null
@@ -409,7 +410,7 @@
 
       function clear_history() {
         document.getElementById("history").innerHTML = '';
-        push_history("output", r.header());
+        push_history("output", r.header);
       }
 
       function font_size(value) {
