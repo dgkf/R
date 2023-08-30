@@ -223,7 +223,7 @@ impl Format for String {
 
 impl Callable for String {
     fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
-        (stack.last_frame().env.get(self.clone())?).call(args, stack)
+        (stack.last_frame().env.clone().get(self.clone())?).call(args, stack)
     }
 }
 

@@ -562,11 +562,11 @@ impl Display for Environment {
 }
 
 pub trait Context {
-    fn get(&self, name: String) -> EvalResult {
+    fn get(&mut self, name: String) -> EvalResult {
         (*self).env().get(name)
     }
 
-    fn get_ellipsis(&self) -> EvalResult {
+    fn get_ellipsis(&mut self) -> EvalResult {
         let err = Err(RSignal::Error(RError::IncorrectContext("...".to_string())));
         self.get("...".to_string()).or(err)
     }
@@ -640,19 +640,22 @@ impl Context for CallStack {
     fn eval(&mut self, expr: Expr) -> EvalResult {
         if let Expr::List(x) = expr {
             Ok(self.eval_list_lazy(x)?)
+        } else if let Expr::Symbol(what) = expr {
+            let what  = self.get(what);
+            what
         } else if let Expr::Call(what, args) = expr.clone() {
             match *what {
                 Expr::Primitive(what) => {
                     self.add_frame(expr, self.last_frame().env.clone());
                     let result = what.call(args, self);
-                    return self.pop_frame_after(result)
+                    return self.pop_frame_after(result);
                 },
                 Expr::String(what) | Expr::Symbol(what) => {
                     // builtin primitives do not introduce a new call onto the stack
                     if let Ok(f) = string_as_primitive(&what) {
                         self.add_frame(expr, self.last_frame().env.clone());
                         let result = f.call(args, self);
-                        return self.pop_frame_after(result)
+                        return self.pop_frame_after(result);
                     }
 
                     // look up our call target
@@ -684,6 +687,37 @@ impl Context for CallStack {
             }
         } else {
             self.last_frame().eval(expr)
+        }
+    }
+
+    fn get(&mut self, name: String) -> EvalResult {
+        let mut env = self.env();
+        loop {
+            // search in this environment for value by name
+            if let Some(value) = env.values.borrow().get(&name) {
+                let result = value.clone();
+                return match result {
+                    R::Closure(expr, env) => {
+                        self.add_frame(expr.clone(), env.clone());
+                        let result = self.eval(expr);
+                        return self.pop_frame_after(result);
+                    },
+                    _ => Ok(result),
+                };
+            }
+
+            // if not found, search through parent if available
+            if let Some(parent) = &env.parent {
+                env = parent.clone();
+            } else {
+                break;
+            }
+        }
+
+        if let Ok(prim) = name.as_str().try_into() {
+            Ok(R::Function(ExprList::new(), Expr::Primitive(prim), self.env()))
+        } else {
+            Err(RSignal::Error(RError::VariableNotFound(name)))
         }
     }
 
@@ -724,7 +758,7 @@ impl Context for Rc<Environment> {
         }
     }
 
-    fn get(&self, name: String) -> EvalResult {
+    fn get(&mut self, name: String) -> EvalResult {
         // search in this environment for value by name
         if let Some(value) = self.values.borrow().get(&name) {
             let result = value.clone();
@@ -735,7 +769,7 @@ impl Context for Rc<Environment> {
 
         // if not found, search through parent if available
         } else if let Some(parent) = &self.parent {
-            parent.get(name)
+            parent.clone().get(name)
 
         // if we're at the top level, fall back to primitives if available
         } else if let Ok(prim) = name.as_str().try_into() {
