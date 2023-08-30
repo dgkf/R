@@ -112,10 +112,15 @@
 
     .history-scroll {
       height: 100%;
-      overflow: scroll;
+      overflow-x: hidden;
+      overflow-y: scroll;
       scrollbar-width: none;
       scroll-behavior: smooth;
       -webkit-mask-image: -webkit-linear-gradient(bottom, rgba(0,0,0,1) max(10em, 30vh), rgba(0,0,0,0.2) max(20em, 60vh));
+    }
+
+    .history-scroll::-webkit-scrollbar {
+      display: none;
     }
 
     .history-scroll-pad {
@@ -245,13 +250,17 @@
       color: var(--fg);
 
       border-radius: 1em;
-      border: 0.2em solid color-mix(in lch, var(--bg), var(--fg));
+      border: 0.2em solid color-mix(in lch, var(--bg) 85%, var(--fg));
       padding: 1em;
     }
 
     #prompt:focus {
       outline: 0;
-      border-color: #555;
+      border-color: color-mix(in lch, var(--bg) 70%, var(--fg));
+    }
+
+    #prompt::-webkit-scrollbar {
+      display: none;
     }
     
    </style>
@@ -260,11 +269,15 @@
     <script type="module">
       import init, { wasm_session_header, wasm_env, wasm_parses_successfully } from "./pkg/r.js";
       window.r = await init().then(() => { 
-        push("output", wasm_session_header());
+        push_history("output", wasm_session_header());
         return {
           "eval": wasm_env(),
           "header": wasm_session_header,          
           "validate": wasm_parses_successfully,
+          "history": {
+            "log": [],
+            "selected": null
+          }
         }
       });
     </script>
@@ -276,6 +289,14 @@
       });
 
       function prompt_input(event) {
+        if (event.key == "ArrowUp" && event.target.selectionStart <= 0) {
+          r.history.selected = ((r.history.selected || 0) + 1) % r.history.log.length;
+          return set_prompt(r.history.log[r.history.selected]);
+        } else if (event.key == "ArrowDown" && event.target.selectionEnd >= event.target.value.length) {
+          r.history.selected = (r.history.log.length + (r.history.selected || 0) - 1) % r.history.log.length;
+          return set_prompt(r.history.log[r.history.selected]);
+        }
+
         // possibly submit code
         if (event.key == "Enter") {
           // if ctrl is held
@@ -288,7 +309,7 @@
           // if code is a complete expression, run it
           let prompt = document.getElementById("prompt");
           let code = prompt.value;
-          if (window.r.validate(code)) {
+          if (r.validate(code)) {
             run();
             event.preventDefault();
             return;
@@ -308,19 +329,19 @@
         }
       }
 
-      function push(type, content, elem) {
-        let history = elem || document.getElementById("history");
+      function push_history(type, content, elem) {
+        let parent = elem || document.getElementById("history");
         let node = document.createElement("div");
         let text = document.createElement("pre");
         node.className = "history-cell " + type;
         text.textContent = content;
         node.appendChild(text);
-        history.appendChild(node);
+        parent.appendChild(node);
         return node;
       }
 
       function unexpected_error(elem) {
-        let history = elem || document.getElementById("history")
+        let parent = elem || document.getElementById("history")
         let node = document.createElement("div");
         node.className = "history-cell error";
 
@@ -341,7 +362,7 @@
         text.textContent = "?";
         node.appendChild(text);
 
-        history.appendChild(node);
+        parent.appendChild(node);
         return node;
       }
       
@@ -351,12 +372,14 @@
         // read code and print to history
         let code = prompt.value;
         if (!code.trim()) { return clear_prompt(); }
-        let input = push("input", code);
+
+        r.history.log.push(code);
+        let input = push_history("input", code);
         
         // get result and print to history
         try { 
-          let result = window.r.eval(code);
-          let node = push("output", result, input);
+          let result = r.eval(code);
+          let node = push_history("output", result, input);
           node.scrollIntoView();
         } catch (error) {
           console.log(error);
@@ -373,15 +396,20 @@
       }
 
       function clear_prompt() {
+        r.history.log.selected = null;
         let prompt = document.getElementById("prompt");
         prompt.value = '';     
         prompt.rows = 1;
         prompt.focus();
       }
 
+      function set_prompt(input) {
+        document.getElementById("prompt").value = input;
+      }
+
       function clear_history() {
         document.getElementById("history").innerHTML = '';
-        push("output", window.r.header());
+        push_history("output", r.header());
       }
 
       function font_size(value) {
