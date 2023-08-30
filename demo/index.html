@@ -55,17 +55,11 @@
     }
 
     * {
-      -webkit-transition: all 0.3s ease;
-      -moz-transition: all 0.3s ease;
-      -o-transition: all 0.3s ease;
-      -ms-transition: all 0.3s ease;
-      transition: all 0.3s ease;
-
-      -webkit-transition: font-size 0s linear;
-      -moz-transition: font-size 0s linear;
-      -o-transition: font-size 0s linear;
-      -ms-transition: font-size 0s linear;
-      transition: font-size 0s linear;
+      -webkit-transition: all 0.3s ease, font-size 0s linear;
+      -moz-transition: all 0.3s ease, font-size 0s linear;
+      -o-transition: all 0.3s ease, font-size 0s linear;
+      -ms-transition: all 0.3s ease, font-size 0s linear;
+      transition: all 0.3s ease, font-size 0s linear;
     }
 
     body {
@@ -243,6 +237,7 @@
     #prompt {
       box-sizing: border-box;
       font-family: monospace, mono;
+      line-height: 1.5em;
       width: 100%;
       resize: vertical;
 
@@ -263,12 +258,13 @@
   </head>
   <body>
     <script type="module">
-      import init, { wasm_session_header, wasm_env } from "./pkg/r.js";
+      import init, { wasm_session_header, wasm_env, wasm_parses_successfully } from "./pkg/r.js";
       window.r = await init().then(() => { 
         push("output", wasm_session_header());
         return {
           "eval": wasm_env(),
           "header": wasm_session_header,          
+          "validate": wasm_parses_successfully,
         }
       });
     </script>
@@ -280,7 +276,36 @@
       });
 
       function prompt_input(event) {
-        if (event.ctrlKey && event.key == "Enter") run();
+        // possibly submit code
+        if (event.key == "Enter") {
+          // if ctrl is held
+          if (event.ctrlKey || event.getModifierState("Meta")) {
+            run();
+            event.preventDefault();
+            return;
+          }
+
+          // if code is a complete expression, run it
+          let prompt = document.getElementById("prompt");
+          let code = prompt.value;
+          if (window.r.validate(code)) {
+            run();
+            event.preventDefault();
+            return;
+          }          
+        }
+
+        // add or remove lines based on input
+        if (event.key == "Enter") {
+          let prompt = document.getElementById("prompt");
+          prompt.rows = prompt.value.split("\n").length + 1;
+        }
+
+        if (event.key == "Backspace") {
+          let prompt = document.getElementById("prompt");
+          let val = prompt.value;
+          prompt.rows = val.substring(0, val.length - 1).split("\n").length;
+        }
       }
 
       function push(type, content, elem) {
@@ -349,7 +374,8 @@
 
       function clear_prompt() {
         let prompt = document.getElementById("prompt");
-        prompt.value = '';        
+        prompt.value = '';     
+        prompt.rows = 1;
         prompt.focus();
       }
 
