@@ -33,6 +33,7 @@ lazy_static::lazy_static! {
             .op(Op::infix(multiply, Left) | Op::infix(divide, Left))
             .op(Op::infix(modulo, Left) | Op::infix(special, Left) | Op::infix(pipe, Left))
             .op(Op::infix(power, Left))
+            .op(Op::infix(colon, Left))
    };
 }
 
@@ -63,6 +64,7 @@ fn parse_expr(pairs: Pairs<Rule>) -> Expr {
                 Rule::multiply => Box::new(InfixMul),
                 Rule::divide => Box::new(InfixDiv),
                 Rule::power => Box::new(InfixPow),
+                Rule::colon => Box::new(InfixColon),
                 Rule::modulo => Box::new(InfixMod),
                 Rule::assign => Box::new(InfixAssign),
                 Rule::or => Box::new(InfixOr),
