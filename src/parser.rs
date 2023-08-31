@@ -231,10 +231,8 @@ fn parse_repeat(pair: Pair<Rule>) -> Expr {
 }
 
 fn parse_postfix(pair: Pair<Rule>) -> (Expr, ExprList) {
-    use Expr::*;
-
     match pair.as_rule() {
-        Rule::call => (Missing, parse_pairlist(pair)),
+        Rule::call => (Expr::Null, parse_pairlist(pair)),
         Rule::index => {
             let args = parse_pairlist(pair);
             (Expr::as_primitive(PostfixIndex), args)
@@ -251,8 +249,9 @@ fn parse_postfixed(pair: Pair<Rule>) -> Expr {
     while let Some(next) = inner.next() {
         let (what, mut args) = parse_postfix(next);
         result = match what {
+            // Null used here has a magic value to dispatch on `x(...)` calls
             // if postfix is parenthesized pairlist, it's a call to result
-            Expr::Missing => Expr::Call(Box::new(result), args),
+            Expr::Null => Expr::Call(Box::new(result), args),
 
             // otherwise call to a postfix operator with result as the first arg
             _ => {
