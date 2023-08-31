@@ -164,7 +164,7 @@
       font-size: 1.2em;
       font-weight: bold;
 
-      padding: 0.2em 0.5em;
+      padding: 0.3em 0.5em 0em 0.5em;
       margin: 0.2em 0 0 0;
 
       cursor: pointer;
@@ -405,7 +405,9 @@
       }
 
       function set_prompt(input) {
-        document.getElementById("prompt").value = input;
+        let prompt = document.getElementById("prompt")
+        prompt.value = input;
+        prompt.rows = prompt.value.split("\n").length;
       }
 
       function clear_history() {
