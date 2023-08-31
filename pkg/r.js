@@ -137,7 +137,7 @@ function __wbg_adapter_20(arg0, arg1, arg2) {
         const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
         const ptr0 = passStringToWasm0(arg2, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
         const len0 = WASM_VECTOR_LEN;
-        wasm._dyn_core__ops__function__Fn__A____Output___R_as_wasm_bindgen__closure__WasmClosure___describe__invoke__h48ec4b88985e60d6(retptr, arg0, arg1, ptr0, len0);
+        wasm.wasm_bindgen__convert__closures__invoke1__h5b77997aa44f29a4(retptr, arg0, arg1, ptr0, len0);
         var r0 = getInt32Memory0()[retptr / 4 + 0];
         var r1 = getInt32Memory0()[retptr / 4 + 1];
         let v2;
@@ -348,8 +348,8 @@ function __wbg_get_imports() {
         const ret = wasm.memory;
         return addHeapObject(ret);
     };
-    imports.wbg.__wbindgen_closure_wrapper682 = function(arg0, arg1, arg2) {
-        const ret = makeClosure(arg0, arg1, 408, __wbg_adapter_20);
+    imports.wbg.__wbindgen_closure_wrapper697 = function(arg0, arg1, arg2) {
+        const ret = makeClosure(arg0, arg1, 418, __wbg_adapter_20);
         return addHeapObject(ret);
     };
 
@@ -407,4 +407,4 @@ async function __wbg_init(input) {
 
 export { initSync }
 export default __wbg_init;
-export const GIT_SHA_SHORT = "3452432e";
+export const GIT_SHA_SHORT = "8d55651e";
