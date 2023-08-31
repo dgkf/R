@@ -43,12 +43,11 @@
 
 // repl line feed parsing
 
-    repl = _{ WS* ~ expr ~ WS* ~ eoi | WS* ~ exprs ~ WS* ~ eoi }
+    repl = _{ WS* ~ expr ~ WS* ~ eoi | WS* ~ block_exprs ~ WS* ~ eoi }
 
 // expression basics
 
-    exprs = { expr ~ (WS_NO_NL* ~ ";" ~ WS* ~ expr)* ~ ";"? }
-    expr = { atomic ~ WS* ~ ( infix ~ WS* ~ atomic ~ WS* )* }
+    expr = { atomic ~ ( WS* ~  infix ~ WS* ~ atomic )* }
 
         atomic = _{ prefixed }
             prefixed = { prefix* ~ postfixed }
@@ -102,9 +101,9 @@
             index        = { "[[" ~ pairs ~ "]]" }
             vector_index = { "["  ~ pairs ~  "]" }           
 
-        block  = { "{" ~ WS* ~ inline* ~ WS* ~ expr? ~ WS* ~ "}" }
-            inline = _{ expr ~ WS_NO_NL* ~ inline_term ~ WS* } 
-            inline_term = _{ ";" | NEWLINE | eoi }
+        block  = _{ "{" ~ WS* ~ block_exprs ~ WS* ~ "}" }
+            block_exprs = { WS* ~ expr? ~ ( block_sep ~ expr? )* ~ WS* }
+            block_sep = _{ WS_NO_NL* ~ ( ";" | NEWLINE ) ~ WS* }
 
         paren_expr = _{ "(" ~ WS* ~ expr ~ WS* ~ ")" }
 
@@ -152,7 +151,7 @@
 
 // atomic value types
 
-    number = @{ "-"? ~ number_leading | number_trailing }
+    number = @{ "-"? ~ number_leading }
         number_leading = { ("0" | ASCII_NONZERO_DIGIT ~ ASCII_DIGIT*) ~ ("." ~ ASCII_DIGIT*)? }
         number_trailing = { "." ~ ASCII_DIGIT+ }
 

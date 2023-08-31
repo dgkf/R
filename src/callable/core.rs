@@ -269,31 +269,43 @@ impl Callable for R {
 
 #[cfg(test)]
 mod test {
-    use crate::assert_r_eq;
+    use crate::r;
 
     #[test]
     fn calls_find_symbols_in_parent_envs() {
-        assert_r_eq!(
-            R{ f <- function(a) { a + b }; b <- 3; f(2) }, 
-            R{ 5 }
+        assert_eq!(
+            r!{ f <- function(a) { a + b }; b <- 3; f(2) }, 
+            r!{ 5 }
         );
 
-        assert_r_eq!(
-            R{ x <- function(a) { a + b }; b <- 3; y <- function(c, b) { x(c) * 2 + b }; y(10, 100) }, 
-            R{ 126 }
+        assert_eq!(
+            r!{{"
+                x <- function(a) { 
+                    a + b 
+                }
+
+                b <- 3
+
+                y <- function(c, b) { 
+                    x(c) * 2 + b 
+                }
+
+                y(10, 100)
+            "}},
+            r!{ 126 }
         );
     }
 
     #[test]
     fn lazy_argument_evaluation() {
-        assert_r_eq!(
-            R{ f <- function(a, b = a) { b }; f(3) }, 
-            R{ 3 }
+        assert_eq!(
+            r!{ f <- function(a, b = a) { b }; f(3) }, 
+            r!{ 3 }
         );
 
-        assert_r_eq!(
-            R{ f <- function(a, b = a) { b }; f(a = 3) }, 
-            R{ 3 }
+        assert_eq!(
+            r!{ f <- function(a, b = a) { b }; f(a = 3) }, 
+            r!{ 3 }
         );
     }
 }

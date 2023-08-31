@@ -103,85 +103,85 @@ impl Callable for PrimitivePaste {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::assert_r_eq;
+    use crate::r;
 
     #[test]
     fn numeric_input() {
-        assert_r_eq!(
-            R{ paste(1, 2, collapse = NULL) }, 
-            R{ "1 2" }
+        assert_eq!(
+            r!{ paste(1, 2, collapse = NULL) }, 
+            r!{ "1 2" }
         );
     }
 
     #[test]
     fn only_null() {
-        assert_r_eq!(
-            R{ paste(null) }, 
+        assert_eq!(
+            r!{ paste(null) }, 
             Ok(R::Vector(Vector::Character(vec![])))
         );
     }
 
     #[test]
     fn ignore_null() {
-        assert_r_eq!(
-            R{ paste(1.1, null, 2, false, "a", c(1.0, 2.0)) },
-            R{ c("1.1  2 false a 1", "1.1  2 false a 2") }
+        assert_eq!(
+            r!{ paste(1.1, null, 2, false, "a", c(1.0, 2.0)) },
+            r!{ c("1.1  2 false a 1", "1.1  2 false a 2") }
         )
     }
 
     #[test]
     fn sep_param() {
-        assert_r_eq!(
-            R{ paste(1.1, null, 2, false, "a", c(1.0, 2.0), sep = "+") },
-            R{ c("1.1++2+false+a+1", "1.1++2+false+a+2") }
+        assert_eq!(
+            r!{ paste(1.1, null, 2, false, "a", c(1.0, 2.0), sep = "+") },
+            r!{ c("1.1++2+false+a+1", "1.1++2+false+a+2") }
         )
     }
 
     #[test]
     fn param_recycling() {
-        assert_r_eq!(
-            R{ paste(c(1, 2, 3, 4, 5), c("st", "nd", "rd", c("th", "th")), sep = "") },
-            R{ c("1st", "2nd", "3rd", "4th", "5th") }
+        assert_eq!(
+            r!{ paste(c(1, 2, 3, 4, 5), c("st", "nd", "rd", c("th", "th")), sep = "") },
+            r!{ c("1st", "2nd", "3rd", "4th", "5th") }
         )
     }
 
     #[test]
     fn collapse_param() {
-        assert_r_eq!(
-            R{ paste(1.1, null, 2, false, "a", c(1.0, 2.0), , collapse = "+") },
-            R{ "1.1  2 false a 1+1.1  2 false a 2" }
+        assert_eq!(
+            r!{ paste(1.1, null, 2, false, "a", c(1.0, 2.0), , collapse = "+") },
+            r!{ "1.1  2 false a 1+1.1  2 false a 2" }
         )
     }
 
     #[test]
     fn non_vec_collapse() {
-        assert_r_eq!(
-            R{ paste(1, 2, 3, collapse = "+") },
-            R{ "1 2 3" }
+        assert_eq!(
+            r!{ paste(1, 2, 3, collapse = "+") },
+            r!{ "1 2 3" }
         )
     }
 
     #[test]
     fn collapse_and_sep() {
-        assert_r_eq!(
-            R{ paste(c(1, 2), 3, 4, 5, sep = "-", collapse = "+") },
-            R{ "1-3-4-5+2-3-4-5" }
+        assert_eq!(
+            r!{ paste(c(1, 2), 3, 4, 5, sep = "-", collapse = "+") },
+            r!{ "1-3-4-5+2-3-4-5" }
         )
     }
 
     #[test]
     fn param_from_parent_frame() {
-        assert_r_eq!(
-            R{ x <- "<collapse>"; paste(c("a", "b"), collapse = x) },
-            R{ "a<collapse>b" }
+        assert_eq!(
+            r!{ x <- "<collapse>"; paste(c("a", "b"), collapse = x) },
+            r!{ "a<collapse>b" }
         )
     }
 
     #[test]
     fn collapse_empty_string() {
-        assert_r_eq!(
-            R{ paste("a", c("b", "c"), collapse = "") },
-            R{ "a ba c" }
+        assert_eq!(
+            r!{ paste("a", c("b", "c"), collapse = "") },
+            r!{ "a ba c" }
         )
     }
 }
