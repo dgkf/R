@@ -557,7 +557,7 @@ impl CallStack {
     }
 
     pub fn new() -> CallStack {
-        CallStack::from(Frame { call: Expr::Missing, env: Rc::new(Environment::default())})
+        CallStack::from(Frame { call: Expr::Null, env: Rc::new(Environment::default())})
     }
 }
 
@@ -580,7 +580,7 @@ impl From<Frame> for CallStack {
 
 impl From<Rc<Environment>> for CallStack {
     fn from(value: Rc<Environment>) -> Self {
-        CallStack { frames: vec![Frame { call: Expr::Missing, env: value.clone() }] }
+        CallStack { frames: vec![Frame { call: Expr::Null, env: value.clone() }] }
     }
 }
 
@@ -713,7 +713,7 @@ impl Context for CallStack {
         } else if let Expr::Call(what, args) = expr.clone() {
             match *what {
                 Expr::Primitive(what) => {
-                    self.add_frame(expr, self.last_frame().env.clone());
+                    self.add_frame(expr.clone(), self.last_frame().env.clone());
                     let result = what.call(args, self);
                     return self.pop_frame_after(result);
                 },
@@ -766,7 +766,7 @@ impl Context for CallStack {
                 return match result {
                     R::Closure(expr, env) => {
                         self.add_frame(expr.clone(), env.clone());
-                        let result = self.eval(expr);
+                        let result = self.eval(expr.clone());
                         return self.pop_frame_after(result);
                     },
                     _ => Ok(result),
@@ -821,6 +821,7 @@ impl Context for Rc<Environment> {
             Expr::Symbol(name) => self.get(name),
             Expr::Break => Err(RSignal::Condition(Cond::Break)),
             Expr::Continue => Err(RSignal::Condition(Cond::Continue)),
+            Expr::Missing(s) => RError::ArgumentMissing(s).into(),
             x => unimplemented!("Context::eval(Rc<Environment>, {})", x),
         }
     }

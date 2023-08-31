@@ -30,7 +30,7 @@ impl Callable for PrimitiveRnorm {
             unreachable!()
         };
 
-        let (vals, _) = match_args(self.formals(), vals, &stack.env());
+        let (vals, _) = match_args(self.formals(), vals, &stack);
         let vals = force_closures(vals, stack);
         let mut vals = R::List(vals);
 

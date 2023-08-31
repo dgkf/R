@@ -1,6 +1,5 @@
 extern crate r_derive;
 
-use std::rc::Rc;
 use crate::ast::*;
 use crate::callable::operators::*;
 use crate::callable::dyncompare::*;
@@ -9,7 +8,7 @@ use crate::lang::*;
 pub fn match_args(
     mut formals: ExprList,
     mut args: Vec<(Option<String>, R)>,
-    env: &Rc<Environment>,
+    stack: &CallStack,
 ) -> (Vec<(Option<String>, R)>, Vec<(Option<String>, R)>) {
     let mut ellipsis: Vec<(Option<String>, R)> = vec![];
     let mut matched_args: Vec<(Option<String>, R)> = vec![];
@@ -54,7 +53,7 @@ pub fn match_args(
 
     // add back in parameter defaults that weren't filled with args
     for (param, default) in formals.into_iter() {
-        matched_args.push((param, R::Closure(default, env.clone())));
+        matched_args.push((param, R::Closure(default, stack.env().clone())));
     }
 
     (matched_args, ellipsis)
@@ -237,7 +236,7 @@ impl Format for R {}
 
 impl Callable for R {
     fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
-        let R::Function(formals, body, parent_env) = self else {
+        let R::Function(formals, body, _) = self else {
             unimplemented!("can't call non-function")
         };
 
@@ -257,7 +256,7 @@ impl Callable for R {
         };
 
         // match arguments against function signature
-        let (args, ellipsis) = match_args(formals.clone(), args, parent_env);
+        let (args, ellipsis) = match_args(formals.clone(), args, stack);
 
         // add closures to local scope
         stack.last_frame().env.insert("...".to_string(), R::List(ellipsis));
@@ -265,5 +264,36 @@ impl Callable for R {
 
         // evaluate body in local scope
         stack.eval(body.clone())
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use crate::assert_r_eq;
+
+    #[test]
+    fn calls_find_symbols_in_parent_envs() {
+        assert_r_eq!(
+            R{ f <- function(a) { a + b }; b <- 3; f(2) }, 
+            R{ 5 }
+        );
+
+        assert_r_eq!(
+            R{ x <- function(a) { a + b }; b <- 3; y <- function(c, b) { x(c) * 2 + b }; y(10, 100) }, 
+            R{ 126 }
+        );
+    }
+
+    #[test]
+    fn lazy_argument_evaluation() {
+        assert_r_eq!(
+            R{ f <- function(a, b = a) { b }; f(3) }, 
+            R{ 3 }
+        );
+
+        assert_r_eq!(
+            R{ f <- function(a, b = a) { b }; f(a = 3) }, 
+            R{ 3 }
+        );
     }
 }
