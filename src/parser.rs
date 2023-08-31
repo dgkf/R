@@ -32,8 +32,8 @@ lazy_static::lazy_static! {
             .op(Op::infix(add, Left) | Op::infix(subtract, Left))
             .op(Op::infix(multiply, Left) | Op::infix(divide, Left))
             .op(Op::infix(modulo, Left) | Op::infix(special, Left) | Op::infix(pipe, Left))
-            .op(Op::infix(colon, Left))
             .op(Op::infix(power, Left))
+            .op(Op::infix(colon, Left))
    };
 }
 

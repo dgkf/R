@@ -1,7 +1,8 @@
 use r_derive::Primitive;
 
 use crate::ast::*;
-use crate::lang::*;
+use crate::error::RError;
+use crate::lang::{CallStack, EvalResult, Context, R};
 use crate::vector::vectors::*;
 use super::core::*;
 
@@ -332,17 +333,63 @@ impl PrimitiveSYM for InfixColon {
 }
 
 impl Callable for InfixColon {
-    fn call(&self, args: ExprList, _stack: &mut CallStack) -> EvalResult {
-        // TODO: reduce call stack nesting here
-        let (lhs, rhs) = args.unnamed_binary_args();
+    fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
+        let mut argstream = args.into_iter();
+        let arg1 = argstream.next().map(|(_, v)| v).unwrap_or(Expr::Null);
+        let arg2 = argstream.next().map(|(_, v)| v).unwrap_or(Expr::Null);
 
-        use Expr::*;
-        match (lhs, rhs) {
-            (Number(l), Number(r)) => Ok(R::Vector(Vector::from(((l as i32)..=(r as i32)).into_iter().collect::<Vec<i32>>()))),
-            (Number(l), Integer(r)) => Ok(R::Vector(Vector::from(((l as i32)..=(r as i32)).into_iter().collect::<Vec<i32>>()))),
-            (Integer(l), Number(r)) => Ok(R::Vector(Vector::from(((l as i32)..=(r as i32)).into_iter().collect::<Vec<i32>>()))),
-            (Integer(l), Integer(r)) => Ok(R::Vector(Vector::from(((l as i32)..=(r as i32)).into_iter().collect::<Vec<i32>>()))),
-            _ => unreachable!(),
+        fn colon_args(arg: &Expr) -> Option<(Expr, Expr)> {
+            if let Expr::Call(what, largs) = arg.clone() {
+                if let Expr::Primitive(p) = *what {
+                    if p == (Box::new(InfixColon) as Box<dyn Primitive>) {
+                        return Some(largs.clone().unnamed_binary_args());
+                    }    
+                }
+            }
+
+            None
+        }
+
+        // handle special case of chained colon ops: `x:y:z`
+        if let Some((llhs, lrhs)) = colon_args(&arg1) {
+            // since we're rearranging calls here, we might need to modify the call stack
+            let args = ExprList::from(vec![(None, llhs), (None, lrhs), (None, arg2)]);
+            return InfixColon.call(args, stack);
+
+        // tertiary case
+        } else if let Some((_, arg3)) = argstream.next() {
+            // currently always returns numeric vector
+            let start: f64 = stack.eval(arg1)?.as_numeric()?.try_into()?;
+            let by: f64 = stack.eval(arg2)?.as_numeric()?.try_into()?;
+            let end: f64 = stack.eval(arg3)?.as_numeric()?.try_into()?;
+
+            if by == 0.0 {
+                return RError::Other("Cannot increment by 0".to_string()).into()
+            }
+
+            if (end - start) / by < 0.0 {
+                return Ok(R::Vector(Vector::Numeric(vec![])))
+            }
+
+            let mut v = start;
+            return Ok(R::Vector(Vector::from(
+                vec![start].into_iter()
+                    .chain(std::iter::repeat_with(|| { v += by; v }))
+                    .take_while(|x| if &start <= &end { x <= &end } else { x >= &end })
+                    .collect::<Vec<f64>>()
+            )))
+            
+        // binary case
+        } else {
+            let start: i32 = stack.eval(arg1)?.as_integer()?.try_into()?;
+            let end: i32 = stack.eval(arg2)?.as_integer()?.try_into()?;
+            return Ok(R::Vector(Vector::from(
+                if start <= end {
+                    (start..=end).into_iter().collect::<Vec<i32>>()
+                } else {
+                    (end..=start).into_iter().rev().collect::<Vec<i32>>()
+                }
+            )))
         }
     }
 }
