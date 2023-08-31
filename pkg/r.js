@@ -407,4 +407,4 @@ async function __wbg_init(input) {
 
 export { initSync }
 export default __wbg_init;
-export const GIT_SHA_SHORT = "fe353a1f";
+export const GIT_SHA_SHORT = "226de098";
