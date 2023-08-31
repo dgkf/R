@@ -60,7 +60,7 @@ impl Callable for PrimFor {
 
         let mut eval_result: EvalResult;
         let mut result = R::Null;
-        let mut index = 0;
+        let mut index = 1;
 
         while let Some(value) = iter.get(index) {
             index += 1;
