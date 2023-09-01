@@ -65,13 +65,13 @@ pub fn builtin(attr: TokenStream, item: TokenStream) -> TokenStream {
             where
                 Self: Callable
             {
-                fn callable_clone(&self) -> Box<dyn Primitive> {
+                fn callable_clone(&self) -> Box<dyn Builtin> {
                     Box::new(self.clone())
                 }
             }
 
             #[automatically_derived]
-            impl Primitive for #what {}
+            impl Builtin for #what {}
         },
         Builtin::Keyword => quote! {
             #item
@@ -81,13 +81,13 @@ pub fn builtin(attr: TokenStream, item: TokenStream) -> TokenStream {
             where
                 Self: Callable
             {
-                fn callable_clone(&self) -> Box<dyn Primitive> {
+                fn callable_clone(&self) -> Box<dyn Builtin> {
                     Box::new(self.clone())
                 }
             }
 
             #[automatically_derived]
-            impl Primitive for #what {}
+            impl Builtin for #what {}
         },
     };
 

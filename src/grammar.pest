@@ -24,9 +24,11 @@
 //
 
     hl = _{ CAPTURE_WS? ~ ( hl_kws  ~ CAPTURE_WS? )* ~ eoi }
-        hl_kws = _{ hl_infix | hl_reserved | hl_control | hl_value | hl_call | hl_num | hl_sym | hl_str | hl_ops | hl_brackets | hl_other }
-        hl_control = { "if" | "else" | "for" | "while" | "repeat" | "return" }
-        hl_reserved = { "function" | "fn" }
+        hl_kws = _{ hl_infix | hl_reserved | hl_control | hl_call | hl_value | hl_num | hl_sym | hl_str | hl_ops | hl_brackets | hl_other }
+        hl_control = { hl_control_kws ~ (eoi | !ASCII_ALPHA) }
+        hl_control_kws = _{ "if" | "else" | "for" | "while" | "repeat" | "return" }
+        hl_reserved = { hl_reserved_kws ~ (eoi | !ASCII_ALPHA) }
+        hl_reserved_kws = _{ "function" | "fn" }
         hl_value = { val_null | val_na | val_inf | val_true | val_false }
         hl_call = _{ hl_callname ~ CAPTURE_WS* ~ hl_open }
         hl_callname = { hl_sym | hl_str }

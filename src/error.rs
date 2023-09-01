@@ -15,12 +15,15 @@ pub enum RError {
     CannotBeCoercedToLogical,
     CannotBeCoercedToInteger,
     CannotBeCoercedToNumeric,
-
-    // temporary workaround until we propagate call stack to all error locations
-    WithCallStack(Box<RError>, CallStack),  
-    Other(String),
     ArgumentMissing(String),
     ArgumentInvalid(String),
+    Other(String),
+
+    // temporary workaround until we propagate call stack to all error locations
+    WithCallStack(Box<RError>, CallStack),      
+
+    // in-dev errors
+    Unimplemented(Option<String>),
 }
 
 impl RError {
@@ -57,6 +60,8 @@ impl RError {
             RError::WithCallStack(e, c) => format!("{}\n{c}", e.as_str()),
             RError::ArgumentMissing(s) => format!("argument '{s}' is missing with no default"),
             RError::ArgumentInvalid(s) => format!("argument '{s}' is invalid."),
+            RError::Unimplemented(Some(s)) => format!("Uh, oh! Looks like '{s}' is only partially implemented."),
+            RError::Unimplemented(_) => format!("Uh, oh! You tried to do something that is only partially implemented."),
         }
     }
 }

@@ -58,7 +58,7 @@ fn parse_expr(pairs: Pairs<Rule>) -> Expr {
             // infix operator with two unnamed arguments
             let args = vec![(None, lhs), (None, rhs)].into();
 
-            let op: Box<dyn Primitive> = match op.as_rule() {
+            let op: Box<dyn Builtin> = match op.as_rule() {
                 Rule::add => Box::new(InfixAdd),
                 Rule::subtract => Box::new(InfixSub),
                 Rule::multiply => Box::new(InfixMul),
@@ -143,7 +143,7 @@ fn parse_block(pair: Pair<Rule>) -> Expr {
         .collect();
 
     // build call from symbol and list
-    Expr::new_primitive_call(PrimBlock, exprs)
+    Expr::new_primitive_call(KeywordBlock, exprs)
 }
 
 fn parse_named(pair: Pair<Rule>) -> (Option<String>, Expr) {
@@ -193,7 +193,7 @@ fn parse_if_else(pair: Pair<Rule>) -> Expr {
     };
 
     let args = ExprList::from(vec![cond, true_expr, false_expr]);
-    Expr::new_primitive_call(PrimIf, args)
+    Expr::new_primitive_call(KeywordIf, args)
 }
 
 fn parse_symbol(pair: Pair<Rule>) -> Expr {
@@ -211,7 +211,7 @@ fn parse_for(pair: Pair<Rule>) -> Expr {
     let body = parse_expr(inner.next().unwrap().into_inner());
 
     let args = ExprList::from(vec![(Some(var), iter), (None, body)]);
-    Expr::new_primitive_call(PrimFor, args)
+    Expr::new_primitive_call(KeywordFor, args)
 }
 
 fn parse_while(pair: Pair<Rule>) -> Expr {
@@ -219,14 +219,14 @@ fn parse_while(pair: Pair<Rule>) -> Expr {
     let cond = parse_expr(inner.next().unwrap().into_inner());
     let body = parse_expr(inner.next().unwrap().into_inner());
     let args = ExprList::from(vec![cond, body]);
-    Expr::new_primitive_call(PrimWhile, args)
+    Expr::new_primitive_call(KeywordWhile, args)
 }
 
 fn parse_repeat(pair: Pair<Rule>) -> Expr {
     let mut inner = pair.into_inner();
     let body = parse_expr(inner.next().unwrap().into_inner());
     let args = ExprList::from(vec![body]);
-    Expr::new_primitive_call(PrimRepeat, args)
+    Expr::new_primitive_call(KeywordRepeat, args)
 }
 
 fn parse_postfix(pair: Pair<Rule>) -> (Expr, ExprList) {

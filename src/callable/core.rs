@@ -1,8 +1,8 @@
 extern crate r_derive;
 
 use crate::ast::*;
-use crate::callable::operators::*;
 use crate::callable::dyncompare::*;
+use crate::callable::builtins::BUILTIN;
 use crate::lang::*;
 
 pub fn match_args(
@@ -65,20 +65,20 @@ impl std::fmt::Debug for Box<dyn Callable> {
     }
 }
 
-impl std::fmt::Debug for Box<dyn Primitive> {
+impl std::fmt::Debug for Box<dyn Builtin> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "")
     }
 }
 
-impl Clone for Box<dyn Primitive> {
-    fn clone(&self) -> Box<dyn Primitive> {
+impl Clone for Box<dyn Builtin> {
+    fn clone(&self) -> Box<dyn Builtin> {
         self.callable_clone()
     }
 }
 
 pub trait CallableClone: Callable {
-    fn callable_clone(&self) -> Box<dyn Primitive>;
+    fn callable_clone(&self) -> Box<dyn Builtin>;
 }
 
 pub trait Callable {
@@ -150,7 +150,7 @@ pub trait Format {
     }
 }
 
-pub trait Primitive: Callable + CallableClone + Format + DynCompare + Sync {}
+pub trait Builtin: Callable + CallableClone + Format + DynCompare + Sync {}
 
 pub trait Sym {
     const SYM: &'static str;
@@ -164,8 +164,8 @@ pub enum SymKind {
     PostfixCall(&'static str, &'static str)
 }
 
-impl PartialEq<dyn Primitive> for dyn Primitive {
-    fn eq(&self, other: &dyn Primitive) -> bool {
+impl PartialEq<dyn Builtin> for dyn Builtin {
+    fn eq(&self, other: &dyn Builtin) -> bool {
         self.as_dyn_compare() == other.as_dyn_compare()
     }
 }
@@ -196,32 +196,21 @@ impl CallableClone for String
 where
     Self: Callable
 {
-    fn callable_clone(&self) -> Box<dyn Primitive> {
+    fn callable_clone(&self) -> Box<dyn Builtin> {
         Box::new(self.clone())
     }
 }
 
-impl Primitive for String {}
+impl Builtin for String {}
 
-pub fn string_as_primitive(s: &str) -> Result<Box<dyn Primitive>, ()> {
-    use crate::callable::primitive::*;
-    match s {
-        "|>" => Ok(Box::new(InfixPipe)),
-        "c" => Ok(Box::new(PrimitiveC)),
-        "callstack" => Ok(Box::new(PrimitiveCallstack)),
-        "list" => Ok(Box::new(PrimitiveList)),
-        "paste" => Ok(Box::new(PrimitivePaste)),
-        "q" => Ok(Box::new(PrimitiveQ)),
-        "rnorm" => Ok(Box::new(PrimitiveRnorm)),
-        "runif" => Ok(Box::new(PrimitiveRunif)),
-        _ => Err(()),
-    }
+pub fn builtin(s: &str) -> Result<Box<dyn Builtin>, ()> {
+    <Box<dyn Builtin>>::try_from(s)
 }
 
-impl TryFrom<&str> for Box<dyn Primitive> {
+impl TryFrom<&str> for Box<dyn Builtin> {
     type Error = ();
     fn try_from(s: &str) -> Result<Self, Self::Error> {
-        string_as_primitive(s)
+        BUILTIN.get(s).map_or(Err(()), |b| Ok(b.clone()))
     }
 }
 

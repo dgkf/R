@@ -259,7 +259,7 @@ impl Callable for InfixColon {
         fn colon_args(arg: &Expr) -> Option<(Expr, Expr)> {
             if let Expr::Call(what, largs) = arg.clone() {
                 if let Expr::Primitive(p) = *what {
-                    if p == (Box::new(InfixColon) as Box<dyn Primitive>) {
+                    if p == (Box::new(InfixColon) as Box<dyn Builtin>) {
                         return Some(largs.clone().unnamed_binary_args());
                     }    
                 }

@@ -1,6 +1,6 @@
 use crate::ast::*;
 use crate::error::*;
-use crate::callable::core::{Callable, string_as_primitive};
+use crate::callable::core::{Callable, builtin};
 use crate::vector::vectors::*;
 
 use core::fmt;
@@ -139,7 +139,7 @@ impl R {
         match self {
             R::Vector(v) => Ok(R::Vector(v.as_numeric())),
             R::Null => Ok(R::Vector(Vector::Numeric(vec![]))),
-            atom => unreachable!("{:?} cannot be coerced to numeric", atom),
+            _ => RError::CannotBeCoercedToNumeric.into(),
         }
     }
 
@@ -719,7 +719,7 @@ impl Context for CallStack {
                 },
                 Expr::String(what) | Expr::Symbol(what) => {
                     // builtin primitives do not introduce a new call onto the stack
-                    if let Ok(f) = string_as_primitive(&what) {
+                    if let Ok(f) = builtin(&what) {
                         self.add_frame(expr, self.last_frame().env.clone());
                         let result = f.call(args, self);
                         return self.pop_frame_after(result);
@@ -781,7 +781,7 @@ impl Context for CallStack {
             }
         }
 
-        if let Ok(prim) = name.as_str().try_into() {
+        if let Ok(prim) = builtin(name.as_str()) {
             Ok(R::Function(ExprList::new(), Expr::Primitive(prim), self.env()))
         } else {
             Err(RSignal::Error(RError::VariableNotFound(name)))
