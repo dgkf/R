@@ -1,4 +1,4 @@
-use r_derive::Primitive;
+use r_derive::builtin;
 use rand::Rng;
 use rand::distributions::{Distribution, Uniform};
 
@@ -8,13 +8,9 @@ use crate::lang::*;
 use crate::callable::core::*;
 use crate::vector::vectors::Vector;
 
-#[derive(Debug, Clone, Primitive, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
+#[builtin(sym = "runif")]
 pub struct PrimitiveRunif;
-
-impl PrimitiveSYM for PrimitiveRunif {
-    const SYM: &'static str = "runif";
-}
-
 impl Callable for PrimitiveRunif {
     fn formals(&self) -> ExprList {
         ExprList::from(vec![

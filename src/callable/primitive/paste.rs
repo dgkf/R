@@ -1,4 +1,4 @@
-use r_derive::Primitive;
+use r_derive::*;
 
 use crate::ast::*;
 use crate::error::*;
@@ -6,13 +6,9 @@ use crate::lang::*;
 use crate::vector::vectors::*;
 use crate::callable::core::*;
 
-#[derive(Debug, Clone, Primitive, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
+#[builtin(sym = "paste")]
 pub struct PrimitivePaste;
-
-impl PrimitiveSYM for PrimitivePaste {
-    const SYM: &'static str = "paste";
-}
-
 impl Callable for PrimitivePaste {
     fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
         let R::List(vals) = stack.parent_frame().eval_list_lazy(args)? else {

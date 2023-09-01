@@ -1,4 +1,4 @@
-use r_derive::Primitive;
+use r_derive::*;
 
 use crate::ast::*;
 use crate::error::RError;
@@ -6,13 +6,9 @@ use crate::lang::{CallStack, EvalResult, Context, R};
 use crate::vector::vectors::*;
 use super::core::*;
 
-#[derive(Debug, Clone, Primitive, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
+#[builtin(sym = "<-", kind = Infix)]
 pub struct InfixAssign;
-
-impl PrimitiveSYM for InfixAssign {
-    const SYM: &'static str = "<-";
-}
-
 impl Callable for InfixAssign {
     fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
         let (lhs, rhs) = args.unnamed_binary_args();
@@ -38,13 +34,9 @@ impl Callable for InfixAssign {
     }
 }
 
-#[derive(Debug, Clone, Primitive, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
+#[builtin(sym = "+", kind = Infix)]
 pub struct InfixAdd;
-
-impl PrimitiveSYM for InfixAdd {
-    const SYM: &'static str = "+";
-}
-
 impl Callable for InfixAdd {
     fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
         let (lhs, rhs) = stack.eval_binary(args.unnamed_binary_args())?;
@@ -52,13 +44,9 @@ impl Callable for InfixAdd {
     }
 }
 
-#[derive(Debug, Clone, Primitive, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
+#[builtin(sym = "-", kind = Infix)]
 pub struct InfixSub;
-
-impl PrimitiveSYM for InfixSub {
-    const SYM: &'static str = "-";
-}
-
 impl Callable for InfixSub {
     fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
         let (lhs, rhs) = stack.eval_binary(args.unnamed_binary_args())?;
@@ -66,15 +54,9 @@ impl Callable for InfixSub {
     }
 }
 
-#[derive(Debug, Clone, Primitive, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
+#[builtin(sym = "-", kind = Prefix)]
 pub struct PrefixSub;
-
-impl Format for PrefixSub {
-    fn rfmt_call_with(&self, _state: FormatState, args: &ExprList) -> String {
-        format!("-{}", args.values[0])
-    }
-}
-
 impl Callable for PrefixSub {
     fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
         let what = stack.eval(args.unnamed_unary_arg())?;
@@ -82,13 +64,9 @@ impl Callable for PrefixSub {
     }
 }
 
-#[derive(Debug, Clone, Primitive, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
+#[builtin(sym = "*", kind = Infix)]
 pub struct InfixMul;
-
-impl PrimitiveSYM for InfixMul {
-    const SYM: &'static str = "*";
-}
-
 impl Callable for InfixMul {
     fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
         let (lhs, rhs) = stack.eval_binary(args.unnamed_binary_args())?;
@@ -96,13 +74,9 @@ impl Callable for InfixMul {
     }
 }
 
-#[derive(Debug, Clone, Primitive, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
+#[builtin(sym = "/", kind = Infix)]
 pub struct InfixDiv;
-
-impl PrimitiveSYM for InfixDiv {
-    const SYM: &'static str = "/";
-}
-
 impl Callable for InfixDiv {
     fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
         let (lhs, rhs) = stack.eval_binary(args.unnamed_binary_args())?;
@@ -110,13 +84,9 @@ impl Callable for InfixDiv {
     }
 }
 
-#[derive(Debug, Clone, Primitive, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
+#[builtin(sym = "^")]
 pub struct InfixPow;
-
-impl PrimitiveSYM for InfixPow {
-    const SYM: &'static str = "*";
-}
-
 impl Callable for InfixPow {
     fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
         let (lhs, rhs) = stack.eval_binary(args.unnamed_binary_args())?;
@@ -124,13 +94,9 @@ impl Callable for InfixPow {
     }
 }
 
-#[derive(Debug, Clone, Primitive, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
+#[builtin(sym = "%", kind = Infix)]
 pub struct InfixMod;
-
-impl PrimitiveSYM for InfixMod {
-    const SYM: &'static str = "%";
-}
-
 impl Callable for InfixMod {
     fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
         let (lhs, rhs) = stack.eval_binary(args.unnamed_binary_args())?;
@@ -138,13 +104,9 @@ impl Callable for InfixMod {
     }
 }
 
-#[derive(Debug, Clone, Primitive, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
+#[builtin(sym = "||", kind = Infix)]
 pub struct InfixOr;
-
-impl PrimitiveSYM for InfixOr {
-    const SYM: &'static str = "||";
-}
-
 impl Callable for InfixOr {
     fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
         let (lhs, rhs) = stack.eval_binary(args.unnamed_binary_args())?;
@@ -161,13 +123,9 @@ impl Callable for InfixOr {
     }
 }
 
-#[derive(Debug, Clone, Primitive, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
+#[builtin(sym = "&&", kind = Infix)]
 pub struct InfixAnd;
-
-impl PrimitiveSYM for InfixAnd {
-    const SYM: &'static str = "&&";
-}
-
 impl Callable for InfixAnd {
     fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
         let (lhs, rhs) = stack.eval_binary(args.unnamed_binary_args())?;
@@ -184,13 +142,9 @@ impl Callable for InfixAnd {
     }
 }
 
-#[derive(Debug, Clone, Primitive, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
+#[builtin(sym = "|", kind = Infix)]
 pub struct InfixVectorOr;
-
-impl PrimitiveSYM for InfixVectorOr {
-    const SYM: &'static str = "|";
-}
-
 impl Callable for InfixVectorOr {
     fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
         let (lhs, rhs) = stack.eval_binary(args.unnamed_binary_args())?;
@@ -198,13 +152,9 @@ impl Callable for InfixVectorOr {
     }
 }
 
-#[derive(Debug, Clone, Primitive, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
+#[builtin(sym = "&", kind = Infix)]
 pub struct InfixVectorAnd;
-
-impl PrimitiveSYM for InfixVectorAnd {
-    const SYM: &'static str = "&";
-}
-
 impl Callable for InfixVectorAnd {
     fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
         let (lhs, rhs) = stack.eval_binary(args.unnamed_binary_args())?;
@@ -212,13 +162,9 @@ impl Callable for InfixVectorAnd {
     }
 }
 
-#[derive(Debug, Clone, Primitive, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
+#[builtin(sym = ">", kind = Infix)]
 pub struct InfixGreater;
-
-impl PrimitiveSYM for InfixGreater {
-    const SYM: &'static str = ">";
-}
-
 impl Callable for InfixGreater {
     fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
         let (lhs, rhs) = stack.eval_binary(args.unnamed_binary_args())?;
@@ -226,13 +172,9 @@ impl Callable for InfixGreater {
     }
 }
 
-#[derive(Debug, Clone, Primitive, PartialEq)]
+#[derive(Debug, Clone, PartialEq,)]
+#[builtin(sym = ">=", kind = Infix)]
 pub struct InfixGreaterEqual;
-
-impl PrimitiveSYM for InfixGreaterEqual {
-    const SYM: &'static str = ">=";
-}
-
 impl Callable for InfixGreaterEqual {
     fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
         let (lhs, rhs) = stack.eval_binary(args.unnamed_binary_args())?;
@@ -240,13 +182,9 @@ impl Callable for InfixGreaterEqual {
     }
 }
 
-#[derive(Debug, Clone, Primitive, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
+#[builtin(sym = "<", kind = Infix)]
 pub struct InfixLess;
-
-impl PrimitiveSYM for InfixLess {
-    const SYM: &'static str = "<";
-}
-
 impl Callable for InfixLess {
     fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
         let (lhs, rhs) = stack.eval_binary(args.unnamed_binary_args())?;
@@ -254,13 +192,9 @@ impl Callable for InfixLess {
     }
 }
 
-#[derive(Debug, Clone, Primitive, PartialEq)]
+#[derive(Debug, Clone, PartialEq,)]
+#[builtin(sym = "<=", kind = Infix)]
 pub struct InfixLessEqual;
-
-impl PrimitiveSYM for InfixLessEqual {
-    const SYM: &'static str = "<=";
-}
-
 impl Callable for InfixLessEqual {
     fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
         let (lhs, rhs) = stack.eval_binary(args.unnamed_binary_args())?;
@@ -268,13 +202,9 @@ impl Callable for InfixLessEqual {
     }
 }
 
-#[derive(Debug, Clone, Primitive, PartialEq)]
+#[derive(Debug, Clone, PartialEq,)]
+#[builtin(sym = "==", kind = Infix)]
 pub struct InfixEqual;
-
-impl PrimitiveSYM for InfixEqual {
-    const SYM: &'static str = "==";
-}
-
 impl Callable for InfixEqual {
     fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
         let (lhs, rhs) = stack.eval_binary(args.unnamed_binary_args())?;
@@ -282,13 +212,9 @@ impl Callable for InfixEqual {
     }
 }
 
-#[derive(Debug, Clone, Primitive, PartialEq)]
+#[derive(Debug, Clone, PartialEq,)]
+#[builtin(sym = "!=", kind = Infix)]
 pub struct InfixNotEqual;
-
-impl PrimitiveSYM for InfixNotEqual {
-    const SYM: &'static str = "!=";
-}
-
 impl Callable for InfixNotEqual {
     fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
         let (lhs, rhs) = stack.eval_binary(args.unnamed_binary_args())?;
@@ -296,13 +222,9 @@ impl Callable for InfixNotEqual {
     }
 }
 
-#[derive(Debug, Clone, Primitive, PartialEq)]
+#[derive(Debug, Clone, PartialEq,)]
+#[builtin(sym = "|>", kind = Infix)]
 pub struct InfixPipe;
-
-impl PrimitiveSYM for InfixPipe {
-    const SYM: &'static str = "|>";
-}
-
 impl Callable for InfixPipe {
     fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
         // TODO: reduce call stack nesting here
@@ -325,13 +247,9 @@ impl Callable for InfixPipe {
     }
 }
 
-#[derive(Debug, Clone, Primitive, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
+#[builtin(sym = ":", kind = Infix)]
 pub struct InfixColon;
-
-impl PrimitiveSYM for InfixColon {
-    const SYM: &'static str = ":";
-}
-
 impl Callable for InfixColon {
     fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
         let mut argstream = args.into_iter();
@@ -394,22 +312,9 @@ impl Callable for InfixColon {
     }
 }
 
-#[derive(Debug, Clone, Primitive, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
+#[builtin(sym = "[[", kind = PostfixCall("[[", "]]"))]
 pub struct PostfixIndex;
-
-impl Format for PostfixIndex {
-    fn rfmt_call_with(&self, _state: FormatState, args: &ExprList) -> String {
-        let what = &args.values[0];
-
-        let args = ExprList {
-            keys: args.keys[1..].to_owned(),
-            values: args.values[1..].to_owned(),
-        };
-
-        format!("{}[[{}]]", what, args)
-    }
-}
-
 impl Callable for PostfixIndex {
     fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
         let (what, index) = stack.eval_binary(args.unnamed_binary_args())?;
@@ -431,15 +336,9 @@ impl Callable for PostfixIndex {
     }
 }
 
-#[derive(Debug, Clone, Primitive, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
+#[builtin(sym = "[", kind = PostfixCall("[", "]"))]
 pub struct PostfixVecIndex;
-
-impl Format for PostfixVecIndex {
-    fn rfmt_call_with(&self, _state: FormatState, args: &ExprList) -> String {
-        format!("{}[{}]", args.values[0], args.values[1])
-    }
-}
-
 impl Callable for PostfixVecIndex {
     fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
         let (what, index) = stack.eval_binary(args.unnamed_binary_args())?;
@@ -447,7 +346,8 @@ impl Callable for PostfixVecIndex {
     }
 }
 
-#[derive(Debug, Clone, Primitive, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
+#[builtin]
 pub struct PrimVec;
 
 impl Format for PrimVec {

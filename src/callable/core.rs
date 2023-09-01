@@ -150,7 +150,18 @@ pub trait Format {
     }
 }
 
-pub trait Primitive: Callable + CallableClone + Format + DynCompare {
+pub trait Primitive: Callable + CallableClone + Format + DynCompare + Sync {}
+
+pub trait Sym {
+    const SYM: &'static str;
+    const KIND: &'static SymKind;
+}
+
+pub enum SymKind {
+    Function,
+    Infix,
+    Prefix,
+    PostfixCall(&'static str, &'static str)
 }
 
 impl PartialEq<dyn Primitive> for dyn Primitive {
@@ -159,17 +170,19 @@ impl PartialEq<dyn Primitive> for dyn Primitive {
     }
 }
 
-pub trait PrimitiveSYM {
-    const SYM: &'static str;
-}
-
 impl<T> Format for T
 where
-    T: PrimitiveSYM,
+    T: Sym,
 {
     fn rfmt_call_with(&self, _state: FormatState, args: &ExprList) -> String {
+        use SymKind::*;
         let sym = Self::SYM;
-        format!("{} {sym} {}", args.values[0], args.values[1])
+        match Self::KIND {
+            Function => format!("{sym}({})", args),
+            Infix => format!("{} {sym} {}", args.values[0], args.values[1]),
+            Prefix => format!("{sym}{}", args.values[0]),
+            PostfixCall(l, r) => format!("{sym}{l}{}{r}", args),
+        }
     }
 
     fn rfmt_with(&self, _: FormatState) -> String {

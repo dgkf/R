@@ -1,10 +1,11 @@
-use r_derive::Primitive;
+use r_derive::*;
 
 use crate::ast::*;
 use crate::lang::*;
 use super::core::*;
 
-#[derive(Debug, Clone, Primitive, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
+#[builtin]
 pub struct PrimIf;
 
 impl Format for PrimIf {
@@ -34,7 +35,8 @@ impl Callable for PrimIf {
     }
 }
 
-#[derive(Debug, Clone, Primitive, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
+#[builtin]
 pub struct PrimFor;
 
 impl Format for PrimFor {
@@ -85,7 +87,8 @@ impl Callable for PrimFor {
     }
 }
 
-#[derive(Debug, Clone, Primitive, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
+#[builtin]
 pub struct PrimWhile;
 
 impl Format for PrimWhile {
@@ -133,7 +136,8 @@ impl Callable for PrimWhile {
     }
 }
 
-#[derive(Debug, Clone, Primitive, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
+#[builtin]
 pub struct PrimRepeat;
 
 impl Format for PrimRepeat {
@@ -170,7 +174,8 @@ impl Callable for PrimRepeat {
     }
 }
 
-#[derive(Debug, Clone, Primitive, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
+#[builtin]
 pub struct PrimBlock;
 
 impl Format for PrimBlock {
