@@ -11,7 +11,7 @@ pub enum Expr {
     Continue,
     Break,
     Ellipsis,
-    Missing(String),
+    Missing,
     Bool(bool),
     Number(f64),
     Integer(i32),
@@ -33,7 +33,7 @@ impl PartialEq for Expr {
             (Continue, Continue) => true,
             (Break, Break) => true,
             (Ellipsis, Ellipsis) => true,
-            (Missing(_), Missing(_)) => true,
+            (Missing, Missing) => true,
             (Bool(l), Bool(r)) => l == r,
             (Number(l), Number(r)) => l == r,
             (Integer(l), Integer(r)) => l == r,
@@ -73,7 +73,7 @@ impl fmt::Display for Expr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Expr::Null => write!(f, "NULL"),
-            Expr::Missing(_) => write!(f, ""),
+            Expr::Missing => write!(f, ""),
             Expr::Break => write!(f, "break"),
             Expr::Continue => write!(f, "continue"),
             Expr::Bool(true) => write!(f, "TRUE"),
@@ -106,7 +106,7 @@ impl fmt::Display for ExprList {
             .iter()
             .enumerate()
             .map(|(i, v)| match (&self.keys[i], v) {
-                (Some(k), Expr::Missing(_)) => format!("{}", k),
+                (Some(k), Expr::Missing) => format!("{}", k),
                 (Some(k), _) => format!("{} = {}", k, v),
                 (None, v) => format!("{}", v),
             })
@@ -307,7 +307,7 @@ impl ExprList {
     pub fn as_formals(self) -> ExprList {
         self.into_iter()
             .map(|(k, v)| match (k, v) {
-                (None, Expr::Symbol(param)) => (Some(param.clone()), Expr::Missing(param)),
+                (None, Expr::Symbol(param)) => (Some(param.clone()), Expr::Missing),
                 other => other,
             })
             .collect()

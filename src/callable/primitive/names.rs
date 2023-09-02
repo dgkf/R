@@ -11,26 +11,21 @@ pub struct PrimitiveNames;
 impl Callable for PrimitiveNames{
     fn formals(&self) -> ExprList {
         ExprList::from(vec![
-            (Some(String::from("x")), Expr::Missing(String::from("x"))),
+            (Some(String::from("x")), Expr::Missing),
         ])
     }
 
-    fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
-        let R::List(vals) = stack.parent_frame().eval_list_lazy(args)? else {
-            unreachable!()
-        };
+    fn call_matched(&self, mut args: R, mut _ellipsis: R, stack: &mut CallStack) -> EvalResult {
+        let x = args.try_get_named("x")?.force(stack)?;
 
-        let (vals, _) = match_args(self.formals(), vals, &stack);
-        let mut vals = R::List(vals);
-        let x = vals.try_get_named("x")?;
-
-        match x.force(stack)? {
-            R::Null => Ok(R::Null),
-            R::Closure(_, _) => Ok(R::Null),
-            R::Vector(_) => Ok(R::Null),  // named vectors currently not supported...
-            R::Expr(_) => Ok(R::Null),  // handle arg lists?
-            R::Function(_, _, _) => Ok(R::Null), // return formals?
-            R::List(x) => {
+        use R::*;
+        match x {
+            Null => Ok(Null),
+            Closure(_, _) => Ok(Null),
+            Vector(_) => Ok(Null),  // named vectors currently not supported...
+            Expr(_) => Ok(Null),  // handle arg lists?
+            Function(_, _, _) => Ok(Null), // return formals?
+            List(x) => {
                 Ok(x.iter()
                     .map(|(k, _)| match k {
                         Some(name) => OptionNA::Some(name.clone()),
@@ -39,7 +34,7 @@ impl Callable for PrimitiveNames{
                     .collect::<Vec<OptionNA<String>>>()
                     .into())
             },
-            R::Environment(e) => {
+            Environment(e) => {
                 let mut names = e.values.borrow().keys()
                     .map(|k| k.clone())
                     .collect::<Vec<String>>();

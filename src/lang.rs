@@ -275,9 +275,12 @@ impl R {
     }
 
     pub fn try_get_named(&mut self, name: &str) -> EvalResult {
-        use RError::VariableNotFound;
-        self.get_named(name)
-            .map_or(VariableNotFound(String::from(name)).into(), |x| Ok(x))
+        use RError::{ArgumentMissing,VariableNotFound};
+        match self.get_named(name) {
+            Some(R::Closure(Expr::Missing, _)) => Err(ArgumentMissing(name.into()).into()),
+            Some(x) => Ok(x),
+            None => Err(VariableNotFound(name.into()).into()),
+        }
     }
 
     pub fn try_get(&self, index: R) -> EvalResult {
@@ -296,6 +299,17 @@ impl R {
 impl Default for R {
     fn default() -> Self {
         R::Null
+    }
+}
+
+impl TryInto<List> for R {
+    type Error = RSignal;
+
+    fn try_into(self) -> Result<List, Self::Error> {
+        match self {
+            R::List(l) => Ok(l),
+            _ => unimplemented!(),
+        }
     }
 }
 
@@ -747,7 +761,7 @@ pub trait Context {
         ))
     }
 
-    fn eval_list_greedy(&mut self, l: ExprList) -> EvalResult {
+    fn eval_list_eager(&mut self, l: ExprList) -> EvalResult {
         Ok(R::List(
             l.into_iter()
                 .flat_map(|pair| match pair {
@@ -893,7 +907,6 @@ impl Context for Rc<Environment> {
             Expr::Symbol(name) => self.get(name),
             Expr::Break => Err(RSignal::Condition(Cond::Break)),
             Expr::Continue => Err(RSignal::Condition(Cond::Continue)),
-            Expr::Missing(s) => RError::ArgumentMissing(s).into(),
             x => unimplemented!("Context::eval(Rc<Environment>, {})", x),
         }
     }

@@ -9,6 +9,6 @@ use crate::callable::core::*;
 pub struct PrimitiveList;
 impl Callable for PrimitiveList {
     fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
-        stack.eval_list_greedy(args)
+        stack.eval_list_eager(args)
     }
 }

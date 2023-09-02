@@ -11,7 +11,7 @@ pub struct PrimitiveEnvironment;
 impl Callable for PrimitiveEnvironment {
     fn formals(&self) -> ExprList {
         ExprList::from(vec![
-            (Some(String::from("fun")), Expr::Missing(String::from("fun"))),
+            (Some(String::from("fun")), Expr::Missing),
         ])
     }
 
@@ -25,7 +25,7 @@ impl Callable for PrimitiveEnvironment {
 
         // default when `fun` is missing or not found
         let fun = vals.try_get_named("fun");
-        if let Ok(R::Closure(Expr::Missing(_), _)) | Err(_) = fun {
+        if let Ok(R::Closure(Expr::Missing, _)) | Err(_) = fun {
             return Ok(R::Environment(stack.env().clone()));
         };
 

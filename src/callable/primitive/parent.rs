@@ -10,7 +10,7 @@ pub struct PrimitiveParent;
 impl Callable for PrimitiveParent{
     fn formals(&self) -> ExprList {
         ExprList::from(vec![
-            (Some(String::from("x")), Expr::Missing(String::from("x"))),
+            (Some(String::from("x")), Expr::Missing),
         ])
     }
 
@@ -24,7 +24,7 @@ impl Callable for PrimitiveParent{
 
         // default when `x` is missing or not found
         let x = vals.try_get_named("x");
-        if let Ok(R::Closure(Expr::Missing(_), _)) | Err(_) = x {
+        if let Ok(R::Closure(Expr::Missing, _)) | Err(_) = x {
             return Ok(stack.env().parent.clone().map_or(R::Null, |e| R::Environment(e)));
         };
 

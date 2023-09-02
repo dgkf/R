@@ -5,11 +5,7 @@ use crate::callable::dyncompare::*;
 use crate::callable::builtins::BUILTIN;
 use crate::lang::*;
 
-pub fn match_args(
-    mut formals: ExprList,
-    mut args: Vec<(Option<String>, R)>,
-    stack: &CallStack,
-) -> (Vec<(Option<String>, R)>, Vec<(Option<String>, R)>) {
+pub fn match_args(mut formals: ExprList, mut args: List, stack: &CallStack) -> (List, List) {
     let mut ellipsis: Vec<(Option<String>, R)> = vec![];
     let mut matched_args: Vec<(Option<String>, R)> = vec![];
 
@@ -86,7 +82,68 @@ pub trait Callable {
         ExprList::new()
     }
 
-    fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult;
+    fn match_args(&self, args: ExprList, stack: &mut CallStack) -> Result<(List, List), RSignal> {
+        let mut formals = self.formals();
+        let mut ellipsis: Vec<(Option<String>, R)> = vec![];
+        let mut matched_args: Vec<(Option<String>, R)> = vec![];
+
+        // extract iterable list of arguments
+        let mut args: List = stack.parent_frame().eval_list_lazy(args)?.try_into()?;
+
+        // assign named args to corresponding formals
+        let mut i: usize = 0;
+        while i < args.len() {
+            match &args[i].0 {
+                Some(argname) => {
+                    if let Some((Some(_), _)) = formals.remove_named(&argname) {
+                        matched_args.push(args.remove(i));
+                        continue;
+                    }
+                }
+                _ => (),
+            }
+            i += 1;
+        }
+
+        // remove any Ellipsis param, and any trailing unassigned params
+        formals.pop_trailing();
+
+        // backfill unnamed args, populating ellipsis with overflow
+        for (key, value) in args.into_iter() {
+            match key {
+                // named args go directly to ellipsis, they did not match a formal
+                Some(arg) => {
+                    ellipsis.push((Some(arg), value));
+                }
+
+                // unnamed args populate next formal, or ellipsis if formals exhausted
+                None => {
+                    let next_unassigned_formal = formals.remove(0);
+                    if let Some((Some(param), _)) = next_unassigned_formal {
+                        matched_args.push((Some(param), value));
+                    } else {
+                        ellipsis.push((None, value));
+                    }
+                }
+            }
+        }
+
+        // add back in parameter defaults that weren't filled with args
+        for (param, default) in formals.into_iter() {
+            matched_args.push((param, R::Closure(default, stack.env().clone())));
+        }
+
+        Ok((matched_args, ellipsis))
+    }
+
+    fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
+        let (args, ellipsis) = self.match_args(args, stack)?;
+        self.call_matched(R::List(args), R::List(ellipsis), stack)
+    }
+
+    fn call_matched(&self, mut _args: R, mut _ellipsis: R, _stack: &mut CallStack) -> EvalResult {
+        unimplemented!()
+    }
 
     fn call_assign(&self, _value: Expr, _args: ExprList, _stack: &mut CallStack) -> EvalResult {
         unimplemented!();

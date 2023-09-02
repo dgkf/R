@@ -13,7 +13,7 @@ impl Callable for PrimitiveC {
         // this can be cleaned up quite a bit, but I just need it working with
         // more types for now to test vectorized operators using different types
 
-        let R::List(vals) = stack.eval_list_greedy(args)? else {
+        let R::List(vals) = stack.eval_list_eager(args)? else {
             unreachable!()
         };
 
