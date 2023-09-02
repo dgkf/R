@@ -313,6 +313,54 @@ impl Callable for InfixColon {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+#[builtin(sym = "$", kind = Infix)]
+pub struct InfixDollar;
+impl Callable for InfixDollar {
+    fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
+        let mut argstream = args.into_iter();
+
+        let Some((_, what)) = argstream.next() else {
+            unreachable!();
+        };
+
+        let Some((_, index)) = argstream.next() else {
+            unreachable!();
+        };
+
+        let mut what = stack.eval(what)?;
+
+        match index {
+            Expr::String(s) | Expr::Symbol(s) => what.try_get_named(s.as_str()),
+            _ => Ok(R::Null),
+        }
+
+    }
+
+    fn call_assign(&self, value: Expr, args: ExprList, stack: &mut CallStack) -> EvalResult {
+        let mut argstream = args.into_iter();
+
+        let Some((_, what)) = argstream.next() else {
+            unreachable!();
+        };
+
+        let Some((_, name)) = argstream.next() else {
+            unreachable!();
+        };
+
+        let value = stack.eval(value)?;
+        let mut what = stack.eval(what)?;
+
+        match name {
+            Expr::String(s) | Expr::Symbol(s) => {
+                what.set_named(s.as_str(), value)?;
+                Ok(what)
+            },
+            _ => unimplemented!()
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
 #[builtin(sym = "[[", kind = PostfixCall("[[", "]]"))]
 pub struct PostfixIndex;
 impl Callable for PostfixIndex {

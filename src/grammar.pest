@@ -65,10 +65,12 @@
                 assign | 
                 add | subtract | multiply | divide | modulo | power | 
                 pipe | 
-                colon | doublecolon | triplecolon |
+                colon | 
                 gte | lte | gt | eq | neq | lt | 
                 or | vor | and | vand | 
-                special
+                special |
+                dollar | 
+                doublecolon | triplecolon
             }
 
             // numerics
@@ -97,6 +99,7 @@
             // special
             special = { "%" ~ !("%") ~ "%" }
             pipe = { "|>" }
+            dollar = { "$" }
             colon = { ":" }
             doublecolon = { "::" }
             triplecolon = { ":::" }

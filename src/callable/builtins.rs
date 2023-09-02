@@ -35,6 +35,7 @@ lazy_static! {
             ("!=", Box::new(InfixNotEqual) as Box<dyn Builtin>),
             ("|>", Box::new(InfixPipe) as Box<dyn Builtin>),
             (":", Box::new(InfixColon) as Box<dyn Builtin>),
+            ("$", Box::new(InfixDollar) as Box<dyn Builtin>),
             ("[[", Box::new(PostfixIndex) as Box<dyn Builtin>),
             ("[", Box::new(PostfixVecIndex) as Box<dyn Builtin>),
             ("q", Box::new(PrimitiveQ) as Box<dyn Builtin>),

@@ -244,6 +244,29 @@ impl R {
         
     }
 
+    pub fn set_named(&mut self, name: &str, value: R) -> EvalResult {
+        match self {
+            R::List(v) => {
+                let loc = v.iter().enumerate()
+                    .find(|(_, (k, _))| *k == Some(name.into()))
+                    .map(|(i, _)| i);
+
+                match loc {
+                    Some(i) => v[i].1 = value.clone(),
+                    None => v.push((Some(name.into()), value.clone())),
+                }
+
+                Ok(value)
+            },
+            R::Environment(e) => {
+                e.values.borrow_mut().insert(name.into(), value.clone());
+                Ok(value)
+            },
+            _ => Ok(R::Null)
+        }
+
+    }
+
     pub fn environment(&self) -> Option<Rc<Environment>> {
         match self {
             R::Closure(_, e) | R::Function(_, _, e) | R::Environment(e) => Some(e.clone()),
