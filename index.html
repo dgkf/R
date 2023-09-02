@@ -7,6 +7,7 @@
     <meta name="description" content="A reimagining of R"/>
     <meta name="application-name" content="R"/>
     <link rel="manifest" href="manifest.json"/>
+    <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
 
     <meta name="viewport" content="viewport-fit=cover width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0"/>
     <meta name="theme-color" content="#111">
@@ -15,12 +16,10 @@
     <meta name="apple-mobile-web-app-capable" content="yes"/>
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 
-    <!--
-    <link rel="icon" type="image/svg+xml" size="any" href="TODO"/>
-    <link rel="apple-touch-icon" type="image/png" sizes="1024x1024" href="TODO"/>
+    <link rel="icon" type="image/svg+xml" size="any" href="assets/favicon.svg"/>
+    <link rel="apple-touch-icon" type="image/png" sizes="256x256" href="assets/favicon.svg"/>
     <meta name="msapplication-TileColor" content="#111"/>
-    <meta name="msapplication-TileImage" content="TODO"/>
-    -->
+    <meta name="msapplication-TileImage" content="assets/favicon.svg"/>
 
    <style>
     html {
@@ -290,10 +289,13 @@
       });
 
       function prompt_input(event) {
-        if (event.key == "ArrowUp" && event.target.selectionStart <= 0) {
+        let at_start = event.target.selectionStart <= 0;
+        let at_end = event.target.selectionEnd >= event.target.value.length;
+
+        if (event.key == "ArrowUp" && at_start) {
           r.history.selected = ((r.history.selected || 0) + 1) % r.history.log.length;
           return prompt_set(r.history.log[r.history.selected]);
-        } else if (event.key == "ArrowDown" && event.target.selectionEnd >= event.target.value.length) {
+        } else if (event.key == "ArrowDown" && at_end) {
           r.history.selected = (r.history.log.length + (r.history.selected || 0) - 1) % r.history.log.length;
           return prompt_set(r.history.log[r.history.selected]);
         }
@@ -308,13 +310,13 @@
           }
 
           // if code is a complete expression, run it
-          let prompt = document.getElementById("prompt");
-          let code = prompt.value;
-          if (r.validate(code)) {
-            run();
-            event.preventDefault();
-            return;
-          }          
+          if (at_end) {
+            if (r.validate(prompt().value)) {
+              run();
+              event.preventDefault();
+              return;
+            }          
+          }
         }
 
         // add or remove lines based on input
@@ -393,25 +395,26 @@
       }
 
       function prompt() {
-        document.getElementById("prompt"); 
+        return document.getElementById("prompt")
       }
 
       function prompt_clear() {
         r.history.log.selected = null;
-        let prompt = prompt();
-        prompt.value = '';     
-        prompt.rows = 1;
-        prompt.focus();
+        let elem = prompt();
+        elem.value = '';     
+        elem.rows = 1;
+        elem.focus();
       }
 
       function prompt_set(input) {
-        let prompt = prompt();
-        resize_prompt();
+        let elem = prompt();
+        elem.value = input;
+        prompt_resize();
       }
 
       function prompt_resize() {
-        let prompt = document.getElementById("prompt")
-        prompt.rows = prompt.value.split("\n").length;       
+        let elem = prompt()
+        elem.rows = elem.value.split("\n").length;       
       }
 
       function clear_history() {
