@@ -8,6 +8,12 @@ edition = "2021"
 [lib]
 crate-type = ["cdylib", "rlib"]
 
+[profile.release]
+lto = true
+
+[build-dependencies]
+regex = "1.9.4"
+
 [dependencies]
 r_derive = { path = "r_derive" }
 

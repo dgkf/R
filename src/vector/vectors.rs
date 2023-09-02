@@ -268,6 +268,12 @@ impl From<Vec<bool>> for Vector {
     }
 }
 
+impl From<bool> for Vector {
+    fn from(x: bool) -> Self {
+        Self::from(vec![x])
+    }
+}
+
 impl From<Vec<OptionNA<bool>>> for Vector {
     fn from(x: Vec<OptionNA<bool>>) -> Self {
         Vector::Logical(x)
@@ -334,10 +340,6 @@ impl Display for Vector {
             let n = x.len();
             let nlen = format!("{}", n).len();
 
-            if n == 0 {
-                return write!(f, "numeric(0)");
-            }
-
             // TODO: iteratively calculate when we hit max print so our
             // max_len isn't inflated by a value that is omitted
 
@@ -384,11 +386,15 @@ impl Display for Vector {
                 .collect()
         }
 
-        match self {
-            Vector::Numeric(x) => fmt_vec(x, f),
-            Vector::Integer(x) => fmt_vec(x, f),
-            Vector::Logical(x) => fmt_vec(x, f),
-            Vector::Character(x) => fmt_vec(&fmt_strs(x), f),
+        match (self.len(), self) {
+            (0, Vector::Numeric(_)) => write!(f, "numeric(0)"),
+            (0, Vector::Integer(_)) => write!(f, "integer(0)"),
+            (0, Vector::Logical(_)) => write!(f, "logical(0)"),
+            (0, Vector::Character(_)) => write!(f, "character(0)"),
+            (_, Vector::Numeric(x)) => fmt_vec(x, f),
+            (_, Vector::Integer(x)) => fmt_vec(x, f),
+            (_, Vector::Logical(x)) => fmt_vec(x, f),
+            (_, Vector::Character(x)) => fmt_vec(&fmt_strs(x), f),
         }
     }
 }

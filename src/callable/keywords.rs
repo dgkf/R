@@ -1,13 +1,14 @@
-use r_derive::Primitive;
+use r_derive::*;
 
 use crate::ast::*;
 use crate::lang::*;
 use super::core::*;
 
-#[derive(Debug, Clone, Primitive, PartialEq)]
-pub struct PrimIf;
+#[derive(Debug, Clone, PartialEq)]
+#[builtin]
+pub struct KeywordIf;
 
-impl Format for PrimIf {
+impl Format for KeywordIf {
     fn rfmt_call_with(&self, _state: FormatState, args: &ExprList) -> String {
         if let Some(else_expr) = args.values.get(2) {
             format!(
@@ -20,7 +21,7 @@ impl Format for PrimIf {
     }
 }
 
-impl Callable for PrimIf {
+impl Callable for KeywordIf {
     fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
         let mut args = args.values.into_iter();
         let cond = stack.eval(args.next().unwrap())?;
@@ -34,10 +35,11 @@ impl Callable for PrimIf {
     }
 }
 
-#[derive(Debug, Clone, Primitive, PartialEq)]
-pub struct PrimFor;
+#[derive(Debug, Clone, PartialEq)]
+#[builtin]
+pub struct KeywordFor;
 
-impl Format for PrimFor {
+impl Format for KeywordFor {
     fn rfmt_call_with(&self, _state: FormatState, args: &ExprList) -> String {
         let Some(sym) = &args.keys[0] else {
             unreachable!()
@@ -47,7 +49,7 @@ impl Format for PrimFor {
     }
 }
 
-impl Callable for PrimFor {
+impl Callable for KeywordFor {
     fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
         let mut args = args.into_iter();
 
@@ -85,16 +87,17 @@ impl Callable for PrimFor {
     }
 }
 
-#[derive(Debug, Clone, Primitive, PartialEq)]
-pub struct PrimWhile;
+#[derive(Debug, Clone, PartialEq)]
+#[builtin]
+pub struct KeywordWhile;
 
-impl Format for PrimWhile {
+impl Format for KeywordWhile {
     fn rfmt_call_with(&self, _state: FormatState, args: &ExprList) -> String {
         format!("while ({}) {}", args.values[0], args.values[1])
     }
 }
 
-impl Callable for PrimWhile {
+impl Callable for KeywordWhile {
     fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
         use Cond::*;
         use RSignal::*;
@@ -133,16 +136,17 @@ impl Callable for PrimWhile {
     }
 }
 
-#[derive(Debug, Clone, Primitive, PartialEq)]
-pub struct PrimRepeat;
+#[derive(Debug, Clone, PartialEq)]
+#[builtin]
+pub struct KeywordRepeat;
 
-impl Format for PrimRepeat {
+impl Format for KeywordRepeat {
     fn rfmt_call_with(&self, _state: FormatState, args: &ExprList) -> String {
         format!("repeat {}", args.values[1])
     }
 }
 
-impl Callable for PrimRepeat {
+impl Callable for KeywordRepeat {
     fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
         let mut args = args.values.into_iter();
         let body = args.next().unwrap();
@@ -170,10 +174,11 @@ impl Callable for PrimRepeat {
     }
 }
 
-#[derive(Debug, Clone, Primitive, PartialEq)]
-pub struct PrimBlock;
+#[derive(Debug, Clone, PartialEq)]
+#[builtin]
+pub struct KeywordBlock;
 
-impl Format for PrimBlock {
+impl Format for KeywordBlock {
     fn rfmt_call_with(&self, _state: FormatState, args: &ExprList) -> String {
         format!(
             "{{\n{}\n}}",
@@ -186,7 +191,7 @@ impl Format for PrimBlock {
     }
 }
 
-impl Callable for PrimBlock {
+impl Callable for KeywordBlock {
     fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
         let mut value = Ok(R::Null);
         for expr in args.values {

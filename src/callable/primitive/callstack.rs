@@ -1,16 +1,12 @@
-use r_derive::Primitive;
+use r_derive::builtin;
 
 use crate::ast::ExprList;
 use crate::lang::{CallStack, EvalResult, R};
 use crate::callable::core::*;
 
-#[derive(Debug, Clone, Primitive, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
+#[builtin(sym = "callstack")]
 pub struct PrimitiveCallstack;
-
-impl PrimitiveSYM for PrimitiveCallstack {
-    const SYM: &'static str = "callstack";
-}
-
 impl Callable for PrimitiveCallstack {
     fn call(&self, _args: ExprList, stack: &mut CallStack) -> EvalResult {
         Ok(R::List(

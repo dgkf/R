@@ -14,7 +14,10 @@ where
     P: AsRef<Path>,
 {
     println!("{}", session_header());
-    let global_env = Rc::new(Environment::default());
+    let global_env = Rc::new(Environment {
+        parent: Some(Environment::from_builtins()),
+        ..Default::default()        
+    });
 
     let line_editor = Reedline::create()
         .with_validator(Box::new(RValidator))
@@ -75,11 +78,14 @@ where
 }
 
 pub fn eval(input: &str) -> EvalResult {
-    let global_env = Rc::new(Environment::default());
-    let mut stack = CallStack::from(global_env.clone());
+    let global_env = Rc::new(Environment {
+        parent: Some(Environment::from_builtins()),
+        ..Default::default()        
+    });
 
+    let mut stack = CallStack::from(global_env.clone());
     match parse(input) {
         Ok(expr) => stack.eval(expr),
-        Err(e) => Err(RSignal::Error(e))
+        Err(e) => Err(e)
     }
 }

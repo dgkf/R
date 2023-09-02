@@ -42,6 +42,7 @@ impl Highlighter for RHighlighter {
                         Rule::hl_value => Style::new().fg(Color::Rgb(255, 158, 101)),
                         Rule::hl_num => Style::new().fg(Color::Rgb(240, 158, 130)),
                         Rule::hl_str => Style::new().fg(Color::Rgb(158, 206, 106)),
+                        Rule::hl_comment => Style::new().fg(Color::Rgb(100, 100, 100)),
                         Rule::hl_reserved | Rule::hl_control => {
                             Style::new().fg(Color::Rgb(187, 154, 246)).italic()
                         }

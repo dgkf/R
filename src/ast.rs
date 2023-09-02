@@ -1,7 +1,7 @@
 use core::fmt;
 use std::{iter::Zip, slice::IterMut, vec::IntoIter};
 
-use crate::callable::core::Primitive;
+use crate::callable::core::Builtin;
 
 #[derive(Debug, Clone)]
 pub enum Expr {
@@ -20,7 +20,7 @@ pub enum Expr {
     List(ExprList),
     Function(ExprList, Box<Expr>),
     Call(Box<Expr>, ExprList),
-    Primitive(Box<dyn Primitive>),
+    Primitive(Box<dyn Builtin>),
 }
 
 impl PartialEq for Expr {
@@ -55,14 +55,14 @@ impl PartialEq for Expr {
 impl Expr {
     pub fn as_primitive<T>(x: T) -> Self
     where
-        T: Primitive + 'static,
+        T: Builtin + 'static,
     {
         Self::Primitive(Box::new(x))
     }
 
     pub fn new_primitive_call<T>(x: T, args: ExprList) -> Self
     where
-        T: Primitive + 'static,
+        T: Builtin + 'static,
     {
         let p = Self::as_primitive(x);
         Self::Call(Box::new(p), args)

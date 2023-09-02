@@ -13,8 +13,15 @@ pub fn wasm_session_header() -> String {
 
 #[wasm_bindgen]
 pub fn wasm_env() -> JsValue {
-    let env = Rc::new(Environment::default());
-    let cb = Closure::<dyn Fn(String) -> Option<String>>::new(move |line: String| wasm_eval_in(&env, line.as_str()));
+    let global_env = Rc::new(Environment {
+        parent: Some(Environment::from_builtins()),
+        ..Default::default()        
+    });
+
+    let cb = Closure::<dyn Fn(String) -> Option<String>>::new(move |line: String| 
+        wasm_eval_in(&global_env, line.as_str())
+    );
+
     let ret = cb.as_ref().clone();
     cb.forget();
     ret
@@ -35,6 +42,7 @@ pub fn wasm_eval_in(env: &Rc<Environment>, input: &str) -> Option<String> {
                 Err(e) => Some(format!("{}", e)),
             }
         }
+        Err(RSignal::Thunk) => None,
         Err(e) => Some(format!("{}", e))
     }
 }
