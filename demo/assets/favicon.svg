@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="256.0px"
+   height="256.0px"
+   viewBox="0 0 256.0 256.0"
+   version="1.1"
+   id="SVGRoot"
+   xmlns:xlink="http://www.w3.org/1999/xlink"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs19714">
+    <linearGradient
+       id="linearGradient19740">
+      <stop
+         style="stop-color:#ac0750;stop-opacity:1;"
+         offset="0"
+         id="stop19736" />
+      <stop
+         style="stop-color:#710766;stop-opacity:1;"
+         offset="1"
+         id="stop19738" />
+    </linearGradient>
+    <radialGradient
+       xlink:href="#linearGradient19740"
+       id="radialGradient20107"
+       cx="127.70441"
+       cy="94.893654"
+       fx="127.70441"
+       fy="94.893654"
+       r="125.0143"
+       gradientTransform="matrix(1.2735241,8.7954791e-5,-8.7603418e-5,1.2685884,-34.921924,-25.777803)"
+       gradientUnits="userSpaceOnUse" />
+  </defs>
+  <g
+     id="layer1">
+    <ellipse
+       style="fill:url(#radialGradient20107);stroke-width:4.88652;stroke-linecap:round;stroke-linejoin:round;fill-opacity:1;stroke:#58163d;stroke-opacity:1"
+       id="path19732"
+       cx="127.81243"
+       cy="128.64407"
+       rx="125.0143"
+       ry="126.04859" />
+    <g
+       aria-label="R"
+       id="text21229"
+       style="font-stretch:semi-condensed;font-size:293.333px;font-family:'DejaVu Sans';-inkscape-font-specification:'DejaVu Sans, Semi-Condensed';fill:#fbb6e4;stroke-width:5;stroke-linecap:round;stroke-linejoin:round">
+      <path
+         id="path2713"
+         d="M 46.929688 35.216797 A 123.0948 123.47803 0 0 0 36.732422 45.447266 L 36.732422 210.96484 A 123.0948 123.47803 0 0 0 62.798828 232.89258 L 62.798828 158.68164 L 91.158203 158.68164 C 101.47068 158.68164 109.58769 161.02041 115.50781 165.69922 C 121.52343 170.37803 127.68231 179.87829 133.98438 194.20117 L 157.99805 247.67578 A 123.0948 123.47803 0 0 0 182.06445 238.84961 L 160.19531 190.62109 C 154.8481 178.58987 149.5486 169.13671 144.29688 162.26172 C 139.04515 155.38674 133.60242 150.89952 127.96875 148.79883 C 138.75866 145.36133 146.92276 139.20245 152.46094 130.32227 C 158.09461 121.44207 160.91211 110.27016 160.91211 96.806641 C 160.91211 76.181684 155.51647 60.759961 144.72656 50.542969 C 133.93665 40.325976 117.51232 35.216797 95.455078 35.216797 L 46.929688 35.216797 z M 62.798828 58.994141 L 95.455078 58.994141 C 108.05922 58.994141 117.56143 62.192287 123.95898 68.589844 C 130.35654 74.891913 133.55469 84.297986 133.55469 96.806641 C 133.55469 109.3153 130.35654 118.81555 123.95898 125.30859 C 117.56143 131.70615 108.05922 134.9043 95.455078 134.9043 L 62.798828 134.9043 L 62.798828 58.994141 z " />
+    </g>
+  </g>
+</svg>
