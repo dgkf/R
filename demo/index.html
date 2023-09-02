@@ -268,7 +268,7 @@
     <script type="module">
       import init, * as r from "./pkg/r.js";
       window.r = await init().then(() => { 
-        push_history("output", r.wasm_session_header());
+        history_push("output", r.wasm_session_header());
         return {
           "eval": r.wasm_env(),
           "header": r.wasm_session_header(),
@@ -286,18 +286,28 @@
         let prompt = document.getElementById("prompt");
         prompt.addEventListener("keydown", prompt_input);
         prompt_resize();
+        prompt.focus();
+        prompt_cursor(Infinity);
       });
 
       function prompt_input(event) {
-        let at_start = event.target.selectionStart <= 0;
-        let at_end = event.target.selectionEnd >= event.target.value.length;
+        let at = event.target.selectionStart;
+        let to = event.target.selectionEnd;
 
+        let at_start = at <= 0;
+        let at_end = to >= event.target.value.length;
+
+        // go back in history (toward end, oldest)
         if (event.key == "ArrowUp" && at_start) {
-          r.history.selected = ((r.history.selected || 0) + 1) % r.history.log.length;
-          return prompt_set(r.history.log[r.history.selected]);
+          return prompt_set(history_increment(-1));
+
+        // go forward in history (toward start, most recent)
         } else if (event.key == "ArrowDown" && at_end) {
-          r.history.selected = (r.history.log.length + (r.history.selected || 0) - 1) % r.history.log.length;
-          return prompt_set(r.history.log[r.history.selected]);
+          return prompt_set(history_increment(1));
+
+        // otherwise, if other keys are pressed, reset selected in history
+        } else if (event.key != "ArrowUp" && event.key != "ArrowDown") {
+          r.history.selected = null;
         }
 
         // possibly submit code
@@ -328,11 +338,13 @@
         if (event.key == "Backspace") {
           let prompt = document.getElementById("prompt");
           let val = prompt.value;
-          prompt.rows = val.substring(0, val.length - 1).split("\n").length;
+          console.log(at, to);
+          console.log("'" + prompt.value.substring(at, to + 1) + "'");
+          prompt.rows = prompt.value.split("\n").length - (prompt.value.substring(at - 1, to).split("\n").length - 1)
         }
       }
 
-      function push_history(type, content, elem) {
+      function history_push(type, content, elem) {
         let parent = elem || document.getElementById("history");
         let node = document.createElement("div");
         let text = document.createElement("pre");
@@ -341,6 +353,14 @@
         node.appendChild(text);
         parent.appendChild(node);
         return node;
+      }
+
+      function history_increment(n) {
+        let l = r.history.log.length;
+        if (!l) { return; }
+        n = (n % l) + l;
+        r.history.selected = ((r.history.selected || 0) + n) % l;
+        return r.history.log[r.history.selected]
       }
 
       function unexpected_error(elem) {
@@ -377,12 +397,12 @@
         if (!code.trim()) { return prompt_clear(); }
 
         r.history.log.push(code);
-        let input = push_history("input", code);
+        let input = history_push("input", code);
         
         // get result and print to history
         try { 
           let result = r.eval(code);
-          let node = push_history("output", result, input);
+          let node = history_push("output", result, input);
           node.scrollIntoView();
         } catch (error) {
           console.log(error);
@@ -412,6 +432,13 @@
         prompt_resize();
       }
 
+      function prompt_cursor(n) {
+        let elem = prompt();
+        if (n > elem.value.length) n = elem.value.length;
+        if (n < 0) n = 0;
+        elem.selectionStart = n;
+      }
+
       function prompt_resize() {
         let elem = prompt()
         elem.rows = elem.value.split("\n").length;       
@@ -419,7 +446,7 @@
 
       function clear_history() {
         document.getElementById("history").innerHTML = '';
-        push_history("output", r.header);
+        history_push("output", r.header);
       }
 
       function font_size(value) {
