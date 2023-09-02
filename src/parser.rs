@@ -9,6 +9,7 @@
 use crate::ast::*;
 use crate::error::RError;
 use crate::callable::{core::*, keywords::*, operators::*, primitive::PrimitiveList};
+use crate::lang::RSignal;
 
 use pest::iterators::{Pair, Pairs};
 use pest::pratt_parser::PrattParser;
@@ -37,10 +38,14 @@ lazy_static::lazy_static! {
    };
 }
 
-pub fn parse(s: &str) -> Result<Expr, RError> {
+pub fn parse(s: &str) -> Result<Expr, RSignal> {
     match RParser::parse(Rule::repl, s) {
-        Ok(pairs) => Ok(parse_expr(pairs)),
-        Err(e) => Err(RError::ParseFailureVerbose(e)),
+        // comments currently entirely unparsed, but return NULL
+        Ok(pairs) if pairs.len() == 0 => Err(RSignal::Thunk),
+
+        // for any expressions
+        Ok(pairs) => Ok(parse_expr(pairs)),        
+        Err(e) => Err(RError::ParseFailureVerbose(e).into()),
     }
 }
 

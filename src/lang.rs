@@ -1,4 +1,5 @@
 use crate::ast::*;
+use crate::callable::builtins::BUILTIN;
 use crate::error::*;
 use crate::callable::core::{Callable, builtin};
 use crate::vector::vectors::*;
@@ -30,8 +31,19 @@ impl PartialEq for R {
             (R::List(l), R::List(r)) => l.iter().zip(r.iter()).all(|((lk, lv), (rk, rv))| lk == rk && lv == rv),
             (R::Expr(l), R::Expr(r)) => l == r,
             (R::Closure(lc, lenv), R::Closure(rc, renv)) => lc == rc && lenv == renv,
-            (R::Function(largs, lbody, lenv), R::Function(rargs, rbody, renv)) => largs == rargs && lbody == rbody && lenv == renv,
-            (R::Environment(l), R::Environment(r)) => l == r,
+            (R::Function(largs, lbody, lenv), R::Function(rargs, rbody, renv)) => {
+                largs == rargs && 
+                    lbody == rbody && 
+                    lenv == renv
+            },
+            (R::Environment(l), R::Environment(r)) => {
+                l.values.as_ptr() == r.values.as_ptr() &&
+                (match (&l.parent, &r.parent) {
+                    (None, None) => true,
+                    (Some(lp), Some(rp)) => Rc::<Environment>::as_ptr(&lp) == Rc::<Environment>::as_ptr(&rp),
+                    _ => false
+                })
+            },
             (R::Vector(lv), R::Vector(rv)) => match (lv, rv) {
                 (Vector::Numeric(l), Vector::Numeric(r)) => l == r,
                 (Vector::Integer(l), Vector::Integer(r)) => l == r,
@@ -57,6 +69,15 @@ impl TryInto<i32> for R {
             [OptionNA::Some(i), ..] => Ok(i),
             _ => Err(CannotBeCoercedToInteger.into()),
         }
+    }
+}
+
+impl<T> From<T> for R
+where
+    Vector: From<T>
+{
+    fn from(value: T) -> Self {
+        R::Vector(Vector::from(value))
     }
 }
 
@@ -104,6 +125,7 @@ pub enum Cond {
 pub enum RSignal {
     Condition(Cond),
     Error(RError),
+    Thunk,  // used when evaluating null opts like comments
 }
 
 impl Display for RSignal {
@@ -111,6 +133,7 @@ impl Display for RSignal {
         match self {
             RSignal::Condition(_) => write!(f, "Signal used at top level"),
             RSignal::Error(e) => write!(f, "{}", e),
+            RSignal::Thunk => write!(f, ""),
         }
     }
 }
@@ -463,16 +486,28 @@ impl VecPartialCmp for R {
     }
 
     fn vec_eq(self, rhs: Self) -> Self::Output {
-        match (self.as_vector()?, rhs.as_vector()?) {
-            (R::Vector(l), R::Vector(r)) => Ok(R::Vector(l.vec_eq(r))),
-            _ => unreachable!(),
+        match (self, rhs) {
+            (lhs @ R::Expr(_), rhs @ R::Expr(_)) => Ok((lhs == rhs).into()),
+            (lhs @ R::Closure(..), rhs @ R::Closure(..)) => Ok((lhs == rhs).into()),
+            (lhs @ R::Function(..), rhs @ R::Function(..)) => Ok((lhs == rhs).into()),
+            (lhs @ R::Environment(_), rhs @ R::Environment(_)) => Ok((lhs == rhs).into()),
+            (lhs, rhs) => match (lhs.as_vector()?, rhs.as_vector()?) {
+                (R::Vector(l), R::Vector(r)) => Ok(R::Vector(l.vec_eq(r))),
+                _ => unreachable!(),
+            }
         }
     }
 
     fn vec_neq(self, rhs: Self) -> Self::Output {
-        match (self.as_vector()?, rhs.as_vector()?) {
-            (R::Vector(l), R::Vector(r)) => Ok(R::Vector(l.vec_neq(r))),
-            _ => unreachable!(),
+        match (self, rhs) {
+            (lhs @ R::Expr(_), rhs @ R::Expr(_)) => Ok((lhs != rhs).into()),
+            (lhs @ R::Closure(..), rhs @ R::Closure(..)) => Ok((lhs != rhs).into()),
+            (lhs @ R::Function(..), rhs @ R::Function(..)) => Ok((lhs != rhs).into()),
+            (lhs @ R::Environment(_), rhs @ R::Environment(_)) => Ok((lhs != rhs).into()),
+            (lhs, rhs) => match (lhs.as_vector()?, rhs.as_vector()?) {
+                (R::Vector(l), R::Vector(r)) => Ok(R::Vector(l.vec_neq(r))),
+                _ => unreachable!(),
+            }
         }
     }
 }
@@ -591,6 +626,20 @@ pub struct Environment {
 }
 
 impl Environment {
+    pub fn from_builtins() -> Rc<Environment> {
+        let env = Rc::new(Environment::default());
+        for (name, builtin) in BUILTIN.iter() {
+            let builtin_fn = R::Function(
+                ExprList::new(), 
+                Expr::Primitive(builtin.clone()), 
+                env.clone()
+            );
+
+            env.insert(String::from(*name), builtin_fn);
+        };
+        env
+    }
+
     pub fn insert(&self, name: String, value: R) {
         self.values.borrow_mut().insert(name, value);
     }

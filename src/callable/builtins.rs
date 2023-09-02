@@ -40,9 +40,11 @@ lazy_static! {
             ("q", Box::new(PrimitiveQ) as Box<dyn Builtin>),
             ("c", Box::new(PrimitiveC) as Box<dyn Builtin>),
             ("callstack", Box::new(PrimitiveCallstack) as Box<dyn Builtin>),
-            ("ls", Box::new(PrimitiveLs) as Box<dyn Builtin>),
             ("rnorm", Box::new(PrimitiveRnorm) as Box<dyn Builtin>),
+            ("names", Box::new(PrimitiveNames) as Box<dyn Builtin>),
+            ("parent", Box::new(PrimitiveParent) as Box<dyn Builtin>),
             ("list", Box::new(PrimitiveList) as Box<dyn Builtin>),
+            ("environment", Box::new(PrimitiveEnvironment) as Box<dyn Builtin>),
             ("runif", Box::new(PrimitiveRunif) as Box<dyn Builtin>),
             ("paste", Box::new(PrimitivePaste) as Box<dyn Builtin>),
             // builtins end

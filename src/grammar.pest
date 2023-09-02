@@ -11,8 +11,10 @@
 
     WS_NO_NL = _{ " " | "\\t" }
     WS = _{ WS_NO_NL | NEWLINE }
+    WB = _{ eoi | !ASCII_ALPHA } // boundary
     CAPTURE_WS = { WS+ }
     eoi  = _{ !ANY }  // since EOI does not parse silently, define our own
+    
 
 // highlighting
 //
@@ -24,12 +26,14 @@
 //
 
     hl = _{ CAPTURE_WS? ~ ( hl_kws  ~ CAPTURE_WS? )* ~ eoi }
-        hl_kws = _{ hl_infix | hl_reserved | hl_control | hl_call | hl_value | hl_num | hl_sym | hl_str | hl_ops | hl_brackets | hl_other }
-        hl_control = { hl_control_kws ~ (eoi | !ASCII_ALPHA) }
+        hl_kws = _{ hl_infix | hl_reserved | hl_control | hl_call | hl_value | hl_num | hl_sym | hl_str | hl_ops | hl_brackets | hl_comment | hl_other }
+        hl_comment = { comment }
+        hl_control = { hl_control_kws ~ WB }
         hl_control_kws = _{ "if" | "else" | "for" | "while" | "repeat" | "return" }
-        hl_reserved = { hl_reserved_kws ~ (eoi | !ASCII_ALPHA) }
+        hl_reserved = { hl_reserved_kws ~ WB }
         hl_reserved_kws = _{ "function" | "fn" }
-        hl_value = { val_null | val_na | val_inf | val_true | val_false }
+        hl_value = { hl_value_kws ~ WB }
+        hl_value_kws = _{ val_null | val_na | val_inf | val_true | val_false }
         hl_call = _{ hl_callname ~ CAPTURE_WS* ~ hl_open }
         hl_callname = { hl_sym | hl_str }
         hl_sym = { hl_symbol_backticked | symbol_ident }
@@ -45,11 +49,13 @@
 
 // repl line feed parsing
 
-    repl = _{ WS* ~ expr ~ WS* ~ eoi | WS* ~ block_exprs ~ WS* ~ eoi }
+    repl = _{ WS* ~ expr ~ WS* ~ comment? ~ eoi | WS* ~ block_exprs ~ WS* ~ eoi }
 
 // expression basics
 
     expr = { atomic ~ ( WS* ~  infix ~ WS* ~ atomic )* }
+
+        comment = _{ "#" ~ ( !NEWLINE ~ !eoi ~ ANY )* }
 
         atomic = _{ prefixed }
             prefixed = { prefix* ~ postfixed }
@@ -105,7 +111,7 @@
 
         block  = _{ "{" ~ WS* ~ block_exprs ~ WS* ~ "}" }
             block_exprs = { WS* ~ expr? ~ ( block_sep ~ expr? )* ~ WS* }
-            block_sep = _{ WS_NO_NL* ~ ( ";" | NEWLINE ) ~ WS* }
+            block_sep = _{ WS_NO_NL* ~ ( ";" | comment? ~ NEWLINE ) ~ WS* }
 
         paren_expr = _{ "(" ~ WS* ~ expr ~ WS* ~ ")" }
 
@@ -145,11 +151,11 @@
 
 // reserved value (val) types
 
-    val_null = { "NULL" | "null" }
-    val_na = { "NA" | "na" }
-    val_inf = { "Inf" | "inf" }
-    val_true = { "TRUE" | "true" }
-    val_false = { "FALSE" | "false" }
+    val_null = { ( "NULL" | "null" ) ~ WB }
+    val_na = { ( "NA" | "na" ) ~ WB }
+    val_inf = { ( "Inf" | "inf" ) ~ WB }
+    val_true = { ( "TRUE" | "true" ) ~ WB }
+    val_false = { ( "FALSE" | "false" ) ~ WB }
 
 // atomic value types
 

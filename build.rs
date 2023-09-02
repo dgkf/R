@@ -86,12 +86,35 @@ fn update_builtins_table(path: String, builtins: Vec<(String, String)>) -> Resul
     Ok(())
 }
 
-fn main() -> Result<(), ()> {
-    println!("cargo:rerun-if-changed=build.rs");
-    println!("cargo:rerun-if-changed=src/callable");
+fn git_hash() -> String {
+    use std::process::Command;
+    let unknown = String::from("unknown");
 
+    let changes = !Command::new("git")
+        .args(&["diff", "--cached", "--exit-code"])
+        .status()
+        .expect("Error encountered while checking for git changes")
+        .success();
+
+    if changes { return unknown }
+
+    Command::new("git")
+        .arg("rev-parse")
+        .arg("--verify")
+        .arg("HEAD")
+        .output()
+        .map_or(Ok(unknown), |o| String::from_utf8(o.stdout))
+        .expect("Error encountered while reading it output")
+}
+
+fn main() -> Result<(), ()> {
+    // embed git hash as environment variable GIT_SHA for use in header
+    println!("cargo:rustc-env=GIT_HASH={}", git_hash());
+    
     // iterate through callable module files and scan for uses of 
     // `#[builtin(.. sym = "sym" ..)]`
+    println!("cargo:rerun-if-changed=build.rs");
+    println!("cargo:rerun-if-changed=src/callable");
     let builtins = scrape_builtins("src/callable".into())?;    
     update_builtins_table("src/callable/builtins.rs".into(), builtins)?;
 

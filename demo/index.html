@@ -269,11 +269,10 @@
     <script type="module">
       import init, * as r from "./pkg/r.js";
       window.r = await init().then(() => { 
-        let header = r.wasm_session_header() + (r.GIT_SHA_SHORT ? " (dev " + r.GIT_SHA_SHORT + ")" : "");
-        push_history("output", header);
+        push_history("output", r.wasm_session_header());
         return {
           "eval": r.wasm_env(),
-          "header": header,
+          "header": r.wasm_session_header(),
           "validate": r.wasm_parses_successfully,
           "history": {
             "log": [],
@@ -287,15 +286,16 @@
       addEventListener("DOMContentLoaded", (event) => {
         let prompt = document.getElementById("prompt");
         prompt.addEventListener("keydown", prompt_input);
+        prompt_resize();
       });
 
       function prompt_input(event) {
         if (event.key == "ArrowUp" && event.target.selectionStart <= 0) {
           r.history.selected = ((r.history.selected || 0) + 1) % r.history.log.length;
-          return set_prompt(r.history.log[r.history.selected]);
+          return prompt_set(r.history.log[r.history.selected]);
         } else if (event.key == "ArrowDown" && event.target.selectionEnd >= event.target.value.length) {
           r.history.selected = (r.history.log.length + (r.history.selected || 0) - 1) % r.history.log.length;
-          return set_prompt(r.history.log[r.history.selected]);
+          return prompt_set(r.history.log[r.history.selected]);
         }
 
         // possibly submit code
@@ -372,7 +372,7 @@
 
         // read code and print to history
         let code = prompt.value;
-        if (!code.trim()) { return clear_prompt(); }
+        if (!code.trim()) { return prompt_clear(); }
 
         r.history.log.push(code);
         let input = push_history("input", code);
@@ -389,25 +389,29 @@
         }
 
         // clear prompt & restore focus
-        clear_prompt();
-
-        // // reset any resizing
-        // prompt.rows = 1;
-        // prompt.style = '';
+        prompt_clear();
       }
 
-      function clear_prompt() {
+      function prompt() {
+        document.getElementById("prompt"); 
+      }
+
+      function prompt_clear() {
         r.history.log.selected = null;
-        let prompt = document.getElementById("prompt");
+        let prompt = prompt();
         prompt.value = '';     
         prompt.rows = 1;
         prompt.focus();
       }
 
-      function set_prompt(input) {
+      function prompt_set(input) {
+        let prompt = prompt();
+        resize_prompt();
+      }
+
+      function prompt_resize() {
         let prompt = document.getElementById("prompt")
-        prompt.value = input;
-        prompt.rows = prompt.value.split("\n").length;
+        prompt.rows = prompt.value.split("\n").length;       
       }
 
       function clear_history() {
@@ -463,7 +467,8 @@
         </div>
         <textarea id="prompt" name="prompt" cols="40" rows="1" 
           spellcheck="false" autocorrect="off" autocomplete="off" autocapitalize="none"
-        >paste("Hello", "World!", sep = ", ")</textarea>
+># check out the progress so far!
+names(parent(environment()))</textarea>
         <div class="flex-row">
           <div class="btn clear" onclick="clear_history()">clear</div>
           <div class = "btn-group">
