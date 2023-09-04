@@ -32,15 +32,16 @@
 
 use std::cell::RefCell;
 use std::fmt::{Debug, Display};
-use std::ops::{Add, Range};
+use std::ops::Range;
 use std::rc::Rc;
 
 /// Atomic 
 ///
-/// Intended to be a generic trait for all vectors, encompassing all 
-/// basic operator behaviors.
+/// Intended to be a generic trait for all vector-able elements. Ideally
+/// would encompass things like coercion traits and operator implementations.
+/// For now just requires Clone.
 /// 
-pub trait Atomic: Clone + Add {}
+pub trait Atomic: Clone {}
 impl Atomic for i32 {}
 
 /// Vector
@@ -154,7 +155,7 @@ impl IntoIterator for Subsets {
         let mut iter = Box::new((0_usize..).into_iter()) as Self::IntoIter;
         for subset in subsets {
             match subset {
-                Subset::Indices(mut i) => {
+                Subset::Indices(i) => {
                     // fasttest case, when no indices are selected
                     if i.len() == 0 {
                         return Box::new((0..0).into_iter());
@@ -164,23 +165,26 @@ impl IntoIterator for Subsets {
                         iter = Box::new(iter.skip(i[0]).take(1));
                         
                     // fast case, when indices are already sorted
-                    } else if i.windows(2).all(|w| w[0] < w[1]) {
-                        i.insert(0, 0);
-                        let mut diffs = i.windows(2).map(|w| w[1] - w[2]);
-                        loop {
-                            let Some(diff) = diffs.next() else {
-                                break
-                            };
-                            
-                            if diff > 1 {
-                                iter = Box::new(iter.skip(diff - 1));
-                            }
+                    } else if i.windows(2).all(|w| w[0] <= w[1]) {
+                        // when sorted, we can keep our existing iterator and
+                        // embed the indices, scanning along the iterator
+                        // and yielding indices as they are encountered
+                        iter = Box::new(
+                            iter.enumerate().scan((i, 0), |(indices, i), (xi, x)| -> Option<Vec<usize>> {
+                                if *i >= indices.len() { 
+                                    return None
+                                }
 
-                            if let Some(n) = diffs.position(|diff| diff != 1) {
-                                diffs.nth(n.saturating_sub(1));
-                                iter = Box::new(iter.take(n));
-                            }
-                        }
+                                let mut n = 0;
+                                while *i < indices.len() && (*indices)[*i] == xi {
+                                    n += 1;
+                                    *i += 1;
+                                };
+
+                                return Some(vec![x; n])
+                            })
+                            .flat_map(|i| i)
+                        )
 
                     // worst case, indices in random order
                     } else {
@@ -254,18 +258,108 @@ impl From<Vec<usize>> for Subset {
 
 fn main() {
     // print out equivalent R code to mock up an interface
+    println!("R 0.v.0 (fake R)");
 
-    let x: Vector<_> = vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10].into();
+    let x: Vector<_> = (1..=10).into_iter().collect::<Vec<_>>().into();
     let y: Vector<_> = vec![10, 9].into();
     println!("> x <- {}", x);
-    println!("> y <- {}", y);
+    println!("> y <- {}\n> ", y);
+
+    // subset x by some indices
+    let x_subset_1 = x.subset(2..8).subset(vec![1, 2, 4]);
+    println!("> # range and (ordered) vector indexing\n> x[3:8][c(2, 3, 5)]\n{}\n> ", x_subset_1);
 
     // subset x by some indices
     let x_subset = x.subset(2..8).subset(vec![4, 2, 2]);
-    println!("> x[3:8][c(5, 3, 3)]\n{}", x_subset);
+    println!("> # out-of-order indices\n> x[3:8][c(5, 3, 3)]\n{}\n> ", x_subset);
 
     // modify
     x_subset.assign(y);
-    println!("x[3:8][c(5, 3)] <- y");
+    println!("> x[3:8][c(5, 3)] <- y");
     println!("> x\n{}", x);
+}
+
+#[cfg(test)]
+ mod test {
+    use super::*;
+
+    #[test]
+    fn subset_range() {
+        let x: Vector<_> = (1..=10).into_iter().collect::<Vec<_>>().into();
+        let Vector::Subset(res, _) = x.subset(2..6).materialize();
+        assert_eq!(res.clone().borrow().to_owned(), vec![3, 4, 5, 6])
+    }
+
+    #[test]
+    fn subset_sequential_indices() {
+        let x: Vector<_> = (1..=10).into_iter().collect::<Vec<_>>().into();
+        let Vector::Subset(res, _) = x.subset(vec![2, 3, 4, 5]).materialize();
+        assert_eq!(res.clone().borrow().to_owned(), vec![3, 4, 5, 6])
+    }
+
+    #[test]
+    fn subset_sequential_repeating_indices() {
+        let x: Vector<_> = (1..=10).into_iter().collect::<Vec<_>>().into();
+        let Vector::Subset(res, _) = x.subset(vec![2, 3, 3, 3, 5, 5]).materialize();
+        assert_eq!(res.clone().borrow().to_owned(), vec![3, 4, 4, 4, 6, 6])
+    }
+
+    #[test]
+    fn subset_indices_with_gap() {
+        let x: Vector<_> = (1..=10).into_iter().collect::<Vec<_>>().into();
+        let Vector::Subset(res, _) = x.subset(vec![2, 8]).materialize();
+        assert_eq!(res.clone().borrow().to_owned(), vec![3, 9])
+    }
+
+    #[test]
+    fn subset_empty_indices() {
+        let x: Vector<_> = (1..=10).into_iter().collect::<Vec<_>>().into();
+        let Vector::Subset(res, _) = x.subset(vec![]).materialize();
+        assert_eq!(res.clone().borrow().to_owned(), vec![])
+    }
+
+    #[test]
+    fn subset_single_index() {
+        let x: Vector<_> = (1..=10).into_iter().collect::<Vec<_>>().into();
+        let Vector::Subset(res, _) = x.subset(vec![6]).materialize();
+        assert_eq!(res.clone().borrow().to_owned(), vec![7])
+    }
+
+    #[test]
+    fn subset_unsorted_indices() {
+        let x: Vector<_> = (1..=10).into_iter().collect::<Vec<_>>().into();
+        let Vector::Subset(res, _) = x.subset(vec![6, 2, 1, 4]).materialize();
+        assert_eq!(res.clone().borrow().to_owned(), vec![7, 3, 2, 5])
+    }
+
+    #[test]
+    fn subset_repeated_indices() {
+        let x: Vector<_> = (1..=10).into_iter().collect::<Vec<_>>().into();
+        let Vector::Subset(res, _) = x.subset(vec![6, 2, 6, 6]).materialize();
+        assert_eq!(res.clone().borrow().to_owned(), vec![7, 3, 7, 7])
+    }
+
+    #[test]
+    fn subset_by_range() {
+        let x: Vector<_> = (1..=10).into_iter().collect::<Vec<_>>().into();
+        let Vector::Subset(res, _) = x.subset(3..6).materialize();
+        assert_eq!(res.clone().borrow().to_owned(), vec![4, 5, 6])
+    }
+
+    #[test]
+    fn nested_subsets() {
+        let x: Vector<_> = (1..=10).into_iter().collect::<Vec<_>>().into();
+        let Vector::Subset(res, _) = x.subset(3..6).subset(vec![2, 1]).materialize();
+        assert_eq!(res.clone().borrow().to_owned(), vec![6, 5])
+    }
+
+    #[test]
+    fn subset_assignment() {
+        let x: Vector<_> = (1..=10).into_iter().collect::<Vec<_>>().into();
+        let subset = x.subset(3..6).subset(vec![2, 1]);
+        let y: Vector<_> = vec![101, 102].into();
+        subset.assign(y);
+        let Vector::Subset(x_modified, _) = x;
+        assert_eq!(x_modified.clone().borrow().to_owned(), vec![1, 2, 3, 4, 102, 101, 7, 8, 9, 10])
+    }
 }
