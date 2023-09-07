@@ -1,4 +1,4 @@
-use super::{IntoNumeric, CommonNum};
+use super::{CommonNum, AsMinimallyNumeric};
 
 /// Zip iterators into recycling vectors, extending to longest length
 ///
@@ -49,12 +49,12 @@ where
     // iterator over pairs of items
     I: Iterator<Item = (LItem, RItem)> + 'a,
     // and item should be coercible to numeric
-    LItem: IntoNumeric<Output = LNum> + 'a, LNum: 'a,
-    RItem: IntoNumeric<Output = RNum> + 'a, RNum: 'a,
+    LItem: AsMinimallyNumeric<As = LNum> + 'a, LNum: 'a,
+    RItem: AsMinimallyNumeric<As = RNum> + 'a, RNum: 'a,
     // and those numerics should be coercible to a common numeric
     (LNum, RNum): CommonNum<Common = Output> + 'a,
 {
-   i.map(|(l, r)| (LItem::as_numeric(l), RItem::as_numeric(r)).as_common())
+   i.map(|(l, r)| (LItem::as_minimally_numeric(l), RItem::as_minimally_numeric(r)).as_common())
 }
 
 #[cfg(test)]

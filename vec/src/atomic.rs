@@ -8,8 +8,7 @@ use super::coercion::*;
 pub trait Atomic: 
     Clone + 
     NaAble + 
-    IntoLogical + 
-    IntoNumeric + 
+    AsMinimallyNumeric + 
     AtomicMode {}
 
 pub trait AtomicMode {
@@ -19,17 +18,17 @@ pub trait AtomicMode {
     fn is_character() -> bool { false }
 }
 
-pub trait IntoAtomic {
-    type Output;
-    fn into(self) -> Self::Output;
+pub trait IntoAtomic: CoerceInto<Self::Atom> + Sized {
+    type Atom;
+    fn atomic(self) -> Self::Atom {
+        self.coerce()
+    }
 }
 
 impl<T> IntoAtomic for T 
 where
     T: Atomic,
+    T: CoerceInto<T>,
 {
-    type Output = T;
-    fn into(self) -> Self::Output {
-        self
-    }
+    type Atom = T;
 }

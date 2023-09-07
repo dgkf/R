@@ -9,14 +9,14 @@ pub use option_na::*;
 mod na_able;
 pub use na_able::*;
 
-mod into_logical;
-pub use into_logical::*;
-
-mod into_numeric;
-pub use into_numeric::*;
+mod into;
+pub use into::*;
 
 mod common_num;
 pub use common_num::*;
+
+mod common_cmp;
+pub use common_cmp::*;
 
 mod map_common;
 pub use map_common::*;

@@ -1,183 +1,52 @@
 use crate::atomic::{AtomicMode, IntoAtomic};
-use crate::coercion::{OptionNa, IntoNaAble, IntoLogical, IntoNumeric};
+use crate::coercion::{OptionNa, AsMinimallyNumeric, Pow};
 
-
-impl AtomicMode for i8 { 
-    fn is_integer() -> bool { 
-        true 
-    } 
-}
-
-impl IntoAtomic for i8 {
-    type Output = OptionNa<i8>;
-    fn into(self) -> Self::Output {
-        OptionNa(Some(self))
+impl AsMinimallyNumeric for i8 { type As = Self; }
+impl IntoAtomic for i8 { type Atom = OptionNa<Self>; }
+impl AtomicMode for i8 { fn is_integer() -> bool { true } }
+impl Pow for i8 {
+    type Output = f32;
+    fn power(self, rhs: Self) -> Self::Output {
+        f32::powf(self as f32, rhs as f32)
     }
 }
 
-impl IntoNaAble for i8 {
-    type Output = OptionNa<i8>;
-    fn into(self) -> Self::Output {
-        OptionNa(Some(self))
+impl AsMinimallyNumeric for i16 { type As = Self; }
+impl IntoAtomic for i16 { type Atom = OptionNa<Self>; }
+impl AtomicMode for i16 { fn is_integer() -> bool { true } }
+impl Pow for i16 {
+    type Output = f32;
+    fn power(self, rhs: Self) -> Self::Output {
+        f32::powf(self as f32, rhs as f32)
     }
 }
 
-impl IntoLogical for i8 {
-    type Output = bool;
-    fn as_logical(self) -> bool {
-        match self {
-            0 => false,
-            _ => true,
-        }
+impl AsMinimallyNumeric for i32 { type As = Self; }
+impl IntoAtomic for i32 { type Atom = OptionNa<Self>; }
+impl AtomicMode for i32 { fn is_integer() -> bool { true } }
+impl Pow for i32 {
+    type Output = f64;
+    fn power(self, rhs: Self) -> Self::Output {
+        f64::powf(self as f64, rhs as f64)
     }
 }
 
-
-
-impl AtomicMode for i16 { 
-    fn is_integer() -> bool { 
-        true
+impl AsMinimallyNumeric for i64 { type As = Self; }
+impl IntoAtomic for i64 { type Atom = OptionNa<Self>; }
+impl AtomicMode for i64 { fn is_integer() -> bool { true } }
+impl Pow for i64 {
+    type Output = f64;
+    fn power(self, rhs: Self) -> Self::Output {
+        f64::powf(self as f64, rhs as f64)
     }
 }
 
-impl IntoAtomic for i16 {
-    type Output = OptionNa<i16>;
-    fn into(self) -> Self::Output {
-        OptionNa(Some(self))
+impl AsMinimallyNumeric for i128 { type As = Self; }
+impl IntoAtomic for i128 { type Atom = OptionNa<Self>; }
+impl AtomicMode for i128 { fn is_integer() -> bool { true } }
+impl Pow for i128 {
+    type Output = f64;
+    fn power(self, rhs: Self) -> Self::Output {
+        f64::powf(self as f64, rhs as f64)
     }
 }
-
-impl IntoNaAble for i16 {
-    type Output = OptionNa<i16>;
-    fn into(self) -> Self::Output {
-        OptionNa(Some(self))
-    }
-}
-
-impl IntoLogical for i16 {
-    type Output = bool;
-    fn as_logical(self) -> bool {
-        match self {
-            0 => false,
-            _ => true,
-        }
-    }
-}
-
-
-
-impl AtomicMode for i32 {
-    fn is_integer() -> bool {
-        true
-    }
-}
-
-impl IntoAtomic for i32 {
-    type Output = OptionNa<i32>;
-    fn into(self) -> Self::Output {
-        OptionNa(Some(self))
-    }
-}
-
-impl IntoNaAble for i32 {
-    type Output = OptionNa<i32>;
-    fn into(self) -> Self::Output {
-        OptionNa(Some(self))
-    }
-}
-
-impl IntoLogical for i32 {
-    type Output = bool;
-    fn as_logical(self) -> bool {
-        match self {
-            0 => false,
-            _ => true,
-        }
-    }
-}
-
-impl IntoNumeric for i32 {
-    type Output = i32;
-    fn as_numeric(self) -> Self::Output {
-        self
-    }
-}
-
-
-
-impl AtomicMode for i64 {
-    fn is_integer() -> bool {
-        true
-    }
-}
-
-impl IntoAtomic for i64 {
-    type Output = OptionNa<i64>;
-    fn into(self) -> Self::Output {
-        OptionNa(Some(self))
-    }
-}
-
-impl IntoNaAble for i64 {
-    type Output = OptionNa<i64>;
-    fn into(self) -> Self::Output {
-        OptionNa(Some(self))
-    }
-}
-
-impl IntoLogical for i64 {
-    type Output = bool;
-    fn as_logical(self) -> bool {
-        match self {
-            0 => false,
-            _ => true,
-        }
-    }
-}
-
-impl IntoNumeric for i64 {
-    type Output = i64;
-    fn as_numeric(self) -> Self::Output {
-        self
-    }
-}
-
-
-
-impl AtomicMode for i128 {
-    fn is_integer() -> bool {
-        true
-    }
-}
-
-impl IntoAtomic for i128 {
-    type Output = OptionNa<i128>;
-    fn into(self) -> Self::Output {
-        OptionNa(Some(self))
-    }
-}
-
-impl IntoNaAble for i128 {
-    type Output = OptionNa<i128>;
-    fn into(self) -> Self::Output {
-        OptionNa(Some(self))
-    }
-}
-
-impl IntoLogical for i128 {
-    type Output = bool;
-    fn as_logical(self) -> bool {
-        match self {
-            0 => false,
-            _ => true,
-        }
-    }
-}
-
-impl IntoNumeric for i128 {
-    type Output = i128;
-    fn as_numeric(self) -> Self::Output {
-        self
-    }
-}
-

@@ -6,6 +6,21 @@ pub enum Subset {
     Range(Range<usize>)
 }
 
+impl Subset {
+    fn get_index_at(&self, index: usize) -> Option<usize> {
+        match self {
+            Subset::Indices(indices) => indices.get(index).map(|i| *i),
+            Subset::Range(range) => {
+                if range.start <= index && index < range.end {
+                    return Some(range.start + index)
+                } else {
+                    return None
+                }
+            },
+        }
+    }
+}
+
 impl From<usize> for Subset {
     fn from(value: usize) -> Self {
         Subset::Indices(vec![value])
@@ -28,8 +43,24 @@ impl From<Vec<usize>> for Subset {
 pub struct Subsets(pub Vec<Subset>);
 
 impl Subsets {
-    pub fn new<T>() {
-        Subsets(Vec::new());
+    pub fn new() -> Self {
+        Subsets(Vec::new())
+    }
+
+    /// Get the raw index of a index applied to a subset
+    ///
+    /// Provided a vector with multiple subsets applied, determine which 
+    /// original index corresponds with the index applied to the subset.
+    ///
+    pub fn get_index_at(&self, mut index: usize) -> Option<usize> {
+        let Subsets(subsets) = self;
+        for subset in subsets.into_iter().rev() {
+            match subset.get_index_at(index) {
+                Some(i) => index = i,
+                None => return None,              
+            }
+        }
+        Some(index)
     }
 
     pub fn push<T>(self, subset: T) 

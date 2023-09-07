@@ -36,7 +36,8 @@
 
 #![allow(dead_code)]
 
-mod atomic;
+pub mod utils;
+pub mod atomic;
 pub mod types;
 pub mod coercion;
 pub mod vector;
