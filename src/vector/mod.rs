@@ -1,9 +1,18 @@
-/// R Vectors module
-///
-/// This module is for handling of vectorized operators in R. All the numeric
-/// coercion is handled within rust's type system. It is pretty faithful to
-/// R's vector types, but there is room for improvement.
-///
+//! Vectors
+//!
+//! This module implements a generic vector interface for operating on data
+//! in vector representations. Most notably, it provides implicit 
+//! "duck-typing" for vector operations and implementations for all mathematical,
+//! logical and comparison operators.
+//! 
+//! Internally, vectors can take different representations, allowing more
+//! efficient ways of representing or generating their contents. 
+//!
+mod vector;
+pub use vector::*;
+
+pub mod utils;
+pub mod types;
 pub mod coercion;
-pub mod iterators;
-pub mod vectors;
+pub mod rep;
+pub mod vecops;

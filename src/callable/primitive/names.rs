@@ -3,7 +3,7 @@ use r_derive::*;
 use crate::ast::*;
 use crate::lang::*;
 use crate::callable::core::*;
-use crate::vector::vectors::OptionNA;
+use crate::vector::types::OptionNa;
 
 #[derive(Debug, Clone, PartialEq)]
 #[builtin(sym = "names")]
@@ -28,10 +28,10 @@ impl Callable for PrimitiveNames{
             List(x) => {
                 Ok(x.iter()
                     .map(|(k, _)| match k {
-                        Some(name) => OptionNA::Some(name.clone()),
-                        None => OptionNA::NA,  // unlike R, unnamed elements are NAs
+                        Some(name) => OptionNa(Some(name.clone())),
+                        None => OptionNa(None),  // unlike R, unnamed elements are NAs
                     })
-                    .collect::<Vec<OptionNA<String>>>()
+                    .collect::<Vec<OptionNa<String>>>()
                     .into())
             },
             Environment(e) => {

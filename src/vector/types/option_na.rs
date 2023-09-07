@@ -1,7 +1,11 @@
 use std::fmt::Display;
 
-use crate::atomic::{Atomic, AtomicMode, IntoAtomic};
-use super::{NaAble, AsMinimallyNumeric, CoerceInto};
+use crate::vector::coercion::CoerceInto;
+use crate::vector::vecops::Pow;
+
+use super::atomic::{Atomic, AtomicMode, IntoAtomic};
+use super::modes::AsMinimallyNumeric;
+use super::NaAble;
 
 
 /// OptionNa Types
@@ -95,18 +99,16 @@ impl<T> AtomicMode for OptionNa<T>
 where
     T: AtomicMode
 {
-    fn is_numeric() -> bool { T::is_numeric() }
-    fn is_logical() -> bool { T::is_logical() }
-    fn is_integer() -> bool { T::is_integer() }
-    fn is_character() -> bool { T::is_character() }
+    fn is_numeric(&self) -> bool { self.is_numeric() }
+    fn is_logical(&self) -> bool { self.is_logical() }
+    fn is_integer(&self) -> bool { self.is_integer() }
+    fn is_character(&self) -> bool { self.is_character() }
 }
 
 impl<T> NaAble for OptionNa<T> 
 where
     T: Default
 {
-    type From = T;
-
     #[inline]
     fn na() -> Self {
         OptionNa(None)
@@ -119,7 +121,7 @@ where
     }
 
     #[inline]
-    fn inner(self) -> Self::From {
+    fn inner(self) -> T {
         let OptionNa(x) = self;
         match x {
             Some(i) => i,
@@ -190,13 +192,6 @@ where
         self.map2(rhs, |l, r| l / r)
     }
 }
-
-pub trait Pow {
-    type Output;
-    /// raise self to the rhs power
-    fn power(self, rhs: Self) -> Self::Output;
-}
-
 
 impl<T> Pow for OptionNa<T>
 where

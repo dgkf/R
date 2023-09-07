@@ -1,4 +1,5 @@
-use super::{CommonNum, AsMinimallyNumeric};
+use crate::vector::types::modes::AsMinimallyNumeric;
+use super::CommonNum;
 
 /// Zip iterators into recycling vectors, extending to longest length
 ///

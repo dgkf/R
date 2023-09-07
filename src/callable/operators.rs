@@ -3,7 +3,8 @@ use r_derive::*;
 use crate::ast::*;
 use crate::error::RError;
 use crate::lang::{CallStack, EvalResult, Context, R};
-use crate::vector::vectors::*;
+use crate::vector::Vector;
+use crate::vector::types::OptionNa;
 use super::core::*;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -114,7 +115,7 @@ impl Callable for InfixOr {
             (R::Vector(l), R::Vector(r)) => {
                 let Ok(lhs) = l.try_into() else { todo!() };
                 let Ok(rhs) = r.try_into() else { todo!() };
-                R::Vector(Vector::Logical(vec![OptionNA::Some(lhs || rhs)]))
+                R::Vector(Vector::from(vec![OptionNa(Some(lhs || rhs))]))
             }
             _ => R::Null,
         };
@@ -133,7 +134,7 @@ impl Callable for InfixAnd {
             (R::Vector(l), R::Vector(r)) => {
                 let Ok(lhs) = l.try_into() else { todo!() };
                 let Ok(rhs) = r.try_into() else { todo!() };
-                R::Vector(Vector::Logical(vec![OptionNA::Some(lhs && rhs)]))
+                R::Vector(Vector::from(vec![OptionNa(Some(lhs && rhs))]))
             }
             _ => R::Null,
         };

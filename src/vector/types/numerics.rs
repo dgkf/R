@@ -1,5 +1,8 @@
-use crate::atomic::{Atomic, AtomicMode};
-use crate::coercion::{NaAble, AsMinimallyNumeric, Pow};
+use crate::vector::vecops::Pow;
+
+use super::atomic::{Atomic, AtomicMode};
+use super::modes::AsMinimallyNumeric;
+use super::NaAble;
 
 
 impl Atomic for f32 {}
@@ -18,8 +21,7 @@ impl Pow for f32 {
 }
 
 impl NaAble for f32 {
-    type From = f32;
-    fn inner(self) -> Self::From { self }
+    fn inner(self) -> f32 { self }
     fn is_na(&self) -> bool { f32::is_nan(*self) }
     fn na() -> Self { std::f32::NAN }
 }
@@ -34,8 +36,7 @@ impl AtomicMode for f64 {
 }
 
 impl NaAble for f64 {
-    type From = f64;
-    fn inner(self) -> Self::From { self }
+    fn inner(self) -> f64 { self }
     fn is_na(&self) -> bool { f64::is_nan(*self) }
     fn na() -> Self { std::f64::NAN }
 }

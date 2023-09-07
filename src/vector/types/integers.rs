@@ -1,5 +1,7 @@
-use crate::atomic::{AtomicMode, IntoAtomic};
-use crate::coercion::{OptionNa, AsMinimallyNumeric, Pow};
+use crate::vector::vecops::Pow;
+use super::modes::AsMinimallyNumeric;
+use super::atomic::{IntoAtomic, AtomicMode};
+use super::OptionNa;
 
 impl AsMinimallyNumeric for i8 { type As = Self; }
 impl IntoAtomic for i8 { type Atom = OptionNa<Self>; }

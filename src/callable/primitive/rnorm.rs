@@ -5,7 +5,7 @@ use crate::ast::*;
 use crate::error::RError;
 use crate::lang::*;
 use crate::callable::core::*;
-use crate::vector::vectors::Vector;
+use crate::vector::Vector;
 
 #[derive(Debug, Clone, PartialEq)]
 #[builtin(sym = "rnorm")]

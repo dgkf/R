@@ -2,8 +2,9 @@ use r_derive::*;
 
 use crate::ast::*;
 use crate::lang::*;
-use crate::vector::vectors::*;
+use crate::vector::*;
 use crate::callable::core::*;
+use crate::vector::types::OptionNa;
 
 #[derive(Debug, Clone, PartialEq)]
 #[builtin(sym = "c")]
@@ -37,7 +38,7 @@ impl Callable for PrimitiveC {
             0 => Ok(R::Null),
             // Coerce everything into logical
             1 => {
-                let mut output = vec![OptionNA::Some(true); 0];
+                let mut output = vec![OptionNa(Some(true)); 0];
                 for (_, val) in vals {
                     match val {
                         R::Null => continue,
@@ -49,7 +50,7 @@ impl Callable for PrimitiveC {
             }
             // Coerce everything into integer
             2 => {
-                let mut output = vec![OptionNA::Some(0); 0];
+                let mut output = vec![OptionNa(Some(0)); 0];
                 for (_, val) in vals {
                     match val {
                         R::Null => continue,
@@ -64,7 +65,7 @@ impl Callable for PrimitiveC {
             }
             // Coerce everything into numeric
             3 => {
-                let mut output = vec![OptionNA::Some(0.0); 0];
+                let mut output = vec![OptionNa(Some(0.0)); 0];
                 for (_, val) in vals {
                     match val {
                         R::Null => continue,
@@ -82,7 +83,7 @@ impl Callable for PrimitiveC {
             }
             // coerce everything into strings
             4 => {
-                let mut output = vec![OptionNA::Some("".to_string()); 0];
+                let mut output = vec![OptionNa(Some("".to_string())); 0];
                 for (_, val) in vals {
                     match val {
                         R::Null => continue,

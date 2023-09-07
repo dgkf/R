@@ -2,7 +2,9 @@ use crate::ast::*;
 use crate::callable::builtins::BUILTIN;
 use crate::error::*;
 use crate::callable::core::{Callable, builtin};
-use crate::vector::vectors::*;
+use crate::vector::*;
+use crate::vector::types::atomic::{Atomic, IntoAtomic};
+use crate::vector::vecops::VecPartialCmp;
 
 use core::fmt;
 use std::fmt::Display;
@@ -14,7 +16,7 @@ pub type EvalResult = Result<R, RSignal>;
 pub enum R {
     // Data structures
     Null,
-    Vector(Vector),
+    Vector(dyn Vector),
     List(List),
 
     // Metaprogramming structures
@@ -59,25 +61,28 @@ impl PartialEq for R {
 impl TryInto<i32> for R {
     type Error = RSignal;
     fn try_into(self) -> Result<i32, Self::Error> {
+        use crate::vector::types::OptionNa;
         use RError::CannotBeCoercedToInteger;
 
-        let R::Vector(Vector::Integer(v)) = self.as_integer()? else {
+        let R::Vector(v) = self else {
             unreachable!();            
         };
 
-        match v[..] {
-            [OptionNA::Some(i), ..] => Ok(i),
+        match v.get(0)?.as_integer() {
+            [OptionNa(Some(i)), ..] => Ok(i),
             _ => Err(CannotBeCoercedToInteger.into()),
         }
     }
 }
 
-impl<T> From<T> for R
+impl<T, V> From<T> for R 
 where
-    Vector: From<T>
+    T: IntoAtomic<Atom = V>,
+    V: Atomic,
+    Vector<V>: From<T>,
 {
-    fn from(value: T) -> Self {
-        R::Vector(Vector::from(value))
+    fn from(value: T) -> R {
+        R::Vector(Vector::<V>::from(value))
     }
 }
 
@@ -86,28 +91,27 @@ impl TryInto<f64> for R {
     fn try_into(self) -> Result<f64, Self::Error> {
         use RError::CannotBeCoercedToNumeric;
 
-        let R::Vector(Vector::Numeric(v)) = self.as_numeric()? else {
+        let R::Vector(v) = self else {
             unreachable!();            
         };
 
-        match v[..] {
-            [OptionNA::Some(i), ..] => Ok(i),
-            _ => Err(CannotBeCoercedToNumeric.into()),
-        }
+        v.get(0)?.as_numeric()
     }
 }
 
-impl TryInto<Vec<f64>> for R {
+impl  TryInto<Vec<f64>> for R {
     type Error = RSignal;
     fn try_into(self) -> Result<Vec<f64>, Self::Error> {
+        use crate::vector::types::OptionNa;
+
         let R::Vector(Vector::Numeric(v)) = self.as_numeric()? else {
             unreachable!();            
         };
 
         Ok(v.iter()
             .map(|vi| match vi {
-                OptionNA::Some(i) => *i,
-                OptionNA::NA => f64::NAN,
+                OptionNa(Some(i)) => *i,
+                OptionNa(None) => f64::NAN,
             })
             .collect())
     }
@@ -138,7 +142,7 @@ impl Display for RSignal {
     }
 }
 
-impl R {
+impl  R {
     pub fn force(self, stack: &mut CallStack) -> EvalResult {
         match self {
             R::Closure(expr, env) => {
@@ -191,24 +195,8 @@ impl R {
     }
 
     pub fn into_usize(&self) -> Result<usize, RSignal> {
-        use OptionNA::*;
-        use Vector::*;
         match self {
-            R::Vector(rvec) => match rvec {
-                Numeric(v) => match v[..] {
-                    [Some(x)] => Ok(x as usize),
-                    _ => Err(RSignal::Error(RError::CannotBeCoercedToInteger)),
-                },
-                Integer(v) => match v[..] {
-                    [Some(x)] => Ok(x as usize),
-                    _ => Err(RSignal::Error(RError::CannotBeCoercedToInteger)),
-                },
-                Logical(v) => match v[..] {
-                    [Some(true)] => Ok(1 as usize),
-                    _ => Err(RSignal::Error(RError::CannotBeCoercedToInteger)),
-                },
-                _ => Err(RSignal::Error(RError::CannotBeCoercedToInteger)),
-            },
+            R::Vector(rvec) => rvec.get(0)?.try_into(),
             _ => todo!(), // emit an appropriate error message
         }
     }
@@ -431,7 +419,7 @@ impl std::ops::Div for R {
     }
 }
 
-impl super::vector::vectors::Pow for R {
+impl crate::vector::vecops::Pow for R {
     type Output = EvalResult;
 
     fn power(self, rhs: Self) -> Self::Output {
@@ -475,24 +463,8 @@ impl std::ops::BitAnd for R {
     }
 }
 
-impl VecPartialCmp for R {
-    type CmpOutput = Vec<Option<std::cmp::Ordering>>;
+impl VecPartialCmp<R> for R {
     type Output = EvalResult;
-
-    fn vec_partial_cmp(self, rhs: Self) -> Self::CmpOutput {
-        let Ok(sv) = self.as_vector() else {
-            unimplemented!()
-        };
-
-        let Ok(rv) = rhs.as_vector() else {
-            unimplemented!()
-        };
-
-        match (sv, rv) {
-            (R::Vector(l), R::Vector(r)) => l.vec_partial_cmp(r),
-            _ => unimplemented!(),
-        }
-    }
 
     fn vec_gt(self, rhs: Self) -> Self::Output {
         match (self.as_vector()?, rhs.as_vector()?) {
@@ -894,15 +866,15 @@ impl Context for Rc<Environment> {
     }
 
     fn eval(&mut self, expr: Expr) -> EvalResult {
-        use Vector::*;
+        use super::vector::types::OptionNa;
         match expr {
             Expr::Null => Ok(R::Null),
-            Expr::NA => Ok(R::Vector(Logical(vec![OptionNA::NA]))),
-            Expr::Inf => Ok(R::Vector(Numeric(vec![OptionNA::Some(f64::INFINITY)]))),
+            Expr::NA => Ok(R::Vector(Vector::from(vec![OptionNa(None)]))),
+            Expr::Inf => Ok(R::Vector(Vector::from(vec![OptionNa(Some(f64::INFINITY))]))),
             Expr::Number(x) => Ok(R::Vector(Vector::from(vec![x]))),
             Expr::Integer(x) => Ok(R::Vector(Vector::from(vec![x]))),
-            Expr::Bool(x) => Ok(R::Vector(Logical(vec![OptionNA::Some(x)]))),
-            Expr::String(x) => Ok(R::Vector(Character(vec![OptionNA::Some(x)]))),
+            Expr::Bool(x) => Ok(R::Vector(Vector::from(vec![OptionNa(Some(x))]))),
+            Expr::String(x) => Ok(R::Vector(Vector::from(vec![OptionNa(Some(x))]))),
             Expr::Function(formals, body) => Ok(R::Function(formals, *body, self.clone())),
             Expr::Symbol(name) => self.get(name),
             Expr::Break => Err(RSignal::Condition(Cond::Break)),

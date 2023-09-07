@@ -3,7 +3,7 @@ use r_derive::*;
 use crate::ast::*;
 use crate::error::*;
 use crate::lang::*;
-use crate::vector::vectors::*;
+use crate::vector::*;
 use crate::callable::core::*;
 
 #[derive(Debug, Clone, PartialEq)]

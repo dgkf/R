@@ -1,4 +1,4 @@
-use crate::coercion::OptionNa;
+use crate::vector::types::OptionNa;
 
 pub fn some<T>(x: T) -> OptionNa<T> {
     OptionNa(Some(x))    
