@@ -113,7 +113,7 @@ mod test {
     fn only_null() {
         assert_eq!(
             r!{ paste(null) }, 
-            Ok(R::Vector(Vector::Character(vec![])))
+            Ok(R::Vector(Vector::from(Vec::<Character>::new())))
         );
     }
 

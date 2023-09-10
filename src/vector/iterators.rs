@@ -39,48 +39,21 @@ where
 ///
 /// * `i` - An iterator over pairs of numeric (or numeric-coercible) values
 ///
-pub fn map_common_add_numeric<'a, I, LItem, RItem, LNum, RNum, Output>(
+pub fn map_common_numeric<I, LItem, RItem, LNum, RNum, Output>(
     i: I,
-) -> impl Iterator<Item = (Output, Output)> + 'a
+) -> impl Iterator<Item = (Output, Output)>
 where
     // iterator over pairs of items
-    I: IntoIterator<Item = (LItem, RItem)> + 'a,
+    I: IntoIterator<Item = (LItem, RItem)>,
     // and item should be coercible to numeric
-    LItem: IntoNumeric<LNum> + 'a,
-    LNum: 'a,
-    RItem: IntoNumeric<RNum> + 'a,
-    RNum: 'a,
+    LItem: MinimallyNumeric<As = LNum> + CoercibleInto<LNum>,
+    RItem: MinimallyNumeric<As = RNum> + CoercibleInto<RNum>,
     // and those numerics should be coercible to a common numeric
-    (LNum, RNum): CommonNum<Output> + 'a,
+    (LNum, RNum): CommonNum<Common = Output>,
 {
     i.into_iter()
-        .map(|(l, r)| (LItem::as_numeric(l), RItem::as_numeric(r)).as_common())
-}
-
-/// Map an iterator of pairs into a pair of common numeric types
-///
-/// Accept an iterator of pairs of numeric (or numeric-coercible) values and
-/// returns an iterator of pairs of numerics coerced to the least greater common
-/// type, assuming a hierarchy of representations.
-///
-/// # Arguments
-///
-/// * `i` - An iterator over pairs of numeric (or numeric-coercible) values
-///
-pub fn map_common_mul_numeric<'a, I, LItem, RItem, LNum, RNum, Output>(
-    i: I,
-) -> impl Iterator<Item = (Output, Output)> + 'a
-where
-    // iterator over pairs of items
-    I: IntoIterator<Item = (LItem, RItem)> + 'a,
-    // and item should be coercible to numeric
-    LItem: IntoNumeric<LNum> + 'a,
-    LNum: 'a,
-    RItem: IntoNumeric<RNum> + 'a,
-    RNum: 'a,
-    // and those numerics should be coercible to a common numeric
-    (LNum, RNum): CommonNum<Output> + 'a,
-{
-    i.into_iter()
-        .map(|(l, r)| (LItem::as_numeric(l), RItem::as_numeric(r)).as_common())
+        .map(|(l, r)| (
+            CoercibleInto::<LNum>::coerce_into(l),
+            CoercibleInto::<RNum>::coerce_into(r)
+        ).as_common())
 }

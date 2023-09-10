@@ -65,7 +65,7 @@ impl TryInto<i32> for R {
             unreachable!();            
         };
 
-        match v[..] {
+        match v.inner().clone().borrow()[..] {
             [OptionNA::Some(i), ..] => Ok(i),
             _ => Err(CannotBeCoercedToInteger.into()),
         }
@@ -90,7 +90,7 @@ impl TryInto<f64> for R {
             unreachable!();            
         };
 
-        match v[..] {
+        match v.inner().clone().borrow()[..] {
             [OptionNA::Some(i), ..] => Ok(i),
             _ => Err(CannotBeCoercedToNumeric.into()),
         }
@@ -104,7 +104,7 @@ impl TryInto<Vec<f64>> for R {
             unreachable!();            
         };
 
-        Ok(v.iter()
+        Ok(v.inner().clone().borrow().iter()
             .map(|vi| match vi {
                 OptionNA::Some(i) => *i,
                 OptionNA::NA => f64::NAN,
@@ -153,7 +153,7 @@ impl R {
     pub fn as_integer(self) -> EvalResult {
         match self {
             R::Vector(v) => Ok(R::Vector(v.as_integer())),
-            R::Null => Ok(R::Vector(Vector::Integer(vec![]))),
+            R::Null => Ok(R::Vector(Vector::from(Vec::<Integer>::new()))),
             _ => Err(RSignal::Error(RError::CannotBeCoercedToInteger)),
         }
     }
@@ -161,7 +161,7 @@ impl R {
     pub fn as_numeric(self) -> EvalResult {
         match self {
             R::Vector(v) => Ok(R::Vector(v.as_numeric())),
-            R::Null => Ok(R::Vector(Vector::Numeric(vec![]))),
+            R::Null => Ok(R::Vector(Vector::from(Vec::<Numeric>::new()))),
             _ => RError::CannotBeCoercedToNumeric.into(),
         }
     }
@@ -169,7 +169,7 @@ impl R {
     pub fn as_logical(self) -> EvalResult {
         match self {
             R::Vector(v) => Ok(R::Vector(v.as_logical())),
-            R::Null => Ok(R::Vector(Vector::Logical(vec![]))),
+            R::Null => Ok(R::Vector(Vector::from(Vec::<Logical>::new()))),
             atom => unreachable!("{:?} cannot be coerced to logical", atom),
         }
     }
@@ -177,14 +177,14 @@ impl R {
     pub fn as_character(self) -> EvalResult {
         match self {
             R::Vector(v) => Ok(R::Vector(v.as_character())),
-            R::Null => Ok(R::Vector(Vector::Character(vec![]))),
+            R::Null => Ok(R::Vector(Vector::from(Vec::<Character>::new()))),
             atom => unreachable!("{:?} cannot be coerced to character", atom),
         }
     }
 
     pub fn as_vector(self) -> EvalResult {
         match self {
-            R::Null => Ok(R::Vector(Vector::Logical(vec![]))),
+            R::Null => Ok(R::Vector(Vector::from(Vec::<Logical>::new()))),
             R::Vector(_) => Ok(self),
             _ => unimplemented!("cannot coerce object into vector"),
         }
@@ -195,15 +195,15 @@ impl R {
         use Vector::*;
         match self {
             R::Vector(rvec) => match rvec {
-                Numeric(v) => match v[..] {
+                Numeric(v) => match v.inner().clone().borrow()[..] {
                     [Some(x)] => Ok(x as usize),
                     _ => Err(RSignal::Error(RError::CannotBeCoercedToInteger)),
                 },
-                Integer(v) => match v[..] {
+                Integer(v) => match v.inner().clone().borrow()[..] {
                     [Some(x)] => Ok(x as usize),
                     _ => Err(RSignal::Error(RError::CannotBeCoercedToInteger)),
                 },
-                Logical(v) => match v[..] {
+                Logical(v) => match v.inner().clone().borrow()[..] {
                     [Some(true)] => Ok(1 as usize),
                     _ => Err(RSignal::Error(RError::CannotBeCoercedToInteger)),
                 },
@@ -284,13 +284,9 @@ impl R {
     }
 
     pub fn try_get(&self, index: R) -> EvalResult {
-        let i = index.into_usize()?;
         match self {
-            R::Vector(rvec) => match rvec.get(i) {
-                Some(v) => Ok(R::Vector(v)),
-                None => RError::Other("out of bounds".to_string()).into(),
-            },
-            R::List(lvec) => Ok(lvec[i - 1].1.clone()),
+            R::Vector(rvec) => rvec.try_get(index),
+            R::List(lvec) => Ok(lvec[index.into_usize()? - 1].1.clone()),
             _ => todo!(),
         }
     }
@@ -431,7 +427,7 @@ impl std::ops::Div for R {
     }
 }
 
-impl super::vector::vectors::Pow for R {
+impl super::vector::vectors::Pow<R> for R {
     type Output = EvalResult;
 
     fn power(self, rhs: Self) -> Self::Output {
@@ -475,25 +471,8 @@ impl std::ops::BitAnd for R {
     }
 }
 
-impl VecPartialCmp for R {
-    type CmpOutput = Vec<Option<std::cmp::Ordering>>;
+impl VecPartialCmp<R> for R {
     type Output = EvalResult;
-
-    fn vec_partial_cmp(self, rhs: Self) -> Self::CmpOutput {
-        let Ok(sv) = self.as_vector() else {
-            unimplemented!()
-        };
-
-        let Ok(rv) = rhs.as_vector() else {
-            unimplemented!()
-        };
-
-        match (sv, rv) {
-            (R::Vector(l), R::Vector(r)) => l.vec_partial_cmp(r),
-            _ => unimplemented!(),
-        }
-    }
-
     fn vec_gt(self, rhs: Self) -> Self::Output {
         match (self.as_vector()?, rhs.as_vector()?) {
             (R::Vector(l), R::Vector(r)) => Ok(R::Vector(l.vec_gt(r))),
@@ -894,15 +873,14 @@ impl Context for Rc<Environment> {
     }
 
     fn eval(&mut self, expr: Expr) -> EvalResult {
-        use Vector::*;
         match expr {
             Expr::Null => Ok(R::Null),
-            Expr::NA => Ok(R::Vector(Logical(vec![OptionNA::NA]))),
-            Expr::Inf => Ok(R::Vector(Numeric(vec![OptionNA::Some(f64::INFINITY)]))),
+            Expr::NA => Ok(R::Vector(Vector::from(vec![OptionNA::NA as Logical]))),
+            Expr::Inf => Ok(R::Vector(Vector::from(vec![OptionNA::Some(f64::INFINITY)]))),
             Expr::Number(x) => Ok(R::Vector(Vector::from(vec![x]))),
             Expr::Integer(x) => Ok(R::Vector(Vector::from(vec![x]))),
-            Expr::Bool(x) => Ok(R::Vector(Logical(vec![OptionNA::Some(x)]))),
-            Expr::String(x) => Ok(R::Vector(Character(vec![OptionNA::Some(x)]))),
+            Expr::Bool(x) => Ok(R::Vector(Vector::from(vec![OptionNA::Some(x)]))),
+            Expr::String(x) => Ok(R::Vector(Vector::from(vec![OptionNA::Some(x)]))),
             Expr::Function(formals, body) => Ok(R::Function(formals, *body, self.clone())),
             Expr::Symbol(name) => self.get(name),
             Expr::Break => Err(RSignal::Condition(Cond::Break)),

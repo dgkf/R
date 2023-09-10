@@ -3,6 +3,7 @@ use r_derive::*;
 use crate::ast::*;
 use crate::error::RError;
 use crate::lang::{CallStack, EvalResult, Context, R};
+use crate::vector::subset::Subset;
 use crate::vector::vectors::*;
 use super::core::*;
 
@@ -114,7 +115,7 @@ impl Callable for InfixOr {
             (R::Vector(l), R::Vector(r)) => {
                 let Ok(lhs) = l.try_into() else { todo!() };
                 let Ok(rhs) = r.try_into() else { todo!() };
-                R::Vector(Vector::Logical(vec![OptionNA::Some(lhs || rhs)]))
+                R::Vector(Vector::from(vec![OptionNA::Some(lhs || rhs)]))
             }
             _ => R::Null,
         };
@@ -133,7 +134,7 @@ impl Callable for InfixAnd {
             (R::Vector(l), R::Vector(r)) => {
                 let Ok(lhs) = l.try_into() else { todo!() };
                 let Ok(rhs) = r.try_into() else { todo!() };
-                R::Vector(Vector::Logical(vec![OptionNA::Some(lhs && rhs)]))
+                R::Vector(Vector::from(vec![OptionNA::Some(lhs && rhs)]))
             }
             _ => R::Null,
         };
@@ -286,7 +287,7 @@ impl Callable for InfixColon {
             }
 
             if (end - start) / by < 0.0 {
-                return Ok(R::Vector(Vector::Numeric(vec![])))
+                return Ok(R::Vector(Vector::from(Vec::<Numeric>::new())))
             }
 
             let mut v = start;
@@ -375,8 +376,10 @@ impl Callable for PostfixIndex {
 
         use R::*;
         match (what, value, index.as_integer()?) {
-            (Vector(mut lrvec), Vector(rrvec), Vector(i)) => {
-                lrvec.set_from_vec(i, rrvec)?;
+            (Vector(lrvec), Vector(rrvec), Vector(ivec)) => {
+                let by: Subset = ivec.try_into()?;
+                let mut lrvec_subset = lrvec.subset(by);
+                lrvec_subset.assign(rrvec)?;
                 Ok(Vector(lrvec))
             }
             _ => unimplemented!(),

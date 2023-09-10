@@ -7,3 +7,6 @@
 pub mod coercion;
 pub mod iterators;
 pub mod vectors;
+pub mod rep;
+pub mod subsets;
+pub mod subset;
