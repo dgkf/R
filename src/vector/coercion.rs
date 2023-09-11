@@ -214,7 +214,7 @@ where
     // bools, could be removed is specialized
     fn coerce_into(self) -> OptionNA<T> {
         match self {
-            OptionNA::Some(s) => s.to_lowercase().parse().map_or(OptionNA::NA, |i| OptionNA::Some(i)),
+            OptionNA::Some(s) => s.parse().map_or(OptionNA::NA, |i| OptionNA::Some(i)),
             OptionNA::NA => OptionNA::NA,
         }
     }    

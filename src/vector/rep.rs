@@ -28,13 +28,14 @@ impl<T: AtomicMode + Clone + Default> Rep<T> {
     /// `SameType::is_same_type_as`.
     ///
     /// ```
-    /// use vec::vector::Vector;
-    /// use vec::types::OptionNa;
-    /// use vec::utils::SameType;
+    /// use r::utils::*;
+    /// use r::vector::vectors::Vector;
+    /// use r::vector::vectors::OptionNA;
     ///
     /// let result = Vector::from(vec![1, 2, 3]);
-    /// let expect = Vector::<OptionNa<i32>>::new();
-    /// assert!(result.is_same_type_as(&expect));
+    /// let expect = Vector::from(Vec::<OptionNA<i32>>::new());
+    ///
+    /// assert!(result.is_same_type_as(&expect))
     /// ```
     /// 
     pub fn new() -> Self {
@@ -169,14 +170,8 @@ impl<T: AtomicMode + Clone + Default> Rep<T> {
 
     /// Test the mode of the internal vector type
     ///
-    /// Internally, this is defined by the [crate::types::atomic::AtomicMode] 
+    /// Internally, this is defined by the [r::vector::vectors::AtomicMode]
     /// implementation of the vector's element type.
-    ///
-    /// ```
-    /// use vec::vector::Vector;
-    /// let v = Vector::from(vec![0_f32, 100_f32]);
-    /// assert!(v.is_numeric())
-    /// ```
     ///
     pub fn is_numeric(&self) -> bool {
         T::is_numeric()
@@ -206,12 +201,18 @@ impl<T: AtomicMode + Clone + Default> Rep<T> {
     /// type of the mode.
     ///
     /// ```
-    /// use vec::vector::Vector;
+    /// use r::vector::vectors::Vector;
+    /// use r::vector::vectors::OptionNA;
     ///
     /// let x = Vector::from(vec![false, true, true, false]);
     /// let n = x.as_numeric();
     ///
-    /// assert_eq!(n, Vector::from(vec![0_f64, 1_f64, 1_f64, 0_f64]))
+    /// assert_eq!(n, Vector::from(vec![
+    ///    OptionNA::Some(0_f64), 
+    ///    OptionNA::Some(1_f64), 
+    ///    OptionNA::Some(1_f64), 
+    ///    OptionNA::Some(0_f64)
+    /// ]))
     /// ```
     ///
     pub fn as_mode<Mode>(&self) -> Rep<Mode> 
@@ -258,7 +259,7 @@ impl<T: AtomicMode + Clone + Default> Rep<T> {
     /// vectorized comparison operators and likely does not need to be used
     /// outside of that context. 
     ///
-    /// See [crate::vecops::VecPartialCmp] for vectorized comparison operator
+    /// See [r::vecops::VecPartialCmp] for vectorized comparison operator
     /// implementations.
     ///
     pub fn vectorized_partial_cmp<R, C>(self, other: Rep<R>) -> Vec<Option<std::cmp::Ordering>>
@@ -384,12 +385,15 @@ where
 
 impl<T> Display for Rep<T> 
 where
-    T: AtomicMode + Display + Default + Clone
+    T: AtomicMode + Debug + Default + Clone
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let n = self.len();
         if n == 0 {
-            return write!(f, "[]")
+            if self.is_numeric() { return write!(f, "numeric(0)") }
+            if self.is_integer() { return write!(f, "integer(0)") }
+            if self.is_logical() { return write!(f, "logical(0)") }
+            if self.is_character() { return write!(f, "character(0)") }
         }
 
         let nlen = format!("{}", n).len();
@@ -399,7 +403,7 @@ where
         let xc = self.inner().clone();
         let xb = xc.borrow();
 
-        let x_strs = xb.iter().map(|xi| format!("{}", xi));
+        let x_strs = xb.iter().map(|xi| format!("{:?}", xi));
         let max_len = x_strs
             .clone()
             .fold(0, |max_len, xi| std::cmp::max(max_len, xi.len()));
@@ -598,10 +602,7 @@ where
 
         Rep::from(
             zip_recycle(lhs, rhs)
-                .map(|(l, r)| {
-                    CoercibleInto::<LNum>::coerce_into(l.clone())
-                        .power(CoercibleInto::<RNum>::coerce_into(r.clone()))
-                })
+                .map(|(l, r)| l.clone().coerce_into().power(r.clone().coerce_into()))
                 .collect::<Vec<O>>()
         )
     }
@@ -626,10 +627,7 @@ where
 
         Rep::from(
             zip_recycle(lhs, rhs)
-                .map(|(l, r)| {
-                    CoercibleInto::<Logical>::coerce_into(l.clone())
-                        .bitor(CoercibleInto::<Logical>::coerce_into(r.clone()))
-                })
+                .map(|(l, r)| l.clone().coerce_into().bitor(r.clone().coerce_into()))
                 .collect::<Vec<O>>()
         )
     }
@@ -654,10 +652,7 @@ where
 
         Rep::from(
             zip_recycle(lhs, rhs)
-                .map(|(l, r)| {
-                    CoercibleInto::<Logical>::coerce_into(l.clone())
-                        .bitand(CoercibleInto::<Logical>::coerce_into(r.clone()))
-                })
+                .map(|(l, r)| l.clone().coerce_into().bitand(r.clone().coerce_into()))
                 .collect::<Vec<O>>()
         )
     }
@@ -752,94 +747,85 @@ where
 }
 
 
-// #[cfg(test)]
-// mod test{
-//     use super::*;
+#[cfg(test)]
+mod test{
+    use super::*;
+    use super::OptionNA::*;
+    use crate::utils::SameType;
 
-//     #[test]
-//     fn vector_add() {
-//         let x = Rep::from((1..=10).into_iter().collect::<Vec<_>>());
-//         let y = Rep::from(vec![2, 5, 6, 2, 3]);
+    #[test]
+    fn vector_add() {
+        let x = Rep::from((1..=10).into_iter().collect::<Vec<_>>());
+        let y = Rep::from(vec![2, 5, 6, 2, 3]);
 
-//         let z = x + y;
-//         assert_eq!(z, Rep::from(vec![3, 7, 9, 6, 8, 8, 12, 14, 11, 13]));
+        let z = x + y;
+        assert_eq!(z, Rep::from(vec![3, 7, 9, 6, 8, 8, 12, 14, 11, 13]));
 
-//         let expected_type = Rep::<OptionNa<i32>>::new();
-//         assert!(z.is_same_type_as(&expected_type));
-//         assert!(z.is_integer());
-//     }
+        let expected_type = Rep::<Integer>::new();
+        assert!(z.is_same_type_as(&expected_type));
+        assert!(z.is_integer());
+    }
 
-//     #[test]
-//     fn vector_mul() {
-//         let x = Rep::from((1..=10).into_iter().collect::<Vec<_>>());
-//         let y = Rep::from(vec![
-//             OptionNa(Some(2)), OptionNa(None), OptionNa(Some(6)), 
-//             OptionNa(None), OptionNa(Some(3))
-//         ]);
+    #[test]
+    fn vector_mul() {
+        let x = Rep::from((1..=10).into_iter().collect::<Vec<_>>());
+        let y = Rep::from(vec![Some(2), NA, Some(6), NA, Some(3)]);
 
-//         let z = x * y;
-//         assert_eq!(z, Rep::from(vec![
-//             OptionNa(Some(2)), OptionNa(None), OptionNa(Some(18)), 
-//             OptionNa(None), OptionNa(Some(15)), OptionNa(Some(12)), 
-//             OptionNa(None), OptionNa(Some(48)), OptionNa(None), 
-//             OptionNa(Some(30))
-//         ]));
+        let z = x * y;
+        assert_eq!(z, Rep::from(vec![Some(2), NA, Some(18), NA, Some(15), 
+            Some(12), NA, Some(48), NA, Some(30)]));
 
-//         let expected_type = Rep::<OptionNa<i32>>::new();
-//         assert!(z.is_same_type_as(&expected_type));
-//         assert!(z.is_integer());
-//     }
+        let expected_type = Rep::<Integer>::new();
+        assert!(z.is_same_type_as(&expected_type));
+        assert!(z.is_integer());
+    }
 
-//     #[test]
-//     fn vector_common_mul_f32_na() {
-//         // expect that f32's do not get coerced into an OptionNa, instead
-//         // using std::f32::NAN as NA representation.
+    #[test]
+    fn vector_common_mul_f32_na() {
+        // expect that f32's do not get coerced into an OptionNA:: instead
+        // using std::f32::NAN as NA representation.
 
-//         let x = Rep::from(vec![0_f32, std::f32::NAN, 10_f32]);
-//         let y = Rep::from(vec![100, 10]);
+        let x = Rep::from(vec![Some(0_f64), NA, Some(10_f64)]);
+        let y = Rep::from(vec![100, 10]);
 
-//         let z = x * y;
-//         // assert_eq!(z, Vector::from(vec![0_f32, std::f32::NAN, 1_000_f32]));
-//         // comparing floats is error prone
+        let z = x * y;
+        // assert_eq!(z, Vector::from(vec![0_f32, std::f32::NAN, 1_000_f32]));
+        // comparing floats is error prone
 
-//         let expected_type = Rep::<f32>::new();
-//         assert!(z.is_same_type_as(&expected_type));
-//         assert!(z.is_numeric());
-//     }
+        let expected_type = Rep::<Numeric>::new();
+        assert!(z.is_same_type_as(&expected_type));
+        assert!(z.is_numeric());
+    }
 
-//     #[test]
-//     fn vector_and() {
-//         // expect that f32's do not get coerced into an OptionNa, instead
-//         // using std::f32::NAN as NA representation.
+    #[test]
+    fn vector_and() {
+        // expect that f32's do not get coerced into an OptionNA:: instead
+        // using std::f32::NAN as NA representation.
 
-//         let x = Rep::from(vec![0_f32, std::f32::NAN, 10_f32]);
-//         let y = Rep::from(vec![100, 10]);
+        let x = Rep::from(vec![Some(0_f64), NA, Some(10_f64)]);
+        let y = Rep::from(vec![100, 10]);
 
-//         let z = x & y;
-//         assert_eq!(z, Rep::from(vec![OptionNa(Some(false)), OptionNa(None), OptionNa(Some(true))]));
+        let z = x & y;
+        assert_eq!(z, Rep::from(vec![Some(false), NA, Some(true)]));
 
-//         let expected_type = Rep::<OptionNa<bool>>::new();
-//         assert!(z.is_same_type_as(&expected_type));
-//         assert!(z.is_logical());
-//     }
+        let expected_type = Rep::<Logical>::new();
+        assert!(z.is_same_type_as(&expected_type));
+        assert!(z.is_logical());
+    }
 
-//     #[test]
-//     fn vector_gt() {
-//         // expect that f32's do not get coerced into an OptionNa, instead
-//         // using std::f32::NAN as NA representation.
+    #[test]
+    fn vector_gt() {
+        // expect that f32's do not get coerced into an  instead
+        // using std::f32::NAN as NA representation.
 
-//         let x = Rep::from(vec![0_f32, std::f32::NAN, 10000_f32]);
-//         let y = Rep::from(vec![100, 10]);
+        let x = Rep::from(vec![Some(0_f64), NA, Some(10000_f64)]);
+        let y = Rep::from(vec![100, 10]);
 
-//         let z = x.vec_gt(y);
-//         assert_eq!(z, Rep::from(vec![
-//             OptionNa(Some(false)), 
-//             OptionNa(None), 
-//             OptionNa(Some(true))
-//         ]));
+        let z = x.vec_gt(y);
+        assert_eq!(z, Rep::from(vec![Some(false), NA, Some(true)]));
 
-//         let expected_type = Rep::<OptionNa<bool>>::new();
-//         assert!(z.is_same_type_as(&expected_type));
-//         assert!(z.is_logical());
-//     }
-// }
+        let expected_type = Rep::<Logical>::new();
+        assert!(z.is_same_type_as(&expected_type));
+        assert!(z.is_logical());
+    }
+}

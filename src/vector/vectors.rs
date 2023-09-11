@@ -10,10 +10,22 @@ use super::coercion::AtomicMode;
 use super::rep::Rep;
 use super::subset::Subset;
 
-#[derive(Clone, PartialEq, PartialOrd, Eq, Ord)]
+#[derive(Clone, PartialEq, Eq, Ord)]
 pub enum OptionNA<T> {
     NA,
     Some(T),
+}
+
+impl<T> PartialOrd for OptionNA<T> 
+where
+    T: PartialOrd
+{
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        match (self, other) {
+            (OptionNA::Some(l), OptionNA::Some(r)) => l.partial_cmp(r),
+            _ => None,
+        }
+    }
 }
 
 impl<T> OptionNA<T> {
@@ -43,7 +55,7 @@ impl AtomicMode for Logical { fn is_logical() -> bool { true }}
 pub type Character = OptionNA<String>;
 impl AtomicMode for Character { fn is_character() -> bool { true }}
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Vector {
     Numeric(Rep<Numeric>),
     Integer(Rep<Integer>),
@@ -279,14 +291,25 @@ impl From<Vec<String>> for Vector {
     }
 }
 
+impl Into<String> for Vector {
+    fn into(self) -> String {
+        match self.as_character() {
+            Vector::Character(v) => match v.inner().clone().borrow().get(0) {
+                Some(OptionNA::Some(s)) => s.clone(),
+                Some(OptionNA::NA) => "NA".to_string(),
+                None => "".to_string(),
+            }
+            _ => unreachable!(),
+        }
+    }
+}
+
+
 impl Into<Vec<String>> for Vector {
     fn into(self) -> Vec<String> {
         match self.as_character() {
             Vector::Character(v) => v.inner().clone().borrow().iter()
-                .map(|x| match x {
-                    OptionNA::Some(val) => val.clone(),
-                    OptionNA::NA => "NA".to_string(),
-                })
+                .map(|x| format!("{}", x))
                 .collect(),
             _ => unreachable!(),
         }
@@ -299,21 +322,36 @@ impl From<Vec<OptionNA<String>>> for Vector {
     }
 }
 
+
+pub trait DefaultDebug {}
+impl DefaultDebug for bool {}
+impl DefaultDebug for i32 {}
+impl DefaultDebug for f64 {}
+
 impl<T> Debug for OptionNA<T>
 where
-    T: Debug,
+    T: DefaultDebug + Display,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            OptionNA::Some(x) => write!(f, "{:?}", x),
+            OptionNA::Some(x) => write!(f, "{}", x),
             OptionNA::NA => write!(f, "NA"),
         }
     }
 }
 
-impl<T> Display for OptionNA<T>
-where
-    T: Display,
+impl Debug for OptionNA<String> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            OptionNA::Some(x) => write!(f, "\"{}\"", x),
+            OptionNA::NA => write!(f, "NA"),
+        }
+    }
+}
+
+impl<T> Display for OptionNA<T> 
+where 
+    T: Display
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {

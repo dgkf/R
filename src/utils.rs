@@ -1,3 +1,15 @@
+pub trait SameType<T>: Sized {
+    fn is_same_type_as(&self, _other: &T) -> bool {
+        false
+    }
+}
+
+impl<T, U> SameType<T> for U {
+    fn is_same_type_as(&self, _other: &T) -> bool {
+        true
+    }
+}
+
 #[macro_export]
 macro_rules! r {
     // evaluate a single token directly

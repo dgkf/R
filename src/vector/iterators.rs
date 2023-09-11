@@ -11,20 +11,16 @@ use crate::vector::coercion::*;
 ///
 /// let x = vec![1, 2, 3, 4];
 /// let y = vec![2, 4];
-/// let z: Vec<_> = zip_recycle(x, y).collect();
+/// let z: Vec<_> = zip_recycle(x.into_iter(), y.into_iter()).collect();
 /// ````
 ///
-pub fn zip_recycle<'a, L, R, LItem, RItem>(
+pub fn zip_recycle<L, R, LItem, RItem>(
     l: L,
     r: R,
-) -> impl Iterator<Item = (LItem, RItem)> + 'a
+) -> impl Iterator<Item = (LItem, RItem)>
 where
-    L: ExactSizeIterator + Iterator<Item = LItem> + Clone + 'a,
-    R: ExactSizeIterator + Iterator<Item = RItem> + Clone + 'a,
-    LItem: Clone + 'a,
-    RItem: Clone + 'a,
-    // LIter: ExactSizeIterator + Iterator<Item = LItem> + Clone + 'a,
-    // RIter: ExactSizeIterator + Iterator<Item = RItem> + Clone + 'a,
+    L: ExactSizeIterator + Iterator<Item = LItem> + Clone,
+    R: ExactSizeIterator + Iterator<Item = RItem> + Clone,
 {
     let l = l.into_iter();
     let r = r.into_iter();
