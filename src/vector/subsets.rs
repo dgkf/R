@@ -112,8 +112,12 @@ impl IntoIterator for Subsets {
                         let ib = ic.borrow();
 
                         let mut order = ib.iter()
+                            .map(|i| match i {
+                                OptionNA::NA => -1,
+                                OptionNA::Some(i) => *i,
+                            })
                             .enumerate()
-                            .map(|(i, v)| (v, i.clone()))
+                            .map(|(i, v)| (v, i.clone())) // cast NAs to -1's
                             .collect::<Vec<_>>();
 
                         // sort by index to get (sorted indices, order)
@@ -124,20 +128,14 @@ impl IntoIterator for Subsets {
 
                         // we'll populate this with the sorted indices first
                         let mut indices: Vec<Option<usize>> = vec![None; i.len()];
-                        let n_na = i.iter().take_while(|&i| **i == OptionNA::NA).count();
+                        let n_na = i.iter().take_while(|&i| *i == -1).count();
 
                         // populate non-na elements
-                        i.insert(n_na, &OptionNA::Some(0));
-                        let diffs = i[n_na..].windows(2)
-                            .map(|w| {
-                                if let OptionNA::Some(i) = w[1].clone() - w[0].clone() { 
-                                    i 
-                                } else { 
-                                    unreachable!()
-                                }
-                            });
+                        i.insert(n_na, 0);
+                        let diffs = i[n_na..].windows(2).map(|w| w[1] - w[0]);
 
-                        let mut last = iter.nth(0).expect("exhausted iterator"); for (i, diff) in diffs.enumerate() {
+                        let mut last = iter.nth(0).expect("exhausted iterator"); 
+                        for (i, diff) in diffs.enumerate() {
                             if diff > 0 {
                                 last = iter.nth((diff - 1) as usize).expect("exhausted iterator");
                             }
