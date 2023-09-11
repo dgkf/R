@@ -3,7 +3,6 @@ use r_derive::*;
 use crate::ast::*;
 use crate::error::*;
 use crate::lang::*;
-use crate::vector::vectors::*;
 use crate::callable::core::*;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -35,8 +34,8 @@ impl Callable for PrimitivePaste {
                 continue
             };
             match (k.as_str(), v) {
-                ("sep", R::Vector(Vector::Character(v))) => {
-                    sep = v.get(0).unwrap().clone().to_string();
+                ("sep", R::Vector(v)) => {
+                    sep = v.into();
                 }
                 ("sep", _) => {
                     return Err(RSignal::Error(RError::Other(
@@ -44,9 +43,9 @@ impl Callable for PrimitivePaste {
                     )));
                 }
                 ("collapse", R::Null) => continue,
-                ("collapse", R::Vector(Vector::Character(v))) => {
+                ("collapse", R::Vector(v)) => {
                     should_collapse = true;
-                    collapse = v.get(0).unwrap().clone().to_string();
+                    collapse = v.into();
                 }
                 ("collapse", _) => {
                     return Err(RSignal::Error(RError::WithCallStack(
@@ -100,6 +99,7 @@ impl Callable for PrimitivePaste {
 mod test {
     use super::*;
     use crate::r;
+    use crate::vector::vectors::{Vector, Character};
 
     #[test]
     fn numeric_input() {
@@ -113,7 +113,7 @@ mod test {
     fn only_null() {
         assert_eq!(
             r!{ paste(null) }, 
-            Ok(R::Vector(Vector::Character(vec![])))
+            Ok(R::Vector(Vector::from(Vec::<Character>::new())))
         );
     }
 

@@ -70,8 +70,9 @@
     }
 
     pre {
-      margin: 0.15rem;
+      margin: 0.3rem 0.1rem;
       white-space: pre-wrap;
+      line-height: 1.4em;
     }
 
     .container {
@@ -115,7 +116,7 @@
       overflow-y: scroll;
       scrollbar-width: none;
       scroll-behavior: smooth;
-      -webkit-mask-image: -webkit-linear-gradient(bottom, rgba(0,0,0,1) max(10em, 30vh), rgba(0,0,0,0.2) max(20em, 60vh));
+      -webkit-mask-image: -webkit-linear-gradient(bottom, rgba(0,0,0,1) max(15em, 35vh), rgba(0,0,0,0.2) max(25em, 60vh));
     }
 
     .history-scroll::-webkit-scrollbar {
@@ -131,10 +132,6 @@
       padding: 0.25em 0.5em;
       border-radius: 0.5em;
       margin: 0.25em 0;
-    }
-
-    .input > pre:before {
-      content: "> ";
     }
 
     .input, .output {
@@ -241,7 +238,7 @@
     #prompt {
       box-sizing: border-box;
       font-family: monospace, mono;
-      line-height: 1.5em;
+      line-height: 1.4em;
       width: 100%;
       resize: vertical;
 
@@ -348,7 +345,12 @@
         let parent = elem || document.getElementById("history");
         let node = document.createElement("div");
         let text = document.createElement("pre");
+
         node.className = "history-cell " + type;
+        if (type == "input") {
+          node.onclick = () => prompt_set(content);
+        }
+
         text.textContent = content;
         node.appendChild(text);
         parent.appendChild(node);

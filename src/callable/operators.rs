@@ -3,6 +3,7 @@ use r_derive::*;
 use crate::ast::*;
 use crate::error::RError;
 use crate::lang::{CallStack, EvalResult, Context, R};
+use crate::vector::subset::Subset;
 use crate::vector::vectors::*;
 use super::core::*;
 
@@ -21,13 +22,16 @@ impl Callable for InfixAssign {
                 Ok(value)
             }
             Call(what, mut args) => match *what {
-                Primitive(prim) => prim.call_assign(rhs, args, stack),
                 String(s) | Symbol(s) => {
                     args.insert(0, rhs);
                     let s = format!("{}<-", s);
                     stack.eval(Call(Box::new(Symbol(s)), args))
+                },
+                _ => {
+                    let what = stack.eval(Call(what, args))?;
+                    let value = stack.eval(rhs)?;
+                    what.assign(value)
                 }
-                _ => unreachable!(),
             },
             _ => unimplemented!("cannot assign to that!"),
         }
@@ -114,7 +118,7 @@ impl Callable for InfixOr {
             (R::Vector(l), R::Vector(r)) => {
                 let Ok(lhs) = l.try_into() else { todo!() };
                 let Ok(rhs) = r.try_into() else { todo!() };
-                R::Vector(Vector::Logical(vec![OptionNA::Some(lhs || rhs)]))
+                R::Vector(Vector::from(vec![OptionNA::Some(lhs || rhs)]))
             }
             _ => R::Null,
         };
@@ -133,7 +137,7 @@ impl Callable for InfixAnd {
             (R::Vector(l), R::Vector(r)) => {
                 let Ok(lhs) = l.try_into() else { todo!() };
                 let Ok(rhs) = r.try_into() else { todo!() };
-                R::Vector(Vector::Logical(vec![OptionNA::Some(lhs && rhs)]))
+                R::Vector(Vector::from(vec![OptionNA::Some(lhs && rhs)]))
             }
             _ => R::Null,
         };
@@ -277,16 +281,16 @@ impl Callable for InfixColon {
         // tertiary case
         } else if let Some((_, arg3)) = argstream.next() {
             // currently always returns numeric vector
-            let start: f64 = stack.eval(arg1)?.as_numeric()?.try_into()?;
-            let by: f64 = stack.eval(arg2)?.as_numeric()?.try_into()?;
-            let end: f64 = stack.eval(arg3)?.as_numeric()?.try_into()?;
+            let start: f64 = stack.eval(arg1)?.try_into()?;
+            let by: f64 = stack.eval(arg2)?.try_into()?;
+            let end: f64 = stack.eval(arg3)?.try_into()?;
 
             if by == 0.0 {
                 return RError::Other("Cannot increment by 0".to_string()).into()
             }
 
             if (end - start) / by < 0.0 {
-                return Ok(R::Vector(Vector::Numeric(vec![])))
+                return Ok(R::Vector(Vector::from(Vec::<Numeric>::new())))
             }
 
             let mut v = start;
@@ -374,9 +378,11 @@ impl Callable for PostfixIndex {
         let (what, index) = stack.eval_binary(args.unnamed_binary_args())?;
 
         use R::*;
-        match (what, value, index.as_integer()?) {
-            (Vector(mut lrvec), Vector(rrvec), Vector(i)) => {
-                lrvec.set_from_vec(i, rrvec)?;
+        match (what, index.as_integer()?) {
+            (Vector(lrvec), Vector(ivec)) => {
+                let by: Subset = ivec.try_into()?;
+                let mut lrvec_subset = lrvec.subset(by);
+                lrvec_subset.assign(value)?;
                 Ok(Vector(lrvec))
             }
             _ => unimplemented!(),

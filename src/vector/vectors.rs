@@ -2,24 +2,65 @@ use std::fmt::Debug;
 use std::fmt::Display;
 
 use crate::error::RError;
-use crate::lang::RSignal;
+use crate::lang::EvalResult;
+use crate::lang::R;
 use crate::vector::coercion::CoercibleInto;
 
-use super::coercion::*;
-use super::iterators::*;
+use super::coercion::AtomicMode;
+use super::rep::Rep;
+use super::subset::Subset;
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Eq, Ord)]
 pub enum OptionNA<T> {
-    Some(T),
     NA,
+    Some(T),
 }
 
-#[derive(Debug, Clone)]
+impl<T> PartialOrd for OptionNA<T> 
+where
+    T: PartialOrd
+{
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        match (self, other) {
+            (OptionNA::Some(l), OptionNA::Some(r)) => l.partial_cmp(r),
+            _ => None,
+        }
+    }
+}
+
+impl<T> OptionNA<T> {
+    pub fn map<F, U>(self, f: F) -> OptionNA<U> 
+    where
+        F: FnOnce(T) -> U
+    {
+        match self {
+            OptionNA::Some(x) => OptionNA::Some(f(x)),
+            OptionNA::NA => OptionNA::NA,
+        }     
+    }
+}
+
+impl<T> Default for OptionNA<T> {
+    fn default() -> Self {
+        OptionNA::NA
+    }
+}
+
+pub type Numeric = OptionNA<f64>;
+impl AtomicMode for Numeric { fn is_numeric() -> bool { true }}
+pub type Integer = OptionNA<i32>;
+impl AtomicMode for Integer { fn is_integer() -> bool { true }}
+pub type Logical = OptionNA<bool>;
+impl AtomicMode for Logical { fn is_logical() -> bool { true }}
+pub type Character = OptionNA<String>;
+impl AtomicMode for Character { fn is_character() -> bool { true }}
+
+#[derive(Debug, Clone, PartialEq)]
 pub enum Vector {
-    Numeric(Vec<OptionNA<f64>>),
-    Integer(Vec<OptionNA<i32>>),
-    Logical(Vec<OptionNA<bool>>),
-    Character(Vec<OptionNA<String>>),
+    Numeric(Rep<Numeric>),
+    Integer(Rep<Integer>),
+    Logical(Rep<Logical>),
+    Character(Rep<Character>),
     // Complex(Complex),
     // Raw(Raw),
 }
@@ -27,70 +68,55 @@ pub enum Vector {
 impl Vector {
     pub fn get(&self, index: usize) -> Option<Vector> {
         use Vector::*;
-
-        #[inline]
-        fn f<T>(v: &Vec<T>, index: usize) -> Option<Vector>
-        where
-            T: Clone,
-            Vector: From<Vec<T>>,
-        {
-            if let Some(value) = v.get(index - 1) {
-                Some(Vector::from(vec![value.clone()]))
-            } else {
-                None
-            }
-        }
-
         match self {
-            Numeric(x) => f(x, index),
-            Integer(x) => f(x, index),
-            Logical(x) => f(x, index),
-            Character(x) => f(x, index),
+            Numeric(x) => x.get(index).map(|i| Numeric(i)),
+            Integer(x) => x.get(index).map(|i| Integer(i)),
+            Logical(x) => x.get(index).map(|i| Logical(i)),
+            Character(x) => x.get(index).map(|i| Character(i)),
         }
     }
 
-    pub fn set_from_vec(&mut self, index: Vector, values: Vector) -> Result<(), RSignal> {
-        let index = index.as_integer();
-
-        let i = match index.as_integer() {
-            Vector::Integer(ivec) => match ivec[..] {
-                [OptionNA::Some(i)] => i,
-                _ => {
-                    return Err(RSignal::Error(RError::Other(
-                        "can only index into vector with integer indices".to_string(),
-                    )))
-                }
+    pub fn try_get(&self, index: R) -> EvalResult {
+        let err = RError::Other("Vector index cannot be coerced into a valid indexing type.".to_string());
+        match (self, index.as_vector()?) {
+            (Vector::Numeric(v), R::Vector(i)) => {
+                Ok(R::Vector(Vector::from(v.subset(i.try_into()?))))
             },
-            _ => unreachable!(),
-        };
-
-        if values.len() != 1 {
-            return Err(RSignal::Error(RError::Other(
-                "cannot assign multiple values to single index".to_string(),
-            )));
-        };
-
-        use Vector::*;
-        match self {
-            Numeric(l) => match values.as_numeric() {
-                Numeric(r) => l[(i - 1) as usize] = r[0].clone(),
-                _ => unreachable!(),
+            (Vector::Integer(v), R::Vector(i)) => {
+                Ok(R::Vector(Vector::from(v.subset(i.try_into()?))))
             },
-            Integer(l) => match values.as_integer() {
-                Integer(r) => l[(i - 1) as usize] = r[0].clone(),
-                _ => unreachable!(),
+            (Vector::Logical(v), R::Vector(i)) => {
+                Ok(R::Vector(Vector::from(v.subset(i.try_into()?))))
             },
-            Logical(l) => match values.as_logical() {
-                Logical(r) => l[(i - 1) as usize] = r[0].clone(),
-                _ => unreachable!(),
+            (Vector::Character(v), R::Vector(i)) => {
+                Ok(R::Vector(Vector::from(v.subset(i.try_into()?))))
             },
-            Character(l) => match values.as_character() {
-                Character(r) => l[(i - 1) as usize] = r[0].clone(),
-                _ => unreachable!(),
-            },
+            _ => Err(err.into())
         }
+    }
 
-        Ok(())
+    pub fn subset(&self, subset: Subset) -> Self {
+        match self {
+            Vector::Numeric(x) => x.subset(subset.into()).into(),
+            Vector::Integer(x) => x.subset(subset.into()).into(),
+            Vector::Logical(x) => x.subset(subset.into()).into(),
+            Vector::Character(x) => x.subset(subset.into()).into(),
+        }
+    }
+
+    pub fn assign(&mut self, other: R) -> EvalResult {
+        let err = RError::Other("Cannot assign to a vector from a different type".to_string()).into();
+        match (self, other) {
+            (Vector::Numeric(l), R::Vector(Vector::Numeric(r))) => 
+                Ok(R::Vector(Vector::from(l.assign(r)))),
+            (Vector::Integer(l), R::Vector(Vector::Integer(r))) => 
+                Ok(R::Vector(Vector::from(l.assign(r)))),
+            (Vector::Logical(l), R::Vector(Vector::Logical(r))) => 
+                Ok(R::Vector(Vector::from(l.assign(r)))),
+            (Vector::Character(l), R::Vector(Vector::Character(r))) => 
+                Ok(R::Vector(Vector::from(l.assign(r)))),
+            _ => return Err(err)
+        }
     }
 
     pub fn vec_coerce<T, U>(v: &Vec<OptionNA<T>>) -> Vec<OptionNA<U>>
@@ -100,7 +126,7 @@ impl Vector {
         use OptionNA::*;
         v.into_iter()
             .map(|i| match i {
-                Some(x) => Some(CoercibleInto::<U>::coerce_into(x.clone())),
+                Some(x) => Some(CoercibleInto::<U>::coerce_into((*x).clone())),
                 NA => NA,
             })
             .collect()
@@ -132,13 +158,10 @@ impl Vector {
     pub fn as_integer(self) -> Vector {
         use Vector::*;
         match self {
-            Numeric(v) => Integer(Self::vec_coerce::<f64, i32>(&v)),
+            Numeric(v) => Integer(v.as_integer()),
             Integer(_) => self,
-            Logical(v) => Integer(Self::vec_coerce::<bool, i32>(&v)),
-            Character(v) => {
-                let (_any_new_nas, v) = Self::vec_parse::<i32>(&v);
-                Integer(v)
-            }
+            Logical(v) => Integer(v.as_integer()),
+            Character(v) => Integer(v.as_integer())
         }
     }
 
@@ -146,34 +169,28 @@ impl Vector {
         use Vector::*;
         match self {
             Numeric(_) => self,
-            Integer(v) => Numeric(Self::vec_coerce::<i32, f64>(&v)),
-            Logical(v) => Numeric(Self::vec_coerce::<bool, f64>(&v)),
-            Character(v) => {
-                let (_any_new_nas, v) = Self::vec_parse::<f64>(&v);
-                Numeric(v)
-            }
+            Integer(v) => Numeric(v.as_numeric()),
+            Logical(v) => Numeric(v.as_numeric()),
+            Character(v) => Numeric(v.as_numeric())
         }
     }
 
     pub fn as_logical(self) -> Vector {
         use Vector::*;
         match self {
-            Numeric(v) => Logical(v.into_iter().map(|i| i.as_logical()).collect::<Vec<_>>()),
-            Integer(v) => Logical(v.into_iter().map(|i| i.as_logical()).collect::<Vec<_>>()),
+            Numeric(v) => Logical(v.as_logical()),
+            Integer(v) => Logical(v.as_logical()),
             Logical(_) => self,
-            Character(v) => {
-                let (_any_new_nas, v) = Self::vec_parse::<bool>(&v);
-                Logical(v)
-            }
+            Character(v) => Logical(v.as_logical())
         }
     }
 
     pub fn as_character(self) -> Vector {
         use Vector::*;
         match self {
-            Numeric(v) => Character(Self::vec_coerce::<f64, String>(&v)),
-            Integer(v) => Character(Self::vec_coerce::<i32, String>(&v)),
-            Logical(v) => Character(Self::vec_coerce::<bool, String>(&v)),
+            Numeric(v) => Character(v.as_character()),
+            Integer(v) => Character(v.as_character()),
+            Logical(v) => Character(v.as_character()),
             Character(_) => self,
         }
     }
@@ -187,114 +204,112 @@ impl Vector {
             Character(v) => v.len(),
         }
     }
-
-    pub fn reserve(self, additional: usize) {
-        use Vector::*;
-        match self {
-            Numeric(mut v) => v.reserve(additional),
-            Integer(mut v) => v.reserve(additional),
-            Logical(mut v) => v.reserve(additional),
-            Character(mut v) => v.reserve(additional),
-        }
-    }
 }
 
 impl TryInto<bool> for Vector {
     type Error = ();
     fn try_into(self) -> Result<bool, Self::Error> {
-        use OptionNA::*;
         use Vector::*;
         match self {
-            Numeric(v) => match v[..] {
-                [Some(vi)] if vi == 0_f64 => Ok(false),
-                [Some(_)] => Ok(true),
-                [NA] => Err(()), // missing value where TRUE/FALSE needed
-                [] => Err(()),   // argument is of length zero
-                _ => Err(()),    // condition has length > 1
-            },
-            Integer(v) => match v[..] {
-                [Some(0)] => Ok(false),
-                [Some(_)] => Ok(true),
-                [NA] => Err(()), // missing value where TRUE/FALSE needed
-                [] => Err(()),   // argument is of length zero
-                _ => Err(()),    // condition has length > 1
-            },
-            Logical(v) => match v[..] {
-                [Some(true)] => Ok(true),
-                [Some(false)] => Ok(false),
-                [NA] => Err(()), // missing value where TRUE/FALSE needed
-                [] => Err(()),   // argument is of length zero
-                _ => Err(()),    // condition has length > 1
-            },
-            Character(v) => match &v[..] {
-                [Some(x)] if x.as_str() == "TRUE" => Ok(true),
-                [Some(x)] if x.as_str() == "FALSE" => Ok(false),
-                [Some(_)] => Err(()), // argument is not interpretable as logical
-                [NA] => Err(()),      // missing value where TRUE/FALSE needed
-                [] => Err(()),        // argument is of length zero
-                _ => Err(()),         // condition has length > 1
-            },
+            Numeric(i) => i.try_into(),
+            Integer(i) => i.try_into(),
+            Logical(i) => i.try_into(),
+            Character(i) => i.try_into(),
         }
+    }
+}
+
+impl From<Rep<Numeric>> for Vector {
+    fn from(x: Rep<Numeric>) -> Self {
+        Vector::Numeric(x)
+    }
+}
+
+impl From<Rep<Integer>> for Vector {
+    fn from(x: Rep<Integer>) -> Self {
+        Vector::Integer(x)
+    }
+}
+
+impl From<Rep<Logical>> for Vector {
+    fn from(x: Rep<Logical>) -> Self {
+        Vector::Logical(x)
+    }
+}
+
+impl From<Rep<Character>> for Vector {
+    fn from(x: Rep<Character>) -> Self {
+        Vector::Character(x)
     }
 }
 
 impl From<Vec<f64>> for Vector {
     fn from(x: Vec<f64>) -> Self {
-        Vector::Numeric(x.into_iter().map(|i| OptionNA::Some(i)).collect())
+        Vector::Numeric(x.into())
     }
 }
 
 impl From<Vec<OptionNA<f64>>> for Vector {
     fn from(x: Vec<OptionNA<f64>>) -> Self {
-        Vector::Numeric(x)
+        Vector::Numeric(x.into())
     }
 }
 
 impl From<Vec<i32>> for Vector {
     fn from(x: Vec<i32>) -> Self {
-        Vector::Integer(x.into_iter().map(|i| OptionNA::Some(i)).collect())
+        Vector::Integer(x.into())
     }
 }
 
 impl From<Vec<OptionNA<i32>>> for Vector {
     fn from(x: Vec<OptionNA<i32>>) -> Self {
-        Vector::Integer(x)
+        Vector::Integer(x.into())
     }
 }
 
 impl From<Vec<bool>> for Vector {
     fn from(x: Vec<bool>) -> Self {
-        Vector::Logical(x.into_iter().map(|i| OptionNA::Some(i)).collect())
+        Vector::Logical(x.into())
     }
 }
 
 impl From<bool> for Vector {
     fn from(x: bool) -> Self {
-        Self::from(vec![x])
+        Vector::Logical(vec![x].into())
     }
 }
 
 impl From<Vec<OptionNA<bool>>> for Vector {
     fn from(x: Vec<OptionNA<bool>>) -> Self {
-        Vector::Logical(x)
+        Vector::Logical(x.into())
     }
 }
 
 impl From<Vec<String>> for Vector {
     fn from(x: Vec<String>) -> Self {
-        Vector::Character(x.into_iter().map(|i| OptionNA::Some(i)).collect())
+        Vector::Character(x.into())
     }
 }
+
+impl Into<String> for Vector {
+    fn into(self) -> String {
+        match self.as_character() {
+            Vector::Character(v) => match v.inner().clone().borrow().get(0) {
+                Some(OptionNA::Some(s)) => s.clone(),
+                Some(OptionNA::NA) => "NA".to_string(),
+                None => "".to_string(),
+            }
+            _ => unreachable!(),
+        }
+    }
+}
+
 
 impl Into<Vec<String>> for Vector {
     fn into(self) -> Vec<String> {
         match self.as_character() {
-            Vector::Character(v) => v
-                .iter()
-                .map(|x| match x {
-                    OptionNA::Some(val) => val.clone(),
-                    OptionNA::NA => "NA".to_string(),
-                })
+            Vector::Character(v) => v.inner().clone().borrow().iter()
+                .map(|x| format!("{}", x))
                 .collect(),
             _ => unreachable!(),
         }
@@ -303,25 +318,40 @@ impl Into<Vec<String>> for Vector {
 
 impl From<Vec<OptionNA<String>>> for Vector {
     fn from(x: Vec<OptionNA<String>>) -> Self {
-        Vector::Character(x)
+        Vector::Character(x.into())
     }
 }
 
+
+pub trait DefaultDebug {}
+impl DefaultDebug for bool {}
+impl DefaultDebug for i32 {}
+impl DefaultDebug for f64 {}
+
 impl<T> Debug for OptionNA<T>
 where
-    T: Debug,
+    T: DefaultDebug + Display,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            OptionNA::Some(x) => write!(f, "{:?}", x),
+            OptionNA::Some(x) => write!(f, "{}", x),
             OptionNA::NA => write!(f, "NA"),
         }
     }
 }
 
-impl<T> Display for OptionNA<T>
-where
-    T: Display,
+impl Debug for OptionNA<String> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            OptionNA::Some(x) => write!(f, "\"{}\"", x),
+            OptionNA::NA => write!(f, "NA"),
+        }
+    }
+}
+
+impl<T> Display for OptionNA<T> 
+where 
+    T: Display
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -333,78 +363,21 @@ where
 
 impl Display for Vector {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        fn fmt_vec<T>(x: &Vec<T>, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result
-        where
-            T: Display,
-        {
-            let n = x.len();
-            let nlen = format!("{}", n).len();
-
-            // TODO: iteratively calculate when we hit max print so our
-            // max_len isn't inflated by a value that is omitted
-
-            let x_strs = x.iter().map(|xi| format!("{}", xi));
-            let max_len = x_strs
-                .clone()
-                .fold(0, |max_len, xi| std::cmp::max(max_len, xi.len()));
-
-            let mut col = 0;
-            let gutterlen = 2 + nlen + 1;
-
-            // hard coded max print & console width
-            let maxprint = 20 * ((80 - gutterlen) / max_len);
-
-            x_strs.take(maxprint).enumerate().try_for_each(|(i, x_str)| {
-                if i == 0 {
-                    col = gutterlen + max_len;
-                    write!(f, "{:>3$}[{}] {:>4$}", "", i + 1, x_str, nlen - 1, max_len)
-                } else if col + 1 + max_len > 80 {
-                    col = gutterlen + max_len;
-                    let i_str = format!("{}", i + 1);
-                    let gutter = nlen - i_str.len();
-                    write!(f, "\n{:>3$}[{}] {:>4$}", "", i_str, x_str, gutter, max_len)
-                } else {
-                    col += 1 + max_len;
-                    write!(f, " {:>1$}", x_str, max_len)
-                }
-            })?;
-
-            if n > maxprint {
-                write!(f, "\n[ omitting {} entries ]", n - maxprint)?;
-            }
-
-            Ok(())
-        }
-
-        fn fmt_strs(x: &Vec<OptionNA<String>>) -> Vec<String> {
-            use OptionNA::*;
-            x.into_iter()
-                .map(|i| match i {
-                    Some(x) => format!("\"{}\"", x),
-                    NA => "NA".to_string(),
-                })
-                .collect()
-        }
-
-        match (self.len(), self) {
-            (0, Vector::Numeric(_)) => write!(f, "numeric(0)"),
-            (0, Vector::Integer(_)) => write!(f, "integer(0)"),
-            (0, Vector::Logical(_)) => write!(f, "logical(0)"),
-            (0, Vector::Character(_)) => write!(f, "character(0)"),
-            (_, Vector::Numeric(x)) => fmt_vec(x, f),
-            (_, Vector::Integer(x)) => fmt_vec(x, f),
-            (_, Vector::Logical(x)) => fmt_vec(x, f),
-            (_, Vector::Character(x)) => fmt_vec(&fmt_strs(x), f),
+        match self {
+            Vector::Numeric(x) => std::fmt::Display::fmt(&x, f),
+            Vector::Integer(x) => std::fmt::Display::fmt(&x, f),
+            Vector::Logical(x) => std::fmt::Display::fmt(&x, f),
+            Vector::Character(x) => std::fmt::Display::fmt(&x, f),
         }
     }
 }
 
-impl<T> std::ops::Add for OptionNA<T>
+impl<T, U, O> std::ops::Add<OptionNA<U>> for OptionNA<T>
 where
-    T: std::ops::Add<Output = T>,
+    T: std::ops::Add<U, Output = O>,
 {
-    type Output = OptionNA<T>;
-    fn add(self, rhs: Self) -> Self::Output {
+    type Output = OptionNA<O>;
+    fn add(self, rhs: OptionNA<U>) -> Self::Output {
         use OptionNA::*;
         match (self, rhs) {
             (Some(l), Some(r)) => Some(l + r),
@@ -469,32 +442,42 @@ where
     }
 }
 
-pub trait Pow {
+pub trait Pow<Rhs> {
     type Output;
     /// raise self to the rhs power
-    fn power(self, rhs: Self) -> Self::Output;
+    fn power(self, rhs: Rhs) -> Self::Output;
 }
 
-impl Pow for i32 {
+impl Pow<i32> for i32 {
     type Output = i32;
     fn power(self, rhs: Self) -> Self::Output {
         i32::pow(self, rhs as u32)
     }
 }
 
-impl Pow for f64 {
+impl Pow<f64> for i32 {
     type Output = f64;
-    fn power(self, rhs: Self) -> Self::Output {
-        f64::powf(self, rhs)
+    fn power(self, rhs: f64) -> Self::Output {
+        f64::powf(self as f64, rhs)
     }
 }
 
-impl<T> Pow for OptionNA<T>
+impl<T> Pow<T> for f64 
 where
-    T: Pow,
+    f64: From<T>
 {
-    type Output = OptionNA<<T as Pow>::Output>;
-    fn power(self, rhs: Self) -> Self::Output {
+    type Output = f64;
+    fn power(self, rhs: T) -> Self::Output {
+        f64::powf(self, rhs.into())
+    }
+}
+
+impl<T, U, O> Pow<OptionNA<U>> for OptionNA<T>
+where
+    T: Pow<U, Output = O>,
+{
+    type Output = OptionNA<O>;
+    fn power(self, rhs: OptionNA<U>) -> Self::Output {
         use OptionNA::*;
         match (self, rhs) {
             (Some(l), Some(r)) => Some(T::power(l, r)),
@@ -517,36 +500,55 @@ where
     }
 }
 
+impl std::ops::BitOr<Logical> for Logical {
+    type Output = Logical;
+    fn bitor(self, rhs: Logical) -> Self::Output {
+        use OptionNA::*;
+        match (self, rhs) {
+            (Some(l), Some(r)) => Some(l || r),
+            _ => NA,
+        }
+    }
+}
+
+impl std::ops::BitAnd<Logical> for Logical {
+    type Output = Logical;
+    fn bitand(self, rhs: Logical) -> Self::Output {
+        use OptionNA::*;
+        match (self, rhs) {
+            (Some(l), Some(r)) => Some(l && r),
+            _ => NA,
+        }
+    }
+}
+
+impl std::ops::Neg for Vector {
+    type Output = Vector;
+    fn neg(self) -> Self::Output {
+        use Vector::*;
+        match self {
+            Numeric(x) => Numeric(x.neg()),
+            Integer(x) => Integer(x.neg()),
+            Logical(x) => Integer(x.neg()),
+            _ => todo!(),
+        }
+    }
+}
+
 impl std::ops::Add for Vector {
     type Output = Vector;
     fn add(self, rhs: Self) -> Self::Output {
         use Vector::*;
-
-        fn f<L, R, LNum, RNum, LRNum>(l: Vec<L>, r: Vec<R>) -> Vector
-        where
-            L: IntoNumeric<LNum> + Clone,
-            R: IntoNumeric<RNum> + Clone,
-            (LNum, RNum): CommonNum<LRNum>,
-            Vector: From<Vec<<LRNum as std::ops::Add>::Output>>,
-            LRNum: std::ops::Add,
-        {
-            Vector::from(
-                map_common_add_numeric(zip_recycle(l, r))
-                    .map(|(l, r)| l + r)
-                    .collect::<Vec<_>>(),
-            )
-        }
-
         match (self, rhs) {
-            (Numeric(l), Numeric(r)) => f(l, r),
-            (Numeric(l), Integer(r)) => f(l, r),
-            (Numeric(l), Logical(r)) => f(l, r),
-            (Integer(l), Numeric(r)) => f(l, r),
-            (Integer(l), Integer(r)) => f(l, r),
-            (Integer(l), Logical(r)) => f(l, r),
-            (Logical(l), Numeric(r)) => f(l, r),
-            (Logical(l), Integer(r)) => f(l, r),
-            (Logical(l), Logical(r)) => f(l, r),
+            (Numeric(l), Numeric(r)) => (l + r).into(),
+            (Numeric(l), Integer(r)) => (l + r).into(),
+            (Numeric(l), Logical(r)) => (l + r).into(),
+            (Integer(l), Numeric(r)) => (l + r).into(),
+            (Integer(l), Integer(r)) => (l + r).into(),
+            (Integer(l), Logical(r)) => (l + r).into(),
+            (Logical(l), Numeric(r)) => (l + r).into(),
+            (Logical(l), Integer(r)) => (l + r).into(),
+            (Logical(l), Logical(r)) => (l + r).into(),
             _ => todo!(),
         }
     }
@@ -556,59 +558,16 @@ impl std::ops::Sub for Vector {
     type Output = Vector;
     fn sub(self, rhs: Self) -> Self::Output {
         use Vector::*;
-
-        fn f<L, R, LNum, RNum, LRNum>(l: Vec<L>, r: Vec<R>) -> Vector
-        where
-            L: IntoNumeric<LNum> + Clone,
-            R: IntoNumeric<RNum> + Clone,
-            (LNum, RNum): CommonNum<LRNum>,
-            Vector: From<Vec<<LRNum as std::ops::Sub>::Output>>,
-            LRNum: std::ops::Sub,
-        {
-            Vector::from(
-                map_common_add_numeric(zip_recycle(l, r))
-                    .map(|(l, r)| l - r)
-                    .collect::<Vec<_>>(),
-            )
-        }
-
         match (self, rhs) {
-            (Numeric(l), Numeric(r)) => f(l, r),
-            (Numeric(l), Integer(r)) => f(l, r),
-            (Numeric(l), Logical(r)) => f(l, r),
-            (Integer(l), Numeric(r)) => f(l, r),
-            (Integer(l), Integer(r)) => f(l, r),
-            (Integer(l), Logical(r)) => f(l, r),
-            (Logical(l), Numeric(r)) => f(l, r),
-            (Logical(l), Integer(r)) => f(l, r),
-            (Logical(l), Logical(r)) => f(l, r),
-            _ => todo!(),
-        }
-    }
-}
-
-impl std::ops::Neg for Vector {
-    type Output = Vector;
-    fn neg(self) -> Self::Output {
-        use Vector::*;
-
-        fn f<T, TNum>(x: Vec<T>) -> Vector
-        where
-            T: IntoNumeric<TNum>,
-            Vector: From<Vec<<TNum as std::ops::Neg>::Output>>,
-            TNum: std::ops::Neg,
-        {
-            Vector::from(
-                x.into_iter()
-                    .map(|i| i.as_numeric().neg())
-                    .collect::<Vec<_>>(),
-            )
-        }
-
-        match self {
-            Numeric(x) => f(x),
-            Integer(x) => f(x),
-            Logical(x) => f(x),
+            (Numeric(l), Numeric(r)) => (l - r).into(),
+            (Numeric(l), Integer(r)) => (l - r).into(),
+            (Numeric(l), Logical(r)) => (l - r).into(),
+            (Integer(l), Numeric(r)) => (l - r).into(),
+            (Integer(l), Integer(r)) => (l - r).into(),
+            (Integer(l), Logical(r)) => (l - r).into(),
+            (Logical(l), Numeric(r)) => (l - r).into(),
+            (Logical(l), Integer(r)) => (l - r).into(),
+            (Logical(l), Logical(r)) => (l - r).into(),
             _ => todo!(),
         }
     }
@@ -618,32 +577,16 @@ impl std::ops::Mul for Vector {
     type Output = Vector;
     fn mul(self, rhs: Self) -> Self::Output {
         use Vector::*;
-
-        fn f<L, R, LNum, RNum, LRNum>(l: Vec<L>, r: Vec<R>) -> Vector
-        where
-            L: IntoNumeric<LNum> + Clone,
-            R: IntoNumeric<RNum> + Clone,
-            (LNum, RNum): CommonNum<LRNum>,
-            Vector: From<Vec<<LRNum as std::ops::Mul>::Output>>,
-            LRNum: std::ops::Mul,
-        {
-            Vector::from(
-                map_common_mul_numeric(zip_recycle(l, r))
-                    .map(|(l, r)| l * r)
-                    .collect::<Vec<_>>(),
-            )
-        }
-
         match (self, rhs) {
-            (Numeric(l), Numeric(r)) => f(l, r),
-            (Numeric(l), Integer(r)) => f(l, r),
-            (Numeric(l), Logical(r)) => f(l, r),
-            (Integer(l), Numeric(r)) => f(l, r),
-            (Integer(l), Integer(r)) => f(l, r),
-            (Integer(l), Logical(r)) => f(l, r),
-            (Logical(l), Numeric(r)) => f(l, r),
-            (Logical(l), Integer(r)) => f(l, r),
-            (Logical(l), Logical(r)) => f(l, r),
+            (Numeric(l), Numeric(r)) => (l * r).into(),
+            (Numeric(l), Integer(r)) => (l * r).into(),
+            (Numeric(l), Logical(r)) => (l * r).into(),
+            (Integer(l), Numeric(r)) => (l * r).into(),
+            (Integer(l), Integer(r)) => (l * r).into(),
+            (Integer(l), Logical(r)) => (l * r).into(),
+            (Logical(l), Numeric(r)) => (l * r).into(),
+            (Logical(l), Integer(r)) => (l * r).into(),
+            (Logical(l), Logical(r)) => (l * r).into(),
             _ => todo!(),
         }
     }
@@ -653,212 +596,182 @@ impl std::ops::Div for Vector {
     type Output = Vector;
     fn div(self, rhs: Self) -> Self::Output {
         use Vector::*;
-
-        fn f<L, R, LNum, RNum, LRNum>(l: Vec<L>, r: Vec<R>) -> Vector
-        where
-            L: IntoNumeric<LNum> + Clone,
-            R: IntoNumeric<RNum> + Clone,
-            (LNum, RNum): CommonNum<LRNum>,
-            Vector: From<Vec<<LRNum as std::ops::Div>::Output>>,
-            LRNum: std::ops::Div,
-        {
-            Vector::from(
-                map_common_mul_numeric(zip_recycle(l, r))
-                    .map(|(l, r)| l / r)
-                    .collect::<Vec<_>>(),
-            )
-        }
-
         match (self, rhs) {
-            (Numeric(l), Numeric(r)) => f(l, r),
-            (Numeric(l), Integer(r)) => f(l, r),
-            (Numeric(l), Logical(r)) => f(l, r),
-            (Integer(l), Numeric(r)) => f(l, r),
-            (Integer(l), Integer(r)) => f(l, r),
-            (Integer(l), Logical(r)) => f(l, r),
-            (Logical(l), Numeric(r)) => f(l, r),
-            (Logical(l), Integer(r)) => f(l, r),
-            (Logical(l), Logical(r)) => f(l, r),
+            (Numeric(l), Numeric(r)) => (l / r).into(),
+            (Numeric(l), Integer(r)) => (l / r).into(),
+            (Numeric(l), Logical(r)) => (l / r).into(),
+            (Integer(l), Numeric(r)) => (l / r).into(),
+            (Integer(l), Integer(r)) => (l / r).into(),
+            (Integer(l), Logical(r)) => (l / r).into(),
+            (Logical(l), Numeric(r)) => (l / r).into(),
+            (Logical(l), Integer(r)) => (l / r).into(),
+            (Logical(l), Logical(r)) => (l / r).into(),
             _ => todo!(),
         }
     }
 }
 
-impl Pow for Vector {
+impl Pow<Vector> for Vector {
     type Output = Vector;
     fn power(self, rhs: Self) -> Self::Output {
         use Vector::*;
-
-        fn f<L, R, LNum, RNum, LRNum>(l: Vec<L>, r: Vec<R>) -> Vector
-        where
-            L: IntoNumeric<LNum> + Clone,
-            R: IntoNumeric<RNum> + Clone,
-            (LNum, RNum): CommonNum<LRNum>,
-            Vector: From<Vec<<LRNum as Pow>::Output>>,
-            LRNum: Pow,
-        {
-            Vector::from(
-                map_common_mul_numeric(zip_recycle(l, r))
-                    .map(|(l, r)| LRNum::power(l, r))
-                    .collect::<Vec<_>>(),
-            )
-        }
-
         match (self, rhs) {
-            (Numeric(l), Numeric(r)) => f(l, r),
-            (Numeric(l), Integer(r)) => f(l, r),
-            (Numeric(l), Logical(r)) => f(l, r),
-            (Integer(l), Numeric(r)) => f(l, r),
-            (Integer(l), Integer(r)) => f(l, r),
-            (Integer(l), Logical(r)) => f(l, r),
-            (Logical(l), Numeric(r)) => f(l, r),
-            (Logical(l), Integer(r)) => f(l, r),
-            (Logical(l), Logical(r)) => f(l, r),
+            (Numeric(l), Numeric(r)) => l.power(r).into(),
+            (Numeric(l), Integer(r)) => l.power(r).into(),
+            (Numeric(l), Logical(r)) => l.power(r).into(),
+            (Integer(l), Numeric(r)) => l.power(r).into(),
+            (Integer(l), Integer(r)) => l.power(r).into(),
+            (Integer(l), Logical(r)) => l.power(r).into(),
+            (Logical(l), Numeric(r)) => l.power(r).into(),
+            (Logical(l), Integer(r)) => l.power(r).into(),
+            (Logical(l), Logical(r)) => l.power(r).into(),
             _ => todo!(),
         }
     }
 }
 
-pub trait VecPartialCmp {
-    type CmpOutput;
+pub trait VecPartialCmp<Rhs> {
     type Output;
-    fn vec_partial_cmp(self, rhs: Self) -> Self::CmpOutput;
-    fn vec_gt(self, rhs: Self) -> Self::Output;
-    fn vec_gte(self, rhs: Self) -> Self::Output;
-    fn vec_lt(self, rhs: Self) -> Self::Output;
-    fn vec_lte(self, rhs: Self) -> Self::Output;
-    fn vec_eq(self, rhs: Self) -> Self::Output;
-    fn vec_neq(self, rhs: Self) -> Self::Output;
+    fn vec_gt(self, rhs: Rhs) -> Self::Output;
+    fn vec_gte(self, rhs: Rhs) -> Self::Output;
+    fn vec_lt(self, rhs: Rhs) -> Self::Output;
+    fn vec_lte(self, rhs: Rhs) -> Self::Output;
+    fn vec_eq(self, rhs: Rhs) -> Self::Output;
+    fn vec_neq(self, rhs: Rhs) -> Self::Output;
 }
 
-impl VecPartialCmp for Vector {
-    type CmpOutput = Vec<Option<std::cmp::Ordering>>;
+impl VecPartialCmp<Vector> for Vector {
     type Output = Vector;
-
-    fn vec_partial_cmp(self, rhs: Self) -> Self::CmpOutput {
-        use Vector::*;
-
-        fn f<L, R, LR>(l: Vec<OptionNA<L>>, r: Vec<OptionNA<R>>) -> Vec<Option<std::cmp::Ordering>>
-        where
-            L: CoercibleInto<LR> + Clone,
-            R: CoercibleInto<LR> + Clone,
-            (L, R): CommonCmp<LR>,
-            LR: PartialOrd,
-        {
-            zip_recycle(l.into_iter(), r.into_iter())
-                .map(|pair| match pair {
-                    (OptionNA::Some(l), OptionNA::Some(r)) => {
-                        let l = CoercibleInto::<LR>::coerce_into(l);
-                        let r = CoercibleInto::<LR>::coerce_into(r);
-                        l.partial_cmp(&r)
-                    }
-                    _ => None,
-                })
-                .collect()
-        }
-
-        match (self, rhs) {
-            (Numeric(l), Numeric(r)) => f(l, r),
-            (Numeric(l), Integer(r)) => f(l, r),
-            (Numeric(l), Logical(r)) => f(l, r),
-            (Numeric(l), Character(r)) => f(l, r),
-            (Integer(l), Numeric(r)) => f(l, r),
-            (Integer(l), Integer(r)) => f(l, r),
-            (Integer(l), Logical(r)) => f(l, r),
-            (Integer(l), Character(r)) => f(l, r),
-            (Logical(l), Numeric(r)) => f(l, r),
-            (Logical(l), Integer(r)) => f(l, r),
-            (Logical(l), Logical(r)) => f(l, r),
-            (Logical(l), Character(r)) => f(l, r),
-            (Character(l), Numeric(r)) => f(l, r),
-            (Character(l), Integer(r)) => f(l, r),
-            (Character(l), Logical(r)) => f(l, r),
-            (Character(l), Character(r)) => f(l, r),
-        }
-    }
-
     fn vec_gt(self, rhs: Self) -> Self::Output {
-        use std::cmp::Ordering::*;
-        Vector::Logical(
-            self.vec_partial_cmp(rhs)
-                .into_iter()
-                .map(|i| match i {
-                    Some(Greater) => OptionNA::Some(true),
-                    Some(_) => OptionNA::Some(false),
-                    None => OptionNA::NA,
-                })
-                .collect(),
-        )
+        use Vector::*;
+        match (self, rhs) {
+            (Numeric(l), Numeric(r)) => l.vec_gt(r).into(),
+            (Numeric(l), Integer(r)) => l.vec_gt(r).into(),
+            (Numeric(l), Logical(r)) => l.vec_gt(r).into(),
+            (Numeric(l), Character(r)) => l.vec_gt(r).into(),
+            (Integer(l), Numeric(r)) => l.vec_gt(r).into(),
+            (Integer(l), Integer(r)) => l.vec_gt(r).into(),
+            (Integer(l), Logical(r)) => l.vec_gt(r).into(),
+            (Integer(l), Character(r)) => l.vec_gt(r).into(),
+            (Logical(l), Numeric(r)) => l.vec_gt(r).into(),
+            (Logical(l), Integer(r)) => l.vec_gt(r).into(),
+            (Logical(l), Logical(r)) => l.vec_gt(r).into(),
+            (Logical(l), Character(r)) => l.vec_gt(r).into(),
+            (Character(l), Numeric(r)) => l.vec_gt(r).into(),
+            (Character(l), Integer(r)) => l.vec_gt(r).into(),
+            (Character(l), Logical(r)) => l.vec_gt(r).into(),
+            (Character(l), Character(r)) => l.vec_gt(r).into(),
+        }
     }
 
     fn vec_gte(self, rhs: Self) -> Self::Output {
-        use std::cmp::Ordering::*;
-        Vector::Logical(
-            self.vec_partial_cmp(rhs)
-                .into_iter()
-                .map(|i| match i {
-                    Some(Greater | Equal) => OptionNA::Some(true),
-                    Some(_) => OptionNA::Some(false),
-                    None => OptionNA::NA,
-                })
-                .collect(),
-        )
+        use Vector::*;
+        match (self, rhs) {
+            (Numeric(l), Numeric(r)) => l.vec_gte(r).into(),
+            (Numeric(l), Integer(r)) => l.vec_gte(r).into(),
+            (Numeric(l), Logical(r)) => l.vec_gte(r).into(),
+            (Numeric(l), Character(r)) => l.vec_gte(r).into(),
+            (Integer(l), Numeric(r)) => l.vec_gte(r).into(),
+            (Integer(l), Integer(r)) => l.vec_gte(r).into(),
+            (Integer(l), Logical(r)) => l.vec_gte(r).into(),
+            (Integer(l), Character(r)) => l.vec_gte(r).into(),
+            (Logical(l), Numeric(r)) => l.vec_gte(r).into(),
+            (Logical(l), Integer(r)) => l.vec_gte(r).into(),
+            (Logical(l), Logical(r)) => l.vec_gte(r).into(),
+            (Logical(l), Character(r)) => l.vec_gte(r).into(),
+            (Character(l), Numeric(r)) => l.vec_gte(r).into(),
+            (Character(l), Integer(r)) => l.vec_gte(r).into(),
+            (Character(l), Logical(r)) => l.vec_gte(r).into(),
+            (Character(l), Character(r)) => l.vec_gte(r).into(),
+        }
     }
 
     fn vec_lt(self, rhs: Self) -> Self::Output {
-        use std::cmp::Ordering::*;
-        Vector::Logical(
-            self.vec_partial_cmp(rhs)
-                .into_iter()
-                .map(|i| match i {
-                    Some(Less) => OptionNA::Some(true),
-                    Some(_) => OptionNA::Some(false),
-                    None => OptionNA::NA,
-                })
-                .collect(),
-        )
+        use Vector::*;
+        match (self, rhs) {
+            (Numeric(l), Numeric(r)) => l.vec_lt(r).into(),
+            (Numeric(l), Integer(r)) => l.vec_lt(r).into(),
+            (Numeric(l), Logical(r)) => l.vec_lt(r).into(),
+            (Numeric(l), Character(r)) => l.vec_lt(r).into(),
+            (Integer(l), Numeric(r)) => l.vec_lt(r).into(),
+            (Integer(l), Integer(r)) => l.vec_lt(r).into(),
+            (Integer(l), Logical(r)) => l.vec_lt(r).into(),
+            (Integer(l), Character(r)) => l.vec_lt(r).into(),
+            (Logical(l), Numeric(r)) => l.vec_lt(r).into(),
+            (Logical(l), Integer(r)) => l.vec_lt(r).into(),
+            (Logical(l), Logical(r)) => l.vec_lt(r).into(),
+            (Logical(l), Character(r)) => l.vec_lt(r).into(),
+            (Character(l), Numeric(r)) => l.vec_lt(r).into(),
+            (Character(l), Integer(r)) => l.vec_lt(r).into(),
+            (Character(l), Logical(r)) => l.vec_lt(r).into(),
+            (Character(l), Character(r)) => l.vec_lt(r).into(),
+        }
     }
 
     fn vec_lte(self, rhs: Self) -> Self::Output {
-        use std::cmp::Ordering::*;
-        Vector::Logical(
-            self.vec_partial_cmp(rhs)
-                .into_iter()
-                .map(|i| match i {
-                    Some(Less | Equal) => OptionNA::Some(true),
-                    Some(_) => OptionNA::Some(false),
-                    None => OptionNA::NA,
-                })
-                .collect(),
-        )
+        use Vector::*;
+        match (self, rhs) {
+            (Numeric(l), Numeric(r)) => l.vec_lte(r).into(),
+            (Numeric(l), Integer(r)) => l.vec_lte(r).into(),
+            (Numeric(l), Logical(r)) => l.vec_lte(r).into(),
+            (Numeric(l), Character(r)) => l.vec_lte(r).into(),
+            (Integer(l), Numeric(r)) => l.vec_lte(r).into(),
+            (Integer(l), Integer(r)) => l.vec_lte(r).into(),
+            (Integer(l), Logical(r)) => l.vec_lte(r).into(),
+            (Integer(l), Character(r)) => l.vec_lte(r).into(),
+            (Logical(l), Numeric(r)) => l.vec_lte(r).into(),
+            (Logical(l), Integer(r)) => l.vec_lte(r).into(),
+            (Logical(l), Logical(r)) => l.vec_lte(r).into(),
+            (Logical(l), Character(r)) => l.vec_lte(r).into(),
+            (Character(l), Numeric(r)) => l.vec_lte(r).into(),
+            (Character(l), Integer(r)) => l.vec_lte(r).into(),
+            (Character(l), Logical(r)) => l.vec_lte(r).into(),
+            (Character(l), Character(r)) => l.vec_lte(r).into(),
+        }
     }
 
     fn vec_eq(self, rhs: Self) -> Self::Output {
-        use std::cmp::Ordering::*;
-        Vector::Logical(
-            self.vec_partial_cmp(rhs)
-                .into_iter()
-                .map(|i| match i {
-                    Some(Equal) => OptionNA::Some(true),
-                    Some(_) => OptionNA::Some(false),
-                    None => OptionNA::NA,
-                })
-                .collect(),
-        )
+        use Vector::*;
+        match (self, rhs) {
+            (Numeric(l), Numeric(r)) => l.vec_eq(r).into(),
+            (Numeric(l), Integer(r)) => l.vec_eq(r).into(),
+            (Numeric(l), Logical(r)) => l.vec_eq(r).into(),
+            (Numeric(l), Character(r)) => l.vec_eq(r).into(),
+            (Integer(l), Numeric(r)) => l.vec_eq(r).into(),
+            (Integer(l), Integer(r)) => l.vec_eq(r).into(),
+            (Integer(l), Logical(r)) => l.vec_eq(r).into(),
+            (Integer(l), Character(r)) => l.vec_eq(r).into(),
+            (Logical(l), Numeric(r)) => l.vec_eq(r).into(),
+            (Logical(l), Integer(r)) => l.vec_eq(r).into(),
+            (Logical(l), Logical(r)) => l.vec_eq(r).into(),
+            (Logical(l), Character(r)) => l.vec_eq(r).into(),
+            (Character(l), Numeric(r)) => l.vec_eq(r).into(),
+            (Character(l), Integer(r)) => l.vec_eq(r).into(),
+            (Character(l), Logical(r)) => l.vec_eq(r).into(),
+            (Character(l), Character(r)) => l.vec_eq(r).into(),
+        }
     }
 
     fn vec_neq(self, rhs: Self) -> Self::Output {
-        use std::cmp::Ordering::*;
-        Vector::Logical(
-            self.vec_partial_cmp(rhs)
-                .into_iter()
-                .map(|i| match i {
-                    Some(Equal) => OptionNA::Some(false),
-                    Some(_) => OptionNA::Some(true),
-                    None => OptionNA::NA,
-                })
-                .collect(),
-        )
+        use Vector::*;
+        match (self, rhs) {
+            (Numeric(l), Numeric(r)) => l.vec_neq(r).into(),
+            (Numeric(l), Integer(r)) => l.vec_neq(r).into(),
+            (Numeric(l), Logical(r)) => l.vec_neq(r).into(),
+            (Numeric(l), Character(r)) => l.vec_neq(r).into(),
+            (Integer(l), Numeric(r)) => l.vec_neq(r).into(),
+            (Integer(l), Integer(r)) => l.vec_neq(r).into(),
+            (Integer(l), Logical(r)) => l.vec_neq(r).into(),
+            (Integer(l), Character(r)) => l.vec_neq(r).into(),
+            (Logical(l), Numeric(r)) => l.vec_neq(r).into(),
+            (Logical(l), Integer(r)) => l.vec_neq(r).into(),
+            (Logical(l), Logical(r)) => l.vec_neq(r).into(),
+            (Logical(l), Character(r)) => l.vec_neq(r).into(),
+            (Character(l), Numeric(r)) => l.vec_neq(r).into(),
+            (Character(l), Integer(r)) => l.vec_neq(r).into(),
+            (Character(l), Logical(r)) => l.vec_neq(r).into(),
+            (Character(l), Character(r)) => l.vec_neq(r).into(),
+        }
     }
 }
 
@@ -866,32 +779,16 @@ impl std::ops::Rem for Vector {
     type Output = Vector;
     fn rem(self, rhs: Self) -> Self::Output {
         use Vector::*;
-
-        fn f<L, R, LNum, RNum, LRNum>(l: Vec<L>, r: Vec<R>) -> Vector
-        where
-            L: IntoNumeric<LNum> + Clone,
-            R: IntoNumeric<RNum> + Clone,
-            (LNum, RNum): CommonNum<LRNum>,
-            Vector: From<Vec<<LRNum as std::ops::Rem>::Output>>,
-            LRNum: std::ops::Rem,
-        {
-            Vector::from(
-                map_common_mul_numeric(zip_recycle(l, r))
-                    .map(|(l, r)| l.rem(r))
-                    .collect::<Vec<_>>(),
-            )
-        }
-
         match (self, rhs) {
-            (Numeric(l), Numeric(r)) => f(l, r),
-            (Numeric(l), Integer(r)) => f(l, r),
-            (Numeric(l), Logical(r)) => f(l, r),
-            (Integer(l), Numeric(r)) => f(l, r),
-            (Integer(l), Integer(r)) => f(l, r),
-            (Integer(l), Logical(r)) => f(l, r),
-            (Logical(l), Numeric(r)) => f(l, r),
-            (Logical(l), Integer(r)) => f(l, r),
-            (Logical(l), Logical(r)) => f(l, r),
+            (Numeric(l), Numeric(r)) => l.rem(r).into(),
+            (Numeric(l), Integer(r)) => l.rem(r).into(),
+            (Numeric(l), Logical(r)) => l.rem(r).into(),
+            (Integer(l), Numeric(r)) => l.rem(r).into(),
+            (Integer(l), Integer(r)) => l.rem(r).into(),
+            (Integer(l), Logical(r)) => l.rem(r).into(),
+            (Logical(l), Numeric(r)) => l.rem(r).into(),
+            (Logical(l), Integer(r)) => l.rem(r).into(),
+            (Logical(l), Logical(r)) => l.rem(r).into(),
             _ => todo!(),
         }
     }
@@ -900,19 +797,24 @@ impl std::ops::Rem for Vector {
 impl std::ops::BitOr for Vector {
     type Output = Vector;
     fn bitor(self, rhs: Self) -> Self::Output {
-        use OptionNA::*;
         use Vector::*;
-
-        match (self.as_logical(), rhs.as_logical()) {
-            (Logical(l), Logical(r)) => Vector::Logical(
-                zip_recycle(l.into_iter(), r.into_iter())
-                    .map(|(l, r)| match (l, r) {
-                        (Some(l), Some(r)) => Some(l || r),
-                        _ => NA,
-                    })
-                    .collect::<Vec<_>>(),
-            ),
-            _ => todo!(),
+        match (self, rhs) {
+            (Numeric(l), Numeric(r)) => l.bitor(r).into(),
+            (Numeric(l), Integer(r)) => l.bitor(r).into(),
+            (Numeric(l), Logical(r)) => l.bitor(r).into(),
+            (Numeric(l), Character(r)) => l.bitor(r).into(),
+            (Integer(l), Numeric(r)) => l.bitor(r).into(),
+            (Integer(l), Integer(r)) => l.bitor(r).into(),
+            (Integer(l), Logical(r)) => l.bitor(r).into(),
+            (Integer(l), Character(r)) => l.bitor(r).into(),
+            (Logical(l), Numeric(r)) => l.bitor(r).into(),
+            (Logical(l), Integer(r)) => l.bitor(r).into(),
+            (Logical(l), Logical(r)) => l.bitor(r).into(),
+            (Logical(l), Character(r)) => l.bitor(r).into(),
+            (Character(l), Numeric(r)) => l.bitor(r).into(),
+            (Character(l), Integer(r)) => l.bitor(r).into(),
+            (Character(l), Logical(r)) => l.bitor(r).into(),
+            (Character(l), Character(r)) => l.bitor(r).into(),
         }
     }
 }
@@ -920,19 +822,24 @@ impl std::ops::BitOr for Vector {
 impl std::ops::BitAnd for Vector {
     type Output = Vector;
     fn bitand(self, rhs: Self) -> Self::Output {
-        use OptionNA::*;
         use Vector::*;
-
-        match (self.as_logical(), rhs.as_logical()) {
-            (Logical(l), Logical(r)) => Vector::Logical(
-                zip_recycle(l.into_iter(), r.into_iter())
-                    .map(|(l, r)| match (l, r) {
-                        (Some(l), Some(r)) => Some(l && r),
-                        _ => NA,
-                    })
-                    .collect::<Vec<_>>(),
-            ),
-            _ => todo!(),
+        match (self, rhs) {
+            (Numeric(l), Numeric(r)) => l.bitand(r).into(),
+            (Numeric(l), Integer(r)) => l.bitand(r).into(),
+            (Numeric(l), Logical(r)) => l.bitand(r).into(),
+            (Numeric(l), Character(r)) => l.bitand(r).into(),
+            (Integer(l), Numeric(r)) => l.bitand(r).into(),
+            (Integer(l), Integer(r)) => l.bitand(r).into(),
+            (Integer(l), Logical(r)) => l.bitand(r).into(),
+            (Integer(l), Character(r)) => l.bitand(r).into(),
+            (Logical(l), Numeric(r)) => l.bitand(r).into(),
+            (Logical(l), Integer(r)) => l.bitand(r).into(),
+            (Logical(l), Logical(r)) => l.bitand(r).into(),
+            (Logical(l), Character(r)) => l.bitand(r).into(),
+            (Character(l), Numeric(r)) => l.bitand(r).into(),
+            (Character(l), Integer(r)) => l.bitand(r).into(),
+            (Character(l), Logical(r)) => l.bitand(r).into(),
+            (Character(l), Character(r)) => l.bitand(r).into(),
         }
     }
 }
