@@ -125,7 +125,7 @@ impl<T: AtomicMode + Clone + Default> Rep<T> {
                 for (li, ri) in l_indices.zip(r_indices) {
                     match (li, ri) {
                         (Some(li), None) => lvb[li] = T::default(),
-                        (Some(li), Some(ri)) => lvb[li] = rvb[ri].clone(),
+                        (Some(li), Some(ri)) => lvb[li] = rvb[ri % rvb.len()].clone(),
                         _ => (),
                     }
                 }
