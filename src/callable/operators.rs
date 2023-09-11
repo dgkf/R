@@ -22,13 +22,16 @@ impl Callable for InfixAssign {
                 Ok(value)
             }
             Call(what, mut args) => match *what {
-                Primitive(prim) => prim.call_assign(rhs, args, stack),
                 String(s) | Symbol(s) => {
                     args.insert(0, rhs);
                     let s = format!("{}<-", s);
                     stack.eval(Call(Box::new(Symbol(s)), args))
+                },
+                _ => {
+                    let what = stack.eval(Call(what, args))?;
+                    let value = stack.eval(rhs)?;
+                    what.assign(value)
                 }
-                _ => unreachable!(),
             },
             _ => unimplemented!("cannot assign to that!"),
         }
@@ -278,9 +281,9 @@ impl Callable for InfixColon {
         // tertiary case
         } else if let Some((_, arg3)) = argstream.next() {
             // currently always returns numeric vector
-            let start: f64 = stack.eval(arg1)?.as_numeric()?.try_into()?;
-            let by: f64 = stack.eval(arg2)?.as_numeric()?.try_into()?;
-            let end: f64 = stack.eval(arg3)?.as_numeric()?.try_into()?;
+            let start: f64 = stack.eval(arg1)?.try_into()?;
+            let by: f64 = stack.eval(arg2)?.try_into()?;
+            let end: f64 = stack.eval(arg3)?.try_into()?;
 
             if by == 0.0 {
                 return RError::Other("Cannot increment by 0".to_string()).into()
@@ -375,11 +378,11 @@ impl Callable for PostfixIndex {
         let (what, index) = stack.eval_binary(args.unnamed_binary_args())?;
 
         use R::*;
-        match (what, value, index.as_integer()?) {
-            (Vector(lrvec), Vector(rrvec), Vector(ivec)) => {
+        match (what, index.as_integer()?) {
+            (Vector(lrvec), Vector(ivec)) => {
                 let by: Subset = ivec.try_into()?;
                 let mut lrvec_subset = lrvec.subset(by);
-                lrvec_subset.assign(rrvec)?;
+                lrvec_subset.assign(value)?;
                 Ok(Vector(lrvec))
             }
             _ => unimplemented!(),

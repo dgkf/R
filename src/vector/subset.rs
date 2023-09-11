@@ -4,6 +4,11 @@ use crate::lang::RSignal;
 
 use super::vectors::{Vector, Integer, OptionNA};
 
+/// Subsets
+///
+/// Representations of how data views might be specified. Indices are 0-indexed,
+/// for direct use against rust-internal representations.
+///
 #[derive(Debug, Clone, PartialEq)]
 pub enum Subset {
     Indices(Rc<RefCell<Vec<Integer>>>),
@@ -65,7 +70,19 @@ impl TryFrom<Vector> for Subset {
     type Error = RSignal;
     fn try_from(value: Vector) -> Result<Self, Self::Error> {
         match value.as_integer() {
-            Vector::Integer(v) => Ok(Subset::Indices(v.materialize().inner().clone())),
+            Vector::Integer(v) => {
+                let v = v.inner();
+
+                // convert indices into 0-indexed values
+                for i in v.borrow_mut().iter_mut() {
+                    match i {
+                        OptionNA::NA => (),
+                        OptionNA::Some(x) => *x -= 1,
+                    }
+                }
+
+                Ok(Subset::Indices(v))
+            },
             _ => unreachable!()
         }
     }

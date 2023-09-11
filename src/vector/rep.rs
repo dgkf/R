@@ -95,16 +95,16 @@ impl<T: AtomicMode + Clone + Default> Rep<T> {
     /// Assignment to a vector from another. The aggregate subsetted indices
     /// are iterated over while performing the assignment.
     ///
-    pub fn assign(&mut self, value: Self) 
+    pub fn assign(&mut self, value: Self) -> Self
     where
         T: Clone + Default
     {
         match (self, value) {
             (Rep::Subset(lv, ls), Rep::Subset(rv, rs)) => {
-                let lvc = lv.clone(); let mut lv = lvc.borrow_mut();
-                let rvc = rv.clone(); let rv = rvc.borrow();
+                let lvc = lv.clone(); let mut lvb = lvc.borrow_mut();
+                let rvc = rv.clone(); let rvb = rvc.borrow();
 
-                let lv_len = lv.len().clone();
+                let lv_len = lvb.len().clone();
                 let l_indices = ls.clone().into_iter()
                     .take_while(|i| {
                         match i {
@@ -123,11 +123,13 @@ impl<T: AtomicMode + Clone + Default> Rep<T> {
 
                 for (li, ri) in l_indices.zip(r_indices) {
                     match (li, ri) {
-                        (Some(li), None) => lv[li.saturating_sub(1)] = T::default(),
-                        (Some(li), Some(ri)) => lv[li.saturating_sub(1)] = rv[ri].clone(),
+                        (Some(li), None) => lvb[li] = T::default(),
+                        (Some(li), Some(ri)) => lvb[li] = rvb[ri].clone(),
                         _ => (),
                     }
                 }
+
+                Rep::Subset(lvc.clone(), ls.clone())
             },
         }
     }
@@ -441,7 +443,7 @@ where
     fn neg(self) -> Self::Output {
         Rep::from(
             self.inner().clone().borrow().iter()
-                .map(|l| CoercibleInto::<LNum>::coerce_into(l).neg())
+                .map(|l| CoercibleInto::<LNum>::coerce_into(l.clone()).neg())
                 .collect::<Vec<O>>()
         )
     }
@@ -570,7 +572,7 @@ where
         let rhs = rb.iter();
 
         Rep::from(
-            map_common_numeric(zip_recycle(lhs, rhs))
+            map_common_numeric(zip_recycle(lhs.into_iter(), rhs.into_iter()))
                 .map(|(l, r)| l.rem(r))
                 .collect::<Vec<O>>()
         )
@@ -596,7 +598,10 @@ where
 
         Rep::from(
             zip_recycle(lhs, rhs)
-                .map(|(l, r)| CoercibleInto::<LNum>::coerce_into(l).power(CoercibleInto::<RNum>::coerce_into(r)))
+                .map(|(l, r)| {
+                    CoercibleInto::<LNum>::coerce_into(l.clone())
+                        .power(CoercibleInto::<RNum>::coerce_into(r.clone()))
+                })
                 .collect::<Vec<O>>()
         )
     }
@@ -621,7 +626,10 @@ where
 
         Rep::from(
             zip_recycle(lhs, rhs)
-                .map(|(l, r)| CoercibleInto::<Logical>::coerce_into(l).bitor(CoercibleInto::<Logical>::coerce_into(r)))
+                .map(|(l, r)| {
+                    CoercibleInto::<Logical>::coerce_into(l.clone())
+                        .bitor(CoercibleInto::<Logical>::coerce_into(r.clone()))
+                })
                 .collect::<Vec<O>>()
         )
     }
@@ -646,7 +654,10 @@ where
 
         Rep::from(
             zip_recycle(lhs, rhs)
-                .map(|(l, r)| CoercibleInto::<Logical>::coerce_into(l).bitand(CoercibleInto::<Logical>::coerce_into(r)))
+                .map(|(l, r)| {
+                    CoercibleInto::<Logical>::coerce_into(l.clone())
+                        .bitand(CoercibleInto::<Logical>::coerce_into(r.clone()))
+                })
                 .collect::<Vec<O>>()
         )
     }

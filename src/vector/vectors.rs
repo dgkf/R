@@ -4,7 +4,6 @@ use std::fmt::Display;
 use crate::error::RError;
 use crate::lang::EvalResult;
 use crate::lang::R;
-use crate::lang::RSignal;
 use crate::vector::coercion::CoercibleInto;
 
 use super::coercion::AtomicMode;
@@ -93,16 +92,19 @@ impl Vector {
         }
     }
 
-    pub fn assign(&mut self, other: Self) -> Result<(), RSignal> {
+    pub fn assign(&mut self, other: R) -> EvalResult {
         let err = RError::Other("Cannot assign to a vector from a different type".to_string()).into();
         match (self, other) {
-            (Vector::Numeric(l), Vector::Numeric(r)) => l.assign(r).into(),
-            (Vector::Integer(l), Vector::Integer(r)) => l.assign(r).into(),
-            (Vector::Logical(l), Vector::Logical(r)) => l.assign(r).into(),
-            (Vector::Character(l), Vector::Character(r)) => l.assign(r).into(),
+            (Vector::Numeric(l), R::Vector(Vector::Numeric(r))) => 
+                Ok(R::Vector(Vector::from(l.assign(r)))),
+            (Vector::Integer(l), R::Vector(Vector::Integer(r))) => 
+                Ok(R::Vector(Vector::from(l.assign(r)))),
+            (Vector::Logical(l), R::Vector(Vector::Logical(r))) => 
+                Ok(R::Vector(Vector::from(l.assign(r)))),
+            (Vector::Character(l), R::Vector(Vector::Character(r))) => 
+                Ok(R::Vector(Vector::from(l.assign(r)))),
             _ => return Err(err)
         }
-        Ok(())
     }
 
     pub fn vec_coerce<T, U>(v: &Vec<OptionNA<T>>) -> Vec<OptionNA<U>>
@@ -112,7 +114,7 @@ impl Vector {
         use OptionNA::*;
         v.into_iter()
             .map(|i| match i {
-                Some(x) => Some(CoercibleInto::<U>::coerce_into(x.clone())),
+                Some(x) => Some(CoercibleInto::<U>::coerce_into((*x).clone())),
                 NA => NA,
             })
             .collect()

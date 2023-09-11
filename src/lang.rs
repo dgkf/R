@@ -150,6 +150,21 @@ impl R {
         }
     }
 
+    pub fn assign(self, value: R) -> EvalResult {
+        // TODO(ERROR) cleanup
+        let err = RError::Other("Invalid target for assignment".to_string());
+        let err_list = RError::Other("Assignment to lists isn't yet implemented".to_string());
+
+        match self {
+            R::Vector(mut v) => {
+                v.assign(value.as_vector()?)?;
+                Ok(R::Vector(v.clone()))
+            },
+            R::List(_) => Err(err_list.into()),
+            _ => Err(err.into()),
+        }
+    }
+
     pub fn as_integer(self) -> EvalResult {
         match self {
             R::Vector(v) => Ok(R::Vector(v.as_integer())),

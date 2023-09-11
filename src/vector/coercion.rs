@@ -21,16 +21,6 @@ pub trait CoercibleInto<T>: Sized {
     fn coerce_into(self) -> T;
 }
 
-impl<T, U> CoercibleInto<U> for &T 
-where
-    T: CoercibleInto<U>
-{
-    #[allow(unconditional_recursion)]
-    fn coerce_into(self) -> U {
-        self.coerce_into()        
-    }
-}
-
 impl CoercibleInto<bool> for bool {
     #[inline]
     fn coerce_into(self) -> bool {
