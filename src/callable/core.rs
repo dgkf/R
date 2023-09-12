@@ -5,56 +5,6 @@ use crate::callable::dyncompare::*;
 use crate::callable::builtins::BUILTIN;
 use crate::lang::*;
 
-pub fn match_args(mut formals: ExprList, mut args: List, stack: &CallStack) -> (List, List) {
-    let mut ellipsis: Vec<(Option<String>, R)> = vec![];
-    let mut matched_args: Vec<(Option<String>, R)> = vec![];
-
-    // assign named args to corresponding formals
-    let mut i: usize = 0;
-    while i < args.len() {
-        match &args[i].0 {
-            Some(argname) => {
-                if let Some((Some(_), _)) = formals.remove_named(&argname) {
-                    matched_args.push(args.remove(i));
-                    continue;
-                }
-            }
-            _ => (),
-        }
-        i += 1;
-    }
-
-    // remove any Ellipsis param, and any trailing unassigned params
-    formals.pop_trailing();
-
-    // backfill unnamed args, populating ellipsis with overflow
-    for (key, value) in args.into_iter() {
-        match key {
-            // named args go directly to ellipsis, they did not match a formal
-            Some(arg) => {
-                ellipsis.push((Some(arg), value));
-            }
-
-            // unnamed args populate next formal, or ellipsis if formals exhausted
-            None => {
-                let next_unassigned_formal = formals.remove(0);
-                if let Some((Some(param), _)) = next_unassigned_formal {
-                    matched_args.push((Some(param), value));
-                } else {
-                    ellipsis.push((None, value));
-                }
-            }
-        }
-    }
-
-    // add back in parameter defaults that weren't filled with args
-    for (param, default) in formals.into_iter() {
-        matched_args.push((param, R::Closure(default, stack.env().clone())));
-    }
-
-    (matched_args, ellipsis)
-}
-
 impl std::fmt::Debug for Box<dyn Callable> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "<callable>")
@@ -145,8 +95,10 @@ pub trait Callable {
         unimplemented!()
     }
 
-    fn call_assign(&self, _value: Expr, _args: ExprList, _stack: &mut CallStack) -> EvalResult {
-        unimplemented!();
+    fn call_assign(&self, value: Expr, args: ExprList, stack: &mut CallStack) -> EvalResult {
+        let what = self.call(args, stack)?;
+        let value = stack.eval(value)?;
+        what.assign(value)
     }
 }
 
@@ -295,27 +247,17 @@ impl Format for R {}
 
 impl Callable for R {
     fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
-        let R::Function(formals, body, _) = self else {
+        let R::Function(_, body, _) = self else {
             unimplemented!("can't call non-function")
         };
 
-        // body is a primitive
+        // body is a primitive, call directly
         if let Expr::Primitive(f) = body {
             return f.call(args, stack)
         };
 
-        // fetch the calling frame from the stack
-        let Some(mut calling_frame) = stack.frame(-1) else {
-            unreachable!();
-        };
-
-        // evaluate args in the calling frame environment
-        let R::List(args) = calling_frame.eval_list_lazy(args)? else {
-            unreachable!();
-        };
-
         // match arguments against function signature
-        let (args, ellipsis) = match_args(formals.clone(), args, stack);
+        let (args, ellipsis) = self.match_args(args, stack)?;
 
         // add closures to local scope
         stack.last_frame().env.insert("...".to_string(), R::List(ellipsis));
@@ -323,6 +265,14 @@ impl Callable for R {
 
         // evaluate body in local scope
         stack.eval(body.clone())
+    }
+
+    fn formals(&self) -> ExprList {
+        if let R::Function(formals, _, _) = self {
+            formals.clone()
+        } else {
+            ExprList::new()
+        }
     }
 }
 

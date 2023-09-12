@@ -20,18 +20,17 @@ impl Callable for InfixAssign {
                 let value = stack.eval(rhs)?;
                 stack.last_frame().env.insert(s, value.clone());
                 Ok(value)
-            }
+            },
             Call(what, mut args) => match *what {
                 String(s) | Symbol(s) => {
                     args.insert(0, rhs);
                     let s = format!("{}<-", s);
                     stack.eval(Call(Box::new(Symbol(s)), args))
                 },
-                _ => {
-                    let what = stack.eval(Call(what, args))?;
-                    let value = stack.eval(rhs)?;
-                    what.assign(value)
-                }
+                Primitive(p) => {
+                    p.call_assign(rhs, args, stack)
+                },
+                _ => unimplemented!("cannot assign to that!"),
             },
             _ => unimplemented!("cannot assign to that!"),
         }

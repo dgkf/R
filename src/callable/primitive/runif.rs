@@ -22,12 +22,7 @@ impl Callable for PrimitiveRunif {
 
     fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
         use RError::ArgumentInvalid;
-
-        let R::List(vals) = stack.parent_frame().eval_list_lazy(args)? else {
-            unreachable!()
-        };
-
-        let (vals, _) = match_args(self.formals(), vals, &stack);
+        let (vals, _) = self.match_args(args, stack)?;
         let vals = force_closures(vals, stack);
         let mut vals = R::List(vals);
 

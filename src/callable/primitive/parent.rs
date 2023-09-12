@@ -15,11 +15,7 @@ impl Callable for PrimitiveParent{
     }
 
     fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
-        let R::List(vals) = stack.parent_frame().eval_list_lazy(args)? else {
-            unreachable!()
-        };
-
-        let (vals, _) = match_args(self.formals(), vals, &stack);
+        let (vals, _) = self.match_args(args, stack)?;
         let mut vals = R::List(vals);
 
         // default when `x` is missing or not found

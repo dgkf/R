@@ -11,4 +11,9 @@ impl Callable for PrimitiveList {
     fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
         stack.eval_list_eager(args)
     }
+
+    fn call_assign(&self, value: Expr, args: ExprList, stack: &mut CallStack) -> EvalResult {
+        // unpacking here!
+        todo!();
+    }
 }

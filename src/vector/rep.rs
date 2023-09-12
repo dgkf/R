@@ -156,8 +156,7 @@ impl<T: AtomicMode + Clone + Default> Rep<T> {
                         None => true,
                     });
 
-                let n = v.clone().borrow().len();
-                for i in iter.take(n) {
+                for i in iter {
                     match i {
                         Some(i) => res.push(vb[i].clone()),
                         None => res.push(T::default()),
