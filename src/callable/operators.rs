@@ -307,9 +307,9 @@ impl Callable for InfixColon {
             let end: i32 = stack.eval(arg2)?.as_integer()?.try_into()?;
             return Ok(R::Vector(Vector::from(
                 if start <= end {
-                    (start..=end).into_iter().collect::<Vec<i32>>()
+                    (start..=end).map(|i| i as f64).into_iter().collect::<Vec<f64>>()
                 } else {
-                    (end..=start).into_iter().rev().collect::<Vec<i32>>()
+                    (end..=start).map(|i| i as f64).into_iter().rev().collect::<Vec<f64>>()
                 }
             )))
         }

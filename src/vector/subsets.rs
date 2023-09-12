@@ -49,16 +49,9 @@ impl IntoIterator for Subsets {
 
     /// Convert Subsets into an iterator if indices
     ///
-    /// Builds an iterator of indices from a collection of subsets.
-    ///
-    /// # Examples
-    ///
-    /// /// let subsets = Subsets::new()
-    /// ///     .push(1..) 
-    /// ///     .push(vec![1, 9, 1, 7]);
-    /// ///
-    /// /// let indices: Vec<_> = subsets.into_iter().collect();
-    /// /// assert_eq!(indices, vec![2, 10, 2, 8])
+    /// Builds an iterator of indices from a collection of subsets. Iterators
+    /// will provide the maximum number of indices, meaning that ranges 
+    /// and masks may be infinite.
     ///
     fn into_iter(self) -> Self::IntoIter {
         let Subsets(subsets) = self;
@@ -146,6 +139,17 @@ impl IntoIterator for Subsets {
                         iter = Box::new(indices.into_iter())
                     }
                 },
+                Subset::Mask(mask) => {
+                    iter = Box::new(
+                        mask.clone().borrow().clone().into_iter().cycle()
+                            .zip(iter)
+                            .filter_map(|(mask, index)| match mask {
+                                OptionNA::Some(true) => Some(index),  // accept index
+                                OptionNA::NA => Some(None), // accept, but NA
+                                _ => None  // filter falses
+                            })
+                    )
+                },
                 Subset::Range(range) => {
                     iter = Box::new(
                         iter.skip(range.start)
@@ -161,97 +165,97 @@ impl IntoIterator for Subsets {
     }
 }
 
-// #[cfg(test)]
-//  mod test {
-//     use crate::vector::Vector;
+#[cfg(test)]
+ mod test {
+    use crate::vector::vectors::Vector;
 
-//     #[test]
-//     fn subset_range() {
-//         let x: Vector<_> = (1..=10).into_iter().collect::<Vec<_>>().into();
-//         let result = x.subset(2..6).materialize();
-//         let expect = Vector::from(vec![3, 4, 5, 6]);
-//         assert_eq!(result, expect)
-//     }
+    #[test]
+    fn subset_range() {
+        let x: Vector = (1..=10).into_iter().collect::<Vec<_>>().into();
+        let result = x.subset((2..6).into()).materialize();
+        let expect = Vector::from(vec![3, 4, 5, 6]);
+        assert_eq!(result, expect)
+    }
 
-//     #[test]
-//     fn subset_sequential_indices() {
-//         let x: Vector<_> = (1..=10).into_iter().collect::<Vec<_>>().into();
-//         let result = x.subset(vec![2, 3, 4, 5]).materialize();
-//         let expect = Vector::from(vec![3, 4, 5, 6]);
-//         assert_eq!(result, expect)
-//     }
+    #[test]
+    fn subset_sequential_indices() {
+        let x: Vector = (1..=10).into_iter().collect::<Vec<_>>().into();
+        let result = x.subset(vec![2, 3, 4, 5].into()).materialize();
+        let expect = Vector::from(vec![3, 4, 5, 6]);
+        assert_eq!(result, expect)
+    }
 
-//     #[test]
-//     fn subset_sequential_repeating_indices() {
-//         let x: Vector<_> = (1..=10).into_iter().collect::<Vec<_>>().into();
-//         let result = x.subset(vec![2, 3, 3, 3, 5, 5]).materialize();
-//         let expect = Vector::from(vec![3, 4, 4, 4, 6, 6]);
-//         assert_eq!(result, expect)
-//     }
+    #[test]
+    fn subset_sequential_repeating_indices() {
+        let x: Vector = (1..=10).into_iter().collect::<Vec<_>>().into();
+        let result = x.subset(vec![2, 3, 3, 3, 5, 5].into()).materialize();
+        let expect = Vector::from(vec![3, 4, 4, 4, 6, 6]);
+        assert_eq!(result, expect)
+    }
 
-//     #[test]
-//     fn subset_indices_with_gap() {
-//         let x: Vector<_> = (1..=10).into_iter().collect::<Vec<_>>().into();
-//         let result = x.subset(vec![2, 8]).materialize();
-//         let expect = Vector::from(vec![3, 9]);
-//         assert_eq!(result, expect);
-//     }
+    #[test]
+    fn subset_indices_with_gap() {
+        let x: Vector = (1..=10).into_iter().collect::<Vec<_>>().into();
+        let result = x.subset(vec![2, 8].into()).materialize();
+        let expect = Vector::from(vec![3, 9]);
+        assert_eq!(result, expect);
+    }
 
-//     #[test]
-//     fn subset_empty_indices() {
-//         let x: Vector<_> = (1..=10).into_iter().collect::<Vec<_>>().into();
-//         let result = x.subset(vec![]).materialize();
-//         let expect = Vector::from(Vec::new() as Vec<i32>);
-//         assert_eq!(result, expect);
-//     }
+    #[test]
+    fn subset_empty_indices() {
+        let x: Vector = (1..=10).into_iter().collect::<Vec<_>>().into();
+        let result = x.subset(vec![].into()).materialize();
+        let expect = Vector::from(Vec::new() as Vec<i32>);
+        assert_eq!(result, expect);
+    }
 
-//     #[test]
-//     fn subset_single_index() {
-//         let x: Vector<_> = (1..=10).into_iter().collect::<Vec<_>>().into();
-//         let result = x.subset(vec![6]).materialize();
-//         let expect = Vector::from(vec![7]);
-//         assert_eq!(result, expect);
-//     }
+    #[test]
+    fn subset_single_index() {
+        let x: Vector = (1..=10).into_iter().collect::<Vec<_>>().into();
+        let result = x.subset(vec![6].into()).materialize();
+        let expect = Vector::from(vec![7]);
+        assert_eq!(result, expect);
+    }
 
-//     #[test]
-//     fn subset_unsorted_indices() {
-//         let x: Vector<_> = (1..=10).into_iter().collect::<Vec<_>>().into();
-//         let result = x.subset(vec![6, 2, 1, 4]).materialize();
-//         let expect = Vector::from(vec![7, 3, 2, 5]);
-//         assert_eq!(result, expect);
-//     }
+    #[test]
+    fn subset_unsorted_indices() {
+        let x: Vector = (1..=10).into_iter().collect::<Vec<_>>().into();
+        let result = x.subset(vec![6, 2, 1, 4].into()).materialize();
+        let expect = Vector::from(vec![7, 3, 2, 5]);
+        assert_eq!(result, expect);
+    }
 
-//     #[test]
-//     fn subset_repeated_indices() {
-//         let x: Vector<_> = (1..=10).into_iter().collect::<Vec<_>>().into();
-//         let result = x.subset(vec![6, 2, 6, 6]).materialize();
-//         let expect = Vector::from(vec![7, 3, 7, 7]);
-//         assert_eq!(result, expect);
-//     }
+    #[test]
+    fn subset_repeated_indices() {
+        let x: Vector = (1..=10).into_iter().collect::<Vec<_>>().into();
+        let result = x.subset(vec![6, 2, 6, 6].into()).materialize();
+        let expect = Vector::from(vec![7, 3, 7, 7]);
+        assert_eq!(result, expect);
+    }
 
-//     #[test]
-//     fn subset_by_range() {
-//         let x: Vector<_> = (1..=10).into_iter().collect::<Vec<_>>().into();
-//         let result = x.subset(3..6).materialize();
-//         let expect = Vector::from(vec![4, 5, 6]);
-//         assert_eq!(result, expect);
-//     }
+    #[test]
+    fn subset_by_range() {
+        let x: Vector = (1..=10).into_iter().collect::<Vec<_>>().into();
+        let result = x.subset((3..6).into()).materialize();
+        let expect = Vector::from(vec![4, 5, 6]);
+        assert_eq!(result, expect);
+    }
 
-//     #[test]
-//     fn nested_subsets() {
-//         let x: Vector<_> = (1..=10).into_iter().collect::<Vec<_>>().into();
-//         let result = x.subset(3..6).subset(vec![2, 1]).materialize();
-//         let expect = Vector::from(vec![6, 5]);
-//         assert_eq!(result, expect);
-//     }
+    #[test]
+    fn nested_subsets() {
+        let x: Vector = (1..=10).into_iter().collect::<Vec<_>>().into();
+        let result = x.subset((3..6).into()).subset(vec![2, 1].into()).materialize();
+        let expect = Vector::from(vec![6, 5]);
+        assert_eq!(result, expect);
+    }
 
-//     #[test]
-//     fn subset_assignment() {
-//         let x: Vector<_> = (1..=10).into_iter().collect::<Vec<_>>().into();
-//         let subset = x.subset(3..6).subset(vec![2, 1]);
-//         let y: Vector<_> = vec![101, 102].into();
-//         subset.assign(y);
-//         let expect = Vector::from(vec![1, 2, 3, 4, 102, 101, 7, 8, 9, 10]);
-//         assert_eq!(x, expect)
-//     }
-// }
+    #[test]
+    fn subset_assignment() {
+        let x: Vector = (1..=10).into_iter().collect::<Vec<_>>().into();
+        let mut subset = x.subset((3..6).into()).subset(vec![2, 1].into());
+        let y: Vector = vec![101, 102].into();
+        let _ = subset.assign(crate::lang::R::Vector(y));
+        let expect = Vector::from(vec![1, 2, 3, 4, 102, 101, 7, 8, 9, 10]);
+        assert_eq!(x, expect)
+    }
+}

@@ -67,7 +67,7 @@ impl<T: AtomicMode + Clone + Default> Rep<T> {
         match self {
             Rep::Subset(v, Subsets(s)) => match s.as_slice() {
                 [] => v.clone().borrow().len(),
-                [.., last] => last.len()
+                [.., last] => std::cmp::min(v.clone().borrow().len(), last.len()),
             },
         }        
     }
@@ -141,7 +141,7 @@ impl<T: AtomicMode + Clone + Default> Rep<T> {
     ///
     pub fn materialize(&self) -> Self 
     where
-        T: Clone
+        T: Clone,
     {
         match self {
             Rep::Subset(v, subsets) => {      
@@ -156,7 +156,8 @@ impl<T: AtomicMode + Clone + Default> Rep<T> {
                         None => true,
                     });
 
-                for i in iter {
+                let n = v.clone().borrow().len();
+                for i in iter.take(n) {
                     match i {
                         Some(i) => res.push(vb[i].clone()),
                         None => res.push(T::default()),

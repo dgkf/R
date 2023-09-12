@@ -119,6 +119,15 @@ impl Vector {
         }
     }
 
+    pub fn materialize(self) -> Self {
+        match self {
+            Vector::Numeric(x) => Vector::from(x.materialize()),
+            Vector::Integer(x) => Vector::from(x.materialize()),
+            Vector::Logical(x) => Vector::from(x.materialize()),
+            Vector::Character(x) => Vector::from(x.materialize()),
+        }
+    }
+
     pub fn vec_coerce<T, U>(v: &Vec<OptionNA<T>>) -> Vec<OptionNA<U>>
     where
         T: CoercibleInto<U> + Clone,
