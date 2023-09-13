@@ -382,7 +382,7 @@ impl Callable for PostfixIndex {
                 let by: Subset = ivec.try_into()?;
                 let mut lrvec_subset = lrvec.subset(by);
                 lrvec_subset.assign(value)?;
-                Ok(Vector(lrvec))
+                Ok(Vector(lrvec_subset))
             }
             _ => unimplemented!(),
         }
