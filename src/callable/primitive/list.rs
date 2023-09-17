@@ -1,8 +1,8 @@
 use r_derive::*;
 
 use crate::ast::*;
-use crate::lang::*;
 use crate::callable::core::*;
+use crate::lang::*;
 
 #[derive(Debug, Clone, PartialEq)]
 #[builtin(sym = "list")]
@@ -12,7 +12,7 @@ impl Callable for PrimitiveList {
         stack.eval_list_eager(args)
     }
 
-    fn call_assign(&self, value: Expr, args: ExprList, stack: &mut CallStack) -> EvalResult {
+    fn call_assign(&self, _value: Expr, _args: ExprList, _stack: &mut CallStack) -> EvalResult {
         // unpacking here!
         todo!();
     }

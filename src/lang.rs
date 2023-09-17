@@ -793,9 +793,15 @@ impl Context for CallStack {
         } else if let Expr::Call(what, args) = expr.clone() {
             match *what {
                 Expr::Primitive(what) => {
-                    self.add_frame(expr.clone(), self.last_frame().env.clone());
-                    let result = what.call(args, self);
-                    return self.pop_frame_after(result);
+                    use crate::callable::keywords::KeywordBlock;
+                    // block expressions do not add to the call stack
+                    if what.dyn_eq(&KeywordBlock) {
+                        what.call(args, self)
+                    } else {
+                        self.add_frame(expr.clone(), self.last_frame().env.clone());
+                        let result = what.call(args, self);
+                        return self.pop_frame_after(result);
+                    }
                 },
                 Expr::String(what) | Expr::Symbol(what) => {
                     // builtin primitives do not introduce a new call onto the stack

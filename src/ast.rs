@@ -41,13 +41,9 @@ impl PartialEq for Expr {
             (Symbol(l), Symbol(r)) => l == r,
             (List(l), List(r)) => l == r,
             (Primitive(l), Primitive(r)) => l == r,
-            (Function(largs, lbody), Function(rargs, rbody)) => {
-                largs == rargs && lbody == rbody
-            },
-            (Call(lwhat, largs), Call(rwhat, rargs)) => {
-                lwhat == rwhat && largs == rargs
-            },
-            _ => false
+            (Function(largs, lbody), Function(rargs, rbody)) => largs == rargs && lbody == rbody,
+            (Call(lwhat, largs), Call(rwhat, rargs)) => lwhat == rwhat && largs == rargs,
+            _ => false,
         }
     }
 }
@@ -88,6 +84,7 @@ impl fmt::Display for Expr {
                 Expr::Primitive(p) => write!(f, "{}", p.rfmt_call(args)),
                 rexpr => write!(f, "{}({})", rexpr, args),
             },
+            Expr::Function(head, body) => write!(f, "function({}) {}", head, body),
             x => write!(f, "{:?}", x),
         }
     }

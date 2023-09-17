@@ -1,3 +1,24 @@
+# 0.3.0 "Days of Abandon"
+
+## Major Changes
+
+* Vector indexed assignment (`x[1:3] <- 10`) is now supported! What's more, 
+  it avoids intermediate replications of the vector by keeping track of the
+  indexing operation as a "view" of the vector.
+
+  ```r
+  x <- 1:10
+  x[2:8][2:5][[2]] <- 1000
+  x
+  # [1]    1    2    3 1000    5    6    7    8    9   10
+  ```
+
+## Internals
+
+* "altreps" are now supported internally, though currently only a "Subset" 
+  (used for indexed assignment) is implemented.
+
+
 # 0.2.0 "In Bloom"
 
 ## Major Changes
@@ -37,7 +58,7 @@
 * Even more primitives now implemented! This release brings `paste()` and 
   `callstack()` (akin to R's `sys.calls()`)
 
-## Behind the Scenes
+## Internals
 
 * Primitives are now _all_ implemented as `dyn Primitive` objects, implementing
   a `Callable` trait. They still don't have a proper standard library namespace, 

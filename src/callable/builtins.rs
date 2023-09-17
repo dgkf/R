@@ -15,6 +15,16 @@ lazy_static! {
     pub static ref BUILTIN: HashMap<&'static str, Box<dyn Builtin>> = {
         HashMap::from([
             // automatically populated on build. see build.rs // builtins start
+            ("parent", Box::new(PrimitiveParent) as Box<dyn Builtin>),
+            ("rnorm", Box::new(PrimitiveRnorm) as Box<dyn Builtin>),
+            ("list", Box::new(PrimitiveList) as Box<dyn Builtin>),
+            ("runif", Box::new(PrimitiveRunif) as Box<dyn Builtin>),
+            ("paste", Box::new(PrimitivePaste) as Box<dyn Builtin>),
+            ("q", Box::new(PrimitiveQ) as Box<dyn Builtin>),
+            ("callstack", Box::new(PrimitiveCallstack) as Box<dyn Builtin>),
+            ("environment", Box::new(PrimitiveEnvironment) as Box<dyn Builtin>),
+            ("names", Box::new(PrimitiveNames) as Box<dyn Builtin>),
+            ("c", Box::new(PrimitiveC) as Box<dyn Builtin>),
             ("<-", Box::new(InfixAssign) as Box<dyn Builtin>),
             ("+", Box::new(InfixAdd) as Box<dyn Builtin>),
             ("-", Box::new(InfixSub) as Box<dyn Builtin>),
@@ -38,16 +48,6 @@ lazy_static! {
             ("$", Box::new(InfixDollar) as Box<dyn Builtin>),
             ("[[", Box::new(PostfixIndex) as Box<dyn Builtin>),
             ("[", Box::new(PostfixVecIndex) as Box<dyn Builtin>),
-            ("q", Box::new(PrimitiveQ) as Box<dyn Builtin>),
-            ("c", Box::new(PrimitiveC) as Box<dyn Builtin>),
-            ("callstack", Box::new(PrimitiveCallstack) as Box<dyn Builtin>),
-            ("rnorm", Box::new(PrimitiveRnorm) as Box<dyn Builtin>),
-            ("names", Box::new(PrimitiveNames) as Box<dyn Builtin>),
-            ("parent", Box::new(PrimitiveParent) as Box<dyn Builtin>),
-            ("list", Box::new(PrimitiveList) as Box<dyn Builtin>),
-            ("environment", Box::new(PrimitiveEnvironment) as Box<dyn Builtin>),
-            ("runif", Box::new(PrimitiveRunif) as Box<dyn Builtin>),
-            ("paste", Box::new(PrimitivePaste) as Box<dyn Builtin>),
             // builtins end
         ])
     };
