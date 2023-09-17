@@ -162,7 +162,7 @@
 
 // atomic value types
 
-    number = @{ "-"? ~ number_leading }
+    number = @{ "-"? ~ (number_leading | number_trailing) }
         number_leading = { ("0" | ASCII_NONZERO_DIGIT ~ ASCII_DIGIT*) ~ ("." ~ ASCII_DIGIT*)? }
         number_trailing = { "." ~ ASCII_DIGIT+ }
 
