@@ -1,8 +1,8 @@
-use std::{ops::Range, cell::RefCell, rc::Rc};
+use std::{cell::RefCell, ops::Range, rc::Rc};
 
-use crate::{lang::RSignal, error::RError};
+use crate::{error::RError, lang::RSignal};
 
-use super::vectors::{Vector, Integer, OptionNA, Logical};
+use super::vectors::{Character, Integer, Logical, OptionNA, Vector};
 
 /// Subsets
 ///
@@ -13,39 +13,37 @@ use super::vectors::{Vector, Integer, OptionNA, Logical};
 pub enum Subset {
     Indices(Rc<RefCell<Vec<Integer>>>),
     Mask(Rc<RefCell<Vec<Logical>>>),
-    Range(Range<usize>)
+    Names(Rc<RefCell<Vec<Character>>>),
+    Range(Range<usize>),
 }
 
 impl Subset {
     pub fn get_index_at(&self, index: usize) -> Option<usize> {
         match self {
-            Subset::Indices(indices) => {
-                indices.clone().borrow()
-                    .get(index)
-                    .and_then(|i| match i {
-                        OptionNA::Some(i) => Some((*i as usize).saturating_sub(1)),
-                        OptionNA::NA => None,
-                    })
-            },
+            Subset::Indices(indices) => indices.clone().borrow().get(index).and_then(|i| match i {
+                OptionNA::Some(i) => Some((*i as usize).saturating_sub(1)),
+                OptionNA::NA => None,
+            }),
             Subset::Range(range) => {
                 if range.start <= index && index < range.end {
-                    return Some(range.start + index)
+                    return Some(range.start + index);
                 } else {
-                    return None
+                    return None;
                 }
-            },
-            Subset::Mask(mask) => {
-                mask.clone().borrow()
-                    .iter()
-                    .enumerate()
-                    .filter_map(|(i, m)| match m {
-                        OptionNA::Some(true) => Some(Some(i)),
-                        OptionNA::NA => Some(None),
-                        _ => None
-                    })
-                    .nth(index)
-                    .unwrap_or(None)
-            },
+            }
+            Subset::Mask(mask) => mask
+                .clone()
+                .borrow()
+                .iter()
+                .enumerate()
+                .filter_map(|(i, m)| match m {
+                    OptionNA::Some(true) => Some(Some(i)),
+                    OptionNA::NA => Some(None),
+                    _ => None,
+                })
+                .nth(index)
+                .unwrap_or(None),
+            Subset::Names(_) => unimplemented!(),
         }
     }
 
@@ -54,15 +52,14 @@ impl Subset {
             Subset::Indices(i) => i.clone().borrow().len(),
             Subset::Range(r) => r.end - r.start,
             Subset::Mask(_) => usize::MAX,
+            Subset::Names(n) => n.clone().borrow().len(),
         }
     }
 }
 
 impl From<usize> for Subset {
     fn from(value: usize) -> Self {
-        Subset::Indices(Rc::new(RefCell::new(
-            vec![OptionNA::Some(value as i32)]
-        )))
+        Subset::Indices(Rc::new(RefCell::new(vec![OptionNA::Some(value as i32)])))
     }
 }
 
@@ -75,9 +72,10 @@ impl From<Range<usize>> for Subset {
 impl From<Vec<usize>> for Subset {
     fn from(value: Vec<usize>) -> Self {
         Subset::Indices(Rc::new(RefCell::new(
-            value.iter()
+            value
+                .iter()
                 .map(|i| OptionNA::Some(*i as i32))
-                .collect::<Vec<_>>()
+                .collect::<Vec<_>>(),
         )))
     }
 }
@@ -99,9 +97,13 @@ impl TryFrom<Vector> for Subset {
                 }
 
                 Ok(Subset::Indices(v))
-            },
+            }
             Vector::Logical(v) => {
-                let all_false = v.inner().clone().borrow().iter()
+                let all_false = v
+                    .inner()
+                    .clone()
+                    .borrow()
+                    .iter()
                     .all(|i| i == &OptionNA::Some(false));
 
                 // special case when all are false, treat it as no indices
@@ -110,8 +112,8 @@ impl TryFrom<Vector> for Subset {
                 } else {
                     Ok(Subset::Mask(v.inner()))
                 }
-            },
-            _ => Err(RError::Other("Cannot convert vector type to index".to_string()).into())
+            }
+            _ => Err(RError::Other("Cannot convert vector type to index".to_string()).into()),
         }
     }
 }

@@ -10,7 +10,7 @@ impl Subsets {
 
     /// Get the raw index of a index applied to a subset
     ///
-    /// Provided a vector with multiple subsets applied, determine which 
+    /// Provided a vector with multiple subsets applied, determine which
     /// original index corresponds with the index applied to the subset.
     ///
     pub fn get_index_at(&self, mut index: usize) -> Option<usize> {
@@ -18,15 +18,15 @@ impl Subsets {
         for subset in subsets.into_iter().rev() {
             match subset.get_index_at(index) {
                 Some(i) => index = i,
-                None => return None,              
+                None => return None,
             }
         }
         Some(index)
     }
 
-    pub fn push<T>(self, subset: T) 
+    pub fn push<T>(self, subset: T)
     where
-        T: Into<Subset>
+        T: Into<Subset>,
     {
         let Subsets(mut v) = self;
         v.push(subset.into());
@@ -35,7 +35,7 @@ impl Subsets {
 
 impl<T> From<Vec<T>> for Subsets
 where
-    T: Into<Subset>
+    T: Into<Subset>,
 {
     fn from(value: Vec<T>) -> Self {
         let v: Vec<Subset> = value.into_iter().map(|i| i.into()).collect();
@@ -44,18 +44,18 @@ where
 }
 
 impl IntoIterator for Subsets {
-    type Item = Option<usize>;
+    type Item = (usize, Option<usize>);
     type IntoIter = Box<dyn Iterator<Item = Self::Item>>;
 
     /// Convert Subsets into an iterator if indices
     ///
     /// Builds an iterator of indices from a collection of subsets. Iterators
-    /// will provide the maximum number of indices, meaning that ranges 
+    /// will provide the maximum number of indices, meaning that ranges
     /// and masks may be infinite.
     ///
     fn into_iter(self) -> Self::IntoIter {
         let Subsets(subsets) = self;
-        let mut iter = Box::new((0_usize..).map(|i| Some(i)).into_iter()) as Self::IntoIter;
+        let mut iter = Box::new((0_usize..).map(|i| (i, Some(i))).into_iter()) as Self::IntoIter;
         for subset in subsets {
             let l = subset.len();
             match subset {
@@ -70,11 +70,12 @@ impl IntoIterator for Subsets {
                         if let OptionNA::Some(to_first) = i.clone().borrow().get(0).expect(msg) {
                             iter = Box::new(iter.skip(*to_first as usize).take(1));
                         } else {
-                            iter = Box::new(vec![None].into_iter())
+                            let (i_orig, _) = iter.next().unwrap_or((0, None));
+                            iter = Box::new(vec![(i_orig, None)].into_iter())
                         }
 
                     // fast case, when indices are already sorted
-                    } else if i.clone().borrow().windows(2).all(|w| w[0] <= w[1]) {
+                    } else if i.borrow().windows(2).all(|w| w[0] <= w[1]) {
                         // when sorted, we can keep our existing iterator and
                         // embed the indices, scanning along the iterator
                         // and yielding indices as they are encountered
@@ -82,20 +83,26 @@ impl IntoIterator for Subsets {
                         let ib = ic.borrow().clone();
 
                         iter = Box::new(
-                            iter.enumerate().scan((ib, 0), |(indices, i), (xi, x)| -> Option<Vec<Option<usize>>> {
-                                if *i >= indices.len() { 
-                                    return None
-                                }
+                            iter.enumerate()
+                                .scan(
+                                    (ib, 0),
+                                    |(indices, i), (xi, (xi_orig, x))| -> Option<Vec<(usize, Option<usize>)>> {
+                                        if *i >= indices.len() {
+                                            return None;
+                                        }
 
-                                let mut n = 0;
-                                while *i < indices.len() && indices[*i] == OptionNA::Some(xi as i32) {
-                                    n += 1;
-                                    *i += 1;
-                                };
+                                        let mut n = 0;
+                                        while *i < indices.len()
+                                            && indices[*i] == OptionNA::Some(xi as i32)
+                                        {
+                                            n += 1;
+                                            *i += 1;
+                                        }
 
-                                return Some(vec![x; n])
-                            })
-                            .flat_map(|i| i)
+                                        return Some(vec![(xi_orig, x); n]);
+                                    },
+                                )
+                                .flat_map(|i| i),
                         )
 
                     // worst case, indices in random order
@@ -104,7 +111,8 @@ impl IntoIterator for Subsets {
                         let ic = i.clone();
                         let ib = ic.borrow();
 
-                        let mut order = ib.iter()
+                        let mut order = ib
+                            .iter()
                             .map(|i| match i {
                                 OptionNA::NA => -1,
                                 OptionNA::Some(i) => *i,
@@ -114,50 +122,55 @@ impl IntoIterator for Subsets {
                             .collect::<Vec<_>>();
 
                         // sort by index to get (sorted indices, order)
-                        // we'll use this to sample the existing iterator then 
+                        // we'll use this to sample the existing iterator then
                         // permute it back into the original order
                         order.sort();
                         let (mut i, order): (Vec<_>, Vec<_>) = order.into_iter().unzip();
 
                         // we'll populate this with the sorted indices first
-                        let mut indices: Vec<Option<usize>> = vec![None; i.len()];
+                        let mut indices: Vec<(usize, Option<usize>)> = vec![(0, None); i.len()];
                         let n_na = i.iter().take_while(|&i| *i == -1).count();
 
                         // populate non-na elements
                         i.insert(n_na, 0);
                         let diffs = i[n_na..].windows(2).map(|w| w[1] - w[0]);
 
-                        let mut last = iter.nth(0).expect("exhausted iterator"); 
+                        let msg = "exhausted iterator";
+                        let (mut i_orig, mut last) = iter.nth(0).expect(msg);
                         for (i, diff) in diffs.enumerate() {
                             if diff > 0 {
-                                last = iter.nth((diff - 1) as usize).expect("exhausted iterator");
+                                (i_orig, last) = iter.nth((diff - 1) as usize).expect(msg);
                             }
-                            indices[order[i + n_na]] = last;
+                            indices[order[i + n_na]] = (i_orig, last);
                         }
 
                         // and finally we convert our new indices into an iterator
                         iter = Box::new(indices.into_iter())
                     }
-                },
+                }
                 Subset::Mask(mask) => {
                     iter = Box::new(
-                        mask.clone().borrow().clone().into_iter().cycle()
+                        mask.borrow()
+                            .clone()
+                            .into_iter()
+                            .cycle()
                             .zip(iter)
-                            .filter_map(|(mask, index)| match mask {
-                                OptionNA::Some(true) => Some(index),  // accept index
-                                OptionNA::NA => Some(None), // accept, but NA
-                                _ => None  // filter falses
-                            })
+                            .filter_map(|(mask, i @ (i_orig, _))| match mask {
+                                OptionNA::Some(true) => Some(i),      // accept index
+                                OptionNA::NA => Some((i_orig, None)), // accept, but NA
+                                _ => None,                            // filter falses
+                            }),
                     )
-                },
+                }
                 Subset::Range(range) => {
                     iter = Box::new(
                         iter.skip(range.start)
                             .enumerate()
                             .take_while(move |(i, _)| i < &(range.end - range.start))
-                            .map(|(_, v)| v)
+                            .map(|(_, v)| v),
                     ) as Self::IntoIter
-                },
+                }
+                Subset::Names(_) => todo!(),
             }
         }
 
@@ -166,7 +179,7 @@ impl IntoIterator for Subsets {
 }
 
 #[cfg(test)]
- mod test {
+mod test {
     use crate::vector::vectors::Vector;
 
     #[test]
@@ -244,7 +257,10 @@ impl IntoIterator for Subsets {
     #[test]
     fn nested_subsets() {
         let x: Vector = (1..=10).into_iter().collect::<Vec<_>>().into();
-        let result = x.subset((3..6).into()).subset(vec![2, 1].into()).materialize();
+        let result = x
+            .subset((3..6).into())
+            .subset(vec![2, 1].into())
+            .materialize();
         let expect = Vector::from(vec![6, 5]);
         assert_eq!(result, expect);
     }
