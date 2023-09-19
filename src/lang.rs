@@ -1,7 +1,9 @@
 use crate::ast::*;
 use crate::callable::builtins::BUILTIN;
+use crate::callable::core::{builtin, Callable};
 use crate::error::*;
-use crate::callable::core::{Callable, builtin};
+use crate::vector::subset::Subset;
+use crate::vector::subsets::Subsets;
 use crate::vector::vectors::*;
 
 use core::fmt;
@@ -28,22 +30,30 @@ impl PartialEq for R {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
             (R::Null, R::Null) => true,
-            (R::List(l), R::List(r)) => l.iter().zip(r.iter()).all(|((lk, lv), (rk, rv))| lk == rk && lv == rv),
+            (R::List(l), R::List(r)) => {
+                let lb = l.values.borrow();
+                let rb = r.values.borrow();
+                let liter = lb.iter();
+                let riter = rb.iter();
+                liter
+                    .zip(riter)
+                    .all(|((lk, lv), (rk, rv))| lk == rk && lv == rv)
+            }
             (R::Expr(l), R::Expr(r)) => l == r,
             (R::Closure(lc, lenv), R::Closure(rc, renv)) => lc == rc && lenv == renv,
             (R::Function(largs, lbody, lenv), R::Function(rargs, rbody, renv)) => {
-                largs == rargs && 
-                    lbody == rbody && 
-                    lenv == renv
-            },
+                largs == rargs && lbody == rbody && lenv == renv
+            }
             (R::Environment(l), R::Environment(r)) => {
-                l.values.as_ptr() == r.values.as_ptr() &&
-                (match (&l.parent, &r.parent) {
-                    (None, None) => true,
-                    (Some(lp), Some(rp)) => Rc::<Environment>::as_ptr(&lp) == Rc::<Environment>::as_ptr(&rp),
-                    _ => false
-                })
-            },
+                l.values.as_ptr() == r.values.as_ptr()
+                    && (match (&l.parent, &r.parent) {
+                        (None, None) => true,
+                        (Some(lp), Some(rp)) => {
+                            Rc::<Environment>::as_ptr(&lp) == Rc::<Environment>::as_ptr(&rp)
+                        }
+                        _ => false,
+                    })
+            }
             (R::Vector(lv), R::Vector(rv)) => match (lv, rv) {
                 (Vector::Numeric(l), Vector::Numeric(r)) => l == r,
                 (Vector::Integer(l), Vector::Integer(r)) => l == r,
@@ -51,7 +61,7 @@ impl PartialEq for R {
                 (Vector::Character(l), Vector::Character(r)) => l == r,
                 _ => false,
             },
-            _ => false
+            _ => false,
         }
     }
 }
@@ -62,7 +72,7 @@ impl TryInto<i32> for R {
         use RError::CannotBeCoercedToInteger;
 
         let R::Vector(Vector::Integer(v)) = self.as_integer()? else {
-            unreachable!();            
+            unreachable!();
         };
 
         match v.inner().clone().borrow()[..] {
@@ -74,7 +84,7 @@ impl TryInto<i32> for R {
 
 impl<T> From<T> for R
 where
-    Vector: From<T>
+    Vector: From<T>,
 {
     fn from(value: T) -> Self {
         R::Vector(Vector::from(value))
@@ -87,7 +97,7 @@ impl TryInto<f64> for R {
         use RError::CannotBeCoercedToNumeric;
 
         let R::Vector(Vector::Numeric(v)) = self.as_numeric()? else {
-            unreachable!();            
+            unreachable!();
         };
 
         match v.inner().clone().borrow()[..] {
@@ -101,10 +111,13 @@ impl TryInto<Vec<f64>> for R {
     type Error = RSignal;
     fn try_into(self) -> Result<Vec<f64>, Self::Error> {
         let R::Vector(Vector::Numeric(v)) = self.as_numeric()? else {
-            unreachable!();            
+            unreachable!();
         };
 
-        Ok(v.inner().clone().borrow().iter()
+        Ok(v.inner()
+            .clone()
+            .borrow()
+            .iter()
             .map(|vi| match vi {
                 OptionNA::Some(i) => *i,
                 OptionNA::NA => f64::NAN,
@@ -125,7 +138,7 @@ pub enum Cond {
 pub enum RSignal {
     Condition(Cond),
     Error(RError),
-    Thunk,  // used when evaluating null opts like comments
+    Thunk, // used when evaluating null opts like comments
 }
 
 impl Display for RSignal {
@@ -145,7 +158,7 @@ impl R {
                 stack.add_frame(expr.clone(), env);
                 let result = stack.eval(expr);
                 stack.pop_frame_after(result)
-            },
+            }
             _ => Ok(self),
         }
     }
@@ -153,14 +166,16 @@ impl R {
     pub fn assign(self, value: R) -> EvalResult {
         // TODO(ERROR) cleanup
         let err = RError::Other("Invalid target for assignment".to_string());
-        let err_list = RError::Other("Assignment to lists isn't yet implemented".to_string());
 
         match self {
             R::Vector(mut v) => {
-                v.assign(value.as_vector()?)?;
-                Ok(R::Vector(v.clone()))
-            },
-            R::List(_) => Err(err_list.into()),
+                v.assign(value.clone().as_vector()?)?;
+                Ok(value)
+            }
+            R::List(mut l) => {
+                l.assign(value.clone())?;
+                Ok(value)
+            }
             _ => Err(err.into()),
         }
     }
@@ -246,51 +261,57 @@ impl R {
         }
     }
 
-
     pub fn get_named(&mut self, name: &str) -> Option<R> {
         match self {
-            R::List(v) => v.iter().find(|(k, _)| *k == Some(String::from(name))).map(|(_, v)| v.clone()),
+            R::List(v) => v
+                .values
+                .borrow()
+                .iter()
+                .find(|(k, _)| *k == Some(String::from(name)))
+                .map(|(_, v)| v.clone()),
             R::Environment(e) => match e.get(String::from(name)) {
                 Ok(v) => Some(v),
                 Err(_) => None,
-            }
-            _ => None
+            },
+            _ => None,
         }
-        
     }
 
     pub fn set_named(&mut self, name: &str, value: R) -> EvalResult {
         match self {
             R::List(v) => {
-                let loc = v.iter().enumerate()
+                let mut vb = v.values.borrow_mut();
+
+                let loc = vb
+                    .iter()
+                    .enumerate()
                     .find(|(_, (k, _))| *k == Some(name.into()))
                     .map(|(i, _)| i);
 
                 match loc {
-                    Some(i) => v[i].1 = value.clone(),
-                    None => v.push((Some(name.into()), value.clone())),
+                    Some(i) => vb[i].1 = value.clone(),
+                    None => vb.push((Some(name.into()), value.clone())),
                 }
 
                 Ok(value)
-            },
+            }
             R::Environment(e) => {
                 e.values.borrow_mut().insert(name.into(), value.clone());
                 Ok(value)
-            },
-            _ => Ok(R::Null)
+            }
+            _ => Ok(R::Null),
         }
-
     }
 
     pub fn environment(&self) -> Option<Rc<Environment>> {
         match self {
             R::Closure(_, e) | R::Function(_, _, e) | R::Environment(e) => Some(e.clone()),
-            _ => None
-        }        
+            _ => None,
+        }
     }
 
     pub fn try_get_named(&mut self, name: &str) -> EvalResult {
-        use RError::{ArgumentMissing,VariableNotFound};
+        use RError::{ArgumentMissing, VariableNotFound};
         match self.get_named(name) {
             Some(R::Closure(Expr::Missing, _)) => Err(ArgumentMissing(name.into()).into()),
             Some(x) => Ok(x),
@@ -300,9 +321,25 @@ impl R {
 
     pub fn try_get(&self, index: R) -> EvalResult {
         match self {
-            R::Vector(rvec) => rvec.try_get(index),
-            R::List(lvec) => Ok(lvec[index.into_usize()? - 1].1.clone()),
+            R::Vector(v) => v.try_get(index),
+            R::List(l) => l.try_get(index),
             _ => todo!(),
+        }
+    }
+
+    pub fn try_get_inner(&self, index: R) -> EvalResult {
+        match self {
+            R::Vector(v) => v.try_get(index),
+            R::List(l) => l.try_get_inner(index),
+            _ => todo!(),
+        }
+    }
+
+    fn len(&self) -> Option<usize> {
+        match self {
+            R::Vector(v) => Some(v.len()),
+            R::List(l) => Some(l.len()),
+            _ => None,
         }
     }
 }
@@ -345,7 +382,12 @@ impl Display for R {
             R::Null => write!(f, "NULL"),
             R::Environment(x) => write!(f, "<environment {:?}>", x.values.as_ptr()),
             R::Function(formals, Expr::Primitive(primitive), _) => {
-                write!(f, "function({}) .Primitive(\"{}\")", formals, primitive.rfmt())
+                write!(
+                    f,
+                    "function({}) .Primitive(\"{}\")",
+                    formals,
+                    primitive.rfmt()
+                )
             }
             R::Function(formals, body, parent_env) => {
                 let parent_env = R::Environment(Rc::clone(parent_env));
@@ -359,7 +401,19 @@ impl Display for R {
 }
 
 fn display_list(x: &List, f: &mut fmt::Formatter<'_>, bc: Option<String>) -> fmt::Result {
-    for (i, (name, value)) in x.iter().enumerate() {
+    let v = x.values.borrow();
+    let s = x.subsets.clone();
+
+    for (i, (_, si)) in s.into_iter().take(v.len()).enumerate() {
+        let name;
+        let value;
+
+        if let Some(i) = si {
+            (name, value) = v[i].clone();
+        } else {
+            return write!(f, "{}", R::Null);
+        }
+
         if i > 0 {
             write!(f, "\n")?
         }
@@ -378,7 +432,7 @@ fn display_list(x: &List, f: &mut fmt::Formatter<'_>, bc: Option<String>) -> fmt
         match value {
             R::List(nested_values) => {
                 write!(f, "{}\n", breadcrumbs)?;
-                display_list(nested_values, f, Some(breadcrumbs))?
+                display_list(&nested_values, f, Some(breadcrumbs))?
             }
             _ => write!(f, "{}\n{}\n", breadcrumbs, value)?,
         }
@@ -525,7 +579,7 @@ impl VecPartialCmp<R> for R {
             (lhs, rhs) => match (lhs.as_vector()?, rhs.as_vector()?) {
                 (R::Vector(l), R::Vector(r)) => Ok(R::Vector(l.vec_eq(r))),
                 _ => unreachable!(),
-            }
+            },
         }
     }
 
@@ -538,12 +592,158 @@ impl VecPartialCmp<R> for R {
             (lhs, rhs) => match (lhs.as_vector()?, rhs.as_vector()?) {
                 (R::Vector(l), R::Vector(r)) => Ok(R::Vector(l.vec_neq(r))),
                 _ => unreachable!(),
-            }
+            },
         }
     }
 }
 
-pub type List = Vec<(Option<String>, R)>;
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct List {
+    pub values: Rc<RefCell<Vec<(Option<String>, R)>>>,
+    pub subsets: Subsets,
+}
+
+impl From<Vec<(Option<String>, R)>> for List {
+    fn from(value: Vec<(Option<String>, R)>) -> Self {
+        List {
+            values: Rc::new(RefCell::new(value)),
+            ..Default::default()
+        }
+    }
+}
+
+impl List {
+    pub fn subset(&self, by: Subset) -> List {
+        let Subsets(mut inner) = self.subsets.clone();
+        inner.push(by);
+        List {
+            values: self.values.clone(),
+            subsets: Subsets(inner),
+        }
+    }
+
+    pub fn assign(&mut self, value: R) -> EvalResult {
+        match value {
+            // remove elements from list
+            R::Null => {
+                let mut v = self.values.borrow_mut();
+                let n = v.len();
+                let indices = self.subsets.clone().into_iter().take(n);
+                for (i, _) in indices {
+                    v.remove(i);
+                }
+                Ok(R::List(List {
+                    values: self.values.clone(),
+                    subsets: self.subsets.clone(),
+                }))
+            }
+            // any single length R value
+            any if any.len() == Some(1) => {
+                let mut v = self.values.borrow_mut();
+                let n = v.len();
+                let indices = self.subsets.clone().into_iter().take(n);
+
+                // first check to see if we need to extend
+                if let Some(max) = self.subsets.clone().into_iter().map(|(i, _)| i).max() {
+                    v.reserve(max.saturating_sub(n))
+                }
+
+                // then assign to indices
+                for (_, i) in indices {
+                    if let Some(i) = i {
+                        v[i].1 = any.clone()
+                    }
+                }
+
+                Ok(R::List(List {
+                    values: self.values.clone(),
+                    subsets: self.subsets.clone(),
+                }))
+            }
+            // multiple assignment
+            any if any.len() == Some(self.len()) => {
+                let mut v = self.values.borrow_mut();
+                let n = v.len();
+                let indices = self.subsets.clone().into_iter().take(n);
+
+                // first check to see if we need to extend
+                if let Some(max) = self.subsets.clone().into_iter().map(|(i, _)| i).max() {
+                    v.reserve(max.saturating_sub(n))
+                }
+
+                // then assign to indices
+                for (any_i, (_, i)) in indices.enumerate() {
+                    if let (Some(value), Some(i)) = (any.get(any_i), i) {
+                        v[i].1 = value;
+                    }
+                }
+
+                Ok(R::List(List {
+                    values: self.values.clone(),
+                    subsets: self.subsets.clone(),
+                }))
+            }
+            other => {
+                let mut v = self.values.borrow_mut();
+                let n = v.len();
+                let indices = self.subsets.clone().into_iter().take(n);
+
+                // first check to see if we need to extend
+                if let Some(max) = self.subsets.clone().into_iter().map(|(i, _)| i).max() {
+                    v.reserve(max.saturating_sub(n))
+                }
+
+                // then assign to indices
+                for (_, i) in indices {
+                    if let Some(i) = i {
+                        v[i].1 = other.clone()
+                    }
+                }
+
+                Ok(R::List(List {
+                    values: self.values.clone(),
+                    subsets: self.subsets.clone(),
+                }))
+            }
+        }
+    }
+
+    fn try_get(&self, index: R) -> EvalResult {
+        let err = RError::Other("Cannot use object for indexing.".to_string());
+        match index.as_vector()? {
+            R::Vector(v) => Ok(R::List(self.subset(v.try_into()?))),
+            _ => Err(err.into()),
+        }
+    }
+
+    fn try_get_inner(&self, index: R) -> EvalResult {
+        let err = RError::Other("Cannot use object for indexing.".to_string());
+        match index.as_vector()? {
+            R::Vector(v) if v.len() == 1 => {
+                let Subsets(mut subsets) = self.subsets.clone();
+                subsets.push(v.try_into()?);
+
+                if let Some((i, _)) = Subsets(subsets).into_iter().next() {
+                    self.values
+                        .borrow()
+                        .get(i)
+                        .map_or(Err(err.into()), |(_, i)| Ok(i.clone()))
+                } else {
+                    Ok(R::Null)
+                }
+            }
+            _ => Err(err.into()),
+        }
+    }
+
+    fn len(&self) -> usize {
+        let Subsets(inner) = &self.subsets;
+        match inner.as_slice() {
+            [] => self.values.borrow().len(),
+            [.., last] => std::cmp::min(self.values.borrow().len(), last.len()),
+        }
+    }
+}
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Frame {
@@ -592,7 +792,7 @@ impl CallStack {
         match n {
             i if i <= 0 => self.frames.get((self.frames.len() as i32 - 1 + i) as usize),
             i if i > 0 => self.frames.get(i as usize),
-            _ => unreachable!()
+            _ => unreachable!(),
         }
     }
 
@@ -617,13 +817,16 @@ impl CallStack {
             Ok(..) => {
                 self.frames.pop();
                 result
-            },
-            error => error
+            }
+            error => error,
         }
     }
 
     pub fn new() -> CallStack {
-        CallStack::from(Frame { call: Expr::Null, env: Rc::new(Environment::default())})
+        CallStack::from(Frame {
+            call: Expr::Null,
+            env: Rc::new(Environment::default()),
+        })
     }
 }
 
@@ -646,7 +849,12 @@ impl From<Frame> for CallStack {
 
 impl From<Rc<Environment>> for CallStack {
     fn from(value: Rc<Environment>) -> Self {
-        CallStack { frames: vec![Frame { call: Expr::Null, env: value.clone() }] }
+        CallStack {
+            frames: vec![Frame {
+                call: Expr::Null,
+                env: value.clone(),
+            }],
+        }
     }
 }
 
@@ -661,13 +869,13 @@ impl Environment {
         let env = Rc::new(Environment::default());
         for (name, builtin) in BUILTIN.iter() {
             let builtin_fn = R::Function(
-                ExprList::new(), 
-                Expr::Primitive(builtin.clone()), 
-                env.clone()
+                ExprList::new(),
+                Expr::Primitive(builtin.clone()),
+                env.clone(),
             );
 
             env.insert(String::from(*name), builtin_fn);
-        };
+        }
         env
     }
 
@@ -678,9 +886,9 @@ impl Environment {
     pub fn append(&self, values: R) {
         match values {
             R::List(x) => {
-                for (key, value) in x {
+                for (key, value) in x.values.borrow().iter() {
                     if let Some(name) = key {
-                        self.insert(name, value)
+                        self.values.borrow_mut().insert(name.clone(), value.clone());
                     } else {
                         println!("Dont' know what to do with value...")
                     }
@@ -729,12 +937,12 @@ pub trait Context {
     }
 
     fn eval_list_lazy(&mut self, l: ExprList) -> EvalResult {
-        Ok(R::List(
+        Ok(R::List(List::from(
             l.into_iter()
                 .flat_map(|pair| match pair {
                     (_, Expr::Ellipsis) => {
                         if let Ok(R::List(ellipsis)) = self.get_ellipsis() {
-                            ellipsis.into_iter()
+                            ellipsis.values.borrow_mut().clone().into_iter()
                         } else {
                             vec![].into_iter()
                         }
@@ -751,17 +959,17 @@ pub trait Context {
                         }
                     }
                 })
-                .collect(),
-        ))
+                .collect::<Vec<_>>(),
+        )))
     }
 
     fn eval_list_eager(&mut self, l: ExprList) -> EvalResult {
-        Ok(R::List(
+        Ok(R::List(List::from(
             l.into_iter()
                 .flat_map(|pair| match pair {
                     (_, Expr::Ellipsis) => {
                         if let Ok(R::List(ellipsis)) = self.get_ellipsis() {
-                            ellipsis.into_iter()
+                            ellipsis.values.borrow_mut().clone().into_iter()
                         } else {
                             vec![].into_iter()
                         }
@@ -774,8 +982,8 @@ pub trait Context {
                         }
                     }
                 })
-                .collect()
-        ))
+                .collect::<Vec<_>>(),
+        )))
     }
 }
 
@@ -788,7 +996,7 @@ impl Context for CallStack {
         if let Expr::List(x) = expr {
             Ok(self.eval_list_lazy(x)?)
         } else if let Expr::Symbol(what) = expr {
-            let what  = self.get(what);
+            let what = self.get(what);
             what
         } else if let Expr::Call(what, args) = expr.clone() {
             match *what {
@@ -802,7 +1010,7 @@ impl Context for CallStack {
                         let result = what.call(args, self);
                         return self.pop_frame_after(result);
                     }
-                },
+                }
                 Expr::String(what) | Expr::Symbol(what) => {
                     // builtin primitives do not introduce a new call onto the stack
                     if let Ok(f) = builtin(&what) {
@@ -831,11 +1039,11 @@ impl Context for CallStack {
                     // evaluate call and handle errors if they arise
                     let result = rwhat.call(args, self);
                     self.pop_frame_after(result)
-                },
+                }
                 _ => {
                     self.add_frame(expr, self.last_frame().env.clone());
                     let result = (self.eval(*what)?).call(args, self);
-                    return self.pop_frame_after(result)
+                    return self.pop_frame_after(result);
                 }
             }
         } else {
@@ -854,7 +1062,7 @@ impl Context for CallStack {
                         self.add_frame(expr.clone(), env.clone());
                         let result = self.eval(expr.clone());
                         return self.pop_frame_after(result);
-                    },
+                    }
                     _ => Ok(result),
                 };
             }
@@ -868,7 +1076,11 @@ impl Context for CallStack {
         }
 
         if let Ok(prim) = builtin(name.as_str()) {
-            Ok(R::Function(ExprList::new(), Expr::Primitive(prim), self.env()))
+            Ok(R::Function(
+                ExprList::new(),
+                Expr::Primitive(prim),
+                self.env(),
+            ))
         } else {
             Err(RSignal::Error(RError::VariableNotFound(name)))
         }
@@ -876,10 +1088,10 @@ impl Context for CallStack {
 
     // NOTE:
     // eval_list_lazy and force_closures are often used together to greedily
-    // evaluated arguments. This pattern can be specialized in the case of a 
-    // CallStack to cut out the creation of intermediate closures. Need to 
-    // lift EvalResult over Context::eval_list_lazy's flat_map by implementing 
-    // Try. 
+    // evaluated arguments. This pattern can be specialized in the case of a
+    // CallStack to cut out the creation of intermediate closures. Need to
+    // lift EvalResult over Context::eval_list_lazy's flat_map by implementing
+    // Try.
 }
 
 impl Context for &Frame {
@@ -925,8 +1137,12 @@ impl Context for Rc<Environment> {
 
         // if we're at the top level, fall back to primitives if available
         } else if let Ok(prim) = name.as_str().try_into() {
-            Ok(R::Function(ExprList::new(), Expr::Primitive(prim), self.env()))
-            
+            Ok(R::Function(
+                ExprList::new(),
+                Expr::Primitive(prim),
+                self.env(),
+            ))
+
         // otherwise, throw error
         } else {
             Err(RSignal::Error(RError::VariableNotFound(name)))

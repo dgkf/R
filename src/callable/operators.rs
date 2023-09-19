@@ -1,11 +1,11 @@
 use r_derive::*;
 
+use super::core::*;
 use crate::ast::*;
 use crate::error::RError;
-use crate::lang::{CallStack, EvalResult, Context, R};
+use crate::lang::{CallStack, Context, EvalResult, R};
 use crate::vector::subset::Subset;
 use crate::vector::vectors::*;
-use super::core::*;
 
 #[derive(Debug, Clone, PartialEq)]
 #[builtin(sym = "<-", kind = Infix)]
@@ -20,16 +20,14 @@ impl Callable for InfixAssign {
                 let value = stack.eval(rhs)?;
                 stack.last_frame().env.insert(s, value.clone());
                 Ok(value)
-            },
+            }
             Call(what, mut args) => match *what {
                 String(s) | Symbol(s) => {
                     args.insert(0, rhs);
                     let s = format!("{}<-", s);
                     stack.eval(Call(Box::new(Symbol(s)), args))
-                },
-                Primitive(p) => {
-                    p.call_assign(rhs, args, stack)
-                },
+                }
+                Primitive(p) => p.call_assign(rhs, args, stack),
                 _ => unimplemented!("cannot assign to that!"),
             },
             _ => unimplemented!("cannot assign to that!"),
@@ -175,7 +173,7 @@ impl Callable for InfixGreater {
     }
 }
 
-#[derive(Debug, Clone, PartialEq,)]
+#[derive(Debug, Clone, PartialEq)]
 #[builtin(sym = ">=", kind = Infix)]
 pub struct InfixGreaterEqual;
 impl Callable for InfixGreaterEqual {
@@ -195,7 +193,7 @@ impl Callable for InfixLess {
     }
 }
 
-#[derive(Debug, Clone, PartialEq,)]
+#[derive(Debug, Clone, PartialEq)]
 #[builtin(sym = "<=", kind = Infix)]
 pub struct InfixLessEqual;
 impl Callable for InfixLessEqual {
@@ -205,7 +203,7 @@ impl Callable for InfixLessEqual {
     }
 }
 
-#[derive(Debug, Clone, PartialEq,)]
+#[derive(Debug, Clone, PartialEq)]
 #[builtin(sym = "==", kind = Infix)]
 pub struct InfixEqual;
 impl Callable for InfixEqual {
@@ -215,7 +213,7 @@ impl Callable for InfixEqual {
     }
 }
 
-#[derive(Debug, Clone, PartialEq,)]
+#[derive(Debug, Clone, PartialEq)]
 #[builtin(sym = "!=", kind = Infix)]
 pub struct InfixNotEqual;
 impl Callable for InfixNotEqual {
@@ -225,7 +223,7 @@ impl Callable for InfixNotEqual {
     }
 }
 
-#[derive(Debug, Clone, PartialEq,)]
+#[derive(Debug, Clone, PartialEq)]
 #[builtin(sym = "|>", kind = Infix)]
 pub struct InfixPipe;
 impl Callable for InfixPipe {
@@ -239,7 +237,7 @@ impl Callable for InfixPipe {
                 args.insert(0, lhs);
                 let new_expr = Call(what, args);
                 stack.eval(new_expr)
-            },
+            }
             s @ Symbol(..) | s @ String(..) => {
                 let args = ExprList::from(vec![(None, lhs)]);
                 let new_expr = Call(Box::new(s), args);
@@ -264,7 +262,7 @@ impl Callable for InfixColon {
                 if let Expr::Primitive(p) = *what {
                     if p == (Box::new(InfixColon) as Box<dyn Builtin>) {
                         return Some(largs.clone().unnamed_binary_args());
-                    }    
+                    }
                 }
             }
 
@@ -285,32 +283,41 @@ impl Callable for InfixColon {
             let end: f64 = stack.eval(arg3)?.try_into()?;
 
             if by == 0.0 {
-                return RError::Other("Cannot increment by 0".to_string()).into()
+                return RError::Other("Cannot increment by 0".to_string()).into();
             }
 
             if (end - start) / by < 0.0 {
-                return Ok(R::Vector(Vector::from(Vec::<Numeric>::new())))
+                return Ok(R::Vector(Vector::from(Vec::<Numeric>::new())));
             }
 
             let mut v = start;
             return Ok(R::Vector(Vector::from(
-                vec![start].into_iter()
-                    .chain(std::iter::repeat_with(|| { v += by; v }))
+                vec![start]
+                    .into_iter()
+                    .chain(std::iter::repeat_with(|| {
+                        v += by;
+                        v
+                    }))
                     .take_while(|x| if &start <= &end { x <= &end } else { x >= &end })
-                    .collect::<Vec<f64>>()
-            )))
-            
+                    .collect::<Vec<f64>>(),
+            )));
+
         // binary case
         } else {
             let start: i32 = stack.eval(arg1)?.as_integer()?.try_into()?;
             let end: i32 = stack.eval(arg2)?.as_integer()?.try_into()?;
-            return Ok(R::Vector(Vector::from(
-                if start <= end {
-                    (start..=end).map(|i| i as f64).into_iter().collect::<Vec<f64>>()
-                } else {
-                    (end..=start).map(|i| i as f64).into_iter().rev().collect::<Vec<f64>>()
-                }
-            )))
+            return Ok(R::Vector(Vector::from(if start <= end {
+                (start..=end)
+                    .map(|i| i as f64)
+                    .into_iter()
+                    .collect::<Vec<f64>>()
+            } else {
+                (end..=start)
+                    .map(|i| i as f64)
+                    .into_iter()
+                    .rev()
+                    .collect::<Vec<f64>>()
+            })));
         }
     }
 }
@@ -336,7 +343,6 @@ impl Callable for InfixDollar {
             Expr::String(s) | Expr::Symbol(s) => what.try_get_named(s.as_str()),
             _ => Ok(R::Null),
         }
-
     }
 
     fn call_assign(&self, value: Expr, args: ExprList, stack: &mut CallStack) -> EvalResult {
@@ -357,8 +363,8 @@ impl Callable for InfixDollar {
             Expr::String(s) | Expr::Symbol(s) => {
                 what.set_named(s.as_str(), value)?;
                 Ok(what)
-            },
-            _ => unimplemented!()
+            }
+            _ => unimplemented!(),
         }
     }
 }
@@ -369,23 +375,7 @@ pub struct PostfixIndex;
 impl Callable for PostfixIndex {
     fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
         let (what, index) = stack.eval_binary(args.unnamed_binary_args())?;
-        what.try_get(index)
-    }
-
-    fn call_assign(&self, value: Expr, args: ExprList, stack: &mut CallStack) -> EvalResult {
-        let value = stack.eval(value)?;
-        let (what, index) = stack.eval_binary(args.unnamed_binary_args())?;
-
-        use R::*;
-        match (what, index.as_integer()?) {
-            (Vector(lrvec), Vector(ivec)) => {
-                let by: Subset = ivec.try_into()?;
-                let mut lrvec_subset = lrvec.subset(by);
-                lrvec_subset.assign(value)?;
-                Ok(Vector(lrvec_subset))
-            }
-            _ => unimplemented!(),
-        }
+        what.try_get_inner(index)
     }
 }
 
@@ -412,6 +402,6 @@ impl Format for PrimVec {
 impl Callable for PrimVec {
     fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
         // for now just use c()
-       super::primitive::PrimitiveC.call(args, stack)
+        super::primitive::PrimitiveC.call(args, stack)
     }
 }

@@ -1,8 +1,8 @@
 extern crate r_derive;
 
 use crate::ast::*;
-use crate::callable::dyncompare::*;
 use crate::callable::builtins::BUILTIN;
+use crate::callable::dyncompare::*;
 use crate::lang::*;
 
 impl std::fmt::Debug for Box<dyn Callable> {
@@ -34,19 +34,23 @@ pub trait Callable {
 
     fn match_args(&self, args: ExprList, stack: &mut CallStack) -> Result<(List, List), RSignal> {
         let mut formals = self.formals();
-        let mut ellipsis: Vec<(Option<String>, R)> = vec![];
-        let mut matched_args: Vec<(Option<String>, R)> = vec![];
+        let ellipsis: List = vec![].into();
+        let matched_args: List = vec![].into();
 
         // extract iterable list of arguments
-        let mut args: List = stack.parent_frame().eval_list_lazy(args)?.try_into()?;
+        let args: List = stack.parent_frame().eval_list_lazy(args)?.try_into()?;
 
         // assign named args to corresponding formals
         let mut i: usize = 0;
-        while i < args.len() {
-            match &args[i].0 {
+        while i < args.values.borrow().len() {
+            match &args.values.borrow()[i].0 {
                 Some(argname) => {
                     if let Some((Some(_), _)) = formals.remove_named(&argname) {
-                        matched_args.push(args.remove(i));
+                        matched_args
+                            .values
+                            .borrow_mut()
+                            .push(args.values.borrow_mut().remove(i));
+
                         continue;
                     }
                 }
@@ -59,20 +63,21 @@ pub trait Callable {
         formals.pop_trailing();
 
         // backfill unnamed args, populating ellipsis with overflow
-        for (key, value) in args.into_iter() {
+        let argsiter = args.values.borrow_mut().clone().into_iter();
+        for (key, value) in argsiter {
             match key {
                 // named args go directly to ellipsis, they did not match a formal
                 Some(arg) => {
-                    ellipsis.push((Some(arg), value));
+                    ellipsis.values.borrow_mut().push((Some(arg), value));
                 }
 
                 // unnamed args populate next formal, or ellipsis if formals exhausted
                 None => {
                     let next_unassigned_formal = formals.remove(0);
                     if let Some((Some(param), _)) = next_unassigned_formal {
-                        matched_args.push((Some(param), value));
+                        matched_args.values.borrow_mut().push((Some(param), value));
                     } else {
-                        ellipsis.push((None, value));
+                        ellipsis.values.borrow_mut().push((None, value));
                     }
                 }
             }
@@ -80,7 +85,10 @@ pub trait Callable {
 
         // add back in parameter defaults that weren't filled with args
         for (param, default) in formals.into_iter() {
-            matched_args.push((param, R::Closure(default, stack.env().clone())));
+            matched_args
+                .values
+                .borrow_mut()
+                .push((param, R::Closure(default, stack.env().clone())));
         }
 
         Ok((matched_args, ellipsis))
@@ -170,7 +178,7 @@ pub enum SymKind {
     Function,
     Infix,
     Prefix,
-    PostfixCall(&'static str, &'static str)
+    PostfixCall(&'static str, &'static str),
 }
 
 impl PartialEq<dyn Builtin> for dyn Builtin {
@@ -203,7 +211,7 @@ where
 
 impl CallableClone for String
 where
-    Self: Callable
+    Self: Callable,
 {
     fn callable_clone(&self) -> Box<dyn Builtin> {
         Box::new(self.clone())
@@ -223,10 +231,13 @@ impl TryFrom<&str> for Box<dyn Builtin> {
     }
 }
 
-pub fn force_closures(vals: Vec<(Option<String>, R)>, stack: &mut CallStack) -> Vec<(Option<String>, R)> {
+pub fn force_closures(vals: List, stack: &mut CallStack) -> Vec<(Option<String>, R)> {
     // Force any closures that were created during call. This helps with using
     // variables as argument for sep and collapse parameters.
-    vals.into_iter()
+    vals.values
+        .borrow_mut()
+        .clone()
+        .into_iter()
         .map(|(k, v)| (k, v.clone().force(stack).unwrap_or(R::Null))) // TODO: raise this error
         .collect()
 }
@@ -253,14 +264,17 @@ impl Callable for R {
 
         // body is a primitive, call directly
         if let Expr::Primitive(f) = body {
-            return f.call(args, stack)
+            return f.call(args, stack);
         };
 
         // match arguments against function signature
         let (args, ellipsis) = self.match_args(args, stack)?;
 
         // add closures to local scope
-        stack.last_frame().env.insert("...".to_string(), R::List(ellipsis));
+        stack
+            .last_frame()
+            .env
+            .insert("...".to_string(), R::List(ellipsis));
         stack.last_frame().env.append(R::List(args));
 
         // evaluate body in local scope
@@ -282,13 +296,10 @@ mod test {
 
     #[test]
     fn calls_find_symbols_in_parent_envs() {
-        assert_eq!(
-            r!{ f <- function(a) { a + b }; b <- 3; f(2) }, 
-            r!{ 5 }
-        );
+        assert_eq!(r! { f <- function(a) { a + b }; b <- 3; f(2) }, r! { 5 });
 
         assert_eq!(
-            r!{{"
+            r! {{"
                 x <- function(a) { 
                     a + b 
                 }
@@ -301,20 +312,14 @@ mod test {
 
                 y(10, 100)
             "}},
-            r!{ 126 }
+            r! { 126 }
         );
     }
 
     #[test]
     fn lazy_argument_evaluation() {
-        assert_eq!(
-            r!{ f <- function(a, b = a) { b }; f(3) }, 
-            r!{ 3 }
-        );
+        assert_eq!(r! { f <- function(a, b = a) { b }; f(3) }, r! { 3 });
 
-        assert_eq!(
-            r!{ f <- function(a, b = a) { b }; f(a = 3) }, 
-            r!{ 3 }
-        );
+        assert_eq!(r! { f <- function(a, b = a) { b }; f(a = 3) }, r! { 3 });
     }
 }

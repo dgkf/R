@@ -1,6 +1,6 @@
 use super::{subset::Subset, vectors::OptionNA};
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Default)]
 pub struct Subsets(pub Vec<Subset>);
 
 impl Subsets {
