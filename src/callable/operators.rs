@@ -4,7 +4,6 @@ use super::core::*;
 use crate::ast::*;
 use crate::error::RError;
 use crate::lang::{CallStack, Context, EvalResult, R};
-use crate::vector::subset::Subset;
 use crate::vector::vectors::*;
 
 #[derive(Debug, Clone, PartialEq)]

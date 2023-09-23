@@ -404,7 +404,8 @@ fn display_list(x: &List, f: &mut fmt::Formatter<'_>, bc: Option<String>) -> fmt
     let v = x.values.borrow();
     let s = x.subsets.clone();
 
-    for (i, (_, si)) in s.into_iter().take(v.len()).enumerate() {
+    let names: Vec<_> = x.values.borrow().clone().into_iter().map(|(n, _)| n).collect();
+    for (i, (_, si)) in s.bind_names(names).into_iter().take(v.len()).enumerate() {
         let name;
         let value;
 
@@ -623,12 +624,13 @@ impl List {
     }
 
     pub fn assign(&mut self, value: R) -> EvalResult {
+        let names: Vec<_> = self.values.borrow().clone().into_iter().map(|(n, _)| n).collect();
         match value {
             // remove elements from list
             R::Null => {
                 let mut v = self.values.borrow_mut();
                 let n = v.len();
-                let indices = self.subsets.clone().into_iter().take(n);
+                let indices = self.subsets.clone().bind_names(names).into_iter().take(n);
                 for (i, _) in indices {
                     v.remove(i);
                 }
@@ -641,10 +643,10 @@ impl List {
             any if any.len() == Some(1) => {
                 let mut v = self.values.borrow_mut();
                 let n = v.len();
-                let indices = self.subsets.clone().into_iter().take(n);
+                let indices = self.subsets.clone().bind_names(names.clone()).into_iter().take(n);
 
                 // first check to see if we need to extend
-                if let Some(max) = self.subsets.clone().into_iter().map(|(i, _)| i).max() {
+                if let Some(max) = self.subsets.clone().bind_names(names).into_iter().map(|(i, _)| i).max() {
                     v.reserve(max.saturating_sub(n))
                 }
 
@@ -660,14 +662,15 @@ impl List {
                     subsets: self.subsets.clone(),
                 }))
             }
-            // multiple assignment
+            // vectorized assignment
+            // TODO(feature): warn when index recycling does not cycle evenly
             any if any.len() == Some(self.len()) => {
                 let mut v = self.values.borrow_mut();
                 let n = v.len();
-                let indices = self.subsets.clone().into_iter().take(n);
+                let indices = self.subsets.clone().bind_names(names.clone()).into_iter().take(n);
 
                 // first check to see if we need to extend
-                if let Some(max) = self.subsets.clone().into_iter().map(|(i, _)| i).max() {
+                if let Some(max) = self.subsets.clone().bind_names(names).into_iter().map(|(i, _)| i).max() {
                     v.reserve(max.saturating_sub(n))
                 }
 
@@ -686,10 +689,10 @@ impl List {
             other => {
                 let mut v = self.values.borrow_mut();
                 let n = v.len();
-                let indices = self.subsets.clone().into_iter().take(n);
+                let indices = self.subsets.clone().bind_names(names.clone()).into_iter().take(n);
 
                 // first check to see if we need to extend
-                if let Some(max) = self.subsets.clone().into_iter().map(|(i, _)| i).max() {
+                if let Some(max) = self.subsets.clone().bind_names(names).into_iter().map(|(i, _)| i).max() {
                     v.reserve(max.saturating_sub(n))
                 }
 
@@ -718,12 +721,13 @@ impl List {
 
     fn try_get_inner(&self, index: R) -> EvalResult {
         let err = RError::Other("Cannot use object for indexing.".to_string());
+        let names: Vec<_> = self.values.borrow().clone().into_iter().map(|(n, _)| n).collect();
         match index.as_vector()? {
             R::Vector(v) if v.len() == 1 => {
                 let Subsets(mut subsets) = self.subsets.clone();
                 subsets.push(v.try_into()?);
 
-                if let Some((i, _)) = Subsets(subsets).into_iter().next() {
+                if let Some((i, _)) = Subsets(subsets).bind_names(names).into_iter().next() {
                     self.values
                         .borrow()
                         .get(i)

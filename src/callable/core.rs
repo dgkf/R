@@ -42,21 +42,23 @@ pub trait Callable {
 
         // assign named args to corresponding formals
         let mut i: usize = 0;
-        while i < args.values.borrow().len() {
-            match &args.values.borrow()[i].0 {
-                Some(argname) => {
+        'outer: while i < args.values.borrow().len() {
+            'inner: {
+                // check argname with immutable borrow, but drop scope. If 
+                // found, drop borrow so we can mutably assign it
+                if let (Some(argname), _) = &args.values.borrow()[i] {
                     if let Some((Some(_), _)) = formals.remove_named(&argname) {
-                        matched_args
-                            .values
-                            .borrow_mut()
-                            .push(args.values.borrow_mut().remove(i));
-
-                        continue;
+                        break 'inner;
                     }
                 }
-                _ => (),
+
+                i += 1;
+                continue 'outer;
             }
-            i += 1;
+
+            matched_args.values
+                .borrow_mut()
+                .push(args.values.borrow_mut().remove(i));               
         }
 
         // remove any Ellipsis param, and any trailing unassigned params
@@ -275,6 +277,7 @@ impl Callable for R {
             .last_frame()
             .env
             .insert("...".to_string(), R::List(ellipsis));
+
         stack.last_frame().env.append(R::List(args));
 
         // evaluate body in local scope

@@ -1,6 +1,6 @@
 use std::{cell::RefCell, ops::Range, rc::Rc};
 
-use crate::{error::RError, lang::RSignal};
+use crate::lang::RSignal;
 
 use super::vectors::{Character, Integer, Logical, OptionNA, Vector};
 
@@ -53,6 +53,127 @@ impl Subset {
             Subset::Range(r) => r.end - r.start,
             Subset::Mask(_) => usize::MAX,
             Subset::Names(n) => n.clone().borrow().len(),
+        }
+    }
+
+    pub fn filter<'a, I>(&self, mut iter: I) -> Box<dyn Iterator<Item = (usize, Option<usize>)> + 'a>
+    where
+        I: Iterator<Item = (usize, Option<usize>)> + 'a
+    {
+        match self.clone() {
+            Subset::Indices(i) => {
+                let l = self.len();
+
+                // fastest case, when no indices are selected
+                if l == 0 {
+                    return Box::new(vec![].into_iter());
+
+                // very fast case, when one index is selected
+                } else if l == 1 {
+                    let msg = "Expected at least one element to index by";
+                    if let OptionNA::Some(to_first) = i.clone().borrow().get(0).expect(msg) {
+                        Box::new(iter.skip(*to_first as usize).take(1))
+                    } else {
+                        let (i_orig, _) = iter.next().unwrap_or((0, None));
+                        Box::new(vec![(i_orig, None)].into_iter())
+                    }
+
+                // fast case, when indices are already sorted
+                } else if i.borrow().windows(2).all(|w| w[0] <= w[1]) {
+                    // when sorted, we can keep our existing iterator and
+                    // embed the indices, scanning along the iterator
+                    // and yielding indices as they are encountered
+                    let ic = i.clone();
+                    let ib = ic.borrow().clone();
+
+                    Box::new(
+                        iter.enumerate()
+                            .scan(
+                                (ib, 0),
+                                |(indices, i), (xi, (xi_orig, x))| -> Option<Vec<(usize, Option<usize>)>> {
+                                    if *i >= indices.len() {
+                                        return None;
+                                    }
+
+                                    let mut n = 0;
+                                    while *i < indices.len()
+                                        && indices[*i] == OptionNA::Some(xi as i32)
+                                    {
+                                        n += 1;
+                                        *i += 1;
+                                    }
+
+                                    return Some(vec![(xi_orig, x); n]);
+                                },
+                            )
+                            .flat_map(|i| i),
+                    )
+                // worst case, indices in random order
+                } else {
+                    // enumerate indices and swap so it's (index, enumeration)
+                    let ic = i.clone();
+                    let ib = ic.borrow();
+
+                    let mut order = ib
+                        .iter()
+                        .map(|i| match i {
+                            OptionNA::NA => -1,
+                            OptionNA::Some(i) => *i,
+                        })
+                        .enumerate()
+                        .map(|(i, v)| (v, i.clone())) // cast NAs to -1's
+                        .collect::<Vec<_>>();
+
+                    // sort by index to get (sorted indices, order)
+                    // we'll use this to sample the existing iterator then
+                    // permute it back into the original order
+                    order.sort();
+                    let (mut i, order): (Vec<_>, Vec<_>) = order.into_iter().unzip();
+
+                    // we'll populate this with the sorted indices first
+                    let mut indices: Vec<(usize, Option<usize>)> = vec![(0, None); i.len()];
+                    let n_na = i.iter().take_while(|&i| *i == -1).count();
+
+                    // populate non-na elements
+                    i.insert(n_na, 0);
+                    let diffs = i[n_na..].windows(2).map(|w| w[1] - w[0]);
+
+                    let msg = "exhausted iterator";
+                    let (mut i_orig, mut last) = iter.nth(0).expect(msg);
+                    for (i, diff) in diffs.enumerate() {
+                        if diff > 0 {
+                            (i_orig, last) = iter.nth((diff - 1) as usize).expect(msg);
+                        }
+                        indices[order[i + n_na]] = (i_orig, last);
+                    }
+
+                    // and finally we convert our new indices into an iterator
+                    Box::new(indices.into_iter())
+                }
+            },
+            Subset::Mask(mask) => {
+                Box::new(
+                    mask.borrow()
+                        .clone()
+                        .into_iter()
+                        .cycle()
+                        .zip(iter)
+                        .filter_map(|(mask, i @ (i_orig, _))| match mask {
+                            OptionNA::Some(true) => Some(i),      // accept index
+                            OptionNA::NA => Some((i_orig, None)), // accept, but NA
+                            _ => None,                            // filter falses
+                        }),
+                )
+            }
+            Subset::Range(range) => {
+                Box::new(
+                    iter.skip(range.start)
+                        .enumerate()
+                        .take_while(move |(i, _)| i < &(range.end - range.start))
+                        .map(|(_, v)| v),
+                )
+            }
+            Subset::Names(_) => unimplemented!(),
         }
     }
 }
@@ -113,7 +234,9 @@ impl TryFrom<Vector> for Subset {
                     Ok(Subset::Mask(v.inner()))
                 }
             }
-            _ => Err(RError::Other("Cannot convert vector type to index".to_string()).into()),
+            Vector::Character(v) => {
+                Ok(Subset::Names(v.inner()))                
+            }
         }
     }
 }
