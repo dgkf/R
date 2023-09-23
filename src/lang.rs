@@ -624,6 +624,9 @@ impl List {
     }
 
     pub fn assign(&mut self, value: R) -> EvalResult {
+        // TODO(performance): Avoid having to split vector and collect into 
+        // separate names vec for binding during subsetting. Ideally just
+        // need a reference.
         let names: Vec<_> = self.values.borrow().clone().into_iter().map(|(n, _)| n).collect();
         match value {
             // remove elements from list
