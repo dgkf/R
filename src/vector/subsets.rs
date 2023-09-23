@@ -62,11 +62,15 @@ impl IntoIterator for NamedSubsets {
         for subset in subsets {
             match subset {
                 Subset::Names(names) => {
+                    // TODO(performance): extract named elements without
+                    // repeatedly iterating through named values
                     let mut indices = vec![(0, None); names.borrow().len()];
                     for (i, _) in iter.take(self.names.len()) {
                         if let Some(Some(ni)) = self.names.get(i) {
-                            if let Some(ni) = names.borrow().iter().position(|i| i == &OptionNA::Some(ni.to_string())) {
-                                indices[ni] = (i, Some(i));
+                            for (si, sn) in names.borrow().iter().enumerate() {
+                                if &OptionNA::Some(ni.to_string()) == sn {
+                                    indices[si] = (i, Some(i))
+                                }
                             }
                         }
                     }
