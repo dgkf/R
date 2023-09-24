@@ -1,10 +1,10 @@
 use r_derive::*;
 
 use super::core::*;
-use crate::ast::*;
 use crate::error::RError;
-use crate::lang::{CallStack, Context, EvalResult, R};
-use crate::vector::vectors::*;
+use crate::lang::{CallStack, Context, EvalResult};
+use crate::object::types::*;
+use crate::object::*;
 
 #[derive(Debug, Clone, PartialEq)]
 #[builtin(sym = "<-", kind = Infix)]
@@ -111,12 +111,12 @@ impl Callable for InfixOr {
     fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
         let (lhs, rhs) = stack.eval_binary(args.unnamed_binary_args())?;
         let res = match (lhs, rhs) {
-            (R::Vector(l), R::Vector(r)) => {
+            (Obj::Vector(l), Obj::Vector(r)) => {
                 let Ok(lhs) = l.try_into() else { todo!() };
                 let Ok(rhs) = r.try_into() else { todo!() };
-                R::Vector(Vector::from(vec![OptionNA::Some(lhs || rhs)]))
+                Obj::Vector(Vector::from(vec![OptionNA::Some(lhs || rhs)]))
             }
-            _ => R::Null,
+            _ => Obj::Null,
         };
 
         Ok(res)
@@ -130,12 +130,12 @@ impl Callable for InfixAnd {
     fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
         let (lhs, rhs) = stack.eval_binary(args.unnamed_binary_args())?;
         let res = match (lhs, rhs) {
-            (R::Vector(l), R::Vector(r)) => {
+            (Obj::Vector(l), Obj::Vector(r)) => {
                 let Ok(lhs) = l.try_into() else { todo!() };
                 let Ok(rhs) = r.try_into() else { todo!() };
-                R::Vector(Vector::from(vec![OptionNA::Some(lhs && rhs)]))
+                Obj::Vector(Vector::from(vec![OptionNA::Some(lhs && rhs)]))
             }
-            _ => R::Null,
+            _ => Obj::Null,
         };
 
         Ok(res)
@@ -286,11 +286,11 @@ impl Callable for InfixColon {
             }
 
             if (end - start) / by < 0.0 {
-                return Ok(R::Vector(Vector::from(Vec::<Numeric>::new())));
+                return Ok(Obj::Vector(Vector::from(Vec::<Numeric>::new())));
             }
 
             let mut v = start;
-            return Ok(R::Vector(Vector::from(
+            return Ok(Obj::Vector(Vector::from(
                 vec![start]
                     .into_iter()
                     .chain(std::iter::repeat_with(|| {
@@ -305,7 +305,7 @@ impl Callable for InfixColon {
         } else {
             let start: i32 = stack.eval(arg1)?.as_integer()?.try_into()?;
             let end: i32 = stack.eval(arg2)?.as_integer()?.try_into()?;
-            return Ok(R::Vector(Vector::from(if start <= end {
+            return Ok(Obj::Vector(Vector::from(if start <= end {
                 (start..=end)
                     .map(|i| i as f64)
                     .into_iter()
@@ -340,7 +340,7 @@ impl Callable for InfixDollar {
 
         match index {
             Expr::String(s) | Expr::Symbol(s) => what.try_get_named(s.as_str()),
-            _ => Ok(R::Null),
+            _ => Ok(Obj::Null),
         }
     }
 

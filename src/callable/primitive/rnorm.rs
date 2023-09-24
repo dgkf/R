@@ -1,11 +1,10 @@
 use r_derive::builtin;
 use rand_distr::{Distribution, Normal};
 
-use crate::ast::*;
 use crate::callable::core::*;
 use crate::error::RError;
 use crate::lang::*;
-use crate::vector::vectors::Vector;
+use crate::object::*;
 
 #[derive(Debug, Clone, PartialEq)]
 #[builtin(sym = "rnorm")]
@@ -23,7 +22,7 @@ impl Callable for PrimitiveRnorm {
         use RError::ArgumentInvalid;
         let (vals, _) = self.match_args(args, stack)?;
         let vals = force_closures(vals, stack);
-        let mut vals = R::List(List::from(vals));
+        let mut vals = Obj::List(List::from(vals));
 
         let n: i32 = vals.try_get_named("n")?.try_into()?;
         let mean: Vec<f64> = vals.try_get_named("mean")?.try_into()?;
@@ -46,7 +45,7 @@ impl Callable for PrimitiveRnorm {
 
             let normal = Normal::new(*mean, *std).unwrap();
 
-            Ok(R::Vector(Vector::from(
+            Ok(Obj::Vector(Vector::from(
                 (1..=n)
                     .into_iter()
                     .map(|_| normal.sample(&mut rng))
@@ -55,7 +54,7 @@ impl Callable for PrimitiveRnorm {
 
         // otherwise we need to zip through mins and maxes to get distributions
         } else {
-            Ok(R::Vector(Vector::from(
+            Ok(Obj::Vector(Vector::from(
                 mean.into_iter()
                     .cycle()
                     .zip(std.into_iter().cycle())

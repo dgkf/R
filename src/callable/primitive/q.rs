@@ -1,8 +1,8 @@
 use r_derive::*;
 
-use crate::ast::*;
 use crate::lang::*;
 use crate::callable::core::*;
+use crate::object::ExprList;
 
 #[derive(Debug, Clone, PartialEq)]
 #[builtin(sym = "q")]

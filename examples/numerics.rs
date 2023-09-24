@@ -1,4 +1,4 @@
-use r::vector::vectors::*;
+use r::object::Vector;
 
 fn main() {
     let x = Vector::from(vec![false, true, false]);
@@ -8,7 +8,7 @@ fn main() {
     println!("{} + {}", x, y);
     println!("{}\n", x + y);
 
-    use r::vector::vectors::OptionNA::*; // Some() and NA
+    use r::object::OptionNA::*; // Some() and NA
     let x = Vector::from(vec![Some(5_i32), NA, Some(1_i32)]);
     let y = Vector::from(vec![1_f64, 2_f64, 3_f64]);
 

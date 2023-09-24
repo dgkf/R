@@ -2,7 +2,8 @@ use std::{cell::RefCell, ops::Range, rc::Rc};
 
 use crate::lang::RSignal;
 
-use super::vectors::{Character, Integer, Logical, OptionNA, Vector};
+use super::{types::*, OptionNA, Vector};
+
 
 /// Subsets
 ///

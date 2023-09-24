@@ -6,10 +6,10 @@
 /// and return a `RExpr`, with a few more specific internal parsers returning
 /// `RExprList`s or tuples of parsed expressions.
 ///
-use crate::ast::*;
 use crate::error::RError;
 use crate::callable::{core::*, keywords::*, operators::*, primitive::PrimitiveList};
 use crate::lang::RSignal;
+use crate::object::{Expr, ExprList};
 
 use pest::iterators::{Pair, Pairs};
 use pest::pratt_parser::PrattParser;

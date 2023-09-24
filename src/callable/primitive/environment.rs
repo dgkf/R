@@ -1,9 +1,9 @@
 use r_derive::*;
 
-use crate::ast::*;
 use crate::error::RError;
 use crate::lang::*;
 use crate::callable::core::*;
+use crate::object::*;
 
 #[derive(Debug, Clone, PartialEq)]
 #[builtin(sym = "environment")]
@@ -17,12 +17,12 @@ impl Callable for PrimitiveEnvironment {
 
     fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
         let (vals, _) = self.match_args(args, stack)?;
-        let mut vals = R::List(vals);
+        let mut vals = Obj::List(vals);
 
         // default when `fun` is missing or not found
         let fun = vals.try_get_named("fun");
-        if let Ok(R::Closure(Expr::Missing, _)) | Err(_) = fun {
-            return Ok(R::Environment(stack.env().clone()));
+        if let Ok(Obj::Closure(Expr::Missing, _)) | Err(_) = fun {
+            return Ok(Obj::Environment(stack.env().clone()));
         };
 
         // Err(_) case tested above
@@ -30,9 +30,9 @@ impl Callable for PrimitiveEnvironment {
 
         // otherwise we can evaluate value and return result's environment
         match fun.force(stack)? {
-            R::Closure(_, e) => Ok(R::Environment(e.clone())),
-            R::Function(_, _, e) => Ok(R::Environment(e.clone())),
-            R::Environment(e) => Ok(R::Environment(e.clone())),
+            Obj::Closure(_, e) => Ok(Obj::Environment(e.clone())),
+            Obj::Function(_, _, e) => Ok(Obj::Environment(e.clone())),
+            Obj::Environment(e) => Ok(Obj::Environment(e.clone())),
             _ => RError::ArgumentInvalid(String::from("fun")).into(),
         }
     }

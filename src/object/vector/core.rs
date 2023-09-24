@@ -3,12 +3,12 @@ use std::fmt::Display;
 
 use crate::error::RError;
 use crate::lang::EvalResult;
-use crate::lang::R;
-use crate::vector::coercion::CoercibleInto;
+use crate::object::Obj;
 
-use super::coercion::AtomicMode;
+use super::coercion::CoercibleInto;
 use super::rep::Rep;
 use super::subset::Subset;
+use super::types::*;
 
 #[derive(Clone, PartialEq, Eq, Ord)]
 pub enum OptionNA<T> {
@@ -46,15 +46,6 @@ impl<T> Default for OptionNA<T> {
     }
 }
 
-pub type Numeric = OptionNA<f64>;
-impl AtomicMode for Numeric { fn is_numeric() -> bool { true }}
-pub type Integer = OptionNA<i32>;
-impl AtomicMode for Integer { fn is_integer() -> bool { true }}
-pub type Logical = OptionNA<bool>;
-impl AtomicMode for Logical { fn is_logical() -> bool { true }}
-pub type Character = OptionNA<String>;
-impl AtomicMode for Character { fn is_character() -> bool { true }}
-
 #[derive(Debug, Clone, PartialEq)]
 pub enum Vector {
     Numeric(Rep<Numeric>),
@@ -76,20 +67,20 @@ impl Vector {
         }
     }
 
-    pub fn try_get(&self, index: R) -> EvalResult {
+    pub fn try_get(&self, index: Obj) -> EvalResult {
         let err = RError::Other("Vector index cannot be coerced into a valid indexing type.".to_string());
         match (self, index.as_vector()?) {
-            (Vector::Numeric(v), R::Vector(i)) => {
-                Ok(R::Vector(Vector::from(v.subset(i.try_into()?))))
+            (Vector::Numeric(v), Obj::Vector(i)) => {
+                Ok(Obj::Vector(Vector::from(v.subset(i.try_into()?))))
             },
-            (Vector::Integer(v), R::Vector(i)) => {
-                Ok(R::Vector(Vector::from(v.subset(i.try_into()?))))
+            (Vector::Integer(v), Obj::Vector(i)) => {
+                Ok(Obj::Vector(Vector::from(v.subset(i.try_into()?))))
             },
-            (Vector::Logical(v), R::Vector(i)) => {
-                Ok(R::Vector(Vector::from(v.subset(i.try_into()?))))
+            (Vector::Logical(v), Obj::Vector(i)) => {
+                Ok(Obj::Vector(Vector::from(v.subset(i.try_into()?))))
             },
-            (Vector::Character(v), R::Vector(i)) => {
-                Ok(R::Vector(Vector::from(v.subset(i.try_into()?))))
+            (Vector::Character(v), Obj::Vector(i)) => {
+                Ok(Obj::Vector(Vector::from(v.subset(i.try_into()?))))
             },
             _ => Err(err.into())
         }
@@ -104,17 +95,17 @@ impl Vector {
         }
     }
 
-    pub fn assign(&mut self, other: R) -> EvalResult {
+    pub fn assign(&mut self, other: Obj) -> EvalResult {
         let err = RError::Other("Cannot assign to a vector from a different type".to_string()).into();
         match (self, other) {
-            (Vector::Numeric(l), R::Vector(Vector::Numeric(r))) => 
-                Ok(R::Vector(Vector::from(l.assign(r)))),
-            (Vector::Integer(l), R::Vector(Vector::Integer(r))) => 
-                Ok(R::Vector(Vector::from(l.assign(r)))),
-            (Vector::Logical(l), R::Vector(Vector::Logical(r))) => 
-                Ok(R::Vector(Vector::from(l.assign(r)))),
-            (Vector::Character(l), R::Vector(Vector::Character(r))) => 
-                Ok(R::Vector(Vector::from(l.assign(r)))),
+            (Vector::Numeric(l), Obj::Vector(Vector::Numeric(r))) => 
+                Ok(Obj::Vector(Vector::from(l.assign(r)))),
+            (Vector::Integer(l), Obj::Vector(Vector::Integer(r))) => 
+                Ok(Obj::Vector(Vector::from(l.assign(r)))),
+            (Vector::Logical(l), Obj::Vector(Vector::Logical(r))) => 
+                Ok(Obj::Vector(Vector::from(l.assign(r)))),
+            (Vector::Character(l), Obj::Vector(Vector::Character(r))) => 
+                Ok(Obj::Vector(Vector::from(l.assign(r)))),
             _ => return Err(err)
         }
     }

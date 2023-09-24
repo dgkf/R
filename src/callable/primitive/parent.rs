@@ -1,8 +1,8 @@
 use r_derive::*;
 
-use crate::ast::*;
 use crate::lang::*;
 use crate::callable::core::*;
+use crate::object::*;
 
 #[derive(Debug, Clone, PartialEq)]
 #[builtin(sym = "parent")]
@@ -16,17 +16,17 @@ impl Callable for PrimitiveParent{
 
     fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
         let (vals, _) = self.match_args(args, stack)?;
-        let mut vals = R::List(vals);
+        let mut vals = Obj::List(vals);
 
         // default when `x` is missing or not found
         let x = vals.try_get_named("x");
-        if let Ok(R::Closure(Expr::Missing, _)) | Err(_) = x {
-            return Ok(stack.env().parent.clone().map_or(R::Null, |e| R::Environment(e)));
+        if let Ok(Obj::Closure(Expr::Missing, _)) | Err(_) = x {
+            return Ok(stack.env().parent.clone().map_or(Obj::Null, |e| Obj::Environment(e)));
         };
 
         match vals.try_get_named("x")?.force(stack)?.environment() {
-            Some(e) => Ok(e.parent.clone().map_or(R::Null, |e| R::Environment(e))),
-            None => Ok(R::Null),
+            Some(e) => Ok(e.parent.clone().map_or(Obj::Null, |e| Obj::Environment(e))),
+            None => Ok(Obj::Null),
         }
     }
 }

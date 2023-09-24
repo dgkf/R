@@ -1,4 +1,3 @@
-use crate::vector::vectors::{Character, Integer, Logical, Numeric};
 use std::cell::RefCell;
 use std::fmt::{Debug, Display};
 use std::rc::Rc;
@@ -7,7 +6,8 @@ use super::coercion::{AtomicMode, CoercibleInto, CommonCmp, CommonNum, Minimally
 use super::iterators::{map_common_numeric, zip_recycle};
 use super::subset::Subset;
 use super::subsets::Subsets;
-use super::vectors::{OptionNA, Pow, VecPartialCmp};
+use super::types::*;
+use super::{OptionNA, Pow, VecPartialCmp};
 
 /// Vector
 #[derive(Debug, Clone, PartialEq)]
@@ -760,8 +760,9 @@ where
 #[cfg(test)]
 mod test {
     use super::OptionNA::*;
-    use super::*;
     use crate::utils::SameType;
+    use crate::object::{types::*, VecPartialCmp};
+    use crate::object::rep::Rep;
 
     #[test]
     fn vector_add() {

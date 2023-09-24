@@ -6,7 +6,8 @@ use super::highlight::RHighlighter;
 use super::prompt::RPrompt;
 use super::validator::RValidator;
 use super::release::*;
-use crate::lang::{CallStack, Cond, Context, Environment, RSignal, EvalResult};
+use crate::lang::{CallStack, Cond, Context, RSignal, EvalResult};
+use crate::object::Environment;
 use crate::parser::parse;
 
 pub fn repl<P>(history: Option<&P>) -> Result<(), ()>

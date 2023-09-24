@@ -1,9 +1,8 @@
 use r_derive::*;
 
-use crate::ast::*;
 use crate::callable::core::*;
 use crate::lang::*;
-use crate::vector::vectors::OptionNA;
+use crate::object::*;
 
 #[derive(Debug, Clone, PartialEq)]
 #[builtin(sym = "names")]
@@ -13,10 +12,10 @@ impl Callable for PrimitiveNames {
         ExprList::from(vec![(Some(String::from("x")), Expr::Missing)])
     }
 
-    fn call_matched(&self, mut args: R, mut _ellipsis: R, stack: &mut CallStack) -> EvalResult {
+    fn call_matched(&self, mut args: Obj, mut _ellipsis: Obj, stack: &mut CallStack) -> EvalResult {
         let x = args.try_get_named("x")?.force(stack)?;
 
-        use R::*;
+        use Obj::*;
         match x {
             Null => Ok(Null),
             Closure(_, _) => Ok(Null),

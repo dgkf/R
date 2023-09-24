@@ -1,9 +1,10 @@
 extern crate r_derive;
 
-use crate::ast::*;
+use crate::object::{Obj, Expr, ExprList};
 use crate::callable::builtins::BUILTIN;
 use crate::callable::dyncompare::*;
 use crate::lang::*;
+use crate::object::List;
 
 impl std::fmt::Debug for Box<dyn Callable> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -90,7 +91,7 @@ pub trait Callable {
             matched_args
                 .values
                 .borrow_mut()
-                .push((param, R::Closure(default, stack.env().clone())));
+                .push((param, Obj::Closure(default, stack.env().clone())));
         }
 
         Ok((matched_args, ellipsis))
@@ -98,10 +99,10 @@ pub trait Callable {
 
     fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
         let (args, ellipsis) = self.match_args(args, stack)?;
-        self.call_matched(R::List(args), R::List(ellipsis), stack)
+        self.call_matched(Obj::List(args), Obj::List(ellipsis), stack)
     }
 
-    fn call_matched(&self, mut _args: R, mut _ellipsis: R, _stack: &mut CallStack) -> EvalResult {
+    fn call_matched(&self, mut _args: Obj, mut _ellipsis: Obj, _stack: &mut CallStack) -> EvalResult {
         unimplemented!()
     }
 
@@ -233,14 +234,14 @@ impl TryFrom<&str> for Box<dyn Builtin> {
     }
 }
 
-pub fn force_closures(vals: List, stack: &mut CallStack) -> Vec<(Option<String>, R)> {
+pub fn force_closures(vals: List, stack: &mut CallStack) -> Vec<(Option<String>, Obj)> {
     // Force any closures that were created during call. This helps with using
     // variables as argument for sep and collapse parameters.
     vals.values
         .borrow_mut()
         .clone()
         .into_iter()
-        .map(|(k, v)| (k, v.clone().force(stack).unwrap_or(R::Null))) // TODO: raise this error
+        .map(|(k, v)| (k, v.clone().force(stack).unwrap_or(Obj::Null))) // TODO: raise this error
         .collect()
 }
 
@@ -256,11 +257,11 @@ impl Callable for String {
     }
 }
 
-impl Format for R {}
+impl Format for Obj {}
 
-impl Callable for R {
+impl Callable for Obj {
     fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
-        let R::Function(_, body, _) = self else {
+        let Obj::Function(_, body, _) = self else {
             unimplemented!("can't call non-function")
         };
 
@@ -276,16 +277,16 @@ impl Callable for R {
         stack
             .last_frame()
             .env
-            .insert("...".to_string(), R::List(ellipsis));
+            .insert("...".to_string(), Obj::List(ellipsis));
 
-        stack.last_frame().env.append(R::List(args));
+        stack.last_frame().env.append(Obj::List(args));
 
         // evaluate body in local scope
         stack.eval(body.clone())
     }
 
     fn formals(&self) -> ExprList {
-        if let R::Function(formals, _, _) = self {
+        if let Obj::Function(formals, _, _) = self {
             formals.clone()
         } else {
             ExprList::new()

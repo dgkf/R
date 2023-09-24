@@ -1,5 +1,6 @@
 use std::ops::Deref;
-use crate::vector::coercion::*;
+
+use super::coercion::{MinimallyNumeric, CoercibleInto, CommonNum};
 
 /// Zip iterators into recycling vectors, extending to longest length
 ///

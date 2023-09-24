@@ -5,8 +5,15 @@
 /// R's vector types, but there is room for improvement.
 ///
 pub mod coercion;
+pub mod types;
 pub mod iterators;
-pub mod vectors;
 pub mod rep;
-pub mod subsets;
-pub mod subset;
+
+mod subsets;
+pub use subsets::*;
+
+mod subset;
+pub use subset::*;
+
+mod core;
+pub use core::*;

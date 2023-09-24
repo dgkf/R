@@ -3,11 +3,10 @@ extern crate pest_derive;
 
 pub mod utils;
 
-pub mod ast;
 pub mod error;
 pub mod lang;
 pub mod parser;
 
 pub mod callable;
 pub mod repl;
-pub mod vector;
+pub mod object;

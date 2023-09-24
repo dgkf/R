@@ -1,7 +1,7 @@
 use r_derive::*;
 
-use crate::ast::*;
 use crate::lang::*;
+use crate::object::{ExprList, Expr, Obj};
 use super::core::*;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -61,7 +61,7 @@ impl Callable for KeywordFor {
         let iter = stack.eval(iter_expr)?;
 
         let mut eval_result: EvalResult;
-        let mut result = R::Null;
+        let mut result = Obj::Null;
         let mut index = 1;
 
         while let Some(value) = iter.get(index) {
@@ -108,7 +108,7 @@ impl Callable for KeywordWhile {
         let body = args.next().unwrap();
 
         let mut eval_result: EvalResult;
-        let mut result = R::Null;
+        let mut result = Obj::Null;
 
         loop {
             // handle while condition
@@ -152,7 +152,7 @@ impl Callable for KeywordRepeat {
         let body = args.next().unwrap();
 
         let mut eval_result: EvalResult;
-        let mut result = R::Null;
+        let mut result = Obj::Null;
 
         loop {
             eval_result = stack.eval(body.clone());
@@ -193,7 +193,7 @@ impl Format for KeywordBlock {
 
 impl Callable for KeywordBlock {
     fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
-        let mut value = Ok(R::Null);
+        let mut value = Ok(Obj::Null);
         for expr in args.values {
             let result = stack.eval(expr);
             match result {

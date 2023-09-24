@@ -1,4 +1,4 @@
-use super::{subset::Subset, vectors::OptionNA};
+use super::{Subset, OptionNA};
 
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct Subsets(pub Vec<Subset>);
@@ -105,7 +105,7 @@ impl IntoIterator for Subsets {
 
 #[cfg(test)]
 mod test {
-    use crate::vector::vectors::Vector;
+    use crate::object::Vector;
 
     #[test]
     fn subset_range() {
@@ -195,7 +195,7 @@ mod test {
         let x: Vector = (1..=10).into_iter().collect::<Vec<_>>().into();
         let mut subset = x.subset((3..6).into()).subset(vec![2, 1].into());
         let y: Vector = vec![101, 102].into();
-        let _ = subset.assign(crate::lang::R::Vector(y));
+        let _ = subset.assign(crate::object::Obj::Vector(y));
         let expect = Vector::from(vec![1, 2, 3, 4, 102, 101, 7, 8, 9, 10]);
         assert_eq!(x, expect)
     }

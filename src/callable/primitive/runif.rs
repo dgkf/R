@@ -2,11 +2,10 @@ use r_derive::builtin;
 use rand::distributions::{Distribution, Uniform};
 use rand::Rng;
 
-use crate::ast::*;
 use crate::callable::core::*;
 use crate::error::RError;
 use crate::lang::*;
-use crate::vector::vectors::Vector;
+use crate::object::*;
 
 #[derive(Debug, Clone, PartialEq)]
 #[builtin(sym = "runif")]
@@ -24,7 +23,7 @@ impl Callable for PrimitiveRunif {
         use RError::ArgumentInvalid;
         let (vals, _) = self.match_args(args, stack)?;
         let vals = force_closures(vals, stack);
-        let mut vals = R::List(List::from(vals));
+        let mut vals = Obj::List(List::from(vals));
 
         let n: i32 = vals.try_get_named("n")?.try_into()?;
         let min: Vec<f64> = vals.try_get_named("min")?.try_into()?;
@@ -46,7 +45,7 @@ impl Callable for PrimitiveRunif {
                 .map_or(ArgumentInvalid(String::from("max")).into(), |x| Ok(x))?;
             let between = Uniform::try_from(*min..=*max).unwrap();
 
-            Ok(R::Vector(Vector::from(
+            Ok(Obj::Vector(Vector::from(
                 (1..=n)
                     .into_iter()
                     .map(|_| between.sample(&mut rng))
@@ -55,7 +54,7 @@ impl Callable for PrimitiveRunif {
 
         // otherwise we need to zip through mins and maxes to get distributions
         } else {
-            Ok(R::Vector(Vector::from(
+            Ok(Obj::Vector(Vector::from(
                 min.into_iter()
                     .cycle()
                     .zip(max.into_iter().cycle())

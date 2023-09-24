@@ -1,16 +1,16 @@
 use r_derive::*;
 
-use crate::ast::*;
 use crate::error::*;
 use crate::lang::*;
 use crate::callable::core::*;
+use crate::object::*;
 
 #[derive(Debug, Clone, PartialEq)]
 #[builtin(sym = "paste")]
 pub struct PrimitivePaste;
 impl Callable for PrimitivePaste {
     fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
-        let R::List(vals) = stack.parent_frame().eval_list_lazy(args)? else {
+        let Obj::List(vals) = stack.parent_frame().eval_list_lazy(args)? else {
             unreachable!()
         };
 
@@ -34,7 +34,7 @@ impl Callable for PrimitivePaste {
                 continue
             };
             match (k.as_str(), v) {
-                ("sep", R::Vector(v)) => {
+                ("sep", Obj::Vector(v)) => {
                     sep = v.into();
                 }
                 ("sep", _) => {
@@ -42,8 +42,8 @@ impl Callable for PrimitivePaste {
                         "sep parameter must be a character value.".to_string(),
                     )));
                 }
-                ("collapse", R::Null) => continue,
-                ("collapse", R::Vector(v)) => {
+                ("collapse", Obj::Null) => continue,
+                ("collapse", Obj::Vector(v)) => {
                     should_collapse = true;
                     collapse = v.into();
                 }
@@ -61,7 +61,7 @@ impl Callable for PrimitivePaste {
         let vec_s_vec: Vec<Vec<String>> = vals
             .into_iter()
             .map(|(_, v)| match v.as_character()? {
-                R::Vector(v) => Ok(v.into()),
+                Obj::Vector(v) => Ok(v.into()),
                 _ => unreachable!(),
             })
             .collect::<Result<_, _>>()?;
@@ -91,7 +91,7 @@ impl Callable for PrimitivePaste {
             output = vec![output.join(&collapse)];
         }
 
-        Ok(R::Vector(output.into()))
+        Ok(Obj::Vector(output.into()))
     }
 }
 
@@ -99,7 +99,7 @@ impl Callable for PrimitivePaste {
 mod test {
     use super::*;
     use crate::r;
-    use crate::vector::vectors::{Vector, Character};
+    use crate::object::types::*;
 
     #[test]
     fn numeric_input() {
@@ -113,7 +113,7 @@ mod test {
     fn only_null() {
         assert_eq!(
             r!{ paste(null) }, 
-            Ok(R::Vector(Vector::from(Vec::<Character>::new())))
+            Ok(Obj::Vector(Vector::from(Vec::<Character>::new())))
         );
     }
 

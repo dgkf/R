@@ -1,6 +1,7 @@
 use std::str::FromStr;
 
-use super::vectors::OptionNA;
+use super::OptionNA;
+
 
 pub trait AtomicMode {
     fn is_numeric() -> bool {
