@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::rc::Rc;
 use std::cell::RefCell;
 
@@ -8,13 +9,25 @@ use super::*;
 
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct List {
+    pub names: Rc<RefCell<HashMap<String, Vec<usize>>>>,
     pub values: Rc<RefCell<Vec<(Option<String>, Obj)>>>,
     pub subsets: Subsets,
 }
 
 impl From<Vec<(Option<String>, Obj)>> for List {
     fn from(value: Vec<(Option<String>, Obj)>) -> Self {
+        let mut names = HashMap::new();
+        for (i, (k, _)) in value.iter().enumerate() {
+            if let Some(name) = k {
+                let indices = names.entry(name.clone()).or_insert(vec![]);
+                if !indices.contains(&i) {
+                    indices.push(i)
+                }
+            }
+        }
+
         List {
+            names: Rc::new(RefCell::new(names)),
             values: Rc::new(RefCell::new(value)),
             ..Default::default()
         }
@@ -26,26 +39,31 @@ impl List {
         let Subsets(mut inner) = self.subsets.clone();
         inner.push(by);
         List {
+            names: self.names.clone(),
             values: self.values.clone(),
             subsets: Subsets(inner),
         }
     }
 
     pub fn assign(&mut self, value: Obj) -> EvalResult {
-        // TODO(performance): Avoid having to split vector and collect into 
-        // separate names vec for binding during subsetting. Ideally just
-        // need a reference.
-        let names: Vec<_> = self.values.borrow().clone().into_iter().map(|(n, _)| n).collect();
         match value {
             // remove elements from list
             Obj::Null => {
-                let mut v = self.values.borrow_mut();
-                let n = v.len();
+                let mut names = self.names.borrow_mut();
+                let mut values = self.values.borrow_mut();
+                let n = values.len();
+
                 let indices = self.subsets.clone().bind_names(names).into_iter().take(n);
                 for (i, _) in indices {
-                    v.remove(i);
+                    if let (Some(name), _) = values.remove(i) {
+                        if let Some(mut key_indices) = names.get_mut(&name) {
+                            key_indices.retain(|ki| ki != &i)
+                        }
+                    }
                 }
+
                 Ok(Obj::List(List {
+                    names: self.names.clone(),
                     values: self.values.clone(),
                     subsets: self.subsets.clone(),
                 }))
@@ -69,6 +87,7 @@ impl List {
                 }
 
                 Ok(Obj::List(List {
+                    names: self.names.clone(),
                     values: self.values.clone(),
                     subsets: self.subsets.clone(),
                 }))
@@ -93,6 +112,7 @@ impl List {
                 }
 
                 Ok(Obj::List(List {
+                    names: self.names.clone(),
                     values: self.values.clone(),
                     subsets: self.subsets.clone(),
                 }))
@@ -115,6 +135,7 @@ impl List {
                 }
 
                 Ok(Obj::List(List {
+                    names: self.names.clone(),
                     values: self.values.clone(),
                     subsets: self.subsets.clone(),
                 }))
