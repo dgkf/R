@@ -1,11 +1,13 @@
-use super::{Subset, OptionNA};
+use std::{cell::RefCell, collections::HashMap, rc::Rc};
+
+use super::Subset;
 
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct Subsets(pub Vec<Subset>);
 
 pub struct NamedSubsets {
     subsets: Subsets,
-    names: Vec<Option<String>>,
+    names: Rc<RefCell<HashMap<String, Vec<usize>>>>,
 }
 
 impl Subsets {
@@ -37,8 +39,11 @@ impl Subsets {
         v.push(subset.into());
     }
 
-    pub fn bind_names(self, names: Vec<Option<String>>) -> NamedSubsets {
-        NamedSubsets { subsets: self, names }
+    pub fn bind_names(self, names: Rc<RefCell<HashMap<String, Vec<usize>>>>) -> NamedSubsets {
+        NamedSubsets {
+            subsets: self,
+            names,
+        }
     }
 }
 
@@ -62,20 +67,38 @@ impl IntoIterator for NamedSubsets {
         for subset in subsets {
             match subset {
                 Subset::Names(names) => {
-                    // TODO(performance): extract named elements without
-                    // repeatedly iterating through named values
-                    let mut indices = vec![(0, None); names.borrow().len()];
-                    for (i, _) in iter.take(self.names.len()) {
-                        if let Some(Some(ni)) = self.names.get(i) {
-                            for (si, sn) in names.borrow().iter().enumerate() {
-                                if &OptionNA::Some(ni.to_string()) == sn {
-                                    indices[si] = (i, Some(i))
-                                }
-                            }
-                        }
-                    }
-                    iter = Box::new(indices.into_iter())
-                },
+                    use super::OptionNA;
+                    const NOTFOUND: (usize, Option<usize>) = (0, None);
+
+                    // first find which indices are part of the current subset
+                    let subset_indices: Vec<_> = iter.map(|(i, _)| i).collect();
+
+                    // for each name, find the first index in the subset
+                    let named_indices = names
+                        .borrow()
+                        .iter()
+                        .map(|name| match name {
+                            OptionNA::NA => NOTFOUND,
+                            OptionNA::Some(name) => self
+                                .names
+                                .borrow()
+                                .get(name)
+                                .and_then(|name_indices| {
+                                    // for each index of this name, find the
+                                    // first that is in our subset
+                                    for i in name_indices {
+                                        if subset_indices.contains(i) {
+                                            return Some((*i, Some(*i)));
+                                        }
+                                    }
+                                    Some(NOTFOUND)
+                                })
+                                .unwrap_or(NOTFOUND),
+                        })
+                        .collect::<Vec<_>>();
+
+                    iter = Box::new(named_indices.into_iter()) as Self::IntoIter
+                }
                 _ => iter = subset.filter(iter),
             }
         }
