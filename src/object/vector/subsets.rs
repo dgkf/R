@@ -70,8 +70,26 @@ impl IntoIterator for NamedSubsets {
                     use super::OptionNA;
                     const NOTFOUND: (usize, Option<usize>) = (0, None);
 
+                    let snames = self.names.borrow();
+
+                    // figure out the absolute maximum value we may require
+                    let mut max = 0 as usize;
+                    for name in names.borrow().iter() {
+                        let OptionNA::Some(name) = name else { continue };
+                        let name_max = snames
+                            .get(name)
+                            .and_then(|name| name.iter().reduce(|l, r| std::cmp::max(l, r)))
+                            .unwrap_or(&0);
+
+                        max = std::cmp::max(max, *name_max)
+                    }
+
+                    // TODO(bug): this does not currently handle out-of-order indexes.
+                    // Need to add length hint and sorted metadata to iterator
+                    // to do something more sensible.
+
                     // first find which indices are part of the current subset
-                    let subset_indices: Vec<_> = iter.map(|(i, _)| i).collect();
+                    let subset_indices: Vec<_> = iter.map(|(i, _)| i).take(max + 1).collect();
 
                     // for each name, find the first index in the subset
                     let named_indices = names
@@ -79,13 +97,9 @@ impl IntoIterator for NamedSubsets {
                         .iter()
                         .map(|name| match name {
                             OptionNA::NA => NOTFOUND,
-                            OptionNA::Some(name) => self
-                                .names
-                                .borrow()
+                            OptionNA::Some(name) => snames
                                 .get(name)
                                 .and_then(|name_indices| {
-                                    // for each index of this name, find the
-                                    // first that is in our subset
                                     for i in name_indices {
                                         if subset_indices.contains(i) {
                                             return Some((*i, Some(*i)));

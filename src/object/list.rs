@@ -16,8 +16,22 @@ pub struct List {
 
 impl From<Vec<(Option<String>, Obj)>> for List {
     fn from(value: Vec<(Option<String>, Obj)>) -> Self {
-        let mut names = HashMap::new();
-        for (i, (k, _)) in value.iter().enumerate() {
+        let mut result = List {
+            values: Rc::new(RefCell::new(value)),
+            ..Default::default()
+        };
+
+        result.reindex();
+        result
+    }
+}
+
+impl List {
+    pub fn reindex(&mut self) {
+        let mut names = self.names.borrow_mut();
+        names.drain();
+
+        for (i, (k, _)) in self.values.borrow().iter().enumerate() {
             if let Some(name) = k {
                 let indices = names.entry(name.clone()).or_insert(vec![]);
                 if !indices.contains(&i) {
@@ -25,16 +39,8 @@ impl From<Vec<(Option<String>, Obj)>> for List {
                 }
             }
         }
-
-        List {
-            names: Rc::new(RefCell::new(names)),
-            values: Rc::new(RefCell::new(value)),
-            ..Default::default()
-        }
     }
-}
 
-impl List {
     pub fn subset(&self, by: Subset) -> List {
         let Subsets(mut inner) = self.subsets.clone();
         inner.push(by);
@@ -49,10 +55,7 @@ impl List {
         match value {
             // remove elements from list
             Obj::Null => {
-                let mut names = self.names.borrow_mut();
-                let mut values = self.values.borrow_mut();
-                let n = values.len();
-
+                let n = self.values.borrow().len();
                 let indices = self
                     .subsets
                     .clone()
@@ -60,13 +63,17 @@ impl List {
                     .into_iter()
                     .take(n);
 
-                for (i, _) in indices {
-                    if let (Some(name), _) = values.remove(i) {
-                        if let Some(key_indices) = names.get_mut(&name) {
-                            key_indices.retain(|ki| ki != &i)
-                        }
+                {
+                    let mut values = self.values.borrow_mut();
+                    for (i, _) in indices {
+                        values.remove(i);
                     }
                 }
+
+                self.reindex();
+
+                // TODO(feat): need to return list with NULL elements when
+                // index is NA
 
                 Ok(Obj::List(List {
                     names: self.names.clone(),
@@ -74,6 +81,7 @@ impl List {
                     subsets: self.subsets.clone(),
                 }))
             }
+
             // any single length R value
             any if any.len() == Some(1) => {
                 let mut v = self.values.borrow_mut();
