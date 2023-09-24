@@ -1,7 +1,8 @@
 use wasm_bindgen::prelude::*;
 use std::rc::Rc;
 
-use crate::lang::{CallStack, Context, Environment, RSignal, Cond};
+use crate::lang::{CallStack, Context, RSignal, Cond};
+use crate::object::Environment;
 use pest::Parser;
 use crate::parser::{RParser, parse, Rule};
 use super::release::session_header;
