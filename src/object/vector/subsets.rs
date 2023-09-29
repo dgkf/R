@@ -72,24 +72,25 @@ impl IntoIterator for NamedSubsets {
 
                     let snames = self.names.borrow();
 
-                    // figure out the absolute maximum value we may require
-                    let mut max = 0 as usize;
-                    for name in names.borrow().iter() {
-                        let OptionNA::Some(name) = name else { continue };
-                        let name_max = snames
-                            .get(name)
-                            .and_then(|name| name.iter().reduce(|l, r| std::cmp::max(l, r)))
-                            .unwrap_or(&0);
+                    // grab indices within subset to find first named index
+                    let (_, hint_n_max) = iter.size_hint();
+                    let subset_indices: Vec<_> = match hint_n_max {
+                        Some(n) => iter.map(|(i, _)| i).take(n).collect(),
+                        None => {
+                            // figure out the absolute maximum value we may require
+                            let mut n = 0 as usize;
+                            for name in names.borrow().iter() {
+                                let OptionNA::Some(name) = name else { continue };
+                                let name_max = snames
+                                    .get(name)
+                                    .and_then(|name| name.iter().reduce(|l, r| std::cmp::max(l, r)))
+                                    .unwrap_or(&0);
 
-                        max = std::cmp::max(max, *name_max)
-                    }
-
-                    // TODO(bug): this does not currently handle out-of-order indexes.
-                    // Need to add length hint and sorted metadata to iterator
-                    // to do something more sensible.
-
-                    // first find which indices are part of the current subset
-                    let subset_indices: Vec<_> = iter.map(|(i, _)| i).take(max + 1).collect();
+                                n = std::cmp::max(n, *name_max)
+                            }
+                            iter.map(|(i, _)| i).take(n + 1).collect()
+                        },
+                    };
 
                     // for each name, find the first index in the subset
                     let named_indices = names
