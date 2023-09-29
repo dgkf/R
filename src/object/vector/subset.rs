@@ -1,9 +1,10 @@
-use std::{cell::RefCell, ops::Range, rc::Rc};
+use std::cell::RefCell;
+use std::ops::Range;
+use std::rc::Rc;
 
 use crate::lang::RSignal;
 
 use super::{types::*, OptionNA, Vector};
-
 
 /// Subsets
 ///
@@ -57,9 +58,12 @@ impl Subset {
         }
     }
 
-    pub fn filter<'a, I>(&self, mut iter: I) -> Box<dyn Iterator<Item = (usize, Option<usize>)> + 'a>
+    pub fn filter<'a, I>(
+        &self,
+        mut iter: I,
+    ) -> Box<dyn Iterator<Item = (usize, Option<usize>)> + 'a>
     where
-        I: Iterator<Item = (usize, Option<usize>)> + 'a
+        I: Iterator<Item = (usize, Option<usize>)> + 'a,
     {
         match self.clone() {
             Subset::Indices(i) => {
@@ -151,7 +155,7 @@ impl Subset {
                     // and finally we convert our new indices into an iterator
                     Box::new(indices.into_iter())
                 }
-            },
+            }
             Subset::Mask(mask) => {
                 Box::new(
                     mask.borrow()
@@ -166,14 +170,12 @@ impl Subset {
                         }),
                 )
             }
-            Subset::Range(range) => {
-                Box::new(
-                    iter.skip(range.start)
-                        .enumerate()
-                        .take_while(move |(i, _)| i < &(range.end - range.start))
-                        .map(|(_, v)| v),
-                )
-            }
+            Subset::Range(range) => Box::new(
+                iter.skip(range.start)
+                    .enumerate()
+                    .take_while(move |(i, _)| i < &(range.end - range.start))
+                    .map(|(_, v)| v),
+            ),
             Subset::Names(_) => unimplemented!(),
         }
     }
@@ -235,9 +237,7 @@ impl TryFrom<Vector> for Subset {
                     Ok(Subset::Mask(v.inner()))
                 }
             }
-            Vector::Character(v) => {
-                Ok(Subset::Names(v.inner()))                
-            }
+            Vector::Character(v) => Ok(Subset::Names(v.inner())),
         }
     }
 }

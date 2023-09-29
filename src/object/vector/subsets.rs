@@ -1,11 +1,13 @@
-use super::{Subset, OptionNA};
+use std::{cell::RefCell, collections::HashMap, rc::Rc};
+
+use super::Subset;
 
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct Subsets(pub Vec<Subset>);
 
 pub struct NamedSubsets {
     subsets: Subsets,
-    names: Vec<Option<String>>,
+    names: Rc<RefCell<HashMap<String, Vec<usize>>>>,
 }
 
 impl Subsets {
@@ -37,8 +39,11 @@ impl Subsets {
         v.push(subset.into());
     }
 
-    pub fn bind_names(self, names: Vec<Option<String>>) -> NamedSubsets {
-        NamedSubsets { subsets: self, names }
+    pub fn bind_names(self, names: Rc<RefCell<HashMap<String, Vec<usize>>>>) -> NamedSubsets {
+        NamedSubsets {
+            subsets: self,
+            names,
+        }
     }
 }
 
@@ -62,20 +67,53 @@ impl IntoIterator for NamedSubsets {
         for subset in subsets {
             match subset {
                 Subset::Names(names) => {
-                    // TODO(performance): extract named elements without
-                    // repeatedly iterating through named values
-                    let mut indices = vec![(0, None); names.borrow().len()];
-                    for (i, _) in iter.take(self.names.len()) {
-                        if let Some(Some(ni)) = self.names.get(i) {
-                            for (si, sn) in names.borrow().iter().enumerate() {
-                                if &OptionNA::Some(ni.to_string()) == sn {
-                                    indices[si] = (i, Some(i))
-                                }
+                    use super::OptionNA;
+                    const NOTFOUND: (usize, Option<usize>) = (0, None);
+
+                    let snames = self.names.borrow();
+
+                    // grab indices within subset to find first named index
+                    let (_, hint_n_max) = iter.size_hint();
+                    let subset_indices: Vec<_> = match hint_n_max {
+                        Some(n) => iter.map(|(i, _)| i).take(n).collect(),
+                        None => {
+                            // figure out the absolute maximum value we may require
+                            let mut n = 0 as usize;
+                            for name in names.borrow().iter() {
+                                let OptionNA::Some(name) = name else { continue };
+                                let name_max = snames
+                                    .get(name)
+                                    .and_then(|name| name.iter().reduce(|l, r| std::cmp::max(l, r)))
+                                    .unwrap_or(&0);
+
+                                n = std::cmp::max(n, *name_max)
                             }
-                        }
-                    }
-                    iter = Box::new(indices.into_iter())
-                },
+                            iter.map(|(i, _)| i).take(n + 1).collect()
+                        },
+                    };
+
+                    // for each name, find the first index in the subset
+                    let named_indices = names
+                        .borrow()
+                        .iter()
+                        .map(|name| match name {
+                            OptionNA::NA => NOTFOUND,
+                            OptionNA::Some(name) => snames
+                                .get(name)
+                                .and_then(|name_indices| {
+                                    for i in name_indices {
+                                        if subset_indices.contains(i) {
+                                            return Some((*i, Some(*i)));
+                                        }
+                                    }
+                                    Some(NOTFOUND)
+                                })
+                                .unwrap_or(NOTFOUND),
+                        })
+                        .collect::<Vec<_>>();
+
+                    iter = Box::new(named_indices.into_iter()) as Self::IntoIter
+                }
                 _ => iter = subset.filter(iter),
             }
         }

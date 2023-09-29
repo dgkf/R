@@ -13,10 +13,24 @@
   # [1]    1    2    3 1000    5    6    7    8    9   10
   ```
 
+* Mutating assignment implemented for `List`s, including by named index.
+
+  ```r
+  x <- list(a = 1, b = 2, c = 3, d = 4, e = 5)
+  x[2:3][[1]] <- 200
+  x[1:4][c("d", "c")] <- 1000
+  x
+  # list(a = 1, b = 200, c = 1000, d = 1000, e = 5)
+  ```
+
 ## Internals
 
 * "altreps" are now supported internally, though currently only a "Subset" 
   (used for indexed assignment) is implemented.
+
+* `List`s were reworked to use a `HashMap` of named values, allowing for
+  more immediate access to named values without repeated traversals of a 
+  vector of pairs.
 
 
 # 0.2.0 "In Bloom"

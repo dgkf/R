@@ -7,5 +7,5 @@ pub fn session_header() -> String {
         String::from("")
     };
 
-    format!("R version 0.2.0 -- \"In Bloom\"{dev}")
+    format!("R version 0.3.0 -- \"Days of Abandon\"{dev}")
 }

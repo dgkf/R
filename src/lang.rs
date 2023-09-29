@@ -1,7 +1,7 @@
-use crate::object::types::*;
-use crate::object::*;
 use crate::callable::core::{builtin, Callable};
 use crate::error::*;
+use crate::object::types::*;
+use crate::object::*;
 
 use core::fmt;
 use std::fmt::Display;
@@ -287,8 +287,12 @@ fn display_list(x: &List, f: &mut fmt::Formatter<'_>, bc: Option<String>) -> fmt
     let v = x.values.borrow();
     let s = x.subsets.clone();
 
-    let names: Vec<_> = x.values.borrow().clone().into_iter().map(|(n, _)| n).collect();
-    for (i, (_, si)) in s.bind_names(names).into_iter().take(v.len()).enumerate() {
+    for (i, (_, si)) in s
+        .bind_names(x.names.clone())
+        .into_iter()
+        .take(v.len())
+        .enumerate()
+    {
         let name;
         let value;
 
@@ -787,7 +791,9 @@ impl Context for Rc<Environment> {
         match expr {
             Expr::Null => Ok(Obj::Null),
             Expr::NA => Ok(Obj::Vector(Vector::from(vec![OptionNA::NA as Logical]))),
-            Expr::Inf => Ok(Obj::Vector(Vector::from(vec![OptionNA::Some(f64::INFINITY)]))),
+            Expr::Inf => Ok(Obj::Vector(Vector::from(vec![OptionNA::Some(
+                f64::INFINITY,
+            )]))),
             Expr::Number(x) => Ok(Obj::Vector(Vector::from(vec![x]))),
             Expr::Integer(x) => Ok(Obj::Vector(Vector::from(vec![x]))),
             Expr::Bool(x) => Ok(Obj::Vector(Vector::from(vec![OptionNA::Some(x)]))),
