@@ -2,13 +2,13 @@ use reedline::{FileBackedHistory, Reedline, Signal};
 use std::path::Path;
 use std::rc::Rc;
 
-use super::highlight::RHighlighter;
+use super::highlight::ExprHighlighter;
 use super::prompt::RPrompt;
-use super::validator::RValidator;
+use super::validator::ExprValidator;
 use super::release::*;
 use crate::lang::{CallStack, Cond, Context, RSignal, EvalResult};
 use crate::object::Environment;
-use crate::parser::parse;
+use crate::parser::*;
 
 pub fn repl<P>(history: Option<&P>) -> Result<(), ()>
 where
@@ -20,9 +20,10 @@ where
         ..Default::default()        
     });
 
+    // initialize parser
     let line_editor = Reedline::create()
-        .with_validator(Box::new(RValidator))
-        .with_highlighter(Box::new(RHighlighter::new()));
+        .with_validator(Box::new(ExprValidator::new()))
+        .with_highlighter(Box::new(ExprHighlighter::new()));
 
     let mut line_editor = if let Some(_history_path) = history {
         println!("Restoring session history...");
@@ -51,7 +52,7 @@ where
                 }
 
                 // otherwise parse and evaluate entry
-                let parse_res = parse(&line);
+                let parse_res = parse_with(es::ExprParser, es::Rule::repl, &line);
                 match parse_res {
                     Ok(expr) => {
                         let mut stack = CallStack::from(global_env.clone());
@@ -79,13 +80,14 @@ where
 }
 
 pub fn eval(input: &str) -> EvalResult {
+    // initialize global env
     let global_env = Rc::new(Environment {
         parent: Some(Environment::from_builtins()),
         ..Default::default()        
     });
 
     let mut stack = CallStack::from(global_env.clone());
-    match parse(input) {
+    match parse_with(ExprParser, Rule::repl, input) {
         Ok(expr) => stack.eval(expr),
         Err(e) => Err(e)
     }

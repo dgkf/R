@@ -1,15 +1,15 @@
 use nu_ansi_term::Style;
 use nu_ansi_term::Color;
+use pest::Parser;
 use reedline::Highlighter;
 use reedline::StyledText;
 
 // use crate::{ast::RExpr};
-use crate::parser::RParser;
+use crate::parser::ExprParser;
 use crate::parser::Rule;
-use pest::Parser;
 
 #[derive(Debug, Clone)]
-pub enum RHighlights {
+pub enum ExprHighlights {
     Keyword,
     Symbol,
     Number,
@@ -22,18 +22,19 @@ pub enum RHighlights {
     None,
 }
 
-pub struct RHighlighter {}
-impl RHighlighter {
+pub struct ExprHighlighter { }
+
+impl ExprHighlighter {
     #[must_use]
     pub fn new() -> Self {
-        Self {}
+        Self { }
     }
 }
 
-impl Highlighter for RHighlighter {
+impl Highlighter for ExprHighlighter {
     fn highlight<'l>(&self, line: &'l str, _pos: usize) -> StyledText {
         let mut styled_text = StyledText::new();
-        match RParser::parse(Rule::hl, line) {
+        match  ExprParser::parse(Rule::hl, line) {
             Ok(pairs) => {
                 for pair in pairs.into_iter() {
                     let style = match pair.as_rule() {

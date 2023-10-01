@@ -2,11 +2,17 @@ use crate::parser::*;
 use pest::Parser;
 use reedline::{ValidationResult, Validator};
 
-pub struct RValidator;
+pub struct ExprValidator { }
 
-impl Validator for RValidator {
+impl ExprValidator {
+    pub fn new() -> ExprValidator {
+        ExprValidator {  }        
+    }
+}
+
+impl Validator for ExprValidator {
     fn validate(&self, line: &str) -> ValidationResult {
-        let res = RParser::parse(Rule::repl, line);
+        let res = ExprParser::parse(Rule::repl, line);
         match res {
             Ok(_) => ValidationResult::Complete,
             Err(_) => ValidationResult::Incomplete,

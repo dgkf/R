@@ -1,0 +1,15 @@
+kw_if = "if"
+kw_else = "else"
+kw_for = "for"
+kw_while = "while"
+kw_repeat = "repeat"
+kw_continue = "continue"
+kw_break = "break"
+kw_return = "return"
+kw_function = "function"
+kw_fn = "fn"
+kw_na = ("NA" | "na")
+kw_null = ("NULL" | "null")
+kw_inf = ("Inf" | "inf")
+kw_true = ("TRUE" | "true")
+kw_false = ("FALSEl | "false")

@@ -1,3 +1,4 @@
+use crate::callable::core::Builtin;
 /// Grammar Parsers
 ///
 /// The primary interface for this module is `parse`. Internally, it dispatches
@@ -7,17 +8,13 @@
 /// `RExprList`s or tuples of parsed expressions.
 ///
 use crate::error::RError;
-use crate::callable::{core::*, keywords::*, operators::*, primitive::PrimitiveList};
+use crate::callable::{keywords::*, operators::*, primitive::PrimitiveList};
 use crate::lang::RSignal;
 use crate::object::{Expr, ExprList};
 
 use pest::iterators::{Pair, Pairs};
 use pest::pratt_parser::PrattParser;
-use pest::Parser;
-
-#[derive(Parser)]
-#[grammar = "grammar.pest"]
-pub struct RParser;
+use pest::{Parser, RuleType};
 
 lazy_static::lazy_static! {
     static ref PRATT_PARSER: PrattParser<Rule> = {
@@ -39,32 +36,68 @@ lazy_static::lazy_static! {
    };
 }
 
-pub fn parse(s: &str) -> Result<Expr, RSignal> {
-    match RParser::parse(Rule::repl, s) {
+#[derive(Parser, Clone, Copy)]
+#[grammar = "grammar/localizations/es.pest"]
+#[grammar = "grammar/grammar.pest"]
+pub struct ExprParser;
+
+pub mod es {
+    use r_derive::Translate;
+    #[derive(Parser, Clone, Copy, Translate)]
+    #[grammar = "grammar/localizations/es.pest"]
+    #[grammar = "grammar/grammar.pest"]
+    pub struct ExprParser;
+}
+
+
+
+impl ExprParser {
+    pub fn parse_input(self, s: &str) -> Result<Expr, RSignal> {
+        match Self::parse(Rule::repl, s) {
+            // comments currently entirely unparsed, but return NULL
+            Ok(pairs) if pairs.len() == 0 => Err(RSignal::Thunk),
+
+            // for any expressions
+            Ok(pairs) => Ok(parse_expr(pairs)),        
+            Err(e) => Err(RError::ParseFailureVerbose(e).into()),
+        }
+    }
+}
+
+pub fn parse_with<P, R>(_parser: P, rule: R, input: &str) -> Result<Expr, RSignal> 
+where
+    P: Parser<R>,
+    R: RuleType + Into<Rule>,
+{
+    match P::parse(rule, input) {
         // comments currently entirely unparsed, but return NULL
         Ok(pairs) if pairs.len() == 0 => Err(RSignal::Thunk),
 
         // for any expressions
         Ok(pairs) => Ok(parse_expr(pairs)),        
-        Err(e) => Err(RError::ParseFailureVerbose(e).into()),
+        Err(e) => unreachable!(), // Err(RError::ParseFailureVerbose(e).into()),
     }
 }
 
-pub fn parse_args(s: &str) -> Result<ExprList, RError> {
-    match RParser::parse(Rule::repl, s) {
-        Ok(mut pairs) => Ok(parse_pairlist(pairs.next().unwrap())),
-        Err(e) => Err(RError::ParseFailureVerbose(e)),
-    }
-}
+fn parse_expr<R>(pairs: Pairs<R>) -> Expr 
+where
+    R: RuleType + Into<Rule>,
+{  
+    let pairs = pairs.map(|pair| {
+        pest::state(pair.as_str(), |state| {
+            state.rule(Into::<Rule>::into(pair.as_rule()), |s| Ok(s))
+        })
+        .unwrap()
+        .next()
+        .unwrap()
+    });
 
-fn parse_expr(pairs: Pairs<Rule>) -> Expr {
     PRATT_PARSER
         .map_primary(parse_primary)
         .map_infix(|lhs, op, rhs| {
             // infix operator with two unnamed arguments
             let args = vec![(None, lhs), (None, rhs)].into();
-
-            let op: Box<dyn Builtin> = match op.as_rule() {
+            let op: Box<dyn Builtin> = match op.as_rule().into() {
                 Rule::add => Box::new(InfixAdd),
                 Rule::subtract => Box::new(InfixSub),
                 Rule::multiply => Box::new(InfixMul),
@@ -93,8 +126,11 @@ fn parse_expr(pairs: Pairs<Rule>) -> Expr {
         .parse(pairs)
 }
 
-fn parse_primary(pair: Pair<Rule>) -> Expr {
-    match pair.as_rule() {
+fn parse_primary<R>(pair: Pair<R>) -> Expr
+where
+    R: RuleType + Into<Rule>,
+{
+    match pair.as_rule().into() {
         // prefix and postfix notation
         Rule::postfixed => parse_postfixed(pair),
         Rule::prefixed => parse_prefixed(pair),
@@ -142,7 +178,10 @@ fn parse_primary(pair: Pair<Rule>) -> Expr {
     }
 }
 
-fn parse_block(pair: Pair<Rule>) -> Expr {
+fn parse_block<R>(pair: Pair<R>) -> Expr
+where
+    R: RuleType + Into<Rule>,
+{
     // extract each inline expression, and treat as unnamed list
     let exprs = pair
         .into_inner()
@@ -153,16 +192,22 @@ fn parse_block(pair: Pair<Rule>) -> Expr {
     Expr::new_primitive_call(KeywordBlock, exprs)
 }
 
-fn parse_named(pair: Pair<Rule>) -> (Option<String>, Expr) {
+fn parse_named<R>(pair: Pair<R>) -> (Option<String>, Expr)
+where
+    R: RuleType + Into<Rule>,
+{
     let mut inner = pair.into_inner();
     let name = String::from(inner.next().unwrap().as_str());
     (Some(name), parse_expr(inner))
 }
 
-fn parse_pairlist(pair: Pair<Rule>) -> ExprList {
+fn parse_pairlist<R>(pair: Pair<R>) -> ExprList
+where
+    R: RuleType + Into<Rule>,
+{
     let exprs = pair
         .into_inner()
-        .map(|i| match i.as_rule() {
+        .map(|i| match i.as_rule().into() {
             Rule::named => parse_named(i),
             Rule::ellipsis => (None, Expr::Ellipsis),
             _ => (None, parse_primary(i)),
@@ -172,7 +217,10 @@ fn parse_pairlist(pair: Pair<Rule>) -> ExprList {
     exprs
 }
 
-fn parse_call(pair: Pair<Rule>) -> Expr {
+fn parse_call<R>(pair: Pair<R>) -> Expr
+where
+    R: RuleType + Into<Rule>,
+{
     let mut inner = pair.into_inner();
     let name = String::from(inner.next().unwrap().as_str());
     Expr::Call(
@@ -181,14 +229,20 @@ fn parse_call(pair: Pair<Rule>) -> Expr {
     )
 }
 
-fn parse_function(pair: Pair<Rule>) -> Expr {
+fn parse_function<R>(pair: Pair<R>) -> Expr
+where
+    R: RuleType + Into<Rule>,
+{
     let mut inner = pair.into_inner();
     let params = parse_pairlist(inner.next().unwrap()).as_formals();
     let body = parse_expr(inner);
     Expr::Function(params, Box::new(body))
 }
 
-fn parse_if_else(pair: Pair<Rule>) -> Expr {
+fn parse_if_else<R>(pair: Pair<R>) -> Expr
+where
+    R: RuleType + Into<Rule>,
+{
     let mut inner = pair.into_inner();
     let cond = parse_expr(inner.next().unwrap().into_inner());
     let true_expr = parse_expr(inner.next().unwrap().into_inner());
@@ -203,11 +257,17 @@ fn parse_if_else(pair: Pair<Rule>) -> Expr {
     Expr::new_primitive_call(KeywordIf, args)
 }
 
-fn parse_symbol(pair: Pair<Rule>) -> Expr {
+fn parse_symbol<R>(pair: Pair<R>) -> Expr
+where
+    R: RuleType + Into<Rule>,
+{
     Expr::Symbol(String::from(pair.as_str()))
 }
 
-fn parse_for(pair: Pair<Rule>) -> Expr {
+fn parse_for<R>(pair: Pair<R>) -> Expr
+where
+    R: RuleType + Into<Rule>,
+{
     let mut inner = pair.into_inner();
 
     let Expr::Symbol(var) = parse_symbol(inner.next().unwrap()) else {
@@ -221,7 +281,10 @@ fn parse_for(pair: Pair<Rule>) -> Expr {
     Expr::new_primitive_call(KeywordFor, args)
 }
 
-fn parse_while(pair: Pair<Rule>) -> Expr {
+fn parse_while<R>(pair: Pair<R>) -> Expr
+where
+    R: RuleType + Into<Rule>,
+{
     let mut inner = pair.into_inner();
     let cond = parse_expr(inner.next().unwrap().into_inner());
     let body = parse_expr(inner.next().unwrap().into_inner());
@@ -229,15 +292,21 @@ fn parse_while(pair: Pair<Rule>) -> Expr {
     Expr::new_primitive_call(KeywordWhile, args)
 }
 
-fn parse_repeat(pair: Pair<Rule>) -> Expr {
+fn parse_repeat<R>(pair: Pair<R>) -> Expr
+where
+    R: RuleType + Into<Rule>,
+{
     let mut inner = pair.into_inner();
     let body = parse_expr(inner.next().unwrap().into_inner());
     let args = ExprList::from(vec![body]);
     Expr::new_primitive_call(KeywordRepeat, args)
 }
 
-fn parse_postfix(pair: Pair<Rule>) -> (Expr, ExprList) {
-    match pair.as_rule() {
+fn parse_postfix<R>(pair: Pair<R>) -> (Expr, ExprList)
+where
+    R: RuleType + Into<Rule>,
+{
+    match pair.as_rule().into() {
         Rule::call => (Expr::Null, parse_pairlist(pair)),
         Rule::index => {
             let args = parse_pairlist(pair);
@@ -248,7 +317,10 @@ fn parse_postfix(pair: Pair<Rule>) -> (Expr, ExprList) {
     }
 }
 
-fn parse_postfixed(pair: Pair<Rule>) -> Expr {
+fn parse_postfixed<R>(pair: Pair<R>) -> Expr 
+where
+    R: RuleType + Into<Rule>,
+{
     let mut inner = pair.into_inner();
     let mut result = parse_primary(inner.next().unwrap());
 
@@ -271,13 +343,16 @@ fn parse_postfixed(pair: Pair<Rule>) -> Expr {
     result
 }
 
-fn parse_prefixed(pair: Pair<Rule>) -> Expr {
+fn parse_prefixed<R>(pair: Pair<R>) -> Expr
+where
+    R: RuleType + Into<Rule>,
+{
     let mut inner = pair.into_inner().rev();
     let mut result = parse_postfixed(inner.next().unwrap());
 
     // iterate backwards through prefixes, applying prefixes from inside-out
     while let Some(prev) = inner.next() {
-        result = match prev.as_rule() {
+        result = match prev.as_rule().into() {
             Rule::subtract => {
                 let args = ExprList::from(vec![result]);
                 Expr::new_primitive_call(PrefixSub, args)
@@ -289,12 +364,18 @@ fn parse_prefixed(pair: Pair<Rule>) -> Expr {
     result
 }
 
-fn parse_vec(pair: Pair<Rule>) -> Expr {
+fn parse_vec<R>(pair: Pair<R>) -> Expr
+where
+    R: RuleType + Into<Rule>,
+{
     let args = parse_pairlist(pair);
     Expr::new_primitive_call(PrimVec, args)
 }
 
-fn parse_list(pair: Pair<Rule>) -> Expr {
+fn parse_list<R>(pair: Pair<R>) -> Expr
+where
+    R: RuleType + Into<Rule>,
+{
     let args = parse_pairlist(pair);
     Expr::new_primitive_call(PrimitiveList, args)
 }
