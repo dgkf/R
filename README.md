@@ -53,6 +53,10 @@ l <- (a = 1, b = 2, c = 3)
 kws <- (na, null, inf, true, false)
 ```
 
+There are plenty of more substantial [changes being considered](https://github.com/dgkf/R/issues?q=is%3Aissue+is%3Aopen+label%3Ameta-proposal). 
+If you enjoy mulling over the direction of syntax and features, feel
+free to join the conversation.
+
 ## Why
 
 This project is primarily a personal exploration into language design. 
