@@ -51,6 +51,9 @@ l <- (a = 1, b = 2, c = 3)
 
 # lowercase keywords
 kws <- (na, null, inf, true, false)
+
+# destructuring assignment
+(a, b) <- (1, 2)
 ```
 
 There are plenty of more substantial [changes being considered](https://github.com/dgkf/R/issues?q=is%3Aissue+is%3Aopen+label%3Ameta-proposal). 
