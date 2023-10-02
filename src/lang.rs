@@ -5,7 +5,6 @@ use crate::object::types::*;
 use crate::object::*;
 
 use core::fmt;
-use std::cell::RefCell;
 use std::fmt::Display;
 use std::rc::Rc;
 
@@ -712,85 +711,26 @@ impl Context for CallStack {
                 Ok(from)
             }
             (Expr::List(l), Obj::List(args)) => {
-                let ret = Obj::List(List { 
-                    names: Rc::new(RefCell::new(args.names.borrow_mut().clone())),
-                    values: Rc::new(RefCell::new(args.values.borrow_mut().clone())),
-                    subsets: args.subsets.clone(), 
-                });
-
-                let ellipsis: List = vec![].into();
-                let matched_args: List = vec![].into();
-
-                // rebuild l such that symbols become names to match
-                let mut to = ExprList::new();
-                for (name, value) in l.clone().into_iter() {
-                    match (name, value) {
-                        (None, Expr::Symbol(var)) => to.push((Some(var), Expr::Missing)),   
-                        _ => todo!(),
-                    }                                        
-                }
-
-                // assign named args to corresponding formals
-                let mut i: usize = 0;
-                'outer: while i < args.values.borrow().len() {
-                    'inner: {
-                        // check argname with immutable borrow, but drop scope. If 
-                        // found, drop borrow so we can mutably assign it
-                        if let (Some(argname), _) = &args.values.borrow()[i] {
-                            if let Some((Some(_), _)) = to.remove_named(&argname) {
-                                break 'inner;
-                            }
+                let mut i = 1;
+                for item in l.into_iter() {
+                    match item {
+                        (None, Expr::String(s) | Expr::Symbol(s)) => {
+                            let index = Obj::Vector(Vector::from(vec![i]));
+                            let value = args.try_get_inner(index)?;
+                            self.assign(Expr::Symbol(s), value)?;
+                            i += 1;
+                        },
+                        // TODO: allow arbitrary right-side expressions
+                        // evaluated with list as additional data-frame
+                        (Some(n), Expr::String(s) | Expr::Symbol(s)) => {
+                            let value = args.try_get_inner(Obj::Vector(Vector::from(vec![s])))?;
+                            self.assign(Expr::Symbol(n), value)?;                            
                         }
-
-                        i += 1;
-                        continue 'outer;
-                    }
-
-                    matched_args.values
-                        .borrow_mut()
-                        .push(args.values.borrow_mut().remove(i));               
-                }
-
-                // remove any Ellipsis param, and any trailing unassigned params
-                to.pop_trailing();
-
-                // backfill unnamed args, populating ellipsis with overflow
-                let argsiter = args.values.borrow_mut().clone().into_iter();
-                for (key, value) in argsiter {
-                    match key {
-                        // named args go directly to ellipsis, they did not match a formal
-                        Some(arg) => {
-                            ellipsis.values.borrow_mut().push((Some(arg), value));
-                        }
-
-                        // unnamed args populate next formal, or ellipsis if formals exhausted
-                        None => {
-                            let next_unassigned_formal = to.remove(0);
-                            if let Some((Some(param), _)) = next_unassigned_formal {
-                                matched_args.values.borrow_mut().push((Some(param), value));
-                            } else {
-                                ellipsis.values.borrow_mut().push((None, value));
-                            }
-                        }
+                        _ => unimplemented!(),
                     }
                 }
 
-                // add back in parameter defaults that weren't filled with args
-                for (param, default) in to.into_iter() {
-                    matched_args
-                        .values
-                        .borrow_mut()
-                        .push((param, Obj::Closure(default, self.env().clone())));
-                }
-
-                // do assignment to named values
-                for (name, value) in matched_args.values.borrow_mut().clone().into_iter() {
-                    if let Some(name) = name {
-                        self.assign(Expr::String(name), value)?;
-                    }                    
-                }
-
-                Ok(ret)
+                Ok(Obj::List(args))
             },
             _ => err,
         }
