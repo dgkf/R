@@ -167,7 +167,7 @@
         number_trailing = { "." ~ ASCII_DIGIT+ }
 
     integer_expr = _{ integer ~ "L" }
-        integer = @{ "-"? ~ ASCII_NONZERO_DIGIT ~ ASCII_DIGIT* }
+        integer = @{ "-"? ~ ( ASCII_NONZERO_DIGIT ~ ASCII_DIGIT* | "0" ) }
 
     string_expr = _{ "\"" ~ double_quoted_string ~ "\"" | "'" ~ single_quoted_string ~ "'" }
         single_quoted_string = @{ single_quoted_string_char* }
@@ -182,10 +182,10 @@
     symbol = _{ symbol_with_backticks | symbol_ident }
         symbol_with_backticks = _{ "`" ~ symbol_backticked ~ "`" }
         symbol_backticked = ${ ( !"`" ~ ANY )* }
-        symbol_ident = ${ ( ASCII_ALPHA | "." | "_" ) ~ ( ASCII_ALPHANUMERIC | "." | "_" )* }
+        symbol_ident = ${ ( ASCII_ALPHA | "_" ) ~ ( ASCII_ALPHANUMERIC | "_" )* }
 
     list = { "(" ~ pairs ~ ")" }
-        pairs = _{ ( ( WS* ~ elem? ~ WS* ~ "," )* ~ WS* ~ elem? )? ~ WS* }
+        pairs = _{ ( ( WS* ~ elem ~ WS* ~ "," )* ~ WS* ~ elem? )? ~ WS* }
         ellipsis = { "..." }
         elem = _{ ellipsis | named | expr }
         named = { symbol ~ WS* ~ "=" ~ WS* ~ expr? }

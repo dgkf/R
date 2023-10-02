@@ -68,8 +68,6 @@ impl IntoIterator for NamedSubsets {
             match subset {
                 Subset::Names(names) => {
                     use super::OptionNA;
-                    const NOTFOUND: (usize, Option<usize>) = (0, None);
-
                     let snames = self.names.borrow();
 
                     // grab indices within subset to find first named index
@@ -96,19 +94,19 @@ impl IntoIterator for NamedSubsets {
                     let named_indices = names
                         .borrow()
                         .iter()
-                        .map(|name| match name {
-                            OptionNA::NA => NOTFOUND,
+                        .filter_map(|name| match name {
+                            OptionNA::NA => None,
                             OptionNA::Some(name) => snames
                                 .get(name)
                                 .and_then(|name_indices| {
                                     for i in name_indices {
                                         if subset_indices.contains(i) {
-                                            return Some((*i, Some(*i)));
+                                            return Some(Some((*i, Some(*i))));
                                         }
                                     }
-                                    Some(NOTFOUND)
+                                    None
                                 })
-                                .unwrap_or(NOTFOUND),
+                                .unwrap_or(None),
                         })
                         .collect::<Vec<_>>();
 

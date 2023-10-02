@@ -1,3 +1,17 @@
+# dev
+
+## Major Changes
+
+* Added simplest-case destructuring assignment.
+
+  ```r
+  (x, y) <- list(a = 1, b = 2)
+  x
+  # [1] 1
+  y
+  # [1] 2
+  ```
+
 # 0.3.0 "Days of Abandon"
 
 ## Major Changes

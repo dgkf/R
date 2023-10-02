@@ -1,4 +1,5 @@
 use crate::callable::core::{builtin, Callable};
+use crate::callable::primitive::PrimitiveList;
 use crate::error::*;
 use crate::object::types::*;
 use crate::object::*;
@@ -608,6 +609,14 @@ pub trait Context {
         self.get("...".to_string()).or(err)
     }
 
+    fn assign_lazy(&mut self, _to: Expr, _from: Expr) -> EvalResult {
+        Err(RSignal::Error(RError::IncorrectContext("<-".to_string())))
+    }
+
+    fn assign(&mut self, _to: Expr, _from: Obj) -> EvalResult {
+        Err(RSignal::Error(RError::IncorrectContext("<-".to_string())))
+    }
+
     fn env(&self) -> Rc<Environment>;
 
     fn eval(&mut self, expr: Expr) -> EvalResult {
@@ -670,6 +679,63 @@ pub trait Context {
 }
 
 impl Context for CallStack {
+    fn assign_lazy(&mut self, to: Expr, from: Expr) -> EvalResult {
+        let err = Err(RSignal::Error(RError::IncorrectContext("<-".to_string())));
+
+        if let Expr::Call(what, mut args) = to { 
+            match *what {
+                Expr::String(s) | Expr::Symbol(s) => {
+                    args.insert(0, from);
+                    let s = format!("{}<-", s);
+                    return self.eval(Expr::Call(Box::new(Expr::Symbol(s)), args))
+                }
+                Expr::Primitive(p) if p.dyn_eq(&PrimitiveList) => {
+                    let result = self.eval(from)?;
+                    return self.assign(Expr::List(args), result)
+                }
+                Expr::Primitive(p) => return p.call_assign(from, args, self),
+                _ => return err,
+            }
+        }
+        
+        let result = self.eval(from)?;
+        self.assign(to, result)
+    }
+
+    fn assign(&mut self, to: Expr, from: Obj) -> EvalResult {
+        let err = Err(RSignal::Error(RError::IncorrectContext("<-".to_string())));
+
+        match (to, from) {          
+            (Expr::String(s) | Expr::Symbol(s), from) => {
+                self.env().insert(s, from.clone());
+                Ok(from)
+            }
+            (Expr::List(l), Obj::List(args)) => {
+                let mut i = 1;
+                for item in l.into_iter() {
+                    match item {
+                        (None, Expr::String(s) | Expr::Symbol(s)) => {
+                            let index = Obj::Vector(Vector::from(vec![i]));
+                            let value = args.try_get_inner(index)?;
+                            self.assign(Expr::Symbol(s), value)?;
+                            i += 1;
+                        },
+                        // TODO: allow arbitrary right-side expressions
+                        // evaluated with list as additional data-frame
+                        (Some(n), Expr::String(s) | Expr::Symbol(s)) => {
+                            let value = args.try_get_inner(Obj::Vector(Vector::from(vec![s])))?;
+                            self.assign(Expr::Symbol(n), value)?;                            
+                        }
+                        _ => unimplemented!(),
+                    }
+                }
+
+                Ok(Obj::List(args))
+            },
+            _ => err,
+        }
+    }
+
     fn env(&self) -> Rc<Environment> {
         self.last_frame().env.clone()
     }
