@@ -1,5 +1,4 @@
 use crate::callable::core::{builtin, Callable};
-use crate::callable::primitive::PrimitiveList;
 use crate::error::*;
 use crate::object::types::*;
 use crate::object::*;
@@ -680,18 +679,20 @@ pub trait Context {
 
 impl Context for CallStack {
     fn assign_lazy(&mut self, to: Expr, from: Expr) -> EvalResult {
+        const LIST: &str = "list";
         let err = Err(RSignal::Error(RError::IncorrectContext("<-".to_string())));
 
         if let Expr::Call(what, mut args) = to { 
             match *what {
+                // special case for list() calls
+                Expr::String(s) | Expr::Symbol(s) if s == LIST => {
+                    let result = self.eval(from)?;
+                    return self.assign(Expr::List(args), result);
+                }
                 Expr::String(s) | Expr::Symbol(s) => {
                     args.insert(0, from);
                     let s = format!("{}<-", s);
                     return self.eval(Expr::Call(Box::new(Expr::Symbol(s)), args))
-                }
-                Expr::Primitive(p) if p.dyn_eq(&PrimitiveList) => {
-                    let result = self.eval(from)?;
-                    return self.assign(Expr::List(args), result)
                 }
                 Expr::Primitive(p) => return p.call_assign(from, args, self),
                 _ => return err,
