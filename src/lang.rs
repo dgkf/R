@@ -1,9 +1,11 @@
 use crate::callable::core::{builtin, Callable};
+use crate::callable::primitive::PrimitiveList;
 use crate::error::*;
 use crate::object::types::*;
 use crate::object::*;
 
 use core::fmt;
+use std::cell::RefCell;
 use std::fmt::Display;
 use std::rc::Rc;
 
@@ -608,6 +610,14 @@ pub trait Context {
         self.get("...".to_string()).or(err)
     }
 
+    fn assign_lazy(&mut self, _to: Expr, _from: Expr) -> EvalResult {
+        Err(RSignal::Error(RError::IncorrectContext("<-".to_string())))
+    }
+
+    fn assign(&mut self, _to: Expr, _from: Obj) -> EvalResult {
+        Err(RSignal::Error(RError::IncorrectContext("<-".to_string())))
+    }
+
     fn env(&self) -> Rc<Environment>;
 
     fn eval(&mut self, expr: Expr) -> EvalResult {
@@ -670,6 +680,122 @@ pub trait Context {
 }
 
 impl Context for CallStack {
+    fn assign_lazy(&mut self, to: Expr, from: Expr) -> EvalResult {
+        let err = Err(RSignal::Error(RError::IncorrectContext("<-".to_string())));
+
+        if let Expr::Call(what, mut args) = to { 
+            match *what {
+                Expr::String(s) | Expr::Symbol(s) => {
+                    args.insert(0, from);
+                    let s = format!("{}<-", s);
+                    return self.eval(Expr::Call(Box::new(Expr::Symbol(s)), args))
+                }
+                Expr::Primitive(p) if p.dyn_eq(&PrimitiveList) => {
+                    let result = self.eval(from)?;
+                    return self.assign(Expr::List(args), result)
+                }
+                Expr::Primitive(p) => return p.call_assign(from, args, self),
+                _ => return err,
+            }
+        }
+        
+        let result = self.eval(from)?;
+        self.assign(to, result)
+    }
+
+    fn assign(&mut self, to: Expr, from: Obj) -> EvalResult {
+        let err = Err(RSignal::Error(RError::IncorrectContext("<-".to_string())));
+
+        match (to, from) {          
+            (Expr::String(s) | Expr::Symbol(s), from) => {
+                self.env().insert(s, from.clone());
+                Ok(from)
+            }
+            (Expr::List(l), Obj::List(args)) => {
+                let ret = Obj::List(List { 
+                    names: Rc::new(RefCell::new(args.names.borrow_mut().clone())),
+                    values: Rc::new(RefCell::new(args.values.borrow_mut().clone())),
+                    subsets: args.subsets.clone(), 
+                });
+
+                let ellipsis: List = vec![].into();
+                let matched_args: List = vec![].into();
+
+                // rebuild l such that symbols become names to match
+                let mut to = ExprList::new();
+                for (name, value) in l.clone().into_iter() {
+                    match (name, value) {
+                        (None, Expr::Symbol(var)) => to.push((Some(var), Expr::Missing)),   
+                        _ => todo!(),
+                    }                                        
+                }
+
+                // assign named args to corresponding formals
+                let mut i: usize = 0;
+                'outer: while i < args.values.borrow().len() {
+                    'inner: {
+                        // check argname with immutable borrow, but drop scope. If 
+                        // found, drop borrow so we can mutably assign it
+                        if let (Some(argname), _) = &args.values.borrow()[i] {
+                            if let Some((Some(_), _)) = to.remove_named(&argname) {
+                                break 'inner;
+                            }
+                        }
+
+                        i += 1;
+                        continue 'outer;
+                    }
+
+                    matched_args.values
+                        .borrow_mut()
+                        .push(args.values.borrow_mut().remove(i));               
+                }
+
+                // remove any Ellipsis param, and any trailing unassigned params
+                to.pop_trailing();
+
+                // backfill unnamed args, populating ellipsis with overflow
+                let argsiter = args.values.borrow_mut().clone().into_iter();
+                for (key, value) in argsiter {
+                    match key {
+                        // named args go directly to ellipsis, they did not match a formal
+                        Some(arg) => {
+                            ellipsis.values.borrow_mut().push((Some(arg), value));
+                        }
+
+                        // unnamed args populate next formal, or ellipsis if formals exhausted
+                        None => {
+                            let next_unassigned_formal = to.remove(0);
+                            if let Some((Some(param), _)) = next_unassigned_formal {
+                                matched_args.values.borrow_mut().push((Some(param), value));
+                            } else {
+                                ellipsis.values.borrow_mut().push((None, value));
+                            }
+                        }
+                    }
+                }
+
+                // add back in parameter defaults that weren't filled with args
+                for (param, default) in to.into_iter() {
+                    matched_args
+                        .values
+                        .borrow_mut()
+                        .push((param, Obj::Closure(default, self.env().clone())));
+                }
+
+                // do assignment to named values
+                for (name, value) in matched_args.values.borrow_mut().clone().into_iter() {
+                    if let Some(name) = name {
+                        self.assign(Expr::String(name), value)?;
+                    }                    
+                }
+
+                Ok(ret)
+            },
+            _ => err,
+        }
+    }
+
     fn env(&self) -> Rc<Environment> {
         self.last_frame().env.clone()
     }

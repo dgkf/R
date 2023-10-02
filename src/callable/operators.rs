@@ -12,25 +12,7 @@ pub struct InfixAssign;
 impl Callable for InfixAssign {
     fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
         let (lhs, rhs) = args.unnamed_binary_args();
-
-        use Expr::*;
-        match lhs {
-            String(s) | Symbol(s) => {
-                let value = stack.eval(rhs)?;
-                stack.last_frame().env.insert(s, value.clone());
-                Ok(value)
-            }
-            Call(what, mut args) => match *what {
-                String(s) | Symbol(s) => {
-                    args.insert(0, rhs);
-                    let s = format!("{}<-", s);
-                    stack.eval(Call(Box::new(Symbol(s)), args))
-                }
-                Primitive(p) => p.call_assign(rhs, args, stack),
-                _ => unimplemented!("cannot assign to that!"),
-            },
-            _ => unimplemented!("cannot assign to that!"),
-        }
+        stack.assign_lazy(lhs, rhs)
     }
 }
 
