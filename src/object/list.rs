@@ -194,7 +194,7 @@ impl List {
     }
 
     pub fn try_get(&self, index: Obj) -> EvalResult {
-        let err = RError::Other("Cannot use object for indexing.".to_string());
+        let err = RError::Other("Cannot use object for indexing".to_string());
         match index.as_vector()? {
             Obj::Vector(v) => Ok(Obj::List(self.subset(v.try_into()?))),
             _ => Err(err.into()),
@@ -202,7 +202,9 @@ impl List {
     }
 
     pub fn try_get_inner(&self, index: Obj) -> EvalResult {
-        let err = RError::Other("Cannot use object for indexing.".to_string());
+        let err_invalid = RError::Other("Cannot use object for indexing".to_string());
+        let err_index_invalid = RError::Other("Index out of bounds".to_string());
+
         match index.as_vector()? {
             Obj::Vector(v) if v.len() == 1 => {
                 let Subsets(mut subsets) = self.subsets.clone();
@@ -216,12 +218,12 @@ impl List {
                     self.values
                         .borrow()
                         .get(i)
-                        .map_or(Err(err.into()), |(_, i)| Ok(i.clone()))
+                        .map_or(Err(err_index_invalid.into()), |(_, i)| Ok(i.clone()))
                 } else {
                     Ok(Obj::Null)
                 }
             }
-            _ => Err(err.into()),
+            _ => Err(err_invalid.into()),
         }
     }
 
