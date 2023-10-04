@@ -103,17 +103,17 @@
             colon = { ":" }
             doublecolon = { "::" }
             triplecolon = { ":::" }
-            pack = { ".." }
+            more = { ".." }
 
-        prefix = _{ subtract | negate | pack }
+        prefix = _{ subtract | negate | more }
             negate = { "!" }
  
-        postfix = _{ call | index | vector_index | pack }
+        postfix = _{ call | index | vector_index | more }
             call         = { "("  ~ pairs ~  ")" }
             index        = { "[[" ~ pairs ~ "]]" }
             vector_index = { "["  ~ pairs ~  "]" }           
 
-        standalone = _{ kw_more }
+        standalone = _{ more }
 
         block  = _{ "{" ~ WS* ~ block_exprs ~ WS* ~ "}" }
             block_exprs = { WS* ~ expr? ~ ( block_sep ~ expr? )* ~ WS* }

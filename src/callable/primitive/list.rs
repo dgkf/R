@@ -2,6 +2,7 @@ use r_derive::*;
 
 use crate::callable::core::*;
 use crate::lang::*;
+use crate::context::Context;
 use crate::object::*;
 
 #[derive(Debug, Clone, PartialEq)]

@@ -2,6 +2,7 @@ use r_derive::*;
 
 use crate::error::RError;
 use crate::lang::*;
+use crate::context::Context;
 use crate::callable::core::*;
 use crate::object::*;
 

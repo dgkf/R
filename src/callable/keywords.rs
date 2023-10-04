@@ -1,6 +1,7 @@
 use r_derive::*;
 
 use crate::internal_err;
+use crate::context::Context;
 use crate::lang::*;
 use crate::lang::Signal::*;
 use crate::object::{ExprList, Obj};
@@ -101,7 +102,7 @@ impl Callable for KeywordFor {
         while let Some(value) = iter.get(index) {
             index += 1;
 
-            stack.last_frame().env.insert(var.clone(), value);
+            stack.last_frame().env().insert(var.clone(), value);
             eval_result = stack.eval(body.clone());
 
             use Cond::*;

@@ -4,6 +4,7 @@ use crate::callable::core::*;
 use crate::lang::*;
 use crate::object::*;
 use crate::object::types::*;
+use crate::context::Context;
 
 #[derive(Debug, Clone, PartialEq)]
 #[builtin(sym = "c")]

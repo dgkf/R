@@ -123,6 +123,7 @@ fn parse_primary(pair: Pair<Rule>) -> Expr {
 
         // reserved symbols
         Rule::ellipsis => Expr::Ellipsis(None),
+        Rule::more => Expr::More,
 
         // atomic values
         Rule::number => Expr::Number(pair.as_str().parse::<f64>().unwrap()),
@@ -256,7 +257,7 @@ fn parse_postfix(pair: Pair<Rule>) -> (Expr, ExprList) {
             (Expr::as_primitive(PostfixIndex), args)
         }
         Rule::vector_index => (Expr::as_primitive(PostfixVecIndex), parse_pairlist(pair)),
-        Rule::pack => {
+        Rule::more => {
             let val = pair.as_str();
             (Expr::Ellipsis(Some(val.to_string())), ExprList::new())
         }
@@ -298,7 +299,7 @@ fn parse_prefixed(pair: Pair<Rule>) -> Expr {
                 let args = ExprList::from(vec![result]);
                 Expr::new_primitive_call(PrefixSub, args)
             }
-            Rule::pack => Expr::Ellipsis(Some(result.to_string())),
+            Rule::more => Expr::Ellipsis(Some(result.to_string())),
             _ => unreachable!("invalid prefix operator '{:#?}'", prev),
         }
     }

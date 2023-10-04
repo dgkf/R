@@ -1,8 +1,9 @@
 use r_derive::*;
 
 use super::core::*;
+use crate::context::Context;
 use crate::error::RError;
-use crate::lang::{CallStack, Context, EvalResult};
+use crate::lang::{CallStack, EvalResult};
 use crate::object::types::*;
 use crate::object::*;
 

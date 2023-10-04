@@ -5,6 +5,9 @@ use std::collections::HashMap;
 use std::rc::Rc;
 
 use crate::callable::builtins::BUILTIN;
+use crate::lang::EvalResult;
+use crate::context::Context;
+use crate::error::RError;
 
 use super::{Obj, Expr, ExprList};
 
@@ -46,6 +49,33 @@ impl Environment {
             }
             _ => unimplemented!(),
         }
+    }
+
+    pub fn get(&self, name: String) -> EvalResult {
+        // search in this environment for value by name
+        if let Some(value) = self.values.borrow().get(&name) {
+            let result = value.clone();
+            return match result {
+                Obj::Closure(expr, env) => Obj::Environment(env).eval(expr),
+                _ => Ok(result),
+            };
+
+        // if not found, search through parent if available
+        } else if let Some(parent) = &self.parent {
+            parent.clone().get(name)
+
+        // if we're at the top level, fall back to primitives if available
+        } else if let Ok(prim) = name.as_str().try_into() {
+            Ok(Obj::Function(
+                ExprList::new(),
+                Expr::Primitive(prim),
+                Rc::new(self.clone()),  // TODO(bug): will this retain shared ref?
+            ))
+
+        // otherwise, throw error
+        } else {
+            Err(RError::VariableNotFound(name).into())
+        }        
     }
 }
 

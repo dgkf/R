@@ -6,7 +6,8 @@ use super::highlight::RHighlighter;
 use super::prompt::RPrompt;
 use super::validator::RValidator;
 use super::release::*;
-use crate::lang::{CallStack, Cond, Context, Signal, EvalResult};
+use crate::lang::{CallStack, Cond, Signal, EvalResult};
+use crate::context::Context;
 use crate::object::Environment;
 use crate::parser::parse;
 

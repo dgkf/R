@@ -2,6 +2,7 @@ extern crate r_derive;
 
 use crate::error::RError;
 use crate::object::{Obj, Expr, ExprList};
+use crate::context::Context;
 use crate::callable::builtins::BUILTIN;
 use crate::callable::dyncompare::*;
 use crate::{lang::*, internal_err};
@@ -272,7 +273,7 @@ impl Format for String {
 
 impl Callable for String {
     fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
-        (stack.last_frame().env.clone().get(self.clone())?).call(args, stack)
+        (stack.last_frame().env().clone().get(self.clone())?).call(args, stack)
     }
 }
 
