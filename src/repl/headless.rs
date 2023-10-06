@@ -1,7 +1,7 @@
 use wasm_bindgen::prelude::*;
 use std::rc::Rc;
 
-use crate::lang::{CallStack, Context, RSignal, Cond};
+use crate::lang::{CallStack, Context, Signal, Cond};
 use crate::object::Environment;
 use pest::Parser;
 use crate::parser::{RParser, parse, Rule};
@@ -40,12 +40,12 @@ pub fn wasm_eval_in(env: &Rc<Environment>, input: &str) -> Option<String> {
             let result = stack.eval(expr);
             let result = stack.eval_tails(result);
             match result {
-                Err(RSignal::Condition(Cond::Terminate)) => None,
+                Err(Signal::Condition(Cond::Terminate)) => None,
                 Ok(val) => Some(format!("{val}")),
                 Err(e) => Some(format!("{e}")),
             }
         }
-        Err(RSignal::Thunk) => None,
+        Err(Signal::Thunk) => None,
         Err(e) => Some(format!("{e}"))
     }
 }
