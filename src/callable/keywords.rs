@@ -1,8 +1,32 @@
 use r_derive::*;
 
+use crate::error::RError;
 use crate::lang::*;
-use crate::object::{ExprList, Expr, Obj};
+use crate::lang::Cond::*;
+use crate::object::{ExprList, Obj};
 use super::core::*;
+
+#[derive(Debug, Clone, PartialEq)]
+#[builtin]
+pub struct KeywordReturn;
+
+impl Format for KeywordReturn {
+    fn rfmt_call_with(&self, _state: FormatState, args: &ExprList) -> String {
+        format!("return {}", args.values[0])
+    }
+
+    fn rfmt_with(&self, _state: FormatState) -> String {
+        "if".to_string()
+    }
+}
+
+impl Callable for KeywordReturn {
+    fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
+        let mut args = args.values.into_iter();
+        let value = stack.eval(args.next().unwrap())?;
+        Return(value, true).into()
+    }
+}
 
 #[derive(Debug, Clone, PartialEq)]
 #[builtin]
@@ -19,6 +43,10 @@ impl Format for KeywordIf {
             format!("if ({}) {}", args.values[0], args.values[1])
         }
     }
+
+    fn rfmt_with(&self, _state: FormatState) -> String {
+        "if".to_string()
+    }
 }
 
 impl Callable for KeywordIf {
@@ -28,9 +56,11 @@ impl Callable for KeywordIf {
         let cond: bool = cond.try_into()?;
 
         if cond {
-            stack.eval(args.next().unwrap())
+            let ifblock = args.next().ok_or(RError::Internal.into())?;
+            Tail(ifblock, true).into()
         } else {
-            stack.eval(args.skip(1).next().unwrap_or(Expr::Null))
+            let elseblock = args.skip(1).next().ok_or(RError::Internal.into())?;
+            Tail(elseblock, true).into()
         }
     }
 }
@@ -47,6 +77,10 @@ impl Format for KeywordFor {
 
         format!("for ({} in {}) {}", sym, args.values[0], args.values[1])
     }
+
+    fn rfmt_with(&self, _state: FormatState) -> String {
+        "for".to_string()
+    }
 }
 
 impl Callable for KeywordFor {
@@ -62,7 +96,7 @@ impl Callable for KeywordFor {
 
         let mut eval_result: EvalResult;
         let mut result = Obj::Null;
-        let mut index = 1;
+        let mut index = 0;
 
         while let Some(value) = iter.get(index) {
             index += 1;
@@ -71,11 +105,11 @@ impl Callable for KeywordFor {
             eval_result = stack.eval(body.clone());
 
             use Cond::*;
-            use RSignal::*;
+            use Signal::*;
             match eval_result {
                 Err(Condition(Break)) => break,
                 Err(Condition(Continue)) => continue,
-                Err(Condition(Return(_))) => return eval_result,
+                Err(Condition(Return(..))) => return eval_result,
                 Err(Error(_)) => return eval_result,
                 _ => (),
             }
@@ -100,7 +134,7 @@ impl Format for KeywordWhile {
 impl Callable for KeywordWhile {
     fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
         use Cond::*;
-        use RSignal::*;
+        use Signal::*;
 
         let mut args = args.values.into_iter();
 
@@ -123,7 +157,7 @@ impl Callable for KeywordWhile {
             match eval_result {
                 Err(Condition(Break)) => break,
                 Err(Condition(Continue)) => continue,
-                Err(Condition(Return(_))) => return eval_result,
+                Err(Condition(Return(..))) => return eval_result,
                 Err(Error(_)) => return eval_result,
                 _ => (),
             }
@@ -159,10 +193,10 @@ impl Callable for KeywordRepeat {
 
             // handle control flow signals during execution
             match eval_result {
-                Err(RSignal::Condition(Cond::Break)) => break,
-                Err(RSignal::Condition(Cond::Continue)) => continue,
-                Err(RSignal::Condition(Cond::Return(_))) => return eval_result,
-                Err(RSignal::Error(_)) => return eval_result,
+                Err(Signal::Condition(Cond::Break)) => break,
+                Err(Signal::Condition(Cond::Continue)) => continue,
+                Err(Signal::Condition(Cond::Return(..))) => return eval_result,
+                Err(Signal::Error(_)) => return eval_result,
                 _ => (),
             }
 
@@ -189,18 +223,22 @@ impl Format for KeywordBlock {
                 .join("\n")
         )
     }
+
+    fn rfmt_with(&self, _: FormatState) -> String {
+        "{".to_string()
+    }
 }
 
 impl Callable for KeywordBlock {
     fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
         let mut value = Ok(Obj::Null);
-        for expr in args.values {
-            let result = stack.eval(expr);
-            match result {
-                Ok(_) => value = result,
-                _ => return result,
-            }
-        }
+        let n = args.values.len().saturating_sub(1);
+        for (i, expr) in args.values.into_iter().enumerate() {
+            value = match i {
+                i if i == n => Tail(expr, true).into(),
+                _ => stack.eval(expr),
+            };
+        };
         value
     }
 }

@@ -8,7 +8,7 @@ use super::coercion::{MinimallyNumeric, CoercibleInto, CommonNum};
 /// recycled even if they do not repeat an even number of times.
 ///
 /// ```rust
-/// use r::vector::iterators::zip_recycle;
+/// use r::object::iterators::zip_recycle;
 ///
 /// let x = vec![1, 2, 3, 4];
 /// let y = vec![2, 4];

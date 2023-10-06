@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use crate::{lang::RSignal, error::RError};
+use crate::{lang::Signal, error::RError};
 
 use super::*;
 
@@ -34,7 +34,8 @@ impl PartialEq for Obj {
             (Obj::Expr(l), Obj::Expr(r)) => l == r,
             (Obj::Closure(lc, lenv), Obj::Closure(rc, renv)) => lc == rc && lenv == renv,
             (Obj::Function(largs, lbody, lenv), Obj::Function(rargs, rbody, renv)) => {
-                largs == rargs && lbody == rbody && lenv == renv
+                largs == rargs && lbody == rbody && 
+                Obj::Environment(lenv.clone()) == Obj::Environment(renv.clone())
             }
             (Obj::Environment(l), Obj::Environment(r)) => {
                 l.values.as_ptr() == r.values.as_ptr()
@@ -59,7 +60,7 @@ impl PartialEq for Obj {
 }
 
 impl TryInto<i32> for Obj {
-    type Error = RSignal;
+    type Error = Signal;
     fn try_into(self) -> Result<i32, Self::Error> {
         use RError::CannotBeCoercedToInteger;
 
@@ -84,7 +85,7 @@ where
 }
 
 impl TryInto<f64> for Obj {
-    type Error = RSignal;
+    type Error = Signal;
     fn try_into(self) -> Result<f64, Self::Error> {
         use RError::CannotBeCoercedToNumeric;
 
@@ -100,7 +101,7 @@ impl TryInto<f64> for Obj {
 }
 
 impl TryInto<Vec<f64>> for Obj {
-    type Error = RSignal;
+    type Error = Signal;
     fn try_into(self) -> Result<Vec<f64>, Self::Error> {
         let Obj::Vector(Vector::Numeric(v)) = self.as_numeric()? else {
             unreachable!();

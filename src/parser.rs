@@ -8,7 +8,7 @@
 ///
 use crate::error::RError;
 use crate::callable::{core::*, keywords::*, operators::*, primitive::PrimitiveList};
-use crate::lang::RSignal;
+use crate::lang::Signal;
 use crate::object::{Expr, ExprList};
 
 use pest::iterators::{Pair, Pairs};
@@ -39,10 +39,10 @@ lazy_static::lazy_static! {
    };
 }
 
-pub fn parse(s: &str) -> Result<Expr, RSignal> {
+pub fn parse(s: &str) -> Result<Expr, Signal> {
     match RParser::parse(Rule::repl, s) {
         // comments currently entirely unparsed, but return NULL
-        Ok(pairs) if pairs.len() == 0 => Err(RSignal::Thunk),
+        Ok(pairs) if pairs.len() == 0 => Err(Signal::Thunk),
 
         // for any expressions
         Ok(pairs) => Ok(parse_expr(pairs)),        
@@ -111,6 +111,7 @@ fn parse_primary(pair: Pair<Rule>) -> Expr {
         Rule::kw_repeat => parse_repeat(pair),
         Rule::kw_break => Expr::Break,
         Rule::kw_continue => Expr::Continue,
+        Rule::kw_return => parse_return(pair),
 
         // reserved values
         Rule::val_true => Expr::Bool(true),
@@ -201,6 +202,13 @@ fn parse_if_else(pair: Pair<Rule>) -> Expr {
 
     let args = ExprList::from(vec![cond, true_expr, false_expr]);
     Expr::new_primitive_call(KeywordIf, args)
+}
+
+fn parse_return(pair: Pair<Rule>) -> Expr {
+    let mut inner = pair.into_inner();
+    let expr = parse_expr(inner.next().unwrap().into_inner());
+    let args = ExprList::from(vec![expr]);
+    Expr::new_primitive_call(KeywordReturn, args)
 }
 
 fn parse_symbol(pair: Pair<Rule>) -> Expr {

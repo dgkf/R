@@ -1,4 +1,4 @@
-use crate::{parser::*, lang::{CallStack, RSignal}};
+use crate::{parser::*, lang::{CallStack, Signal}};
 
 use core::fmt;
 use pest::error::LineColLocation::Pos;
@@ -24,6 +24,7 @@ pub enum RError {
 
     // in-dev errors
     Unimplemented(Option<String>),
+    Internal,
 }
 
 impl RError {
@@ -59,9 +60,10 @@ impl RError {
             }
             RError::WithCallStack(e, c) => format!("{}\n{c}", e.as_str()),
             RError::ArgumentMissing(s) => format!("argument '{s}' is missing with no default"),
-            RError::ArgumentInvalid(s) => format!("argument '{s}' is invalid."),
-            RError::Unimplemented(Some(s)) => format!("Uh, oh! Looks like '{s}' is only partially implemented."),
-            RError::Unimplemented(_) => format!("Uh, oh! You tried to do something that is only partially implemented."),
+            RError::ArgumentInvalid(s) => format!("argument '{s}' is invalid"),
+            RError::Unimplemented(Some(s)) => format!("Uh, oh! Looks like '{s}' is only partially implemented"),
+            RError::Unimplemented(_) => format!("Uh, oh! You tried to do something that is only partially implemented"),
+            RError::Internal => format!("Internal error"),
         }
     }
 }
@@ -72,14 +74,14 @@ impl fmt::Display for RError {
     }
 }
 
-impl Into<RSignal> for RError {
-    fn into(self) -> RSignal {
-        RSignal::Error(self)
+impl Into<Signal> for RError {
+    fn into(self) -> Signal {
+        Signal::Error(self)
     }
 }
 
-impl<T> Into<Result<T, RSignal>> for RError {
-    fn into(self) -> Result<T, RSignal> {
-        Err(RSignal::Error(self))
+impl<T> Into<Result<T, Signal>> for RError {
+    fn into(self) -> Result<T, Signal> {
+        Err(Signal::Error(self))
     }
 }

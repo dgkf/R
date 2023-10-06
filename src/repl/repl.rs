@@ -1,4 +1,4 @@
-use reedline::{FileBackedHistory, Reedline, Signal};
+use reedline::{FileBackedHistory, Reedline};
 use std::path::Path;
 use std::rc::Rc;
 
@@ -6,7 +6,7 @@ use super::highlight::RHighlighter;
 use super::prompt::RPrompt;
 use super::validator::RValidator;
 use super::release::*;
-use crate::lang::{CallStack, Cond, Context, RSignal, EvalResult};
+use crate::lang::{CallStack, Cond, Context, Signal, EvalResult};
 use crate::object::Environment;
 use crate::parser::parse;
 
@@ -17,7 +17,7 @@ where
     println!("{}", session_header());
     let global_env = Rc::new(Environment {
         parent: Some(Environment::from_builtins()),
-        ..Default::default()        
+        ..Default::default()
     });
 
     let line_editor = Reedline::create()
@@ -44,7 +44,7 @@ where
     loop {
         let signal = line_editor.read_line(&prompt);
         match signal {
-            Ok(Signal::Success(line)) => {
+            Ok(reedline::Signal::Success(line)) => {
                 // skip all-whitespace entries
                 if line.chars().all(char::is_whitespace) {
                     continue;
@@ -55,19 +55,19 @@ where
                 match parse_res {
                     Ok(expr) => {
                         let mut stack = CallStack::from(global_env.clone());
-                        match stack.eval(expr) {
-                            Err(RSignal::Condition(Cond::Terminate)) => break,
-                            Ok(val) => println!("{}", val),
-                            Err(e) => println!("{}", e),
+                        let result = stack.eval(expr);
+                        let result = stack.eval_tails(result);
+                        match result {
+                            Err(Signal::Condition(Cond::Terminate)) => break,
+                            Ok(val) => println!("{val}"),
+                            Err(e) => print!("{e}"),
                         }
                     }
-                    Err(e) => {
-                        eprintln!("{}", e)
-                    }
+                    Err(e) => eprintln!("{e}")
                 }
             }
-            Ok(Signal::CtrlD) => break,
-            Ok(Signal::CtrlC) => continue,
+            Ok(reedline::Signal::CtrlD) => break,
+            Ok(reedline::Signal::CtrlC) => continue,
             Err(err) => {
                 println!("REPL Error: {:?}", err);
                 break;
@@ -86,7 +86,10 @@ pub fn eval(input: &str) -> EvalResult {
 
     let mut stack = CallStack::from(global_env.clone());
     match parse(input) {
-        Ok(expr) => stack.eval(expr),
+        Ok(expr) => {
+            let result = stack.eval(expr);
+            stack.eval_tails(result)
+        },
         Err(e) => Err(e)
     }
 }

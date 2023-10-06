@@ -33,14 +33,11 @@ pub trait Callable {
         ExprList::new()
     }
 
-    fn match_args(&self, args: ExprList, stack: &mut CallStack) -> Result<(List, List), RSignal> {
+    fn match_args(&self, args: List, stack: &mut CallStack) -> Result<(List, List), Signal> {
         let mut formals = self.formals();
         let ellipsis: List = vec![].into();
         let matched_args: List = vec![].into();
-
-        // extract iterable list of arguments
-        let args: List = stack.parent_frame().eval_list_lazy(args)?.try_into()?;
-
+        
         // assign named args to corresponding formals
         let mut i: usize = 0;
         'outer: while i < args.values.borrow().len() {
@@ -91,18 +88,23 @@ pub trait Callable {
             matched_args
                 .values
                 .borrow_mut()
-                .push((param, Obj::Closure(default, stack.env().clone())));
+                .push((param, Obj::Closure(default, stack.last_frame().env().clone())));
         }
 
         Ok((matched_args, ellipsis))
     }
 
-    fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
-        let (args, ellipsis) = self.match_args(args, stack)?;
-        self.call_matched(Obj::List(args), Obj::List(ellipsis), stack)
+    fn match_arg_exprs(&self, args: ExprList, stack: &mut CallStack) -> Result<(List, List), Signal> {
+        let args: List = stack.parent_frame().eval_list_lazy(args)?.try_into()?;
+        self.match_args(args, stack)
     }
 
-    fn call_matched(&self, mut _args: Obj, mut _ellipsis: Obj, _stack: &mut CallStack) -> EvalResult {
+    fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
+        let (args, ellipsis) = self.match_arg_exprs(args, stack)?;
+        self.call_matched(args, ellipsis, stack)
+    }
+
+    fn call_matched(&self, mut _args: List, mut _ellipsis: List, _stack: &mut CallStack) -> EvalResult {
         unimplemented!()
     }
 
@@ -170,7 +172,11 @@ pub trait Format {
     }
 }
 
-pub trait Builtin: Callable + CallableClone + Format + DynCompare + Sync {}
+pub trait Builtin: Callable + CallableClone + Format + DynCompare + Sync {
+    fn is_transparent(&self) -> bool {
+        false
+    }
+}
 
 pub trait Sym {
     const SYM: &'static str;
@@ -271,25 +277,32 @@ impl Callable for Obj {
         };
 
         // match arguments against function signature
-        let (args, ellipsis) = self.match_args(args, stack)?;
+        let (args, ellipsis) = self.match_arg_exprs(args, stack)?;
+        self.call_matched(args, ellipsis, stack)
+    }
 
-        // add closures to local scope
+    fn call_matched(&self, args: List, ellipsis: List, stack: &mut CallStack) -> EvalResult {        let Obj::Function(_, body, _) = self else {
+            unimplemented!("can't call non-function")
+        };
+
         stack
             .last_frame()
-            .env
+            .env()
             .insert("...".to_string(), Obj::List(ellipsis));
 
-        stack.last_frame().env.append(Obj::List(args));
+        stack
+            .last_frame()
+            .env()
+            .append(Obj::List(args));
 
         // evaluate body in local scope
         stack.eval(body.clone())
     }
 
     fn formals(&self) -> ExprList {
-        if let Obj::Function(formals, _, _) = self {
-            formals.clone()
-        } else {
-            ExprList::new()
+        match self {
+            Obj::Function(formals, _, _) => formals.clone(),
+            _ => ExprList::new(),
         }
     }
 }

@@ -12,8 +12,8 @@ impl Callable for PrimitiveNames {
         ExprList::from(vec![(Some(String::from("x")), Expr::Missing)])
     }
 
-    fn call_matched(&self, mut args: Obj, mut _ellipsis: Obj, stack: &mut CallStack) -> EvalResult {
-        let x = args.try_get_named("x")?.force(stack)?;
+    fn call_matched(&self, args: List, mut _ellipsis: List, stack: &mut CallStack) -> EvalResult {
+        let x = Obj::List(args).try_get_named("x")?.force(stack)?;
 
         use Obj::*;
         match x {

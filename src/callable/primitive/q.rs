@@ -9,6 +9,6 @@ use crate::object::ExprList;
 pub struct PrimitiveQ;
 impl Callable for PrimitiveQ {
     fn call(&self, _args: ExprList, _stack: &mut CallStack) -> EvalResult {
-        Err(RSignal::Condition(Cond::Terminate))
+        Err(Signal::Condition(Cond::Terminate))
     }
 }

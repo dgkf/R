@@ -2,7 +2,7 @@ use std::cell::RefCell;
 use std::ops::Range;
 use std::rc::Rc;
 
-use crate::lang::RSignal;
+use crate::lang::Signal;
 
 use super::{types::*, OptionNA, Vector};
 
@@ -205,7 +205,7 @@ impl From<Vec<usize>> for Subset {
 }
 
 impl TryFrom<Vector> for Subset {
-    type Error = RSignal;
+    type Error = Signal;
     fn try_from(value: Vector) -> Result<Self, Self::Error> {
         match value {
             value @ Vector::Numeric(_) => Subset::try_from(value.as_integer()),

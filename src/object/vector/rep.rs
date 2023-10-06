@@ -28,8 +28,8 @@ impl<T: AtomicMode + Clone + Default> Rep<T> {
     ///
     /// ```
     /// use r::utils::*;
-    /// use r::vector::vectors::Vector;
-    /// use r::vector::vectors::OptionNA;
+    /// use r::object::Vector;
+    /// use r::object::OptionNA;
     ///
     /// let result = Vector::from(vec![1, 2, 3]);
     /// let expect = Vector::from(Vec::<OptionNA<i32>>::new());
@@ -187,8 +187,8 @@ impl<T: AtomicMode + Clone + Default> Rep<T> {
     /// type of the mode.
     ///
     /// ```
-    /// use r::vector::vectors::Vector;
-    /// use r::vector::vectors::OptionNA;
+    /// use r::object::Vector;
+    /// use r::object::OptionNA;
     ///
     /// let x = Vector::from(vec![false, true, true, false]);
     /// let n = x.as_numeric();

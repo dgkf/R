@@ -15,7 +15,7 @@ impl Callable for PrimitiveParent{
     }
 
     fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
-        let (vals, _) = self.match_args(args, stack)?;
+        let (vals, _) = self.match_arg_exprs(args, stack)?;
         let mut vals = Obj::List(vals);
 
         // default when `x` is missing or not found

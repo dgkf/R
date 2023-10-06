@@ -124,6 +124,7 @@
             | kw_function
             | kw_break
             | kw_continue
+            | kw_return
             | kw_if_else
             | kw_for
             | kw_while
@@ -151,6 +152,7 @@
     kw_repeat = { "repeat" ~ WS* ~ expr }
     kw_break = { "break" }
     kw_continue = { "continue" }
+    kw_return = { "return" ~ WS* ~ expr }
 
 // reserved value (val) types
 

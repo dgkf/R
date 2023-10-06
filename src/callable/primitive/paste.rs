@@ -38,7 +38,7 @@ impl Callable for PrimitivePaste {
                     sep = v.into();
                 }
                 ("sep", _) => {
-                    return Err(RSignal::Error(RError::Other(
+                    return Err(Signal::Error(RError::Other(
                         "sep parameter must be a character value.".to_string(),
                     )));
                 }
@@ -48,7 +48,7 @@ impl Callable for PrimitivePaste {
                     collapse = v.into();
                 }
                 ("collapse", _) => {
-                    return Err(RSignal::Error(RError::WithCallStack(
+                    return Err(Signal::Error(RError::WithCallStack(
                         Box::new(RError::Other("collapse parameter must be NULL or a character string.".to_string())),
                         stack.clone()
                     )))
@@ -144,7 +144,7 @@ mod test {
     #[test]
     fn collapse_param() {
         assert_eq!(
-            r!{ paste(1.1, null, 2, false, "a", c(1.0, 2.0), , collapse = "+") },
+            r!{ paste(1.1, null, 2, false, "a", c(1.0, 2.0), collapse = "+") },
             r!{ "1.1  2 false a 1+1.1  2 false a 2" }
         )
     }

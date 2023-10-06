@@ -21,7 +21,7 @@ impl Callable for PrimitiveRunif {
 
     fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
         use RError::ArgumentInvalid;
-        let (vals, _) = self.match_args(args, stack)?;
+        let (vals, _) = self.match_arg_exprs(args, stack)?;
         let vals = force_closures(vals, stack);
         let mut vals = Obj::List(List::from(vals));
 
