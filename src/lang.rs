@@ -781,12 +781,11 @@ impl Context for CallStack {
         self.last_frame().env.clone()
     }
 
-    fn eval_tails(&mut self, res: EvalResult) -> EvalResult {
-        match res {
-            Err(Signal::Condition(Cond::Tail(expr, _vis))) => self.eval(expr),
-            other => other
-        }
-        
+    fn eval_tails(&mut self, mut res: EvalResult) -> EvalResult {
+        while let Err(Signal::Condition(Cond::Tail(expr, _vis))) = res {
+            res = self.eval(expr)
+        };
+        res
     }
 
     fn eval(&mut self, expr: Expr) -> EvalResult {
