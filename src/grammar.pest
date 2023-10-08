@@ -57,7 +57,7 @@
 
         comment = _{ "#" ~ ( !NEWLINE ~ !eoi ~ ANY )* }
 
-        atomic = _{ prefixed }
+        atomic = _{ prefixed | standalone }
             prefixed = { prefix* ~ postfixed }
             postfixed = { atom ~ postfix* }
 
@@ -103,14 +103,17 @@
             colon = { ":" }
             doublecolon = { "::" }
             triplecolon = { ":::" }
+            pack = { ".." }
 
-        prefix = _{ subtract | negate }
+        prefix = _{ subtract | negate | pack }
             negate = { "!" }
-
-        postfix = _{ call | index | vector_index }
+ 
+        postfix = _{ call | index | vector_index | pack }
             call         = { "("  ~ pairs ~  ")" }
             index        = { "[[" ~ pairs ~ "]]" }
             vector_index = { "["  ~ pairs ~  "]" }           
+
+        standalone = _{ kw_more }
 
         block  = _{ "{" ~ WS* ~ block_exprs ~ WS* ~ "}" }
             block_exprs = { WS* ~ expr? ~ ( block_sep ~ expr? )* ~ WS* }
@@ -153,6 +156,7 @@
     kw_break = { "break" }
     kw_continue = { "continue" }
     kw_return = { "return" ~ WS* ~ expr }
+    kw_more = { ".." }
 
 // reserved value (val) types
 

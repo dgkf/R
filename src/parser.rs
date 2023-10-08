@@ -7,7 +7,7 @@
 /// `RExprList`s or tuples of parsed expressions.
 ///
 use crate::error::RError;
-use crate::callable::{core::*, keywords::*, operators::*, primitive::PrimitiveList};
+use crate::callable::{core::*, keywords::*, operators::*};
 use crate::lang::Signal;
 use crate::object::{Expr, ExprList};
 
@@ -112,6 +112,7 @@ fn parse_primary(pair: Pair<Rule>) -> Expr {
         Rule::kw_break => Expr::Break,
         Rule::kw_continue => Expr::Continue,
         Rule::kw_return => parse_return(pair),
+        Rule::kw_more => Expr::More,
 
         // reserved values
         Rule::val_true => Expr::Bool(true),
@@ -121,7 +122,7 @@ fn parse_primary(pair: Pair<Rule>) -> Expr {
         Rule::val_inf => Expr::Inf,
 
         // reserved symbols
-        Rule::ellipsis => Expr::Ellipsis,
+        Rule::ellipsis => Expr::Ellipsis(None),
 
         // atomic values
         Rule::number => Expr::Number(pair.as_str().parse::<f64>().unwrap()),
@@ -165,7 +166,7 @@ fn parse_pairlist(pair: Pair<Rule>) -> ExprList {
         .into_inner()
         .map(|i| match i.as_rule() {
             Rule::named => parse_named(i),
-            Rule::ellipsis => (None, Expr::Ellipsis),
+            Rule::ellipsis => (None, Expr::Ellipsis(None)),
             _ => (None, parse_primary(i)),
         })
         .collect();
@@ -175,11 +176,14 @@ fn parse_pairlist(pair: Pair<Rule>) -> ExprList {
 
 fn parse_call(pair: Pair<Rule>) -> Expr {
     let mut inner = pair.into_inner();
-    let name = String::from(inner.next().unwrap().as_str());
-    Expr::Call(
-        Box::new(Expr::String(name)),
-        parse_pairlist(inner.next().unwrap()),
-    )
+    let name = inner.next().unwrap().as_str();
+    let pairs = parse_pairlist(inner.next().unwrap());
+
+    match name {
+        "list" => Expr::List(pairs),
+        name => Expr::Call(Box::new(Expr::String(name.to_string())), pairs)
+    }
+
 }
 
 fn parse_function(pair: Pair<Rule>) -> Expr {
@@ -252,6 +256,10 @@ fn parse_postfix(pair: Pair<Rule>) -> (Expr, ExprList) {
             (Expr::as_primitive(PostfixIndex), args)
         }
         Rule::vector_index => (Expr::as_primitive(PostfixVecIndex), parse_pairlist(pair)),
+        Rule::pack => {
+            let val = pair.as_str();
+            (Expr::Ellipsis(Some(val.to_string())), ExprList::new())
+        }
         rule => unreachable!("invalid postfix operator '{:#?}'", rule),
     }
 }
@@ -290,6 +298,7 @@ fn parse_prefixed(pair: Pair<Rule>) -> Expr {
                 let args = ExprList::from(vec![result]);
                 Expr::new_primitive_call(PrefixSub, args)
             }
+            Rule::pack => Expr::Ellipsis(Some(result.to_string())),
             _ => unreachable!("invalid prefix operator '{:#?}'", prev),
         }
     }
@@ -304,5 +313,5 @@ fn parse_vec(pair: Pair<Rule>) -> Expr {
 
 fn parse_list(pair: Pair<Rule>) -> Expr {
     let args = parse_pairlist(pair);
-    Expr::new_primitive_call(PrimitiveList, args)
+    Expr::List(args)
 }

@@ -47,6 +47,15 @@ impl Callable for PrefixSub {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+#[builtin(sym = "..", kind = Prefix)]
+pub struct PrefixPack;
+impl Callable for PrefixPack {
+    fn call(&self, _args: ExprList, _stack: &mut CallStack) -> EvalResult {
+        RError::IncorrectContext("..".to_string()).into()
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
 #[builtin(sym = "*", kind = Infix)]
 pub struct InfixMul;
 impl Callable for InfixMul {
@@ -347,6 +356,15 @@ impl Callable for InfixDollar {
             }
             _ => unimplemented!(),
         }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+#[builtin(sym = "..", kind = Postfix)]
+pub struct PostfixPack;
+impl Callable for PostfixPack {
+    fn call(&self, _args: ExprList, _stack: &mut CallStack) -> EvalResult {
+        RError::IncorrectContext("..".to_string()).into()
     }
 }
 

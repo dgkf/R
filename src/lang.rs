@@ -673,7 +673,7 @@ pub trait Context {
         Ok(Obj::List(List::from(
             l.into_iter()
                 .flat_map(|pair| match pair {
-                    (_, Expr::Ellipsis) => {
+                    (_, Expr::Ellipsis(None)) => {
                         if let Ok(Obj::List(ellipsis)) = self.get_ellipsis() {
                             ellipsis.values.borrow_mut().clone().into_iter()
                         } else {
@@ -699,22 +699,22 @@ pub trait Context {
     fn eval_list_eager(&mut self, l: ExprList) -> EvalResult {
         Ok(Obj::List(List::from(
             l.into_iter()
-                .flat_map(|pair| match pair {
-                    (_, Expr::Ellipsis) => {
+                .map(|pair| match pair {
+                    (_, Expr::Ellipsis(None)) => {
                         if let Ok(Obj::List(ellipsis)) = self.get_ellipsis() {
-                            ellipsis.values.borrow_mut().clone().into_iter()
+                            Ok(ellipsis.values.borrow_mut().clone().into_iter())
                         } else {
-                            vec![].into_iter()
+                            Ok(vec![].into_iter())
                         }
                     }
-                    (k, v) => {
-                        if let Ok(elem) = self.eval(v) {
-                            vec![(k, elem)].into_iter()
-                        } else {
-                            unreachable!()
-                        }
+                    (k, v) => match self.eval(v) {
+                        Ok(elem) => Ok(vec![(k, elem)].into_iter()),
+                        Err(e) => Err(e),
                     }
                 })
+                .collect::<Result<Vec<_>, _>>()?
+                .into_iter()
+                .flatten()
                 .collect::<Vec<_>>(),
         )))
     }
@@ -765,7 +765,7 @@ impl Context for CallStack {
                             self.assign(Expr::Symbol(s), value)?;
                             i += 1;
                         },
-                        // TODO: allow arbitrary right-side expressions
+                        // TODO(feature): allow arbitrary right-side expressions
                         // evaluated with list as additional data-frame
                         (Some(n), Expr::String(s) | Expr::Symbol(s)) => {
                             let value = args.try_get_inner(Obj::Vector(Vector::from(vec![s])))?;
@@ -946,8 +946,8 @@ impl Context for Rc<Environment> {
             Expr::Break => Err(Signal::Condition(Cond::Break)),
             Expr::Continue => Err(Signal::Condition(Cond::Continue)),
             Expr::Primitive(p) => Ok(Obj::Function(p.formals(), Expr::Primitive(p), self.clone())),
+            Expr::More => Ok(Obj::Null),
             x => internal_err!(format!("Can't evaluate Context::eval(Rc<Envrionment>, {x}")),
-
         }
     }
 

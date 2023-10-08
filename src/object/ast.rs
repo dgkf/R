@@ -8,9 +8,10 @@ pub enum Expr {
     Null,
     NA,
     Inf,
+    More,
     Continue,
     Break,
-    Ellipsis,
+    Ellipsis(Option<String>),
     Missing,
     Bool(bool),
     Number(f64),
@@ -32,7 +33,7 @@ impl PartialEq for Expr {
             (Inf, Inf) => true,
             (Continue, Continue) => true,
             (Break, Break) => true,
-            (Ellipsis, Ellipsis) => true,
+            (Ellipsis(l), Ellipsis(r)) => l == r,
             (Missing, Missing) => true,
             (Bool(l), Bool(r)) => l == r,
             (Number(l), Number(r)) => l == r,
@@ -79,7 +80,8 @@ impl fmt::Display for Expr {
             Expr::String(x) => write!(f, "\"{}\"", x),
             Expr::Symbol(x) => write!(f, "{}", x),
             Expr::List(x) => write!(f, "{}", x),
-            Expr::Ellipsis => write!(f, "..."),
+            Expr::Ellipsis(None) => write!(f, "..."),
+            Expr::Ellipsis(Some(s)) => write!(f, "..{s}"),
             Expr::Call(what, args) => match &**what {
                 Expr::Primitive(p) => write!(f, "{}", p.rfmt_call(args)),
                 Expr::String(s) | Expr::Symbol(s) => write!(f, "{}({})", s, args),
@@ -206,7 +208,7 @@ impl ExprList {
 
     pub fn position_ellipsis(&self) -> Option<usize> {
         self.values.iter().position(|i| match i {
-            Expr::Ellipsis => true,
+            Expr::Ellipsis(_) => true,
             _ => false,
         })
     }

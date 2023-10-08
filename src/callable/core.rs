@@ -60,8 +60,11 @@ pub trait Callable {
                 .push(args.values.borrow_mut().remove(i));               
         }
 
+        // TODO(bug): need to evaluate trailing unassigned params that have
+        // a default value before popping off remaining trailing params
+
         // remove any Ellipsis param, and any trailing unassigned params
-        formals.pop_trailing();
+        let remainder = formals.pop_trailing();
 
         // backfill unnamed args, populating ellipsis with overflow
         let argsiter = args.values.borrow_mut().clone().into_iter();
@@ -90,6 +93,12 @@ pub trait Callable {
                 .values
                 .borrow_mut()
                 .push((param, Obj::Closure(default, stack.last_frame().env().clone())));
+        }
+
+        if let Some(Expr::Ellipsis(Some(name))) = remainder.get(0) {
+            matched_args.values.borrow_mut().push((Some(name), Obj::List(ellipsis.clone())))
+        } else if remainder.len() > 0 {
+            matched_args.values.borrow_mut().push((Some("...".to_string()), Obj::List(ellipsis.clone())))
         }
 
         Ok((matched_args, ellipsis))
@@ -188,6 +197,7 @@ pub enum SymKind {
     Function,
     Infix,
     Prefix,
+    Postfix,
     PostfixCall(&'static str, &'static str),
 }
 
@@ -208,6 +218,7 @@ where
             Function => format!("{sym}({})", args),
             Infix => format!("{} {sym} {}", args.values[0], args.values[1]),
             Prefix => format!("{sym}{}", args.values[0]),
+            Postfix => format!("{}{sym}", args.values[0]),
             PostfixCall(l, r) => format!("{sym}{l}{}{r}", args),
         }
     }
