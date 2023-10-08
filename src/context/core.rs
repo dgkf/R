@@ -1,7 +1,7 @@
 use std::rc::Rc;
 
 use crate::lang::{EvalResult, Signal};
-use crate::error::*;
+use crate::{error::*, internal_err};
 use crate::object::*;
 
 pub trait Context: std::fmt::Debug + std::fmt::Display {
@@ -43,26 +43,36 @@ pub trait Context: std::fmt::Debug + std::fmt::Display {
     fn eval_list_lazy(&mut self, l: ExprList) -> EvalResult {
         Ok(Obj::List(List::from(
             l.into_iter()
-                .flat_map(|pair| match pair {
+                .map(|pair| match pair {
                     (_, Expr::Ellipsis(None)) => {
                         if let Ok(Obj::List(ellipsis)) = self.get_ellipsis() {
-                            ellipsis.values.borrow_mut().clone().into_iter()
+                            Ok(ellipsis.values.borrow_mut().clone().into_iter())
                         } else {
-                            vec![].into_iter()
+                            Ok(vec![].into_iter())
+                        }
+                    }
+                    (_, Expr::Ellipsis(Some(name))) => {
+                        if let Ok(Obj::List(more)) = self.get(name) {
+                            Ok(more.values.borrow_mut().clone().into_iter())
+                        } else {
+                            internal_err!()
                         }
                     }
                     (k, e @ (Expr::Call(..) | Expr::Symbol(..))) => {
                         let elem = vec![(k, Obj::Closure(e, self.env()))];
-                        elem.into_iter()
+                        Ok(elem.into_iter())
                     }
                     (k, v) => {
                         if let Ok(elem) = self.eval(v) {
-                            vec![(k, elem)].into_iter()
+                            Ok(vec![(k, elem)].into_iter())
                         } else {
-                            unreachable!()
+                            internal_err!()
                         }
                     }
                 })
+                .collect::<Result<Vec<_>, _>>()?
+                .into_iter()
+                .flatten()
                 .collect::<Vec<_>>(),
         )))
     }
@@ -74,6 +84,13 @@ pub trait Context: std::fmt::Debug + std::fmt::Display {
                     (_, Expr::Ellipsis(None)) => {
                         if let Ok(Obj::List(ellipsis)) = self.get_ellipsis() {
                             Ok(ellipsis.values.borrow_mut().clone().into_iter())
+                        } else {
+                            Ok(vec![].into_iter())
+                        }
+                    }
+                    (_, Expr::Ellipsis(Some(name))) => {
+                        if let Ok(Obj::List(more)) = self.get(name) {
+                            Ok(more.values.borrow_mut().clone().into_iter())
                         } else {
                             Ok(vec![].into_iter())
                         }
