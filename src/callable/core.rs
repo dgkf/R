@@ -107,6 +107,7 @@ pub trait Callable {
 
     fn match_arg_exprs(&self, args: ExprList, stack: &mut CallStack) -> Result<(List, List), Signal> {
         let args: List = stack.parent_frame().eval_list_lazy(args)?.try_into()?;
+        let args = args.dedup_last();
         self.match_args(args, stack)
     }
 

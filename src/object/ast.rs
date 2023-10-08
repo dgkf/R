@@ -169,9 +169,15 @@ impl ExprList {
     }
 
     pub fn get_named(&self, key: &String) -> Option<Expr> {
-        let first_name_index = self.keys.iter().position(|i| i.as_ref() == Some(key));
+        // self.keys.iter()
+        //     .enumerate().rev()
+        //     .find(move |(_, i)| *i == &Some(key.clone()))
+        //     .and_then(|(idx, _)| self.values.get(self.keys.len().saturating_sub(idx)))
+        //     .and_then(|expr| Some(expr.clone()))
+
+        let first_name_index = self.keys.iter().rev().position(|i| i.as_ref() == Some(key));
         match first_name_index {
-            Some(index) => Some(self.values[index].clone()),
+            Some(index) => self.values.get(index).and_then(|val| Some(val.clone())),
             _ => None,
         }
     }

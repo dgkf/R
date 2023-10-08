@@ -227,6 +227,31 @@ impl List {
         }
     }
 
+    pub fn dedup_last(self) -> Self {
+        {
+            let names = self.names.borrow();
+            let mut dups: Vec<usize> = names.iter()
+                .flat_map(|(_, indices)| indices
+                    .split_last()
+                    .map_or(vec![], |(_, leading_dups)| leading_dups.to_vec())
+                )
+                .collect();
+
+            dups.sort();
+
+            let mut vs = self.values.borrow_mut();
+            for i in dups.into_iter().rev() {
+                vs.remove(i);
+            }
+        }
+
+        for (_, indices) in self.names.borrow_mut().iter_mut() {
+            indices.drain(0..indices.len());
+        }
+
+        self
+    }
+
     pub fn len(&self) -> usize {
         let Subsets(inner) = &self.subsets;
         match inner.as_slice() {
