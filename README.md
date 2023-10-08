@@ -35,6 +35,8 @@ This project is not just a rewrite of R, but a playground for features and
 reinterpretations. It is not meant to reimplement a compatible R layer, but 
 to rethink some of R's assumptions. 
 
+### Syntax
+
 To start, there are a few superficial changes:
 
 ```r
@@ -59,6 +61,21 @@ kws <- (na, null, inf, true, false)
 There are plenty of more substantial [changes being considered](https://github.com/dgkf/R/issues?q=is%3Aissue+is%3Aopen+label%3Ameta-proposal). 
 If you enjoy mulling over the direction of syntax and features, feel
 free to join the conversation.
+
+### Performance
+
+You might be thinking `rust` is fast, and therefore this project must be
+fast. Well, unfortunately you'd be wrong. That's probably more of a 
+reflection on me than `rust`. To get the basic skeleton in place, 
+my focus has been on getting things working, not on getting them working
+_well_. For now, expect this interpreter to be about ***1000x*** slower
+than R. 
+
+I'm feeling good about the general structure of the internals, but there
+have been plenty of quick proofs of concept that involve excess copies, 
+extra loops, and probably less-than-ideal data structures. If you're an 
+optimization fiend and you want to help narrow the gap with R, your help 
+would be very much appreciated!
 
 ## Why
 
