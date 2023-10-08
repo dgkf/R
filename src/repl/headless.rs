@@ -1,7 +1,8 @@
 use wasm_bindgen::prelude::*;
 use std::rc::Rc;
 
-use crate::lang::{CallStack, Context, Signal, Cond};
+use crate::lang::{CallStack, Signal, Cond};
+use crate::context::Context;
 use crate::object::Environment;
 use pest::Parser;
 use crate::parser::{RParser, parse, Rule};
