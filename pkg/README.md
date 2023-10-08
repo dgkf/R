@@ -73,9 +73,9 @@ than R.
 
 I'm feeling good about the general structure of the internals, but there
 have been plenty of quick proofs of concept that involve excess copies, 
-extra loops, and probably less-than-ideal data structures. If you're an 
-optimization fiend and you want to help narrow the gap with R, your help 
-would be very much appreciated!
+extra loops, panics and probably less-than-ideal data structures.
+If you're an optimization fiend and you want to help narrow the gap with 
+R, your help would be very much appreciated!
 
 ## Why
 
