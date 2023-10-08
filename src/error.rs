@@ -3,6 +3,11 @@ use crate::{parser::*, lang::{CallStack, Signal}};
 use core::fmt;
 use pest::error::LineColLocation::Pos;
 
+#[macro_export]
+macro_rules! internal_err {
+    () => { crate::error::RError::Internal(std::file!(), std::line!()).into() }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum RError {
     VariableNotFound(String),
@@ -24,7 +29,7 @@ pub enum RError {
 
     // in-dev errors
     Unimplemented(Option<String>),
-    Internal,
+    Internal(&'static str, u32),
 }
 
 impl RError {
@@ -63,7 +68,7 @@ impl RError {
             RError::ArgumentInvalid(s) => format!("argument '{s}' is invalid"),
             RError::Unimplemented(Some(s)) => format!("Uh, oh! Looks like '{s}' is only partially implemented"),
             RError::Unimplemented(_) => format!("Uh, oh! You tried to do something that is only partially implemented"),
-            RError::Internal => format!("Internal error"),
+            RError::Internal(file, line) => format!("Internal error ({file}:{line})"),
         }
     }
 }

@@ -55,9 +55,7 @@ where
                 match parse_res {
                     Ok(expr) => {
                         let mut stack = CallStack::from(global_env.clone());
-                        let result = stack.eval(expr);
-                        let result = stack.eval_tails(result);
-                        match result {
+                        match stack.eval_and_finalize(expr) {
                             Err(Signal::Condition(Cond::Terminate)) => break,
                             Ok(val) => println!("{val}"),
                             Err(e) => print!("{e}"),
@@ -86,10 +84,7 @@ pub fn eval(input: &str) -> EvalResult {
 
     let mut stack = CallStack::from(global_env.clone());
     match parse(input) {
-        Ok(expr) => {
-            let result = stack.eval(expr);
-            stack.eval_tails(result)
-        },
+        Ok(expr) => stack.eval_and_finalize(expr),
         Err(e) => Err(e)
     }
 }

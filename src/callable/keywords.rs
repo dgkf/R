@@ -1,8 +1,8 @@
 use r_derive::*;
 
-use crate::error::RError;
+use crate::internal_err;
 use crate::lang::*;
-use crate::lang::Cond::*;
+use crate::lang::Signal::*;
 use crate::object::{ExprList, Obj};
 use super::core::*;
 
@@ -56,10 +56,10 @@ impl Callable for KeywordIf {
         let cond: bool = cond.try_into()?;
 
         if cond {
-            let ifblock = args.next().ok_or(RError::Internal.into())?;
+            let ifblock = args.next().ok_or(internal_err!())?;
             Tail(ifblock, true).into()
         } else {
-            let elseblock = args.skip(1).next().ok_or(RError::Internal.into())?;
+            let elseblock = args.skip(1).next().ok_or(internal_err!())?;
             Tail(elseblock, true).into()
         }
     }
@@ -109,7 +109,7 @@ impl Callable for KeywordFor {
             match eval_result {
                 Err(Condition(Break)) => break,
                 Err(Condition(Continue)) => continue,
-                Err(Condition(Return(..))) => return eval_result,
+                Err(Return(..)) => return eval_result,
                 Err(Error(_)) => return eval_result,
                 _ => (),
             }
@@ -157,7 +157,7 @@ impl Callable for KeywordWhile {
             match eval_result {
                 Err(Condition(Break)) => break,
                 Err(Condition(Continue)) => continue,
-                Err(Condition(Return(..))) => return eval_result,
+                Err(Return(..)) => return eval_result,
                 Err(Error(_)) => return eval_result,
                 _ => (),
             }
@@ -195,7 +195,7 @@ impl Callable for KeywordRepeat {
             match eval_result {
                 Err(Signal::Condition(Cond::Break)) => break,
                 Err(Signal::Condition(Cond::Continue)) => continue,
-                Err(Signal::Condition(Cond::Return(..))) => return eval_result,
+                Err(Signal::Return(..)) => return eval_result,
                 Err(Signal::Error(_)) => return eval_result,
                 _ => (),
             }

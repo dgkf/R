@@ -1,5 +1,6 @@
 use crate::callable::core::{builtin, Callable};
 use crate::error::*;
+use crate::internal_err;
 use crate::object::types::*;
 use crate::object::*;
 
@@ -14,8 +15,6 @@ pub enum Cond {
     Break,
     Continue,
     Terminate,
-    Return(Obj, bool),  // (value, visibility)
-    Tail(Expr, bool),  // (value expr, visibility)
 }
 
 impl Into<Signal> for Cond {
@@ -34,6 +33,8 @@ impl Into<EvalResult> for Cond {
 pub enum Signal {
     Condition(Cond),
     Error(RError),
+    Return(Obj, bool), // (value, visibility)
+    Tail(Expr, bool), // (value expr, visibility)
     Thunk, // used when evaluating null opts like comments
 }
 
@@ -46,9 +47,9 @@ impl Into<EvalResult> for Signal {
 impl Display for Signal {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Signal::Condition(Cond::Return(obj, true)) => write!(f, "{obj}\n"),
-            Signal::Condition(Cond::Return(_, false)) => Ok(()),
-            Signal::Condition(Cond::Tail(..)) => write!(f, "Whoops, a tail is loose!"),
+            Signal::Return(obj, true) => write!(f, "{obj}\n"),
+            Signal::Return(_, false) => Ok(()),
+            Signal::Tail(..) => write!(f, "Whoops, a tail is loose!"),
             Signal::Condition(_) => write!(f, "Signal used at top level"),
             Signal::Error(e) => write!(f, "{e}\n"),
             Signal::Thunk => write!(f, ""),
@@ -58,7 +59,7 @@ impl Display for Signal {
 
 impl Obj {
     pub fn with_visibility(self, visibility: bool) -> EvalResult {
-        Cond::Return(self, visibility).into()
+        Signal::Return(self, visibility).into()
     }
 
     pub fn force(self, stack: &mut CallStack) -> EvalResult {
@@ -653,12 +654,16 @@ pub trait Context {
 
     fn env(&self) -> Rc<Environment>;
 
+    fn eval_call(&mut self, expr: Expr) -> EvalResult {
+        self.eval(expr)
+    }
+
     fn eval(&mut self, expr: Expr) -> EvalResult {
         self.env().eval(expr)
     }
 
-    fn eval_tails(&mut self, res: EvalResult) -> EvalResult {
-        res
+    fn eval_and_finalize(&mut self, expr: Expr) -> EvalResult {
+        self.eval(expr)
     }
 
     fn eval_binary(&mut self, exprs: (Expr, Expr)) -> Result<(Obj, Obj), Signal> {
@@ -743,7 +748,7 @@ impl Context for CallStack {
     }
 
     fn assign(&mut self, to: Expr, from: Obj) -> EvalResult {
-        use Cond::*;
+        use Signal::*;
         let err = Err(Signal::Error(RError::IncorrectContext("<-".to_string())));
 
         match (to, from) {          
@@ -781,65 +786,48 @@ impl Context for CallStack {
         self.last_frame().env.clone()
     }
 
-    fn eval_tails(&mut self, mut res: EvalResult) -> EvalResult {
-        while let Err(Signal::Condition(Cond::Tail(expr, _vis))) = res {
-            res = self.eval(expr)
-        };
-        res
-    }
+    fn eval_call(&mut self, expr: Expr) -> EvalResult {
+        let Expr::Call(what, args) = expr.clone() else { return internal_err!() };
 
-    fn eval(&mut self, expr: Expr) -> EvalResult {
-        if let Expr::List(x) = expr {
-            Ok(self.eval_list_lazy(x)?)
-        } else if let Expr::Symbol(what) = expr {
-            let what = self.get(what);
-            what
-        } else if let Expr::Call(what, args) = expr.clone() {
-            match *what {
-                Expr::Primitive(what) => {
-                    // no frame gets added for transparent calls
-                    if what.is_transparent() {
-                        what.call(args, self)
-                    } else {
-                        self.add_frame(expr.clone(), self.last_frame().env.clone());
-                        let result = what.call(args, self);
-                        return self.pop_frame_and_return(result);
-                    }
-                }
-                Expr::String(name) | Expr::Symbol(name) => {
-                    // builtins don't need a new environment
-                    if let Ok(f) = builtin(&name) {
-                        self.add_frame(expr, self.last_frame().env.clone());
-                        let result = f.call(args, self);
-                        return self.pop_frame_and_return(result);
-                    }
+        match *what {
+            Expr::Primitive(f) if f.is_transparent() => {
+                f.call(args, self)
+            }
+            Expr::Primitive(f) => {
+                self.add_frame(expr, self.last_frame().env().clone());
+                let result = f.call(args, self);
+                self.pop_frame_and_return(result)
+            }
+            Expr::String(name) | Expr::Symbol(name) if builtin(&name).is_ok() => {
+                let f = builtin(&name)?;
+                self.add_frame(expr, self.last_frame().env().clone());
+                let result = f.call(args, self);
+                self.pop_frame_and_return(result)
+            }
+            Expr::String(name) | Expr::Symbol(name) => {
+                // look up our call target
+                let obj = self.env().get(name.clone())?;
 
-                    // look up our call target
-                    let obj = self.env().get(name.clone())?;
+                // ensure our call target expression has an encapsulating environment
+                let Some(env) = obj.environment() else { return internal_err!() };
 
-                    // ensure our call target expression has an encapsulating environment
-                    let Some(env) = obj.environment() else {
-                        unimplemented!("can't call non-function")
-                    };
+                // introduce a new call frame and evaluate body in new frame
+                self.add_child_frame(expr, env.clone());
 
-                    // introduce a new call frame and evaluate body in new frame
-                    self.add_child_frame(expr, env.clone());
+                // handle tail call recursion
+                let mut result = obj.call(args, self);
 
-                    // handle tail call recursion
-                    let mut result = obj.call(args, self);
+                use Signal::*;
+                while let Err(Tail(Expr::Call(what, args), _vis)) = result {
+                    let tail = Expr::Call(what.clone(), args.clone());
 
-                    use Signal::*;
-                    use Cond::*;
-                    while let Err(Condition(Tail(Expr::Call(what, args), _vis))) = result {
-                        let tail = Expr::Call(what.clone(), args.clone());
-                        result = self.eval(tail);
-                        
+                    #[cfg(feature = "tail-call-optimization")]
+                    {
                         // below allows for tail recursion optimization,
                         // disabled for now because of idiosyncracies with
                         // standard evaluation expectations due to eagerly
                         // evaluated arguments
 
-                        /*                        
                         // tail is recursive call if it calls out to same object
                         // that was called to enter current frame
                         let what_obj = self.eval(*what)?;
@@ -854,25 +842,51 @@ impl Context for CallStack {
 
                             // call with pre-matched args
                             result = what_obj.call_matched(args, ellipsis, self);
-                        } else {
-                            result = self.eval(tail);
+                            continue
                         }
-                        */
                     }
 
-                    // if we left off with a non-call tail expr, make sure it gets evaluated
-                    let result = self.eval_tails(result);
-                    self.pop_frame_and_return(result)
+                    result = self.eval_call(tail);
                 }
-                _ => {
-                    self.add_frame(expr, self.last_frame().env.clone());
-                    let result = (self.eval(*what)?).call(args, self);
-                    return self.pop_frame_and_return(result);
+
+                // evaluate any lingering tail calls in the current frame
+                while let Err(Tail(expr, _vis)) = result {
+                    result = self.eval(expr)
                 }
+
+                self.pop_frame_and_return(result)
             }
-        } else {
-            self.last_frame().eval(expr)
+            _ => {
+                self.add_frame(expr, self.last_frame().env().clone());
+                let result = (self.eval(*what)?).call(args, self);
+                self.pop_frame_and_return(result)
+            }
         }
+    }
+
+    fn eval(&mut self, expr: Expr) -> EvalResult {
+        use Expr::*;
+        let result = match expr {
+            List(x) => self.eval_list_lazy(x),
+            Symbol(s) => self.get(s),
+            Call(..) => self.eval_call(expr),
+            _ => self.last_frame().eval(expr)
+        };
+
+
+        result
+    }
+
+    fn eval_and_finalize(&mut self, expr: Expr) -> EvalResult {
+        let mut result = self.eval(expr);
+
+        // evaluate any lingering tail calls in the current frame
+        use Signal::Tail;
+        while let Err(Tail(expr, _vis)) = result {
+            result = self.eval(expr)
+        };
+
+        result
     }
 
     fn get(&mut self, name: String) -> EvalResult {

@@ -38,6 +38,7 @@ js-sys = "0.3.64"
 
 [features]
 default = ["repl"]
+tail-call-optimization = []
 repl = [
   "dep:crossterm", 
   "dep:reedline", 

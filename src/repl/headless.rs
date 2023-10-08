@@ -37,9 +37,7 @@ pub fn wasm_eval_in(env: &Rc<Environment>, input: &str) -> Option<String> {
     match parse(&input) {
         Ok(expr) => {
             let mut stack = CallStack::from(env.clone());
-            let result = stack.eval(expr);
-            let result = stack.eval_tails(result);
-            match result {
+            match stack.eval_and_finalize(expr) {
                 Err(Signal::Condition(Cond::Terminate)) => None,
                 Ok(val) => Some(format!("{val}")),
                 Err(e) => Some(format!("{e}")),

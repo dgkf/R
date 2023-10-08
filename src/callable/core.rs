@@ -1,5 +1,6 @@
 extern crate r_derive;
 
+use crate::error::RError;
 use crate::object::{Obj, Expr, ExprList};
 use crate::callable::builtins::BUILTIN;
 use crate::callable::dyncompare::*;
@@ -229,8 +230,9 @@ where
 
 impl Builtin for String {}
 
-pub fn builtin(s: &str) -> Result<Box<dyn Builtin>, ()> {
-    <Box<dyn Builtin>>::try_from(s)
+pub fn builtin(s: &str) -> Result<Box<dyn Builtin>, Signal> {
+    let err = RError::VariableNotFound(s.to_string());
+    <Box<dyn Builtin>>::try_from(s).or(Err(err.into()))
 }
 
 impl TryFrom<&str> for Box<dyn Builtin> {
