@@ -4,7 +4,7 @@ use crate::error::RError;
 use crate::object::{Obj, Expr, ExprList};
 use crate::callable::builtins::BUILTIN;
 use crate::callable::dyncompare::*;
-use crate::lang::*;
+use crate::{lang::*, internal_err};
 use crate::object::List;
 
 impl std::fmt::Debug for Box<dyn Callable> {
@@ -269,9 +269,7 @@ impl Format for Obj {}
 
 impl Callable for Obj {
     fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
-        let Obj::Function(_, body, _) = self else {
-            unimplemented!("can't call non-function")
-        };
+        let Obj::Function(_, body, _) = self else { return internal_err!() };
 
         // body is a primitive, call directly
         if let Expr::Primitive(f) = body {
@@ -283,9 +281,8 @@ impl Callable for Obj {
         self.call_matched(args, ellipsis, stack)
     }
 
-    fn call_matched(&self, args: List, ellipsis: List, stack: &mut CallStack) -> EvalResult {        let Obj::Function(_, body, _) = self else {
-            unimplemented!("can't call non-function")
-        };
+    fn call_matched(&self, args: List, ellipsis: List, stack: &mut CallStack) -> EvalResult {
+        let Obj::Function(_, body, _) = self else { return internal_err!() };
 
         stack
             .last_frame()

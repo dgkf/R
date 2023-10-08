@@ -5,7 +5,20 @@ use pest::error::LineColLocation::Pos;
 
 #[macro_export]
 macro_rules! internal_err {
-    () => { crate::error::RError::Internal(std::file!(), std::line!()).into() }
+    () => { 
+        crate::error::RError::Internal(
+            None, 
+            std::file!(), 
+            std::line!()
+        ).into()
+    };
+    ( $x:expr ) => { 
+        crate::error::RError::Internal(
+            Some($x.to_string()),
+            std::file!(), 
+            std::line!()
+        ).into() 
+    };
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -17,9 +30,11 @@ pub enum RError {
     ParseUnexpected(Rule),
     NotInterpretableAsLogical,
     ConditionIsNotScalar,
-    CannotBeCoercedToLogical,
-    CannotBeCoercedToInteger,
+    CannotBeCoercedToCharacter,
     CannotBeCoercedToNumeric,
+    CannotBeCoercedToInteger,
+    CannotBeCoercedToLogical,
+    CannotBeCoercedTo(&'static str),
     ArgumentMissing(String),
     ArgumentInvalid(String),
     Other(String),
@@ -29,7 +44,7 @@ pub enum RError {
 
     // in-dev errors
     Unimplemented(Option<String>),
-    Internal(&'static str, u32),
+    Internal(Option<String>, &'static str, u32),
 }
 
 impl RError {
@@ -51,6 +66,9 @@ impl RError {
             RError::ConditionIsNotScalar => {
                 format!("the condition has length > 1")
             }
+            RError::CannotBeCoercedToCharacter => {
+                format!("object cannot be coerced to type 'character'")
+            },
             RError::CannotBeCoercedToLogical => {
                 format!("object cannot be coerced to type 'logical'")
             }
@@ -60,6 +78,9 @@ impl RError {
             RError::CannotBeCoercedToNumeric => {
                 format!("object cannot be coerced to type 'numeric'")
             }
+            RError::CannotBeCoercedTo(to) => {
+                format!("object cannot be coerced to type '{to}'")
+            }
             RError::Other(s) => {
                 format!("{}", s)
             }
@@ -68,7 +89,8 @@ impl RError {
             RError::ArgumentInvalid(s) => format!("argument '{s}' is invalid"),
             RError::Unimplemented(Some(s)) => format!("Uh, oh! Looks like '{s}' is only partially implemented"),
             RError::Unimplemented(_) => format!("Uh, oh! You tried to do something that is only partially implemented"),
-            RError::Internal(file, line) => format!("Internal error ({file}:{line})"),
+            RError::Internal(None, file, line) => format!("Internal Error ({file}:{line})"),
+            RError::Internal(Some(msg), file, line) => format!("Internal Error ({file}:{line})\n{msg}"),
         }
     }
 }

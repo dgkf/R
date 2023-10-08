@@ -114,7 +114,7 @@ impl Obj {
         match self {
             Obj::Vector(v) => Ok(Obj::Vector(v.as_logical())),
             Obj::Null => Ok(Obj::Vector(Vector::from(Vec::<Logical>::new()))),
-            atom => unreachable!("{:?} cannot be coerced to logical", atom),
+            _ => RError::CannotBeCoercedToLogical.into(),
         }
     }
 
@@ -122,7 +122,7 @@ impl Obj {
         match self {
             Obj::Vector(v) => Ok(Obj::Vector(v.as_character())),
             Obj::Null => Ok(Obj::Vector(Vector::from(Vec::<Character>::new()))),
-            atom => unreachable!("{:?} cannot be coerced to character", atom),
+            _ => RError::CannotBeCoercedToCharacter.into(),
         }
     }
 
@@ -130,7 +130,7 @@ impl Obj {
         match self {
             Obj::Null => Ok(Obj::Vector(Vector::from(Vec::<Logical>::new()))),
             Obj::Vector(_) => Ok(self),
-            _ => unimplemented!("cannot coerce object into vector"),
+            _ => RError::CannotBeCoercedTo("vector").into(),
         }
     }
 
@@ -153,7 +153,7 @@ impl Obj {
                 },
                 _ => Err(Signal::Error(RError::CannotBeCoercedToInteger)),
             },
-            _ => todo!(), // emit an appropriate error message
+            _ => internal_err!(), // emit an appropriate error message
         }
     }
 
@@ -237,7 +237,7 @@ impl Obj {
         match self {
             Obj::Vector(v) => v.try_get(index),
             Obj::List(l) => l.try_get(index),
-            _ => todo!(),
+            _ => internal_err!(),
         }
     }
 
@@ -245,7 +245,7 @@ impl Obj {
         match self {
             Obj::Vector(v) => v.try_get(index),
             Obj::List(l) => l.try_get_inner(index),
-            _ => todo!(),
+            _ => internal_err!(),
         }
     }
 
@@ -270,7 +270,7 @@ impl TryInto<List> for Obj {
     fn try_into(self) -> Result<List, Self::Error> {
         match self {
             Obj::List(l) => Ok(l),
-            _ => unimplemented!(),
+            _ => internal_err!(),
         }
     }
 }
@@ -366,7 +366,7 @@ impl std::ops::Add for Obj {
     fn add(self, rhs: Self) -> Self::Output {
         match (self.as_numeric()?, rhs.as_numeric()?) {
             (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector(l + r)),
-            _ => unreachable!(),
+            _ => internal_err!(),
         }
     }
 }
@@ -377,7 +377,7 @@ impl std::ops::Sub for Obj {
     fn sub(self, rhs: Self) -> Self::Output {
         match (self.as_numeric()?, rhs.as_numeric()?) {
             (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector(l - r)),
-            _ => unreachable!(),
+            _ => internal_err!(),
         }
     }
 }
@@ -388,7 +388,7 @@ impl std::ops::Neg for Obj {
     fn neg(self) -> Self::Output {
         match self.as_numeric()? {
             Obj::Vector(x) => Ok(Obj::Vector(-x)),
-            _ => unreachable!(),
+            _ => internal_err!(),
         }
     }
 }
@@ -399,7 +399,7 @@ impl std::ops::Mul for Obj {
     fn mul(self, rhs: Self) -> Self::Output {
         match (self.as_numeric()?, rhs.as_numeric()?) {
             (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector(l * r)),
-            _ => unreachable!(),
+            _ => internal_err!(),
         }
     }
 }
@@ -410,7 +410,7 @@ impl std::ops::Div for Obj {
     fn div(self, rhs: Self) -> Self::Output {
         match (self.as_numeric()?, rhs.as_numeric()?) {
             (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector(l / r)),
-            _ => unreachable!(),
+            _ => internal_err!(),
         }
     }
 }
@@ -421,7 +421,7 @@ impl super::object::Pow<Obj> for Obj {
     fn power(self, rhs: Self) -> Self::Output {
         match (self.as_numeric()?, rhs.as_numeric()?) {
             (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector(l.power(r))),
-            _ => unreachable!(),
+            _ => internal_err!(),
         }
     }
 }
@@ -432,7 +432,7 @@ impl std::ops::Rem for Obj {
     fn rem(self, rhs: Self) -> Self::Output {
         match (self.as_numeric()?, rhs.as_numeric()?) {
             (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector(l % r)),
-            _ => unreachable!(),
+            _ => internal_err!(),
         }
     }
 }
@@ -443,7 +443,7 @@ impl std::ops::BitOr for Obj {
     fn bitor(self, rhs: Self) -> Self::Output {
         match (self.as_logical()?, rhs.as_logical()?) {
             (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector(l | r)),
-            _ => unreachable!(),
+            _ => internal_err!(),
         }
     }
 }
@@ -454,7 +454,7 @@ impl std::ops::BitAnd for Obj {
     fn bitand(self, rhs: Self) -> Self::Output {
         match (self.as_logical()?, rhs.as_logical()?) {
             (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector(l & r)),
-            _ => unreachable!(),
+            _ => internal_err!(),
         }
     }
 }
@@ -464,28 +464,28 @@ impl VecPartialCmp<Obj> for Obj {
     fn vec_gt(self, rhs: Self) -> Self::Output {
         match (self.as_vector()?, rhs.as_vector()?) {
             (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector(l.vec_gt(r))),
-            _ => unreachable!(),
+            _ => internal_err!(),
         }
     }
 
     fn vec_gte(self, rhs: Self) -> Self::Output {
         match (self.as_vector()?, rhs.as_vector()?) {
             (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector(l.vec_gte(r))),
-            _ => unreachable!(),
+            _ => internal_err!(),
         }
     }
 
     fn vec_lt(self, rhs: Self) -> Self::Output {
         match (self.as_vector()?, rhs.as_vector()?) {
             (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector(l.vec_lt(r))),
-            _ => unreachable!(),
+            _ => internal_err!(),
         }
     }
 
     fn vec_lte(self, rhs: Self) -> Self::Output {
         match (self.as_vector()?, rhs.as_vector()?) {
             (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector(l.vec_lte(r))),
-            _ => unreachable!(),
+            _ => internal_err!(),
         }
     }
 
@@ -497,7 +497,7 @@ impl VecPartialCmp<Obj> for Obj {
             (lhs @ Obj::Environment(_), rhs @ Obj::Environment(_)) => Ok((lhs == rhs).into()),
             (lhs, rhs) => match (lhs.as_vector()?, rhs.as_vector()?) {
                 (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector(l.vec_eq(r))),
-                _ => unreachable!(),
+                _ => internal_err!(),
             },
         }
     }
@@ -510,7 +510,7 @@ impl VecPartialCmp<Obj> for Obj {
             (lhs @ Obj::Environment(_), rhs @ Obj::Environment(_)) => Ok((lhs != rhs).into()),
             (lhs, rhs) => match (lhs.as_vector()?, rhs.as_vector()?) {
                 (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector(l.vec_neq(r))),
-                _ => unreachable!(),
+                _ => internal_err!(),
             },
         }
     }
@@ -573,8 +573,7 @@ impl CallStack {
     pub fn frame(&self, n: i32) -> Option<&Frame> {
         match n {
             i if i <= 0 => self.frames.get((self.frames.len() as i32 - 1 + i) as usize),
-            i if i > 0 => self.frames.get(i as usize),
-            _ => unreachable!(),
+            i => self.frames.get(i as usize),
         }
     }
 
@@ -772,7 +771,7 @@ impl Context for CallStack {
                             let value = args.try_get_inner(Obj::Vector(Vector::from(vec![s])))?;
                             self.assign(Expr::Symbol(n), value)?;                            
                         }
-                        _ => unimplemented!(),
+                        _ => return internal_err!(),
                     }
                 }
 
@@ -805,6 +804,8 @@ impl Context for CallStack {
                 self.pop_frame_and_return(result)
             }
             Expr::String(name) | Expr::Symbol(name) => {
+                use Signal::*;
+
                 // look up our call target
                 let obj = self.env().get(name.clone())?;
 
@@ -817,33 +818,26 @@ impl Context for CallStack {
                 // handle tail call recursion
                 let mut result = obj.call(args, self);
 
-                use Signal::*;
+                // intercept and rearrange call stack to handle tail calls
+                #[cfg(feature = "tail-call-optimization")]
                 while let Err(Tail(Expr::Call(what, args), _vis)) = result {
                     let tail = Expr::Call(what.clone(), args.clone());
 
-                    #[cfg(feature = "tail-call-optimization")]
-                    {
-                        // below allows for tail recursion optimization,
-                        // disabled for now because of idiosyncracies with
-                        // standard evaluation expectations due to eagerly
-                        // evaluated arguments
+                    // tail is recursive call if it calls out to same object
+                    // that was called to enter current frame
+                    let what_obj = self.eval(*what)?;
+                    if what_obj == self.last_frame().to {
+                        // eagerly evaluate and match argument expressions in tail frame
+                        let args: List = self.eval_list_eager(args)?.try_into()?;
+                        let (args, ellipsis) = what_obj.match_args(args, self)?;
 
-                        // tail is recursive call if it calls out to same object
-                        // that was called to enter current frame
-                        let what_obj = self.eval(*what)?;
-                        if what_obj == self.last_frame().to {
-                            // eagerly evaluate and match argument expressions in tail frame
-                            let args: List = self.eval_list_eager(args)?.try_into()?;
-                            let (args, ellipsis) = what_obj.match_args(args, self)?;
+                        // pop tail frame and add a new local frame
+                        self.frames.pop();
+                        self.add_child_frame(tail, env.clone());
 
-                            // pop tail frame and add a new local frame
-                            self.frames.pop();
-                            self.add_child_frame(tail, env.clone());
-
-                            // call with pre-matched args
-                            result = what_obj.call_matched(args, ellipsis, self);
-                            continue
-                        }
+                        // call with pre-matched args
+                        result = what_obj.call_matched(args, ellipsis, self);
+                        continue
                     }
 
                     result = self.eval_call(tail);
@@ -866,15 +860,12 @@ impl Context for CallStack {
 
     fn eval(&mut self, expr: Expr) -> EvalResult {
         use Expr::*;
-        let result = match expr {
+        match expr {
             List(x) => self.eval_list_lazy(x),
             Symbol(s) => self.get(s),
             Call(..) => self.eval_call(expr),
             _ => self.last_frame().eval(expr)
-        };
-
-
-        result
+        }
     }
 
     fn eval_and_finalize(&mut self, expr: Expr) -> EvalResult {
@@ -955,7 +946,8 @@ impl Context for Rc<Environment> {
             Expr::Break => Err(Signal::Condition(Cond::Break)),
             Expr::Continue => Err(Signal::Condition(Cond::Continue)),
             Expr::Primitive(p) => Ok(Obj::Function(p.formals(), Expr::Primitive(p), self.clone())),
-            x => unimplemented!("Context::eval(Rc<Environment>, {})", x),
+            x => internal_err!(format!("Can't evaluate Context::eval(Rc<Envrionment>, {x}")),
+
         }
     }
 

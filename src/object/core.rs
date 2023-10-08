@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use crate::{lang::Signal, error::RError};
+use crate::{lang::Signal, error::RError, internal_err};
 
 use super::*;
 
@@ -65,7 +65,7 @@ impl TryInto<i32> for Obj {
         use RError::CannotBeCoercedToInteger;
 
         let Obj::Vector(Vector::Integer(v)) = self.as_integer()? else {
-            unreachable!();
+            return internal_err!()
         };
 
         match v.inner().clone().borrow()[..] {
@@ -90,7 +90,7 @@ impl TryInto<f64> for Obj {
         use RError::CannotBeCoercedToNumeric;
 
         let Obj::Vector(Vector::Numeric(v)) = self.as_numeric()? else {
-            unreachable!();
+            return internal_err!()
         };
 
         match v.inner().clone().borrow()[..] {
@@ -104,7 +104,7 @@ impl TryInto<Vec<f64>> for Obj {
     type Error = Signal;
     fn try_into(self) -> Result<Vec<f64>, Self::Error> {
         let Obj::Vector(Vector::Numeric(v)) = self.as_numeric()? else {
-            unreachable!();
+            return internal_err!()
         };
 
         Ok(v.inner()
