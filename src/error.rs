@@ -20,9 +20,6 @@ macro_rules! internal_err {
 pub enum RError {
     VariableNotFound(String),
     IncorrectContext(String),
-    ParseFailureVerbose(Box<pest::error::Error<Rule>>),
-    ParseFailure(Box<pest::error::Error<Rule>>),
-    ParseUnexpected(Rule),
     NotInterpretableAsLogical,
     ConditionIsNotScalar,
     CannotBeCoercedToCharacter,
@@ -34,12 +31,20 @@ pub enum RError {
     ArgumentInvalid(String),
     Other(String),
 
+    // parsing errors
+    ParseFailureVerbose(Box<pest::error::Error<Rule>>),
+    ParseFailure(Box<pest::error::Error<Rule>>),
+    ParseUnexpected(Rule),
+
     // temporary workaround until we propagate call stack to all error locations
     WithCallStack(Box<RError>, CallStack),
 
     // in-dev errors
     Unimplemented(Option<String>),
     Internal(Option<String>, &'static str, u32),
+
+    // features
+    FeatureDisabledRestArgs,
 }
 
 impl RError {
@@ -53,7 +58,7 @@ impl RError {
                 _ => format!("Parse failed at {:?}", e.line_col),
             },
             RError::ParseUnexpected(rule) => {
-                format!("Parse failed. Found {:#?}", rule)
+                format!("Parse failed. Found unexpected parsing rule '{:#?}'", rule)
             }
             RError::NotInterpretableAsLogical => {
                 "argument is not interpretable as logical".to_string()
@@ -87,6 +92,9 @@ impl RError {
             RError::Internal(None, file, line) => format!("Internal Error ({file}:{line})"),
             RError::Internal(Some(msg), file, line) => {
                 format!("Internal Error ({file}:{line})\n{msg}")
+            }
+            RError::FeatureDisabledRestArgs => {
+                "..rest syntax currently disabled. To enable, re-build with\n\n    cargo build --features rest-args\n".to_string()
             }
         }
     }

@@ -62,7 +62,7 @@ where
                             Err(e) => print!("{e}"),
                         }
                     }
-                    Err(e) => eprintln!("{e}"),
+                    Err(e) => eprint!("{e}"),
                 }
             }
             Ok(reedline::Signal::CtrlD) => break,

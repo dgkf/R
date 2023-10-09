@@ -1,5 +1,7 @@
 # dev
 
+# 0.3.1 "Art Smock"
+
 ## Major Changes
 
 * Added simplest-case destructuring assignment.
@@ -11,6 +13,36 @@
   y
   # [1] 2
   ```
+
+* `return` keyword introduced (this is unlike R's `return()` primitive, and 
+  this might change back to using a `return()` primitive in the future)
+
+## Experiments
+
+This release introduces "experiments", which are feature-gated behaviors. This
+release introduces two to start:
+
+* `tail-call-optimization`, when enabled, will handle tail calls without 
+  extending the call stack, but with the possibly unexpected behavior of 
+  eagerly evaluating arguments to the call.
+
+* `rest-args`, when enabled, introduces the ability to name ellipsis arguments
+  and to unpack lists into function calls.
+
+## Notable Bugs Addressed
+
+* `for` loop off-by-one error corrected.
+
+## Internals
+
+* Many `panic!`s where replaced with proper errors.
+
+* Introduced the start of destructuring assignment.
+
+* Added `Tail` and `Return` `Signal` variants, which are used to raise returns
+  back to the calling frame (the calling function). `Return` is used to return
+  values and `Tail` is used to return the tail expression for potential tail 
+  call optimization.
 
 # 0.3.0 "Days of Abandon"
 

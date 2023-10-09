@@ -156,7 +156,6 @@
     kw_break = { "break" }
     kw_continue = { "continue" }
     kw_return = { "return" ~ WS* ~ expr }
-    kw_more = { ".." }
 
 // reserved value (val) types
 
