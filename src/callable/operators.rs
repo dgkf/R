@@ -264,7 +264,7 @@ impl Callable for InfixColon {
         if let Some((llhs, lrhs)) = colon_args(&arg1) {
             // since we're rearranging calls here, we might need to modify the call stack
             let args = ExprList::from(vec![(None, llhs), (None, lrhs), (None, arg2)]);
-            return InfixColon.call(args, stack);
+            InfixColon.call(args, stack)
 
         // tertiary case
         } else if let Some((_, arg3)) = argstream.next() {
@@ -289,7 +289,7 @@ impl Callable for InfixColon {
                         v += by;
                         v
                     }))
-                    .take_while(|x| if &start <= &end { x <= &end } else { x >= &end })
+                    .take_while(|x| if start <= end { x <= &end } else { x >= &end })
                     .collect::<Vec<f64>>(),
             )));
 
@@ -298,16 +298,9 @@ impl Callable for InfixColon {
             let start: i32 = stack.eval(arg1)?.as_integer()?.try_into()?;
             let end: i32 = stack.eval(arg2)?.as_integer()?.try_into()?;
             return Ok(Obj::Vector(Vector::from(if start <= end {
-                (start..=end)
-                    .map(|i| i as f64)
-                    .into_iter()
-                    .collect::<Vec<f64>>()
+                (start..=end).map(|i| i as f64).collect::<Vec<f64>>()
             } else {
-                (end..=start)
-                    .map(|i| i as f64)
-                    .into_iter()
-                    .rev()
-                    .collect::<Vec<f64>>()
+                (end..=start).map(|i| i as f64).rev().collect::<Vec<f64>>()
             })));
         }
     }

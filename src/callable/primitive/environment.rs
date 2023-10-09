@@ -1,9 +1,9 @@
 use r_derive::*;
 
+use crate::callable::core::*;
+use crate::context::Context;
 use crate::error::RError;
 use crate::lang::*;
-use crate::context::Context;
-use crate::callable::core::*;
 use crate::object::*;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -11,9 +11,7 @@ use crate::object::*;
 pub struct PrimitiveEnvironment;
 impl Callable for PrimitiveEnvironment {
     fn formals(&self) -> ExprList {
-        ExprList::from(vec![
-            (Some(String::from("fun")), Expr::Missing),
-        ])
+        ExprList::from(vec![(Some(String::from("fun")), Expr::Missing)])
     }
 
     fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
@@ -45,13 +43,12 @@ mod test {
 
     #[test]
     fn no_args() {
-        (r!{ environment() }).expect("environment() returns non-environment value");
-        ()
+        (r! { environment() }).expect("environment() returns non-environment value");
     }
 
     #[test]
     fn functions_return_env() {
-        r_expect!{{"
+        r_expect! {{"
             x <- function() { function() { } }
             environment(x()) != environment(x)
         "}}
@@ -59,7 +56,7 @@ mod test {
 
     #[test]
     fn capture_local_env() {
-        r_expect!{{"
+        r_expect! {{"
             x <- function() { environment() }
             x() != environment(x)
         "}}

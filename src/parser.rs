@@ -1,3 +1,4 @@
+use crate::callable::{core::*, keywords::*, operators::*};
 /// Grammar Parsers
 ///
 /// The primary interface for this module is `parse`. Internally, it dispatches
@@ -7,7 +8,6 @@
 /// `RExprList`s or tuples of parsed expressions.
 ///
 use crate::error::RError;
-use crate::callable::{core::*, keywords::*, operators::*};
 use crate::lang::Signal;
 use crate::object::{Expr, ExprList};
 
@@ -45,15 +45,15 @@ pub fn parse(s: &str) -> Result<Expr, Signal> {
         Ok(pairs) if pairs.len() == 0 => Err(Signal::Thunk),
 
         // for any expressions
-        Ok(pairs) => Ok(parse_expr(pairs)),        
-        Err(e) => Err(RError::ParseFailureVerbose(e).into()),
+        Ok(pairs) => Ok(parse_expr(pairs)),
+        Err(e) => Err(RError::ParseFailureVerbose(Box::new(e)).into()),
     }
 }
 
 pub fn parse_args(s: &str) -> Result<ExprList, RError> {
     match RParser::parse(Rule::repl, s) {
         Ok(mut pairs) => Ok(parse_pairlist(pairs.next().unwrap())),
-        Err(e) => Err(RError::ParseFailureVerbose(e)),
+        Err(e) => Err(RError::ParseFailureVerbose(Box::new(e))),
     }
 }
 
@@ -182,9 +182,8 @@ fn parse_call(pair: Pair<Rule>) -> Expr {
 
     match name {
         "list" => Expr::List(pairs),
-        name => Expr::Call(Box::new(Expr::String(name.to_string())), pairs)
+        name => Expr::Call(Box::new(Expr::String(name.to_string())), pairs),
     }
-
 }
 
 fn parse_function(pair: Pair<Rule>) -> Expr {
@@ -269,7 +268,7 @@ fn parse_postfixed(pair: Pair<Rule>) -> Expr {
     let mut inner = pair.into_inner();
     let mut result = parse_primary(inner.next().unwrap());
 
-    while let Some(next) = inner.next() {
+    for next in inner {
         let (what, mut args) = parse_postfix(next);
         result = match what {
             // Null used here has a magic value to dispatch on `x(...)` calls
@@ -293,7 +292,7 @@ fn parse_prefixed(pair: Pair<Rule>) -> Expr {
     let mut result = parse_postfixed(inner.next().unwrap());
 
     // iterate backwards through prefixes, applying prefixes from inside-out
-    while let Some(prev) = inner.next() {
+    for prev in inner {
         result = match prev.as_rule() {
             Rule::subtract => {
                 let args = ExprList::from(vec![result]);

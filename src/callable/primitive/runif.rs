@@ -39,16 +39,15 @@ impl Callable for PrimitiveRunif {
         // all random numbers at once from the same distribution
         if len == 1 {
             let min = min
-                .get(0)
-                .map_or(ArgumentInvalid(String::from("min")).into(), |x| Ok(x))?;
+                .first()
+                .map_or(ArgumentInvalid(String::from("min")).into(), Ok)?;
             let max = max
-                .get(0)
-                .map_or(ArgumentInvalid(String::from("max")).into(), |x| Ok(x))?;
+                .first()
+                .map_or(ArgumentInvalid(String::from("max")).into(), Ok)?;
             let between = Uniform::try_from(*min..=*max).unwrap();
 
             Ok(Obj::Vector(Vector::from(
                 (1..=n)
-                    .into_iter()
                     .map(|_| between.sample(&mut rng))
                     .collect::<Vec<f64>>(),
             )))

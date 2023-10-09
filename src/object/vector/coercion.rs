@@ -2,7 +2,6 @@ use std::str::FromStr;
 
 use super::OptionNA;
 
-
 pub trait AtomicMode {
     fn is_numeric() -> bool {
         false
@@ -179,10 +178,7 @@ impl CoercibleInto<OptionNA<f64>> for OptionNA<bool> {
 impl CoercibleInto<bool> for f64 {
     #[inline]
     fn coerce_into(self) -> bool {
-        match self.partial_cmp(&0.0) {
-            Some(std::cmp::Ordering::Equal) => false,
-            _ => true,
-        }
+        !matches!(self.partial_cmp(&0.0), Some(std::cmp::Ordering::Equal))
     }
 }
 
@@ -207,18 +203,18 @@ impl CoercibleInto<OptionNA<bool>> for OptionNA<i32> {
     }
 }
 
-impl<T> CoercibleInto<OptionNA<T>> for OptionNA<String> 
+impl<T> CoercibleInto<OptionNA<T>> for OptionNA<String>
 where
-    T: FromStr
+    T: FromStr,
 {
-    // this uses an extra `.to_lowercase` that is only necessary for 
+    // this uses an extra `.to_lowercase` that is only necessary for
     // bools, could be removed is specialized
     fn coerce_into(self) -> OptionNA<T> {
         match self {
             OptionNA::Some(s) => s.parse().map_or(OptionNA::NA, |i| OptionNA::Some(i)),
             OptionNA::NA => OptionNA::NA,
         }
-    }    
+    }
 }
 
 impl CoercibleInto<OptionNA<String>> for OptionNA<bool> {
@@ -243,33 +239,39 @@ pub trait MinimallyNumeric {
     type As;
 }
 
-impl<T, U> MinimallyNumeric for &T 
+impl<T, U> MinimallyNumeric for &T
 where
-    T: MinimallyNumeric<As = U>
+    T: MinimallyNumeric<As = U>,
 {
     type As = U;
 }
 
-impl MinimallyNumeric for bool { type As = i32; }
-impl MinimallyNumeric for i32 { type As = i32; }
-impl MinimallyNumeric for f64 { type As = f64; }
-impl<T, U> MinimallyNumeric for OptionNA<T> 
+impl MinimallyNumeric for bool {
+    type As = i32;
+}
+impl MinimallyNumeric for i32 {
+    type As = i32;
+}
+impl MinimallyNumeric for f64 {
+    type As = f64;
+}
+impl<T, U> MinimallyNumeric for OptionNA<T>
 where
     T: MinimallyNumeric<As = U>,
-    OptionNA<T>: CoercibleInto<OptionNA<U>>
+    OptionNA<T>: CoercibleInto<OptionNA<U>>,
 {
-    type As = OptionNA<U>;    
+    type As = OptionNA<U>;
 }
 
 pub trait IntoLogical<T> {
-    fn as_logical(self) -> T;
+    fn as_logical(&mut self) -> T;
 }
 
 impl<T, U> IntoLogical<OptionNA<T>> for OptionNA<U>
 where
     U: IntoLogical<T>,
 {
-    fn as_logical(self) -> OptionNA<T> {
+    fn as_logical(&mut self) -> OptionNA<T> {
         use OptionNA::*;
         match self {
             Some(x) => Some(U::as_logical(x)),
@@ -279,66 +281,51 @@ where
 }
 
 impl IntoLogical<bool> for bool {
-    fn as_logical(self) -> bool {
-        self
+    fn as_logical(&mut self) -> bool {
+        *self
     }
 }
 
 impl IntoLogical<bool> for i32 {
-    fn as_logical(self) -> bool {
-        match self {
-            0 => false,
-            _ => true,
-        }
+    fn as_logical(&mut self) -> bool {
+        !matches!(self, 0)
     }
 }
 
 impl IntoLogical<bool> for i64 {
-    fn as_logical(self) -> bool {
-        match self {
-            0 => false,
-            _ => true,
-        }
+    fn as_logical(&mut self) -> bool {
+        !matches!(self, 0)
     }
 }
 
 impl IntoLogical<bool> for i128 {
-    fn as_logical(self) -> bool {
-        match self {
-            0 => false,
-            _ => true,
-        }
+    fn as_logical(&mut self) -> bool {
+        !matches!(self, 0)
     }
 }
 
 impl IntoLogical<bool> for f32 {
-    fn as_logical(self) -> bool {
-        match self.partial_cmp(&0.0) {
-            Some(std::cmp::Ordering::Equal) => false,
-            _ => true,
-        }
+    fn as_logical(&mut self) -> bool {
+        !matches!((*self).partial_cmp(&0.0), Some(std::cmp::Ordering::Equal))
     }
 }
 
 impl IntoLogical<bool> for f64 {
-    fn as_logical(self) -> bool {
-        match self.partial_cmp(&0.0) {
-            Some(std::cmp::Ordering::Equal) => false,
-            _ => true,
-        }
+    fn as_logical(&mut self) -> bool {
+        !matches!((*self).partial_cmp(&0.0), Some(std::cmp::Ordering::Equal))
     }
 }
 
 // Common representation for numeric calculations
 pub trait CommonNum: Sized {
     type Common;
-    fn as_common(self) -> (Self::Common, Self::Common);
+    fn into_common(self) -> (Self::Common, Self::Common);
 }
 
 // Common representation for comparison and logical calculations
 pub trait CommonCmp: Sized {
     type Common;
-    fn as_common(self) -> (Self::Common, Self::Common);
+    fn into_common(self) -> (Self::Common, Self::Common);
 }
 
 impl<T, U, V> CommonCmp for (OptionNA<U>, OptionNA<V>)
@@ -346,10 +333,10 @@ where
     (U, V): CommonCmp<Common = OptionNA<T>>,
 {
     type Common = OptionNA<T>;
-    fn as_common(self) -> (OptionNA<T>, OptionNA<T>) {
+    fn into_common(self) -> (OptionNA<T>, OptionNA<T>) {
         use OptionNA::*;
         match self {
-            (Some(l), Some(r)) => (l, r).as_common(),
+            (Some(l), Some(r)) => (l, r).into_common(),
             _ => (NA, NA),
         }
     }
@@ -367,7 +354,7 @@ macro_rules! register {
             $rty: CoercibleInto<$target>,
         {
             type Common = $target;
-            fn as_common(self) -> ($target, $target) {
+            fn into_common(self) -> ($target, $target) {
                 (
                     CoercibleInto::<$target>::coerce_into(self.0),
                     CoercibleInto::<$target>::coerce_into(self.1),
@@ -382,7 +369,7 @@ macro_rules! register {
             OptionNA<$rty>: CoercibleInto<OptionNA<$target>>,
         {
             type Common = OptionNA<$target>;
-            fn as_common(self) -> (Self::Common, Self::Common) {
+            fn into_common(self) -> (Self::Common, Self::Common) {
                 (
                     CoercibleInto::<Self::Common>::coerce_into(self.0),
                     CoercibleInto::<Self::Common>::coerce_into(self.1),
@@ -397,7 +384,7 @@ macro_rules! register {
             $rty: CoercibleInto<$target>,
         {
             type Common = $target;
-            fn as_common(self) -> ($target, $target) {
+            fn into_common(self) -> ($target, $target) {
                 (
                     CoercibleInto::<$target>::coerce_into(self.0),
                     CoercibleInto::<$target>::coerce_into(self.1),
@@ -412,14 +399,13 @@ macro_rules! register {
             OptionNA<$rty>: CoercibleInto<OptionNA<$target>>,
         {
             type Common = OptionNA<$target>;
-            fn as_common(self) -> (Self::Common, Self::Common) {
+            fn into_common(self) -> (Self::Common, Self::Common) {
                 (
                     CoercibleInto::<Self::Common>::coerce_into(self.0),
                     CoercibleInto::<Self::Common>::coerce_into(self.1),
                 )
             }
         }
-
     };
 
     (
@@ -431,7 +417,7 @@ macro_rules! register {
             $lty: CoercibleInto<$target>,
         {
             type Common = $target;
-            fn as_common(self) -> ($target, $target) {
+            fn into_common(self) -> ($target, $target) {
                 (
                     CoercibleInto::<$target>::coerce_into(self.0),
                     CoercibleInto::<$target>::coerce_into(self.1),
@@ -446,7 +432,7 @@ macro_rules! register {
             OptionNA<$lty>: CoercibleInto<OptionNA<$target>>,
         {
             type Common = OptionNA<$target>;
-            fn as_common(self) -> (Self::Common, Self::Common) {
+            fn into_common(self) -> (Self::Common, Self::Common) {
                 (
                     CoercibleInto::<Self::Common>::coerce_into(self.0),
                     CoercibleInto::<Self::Common>::coerce_into(self.1),

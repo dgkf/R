@@ -7,10 +7,13 @@ use crate::lang::EvalResult;
 
 use super::*;
 
+type ListNameMap = HashMap<String, Vec<usize>>;
+type ListValues = Vec<(Option<String>, Obj)>;
+
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct List {
-    pub names: Rc<RefCell<HashMap<String, Vec<usize>>>>,
-    pub values: Rc<RefCell<Vec<(Option<String>, Obj)>>>,
+    pub names: Rc<RefCell<ListNameMap>>,
+    pub values: Rc<RefCell<ListValues>>,
     pub subsets: Subsets,
 }
 
@@ -33,7 +36,7 @@ impl List {
 
         for (i, (k, _)) in self.values.borrow().iter().enumerate() {
             if let Some(name) = k {
-                let indices = names.entry(name.clone()).or_insert(vec![]);
+                let indices = names.entry(name.clone()).or_default();
                 if !indices.contains(&i) {
                     indices.push(i)
                 }
@@ -230,11 +233,13 @@ impl List {
     pub fn dedup_last(self) -> Self {
         {
             let names = self.names.borrow();
-            let mut dups: Vec<usize> = names.iter()
-                .flat_map(|(_, indices)| indices
-                    .split_last()
-                    .map_or(vec![], |(_, leading_dups)| leading_dups.to_vec())
-                )
+            let mut dups: Vec<usize> = names
+                .iter()
+                .flat_map(|(_, indices)| {
+                    indices
+                        .split_last()
+                        .map_or(vec![], |(_, leading_dups)| leading_dups.to_vec())
+                })
                 .collect();
 
             dups.sort();
@@ -258,5 +263,10 @@ impl List {
             [] => self.values.borrow().len(),
             [.., last] => std::cmp::min(self.values.borrow().len(), last.len()),
         }
+    }
+
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
     }
 }

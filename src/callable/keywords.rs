@@ -1,11 +1,11 @@
 use r_derive::*;
 
-use crate::internal_err;
-use crate::context::Context;
-use crate::lang::*;
-use crate::lang::Signal::*;
-use crate::object::{ExprList, Obj};
 use super::core::*;
+use crate::context::Context;
+use crate::internal_err;
+use crate::lang::Signal::*;
+use crate::lang::*;
+use crate::object::{ExprList, Obj};
 
 #[derive(Debug, Clone, PartialEq)]
 #[builtin]
@@ -57,10 +57,10 @@ impl Callable for KeywordIf {
         let cond: bool = cond.try_into()?;
 
         if cond {
-            let ifblock = args.next().ok_or(internal_err!())?;
+            let ifblock = args.next().ok_or::<Signal>(internal_err!())?;
             Tail(ifblock, true).into()
         } else {
-            let elseblock = args.skip(1).next().ok_or(internal_err!())?;
+            let elseblock = args.nth(1).ok_or::<Signal>(internal_err!())?;
             Tail(elseblock, true).into()
         }
     }
@@ -239,7 +239,7 @@ impl Callable for KeywordBlock {
                 i if i == n => Tail(expr, true).into(),
                 _ => stack.eval(expr),
             };
-        };
+        }
         value
     }
 }

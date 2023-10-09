@@ -1,15 +1,14 @@
 /// Do not edit directly!
-/// 
+///
 /// The contents of this file are built by build.rs
 ///
-
 use std::collections::HashMap;
 
-use::lazy_static::lazy_static;
+use ::lazy_static::lazy_static;
 
 use crate::callable::core::Builtin;
-use crate::callable::primitive::*;
 use crate::callable::operators::*;
+use crate::callable::primitive::*;
 
 lazy_static! {
     pub static ref BUILTIN: HashMap<&'static str, Box<dyn Builtin>> = {

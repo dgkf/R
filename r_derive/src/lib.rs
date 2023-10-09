@@ -2,7 +2,7 @@ extern crate proc_macro;
 
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::{parse_macro_input, DeriveInput, parse::Parse, LitStr, Expr};
+use syn::{parse::Parse, parse_macro_input, DeriveInput, Expr, LitStr};
 
 #[derive(Clone)]
 enum Builtin {
@@ -18,8 +18,8 @@ struct Sym {
 
 impl Parse for Builtin {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
-        use syn::{parse_quote, ExprLit, Lit, MetaNameValue, Token};
         use syn::punctuated::Punctuated;
+        use syn::{parse_quote, ExprLit, Lit, MetaNameValue, Token};
 
         let vars = Punctuated::<MetaNameValue, Token![,]>::parse_terminated(input)?.into_iter();
         let mut symbol: Option<LitStr> = None;
@@ -27,9 +27,14 @@ impl Parse for Builtin {
 
         for var in vars {
             match (var.path, var.value) {
-                (k, Expr::Lit(ExprLit { lit: Lit::Str(s), .. })) if k.is_ident("sym") => {
+                (
+                    k,
+                    Expr::Lit(ExprLit {
+                        lit: Lit::Str(s), ..
+                    }),
+                ) if k.is_ident("sym") => {
                     symbol = Some(s);
-                },
+                }
                 (k, e) if k.is_ident("kind") => {
                     kind = e;
                 }
@@ -38,8 +43,8 @@ impl Parse for Builtin {
         }
 
         match symbol {
-            Some(sym) => Ok(Builtin::Sym(Sym{ sym, kind })),
-            None => Ok(Builtin::Keyword)
+            Some(sym) => Ok(Builtin::Sym(Sym { sym, kind })),
+            None => Ok(Builtin::Keyword),
         }
     }
 }
@@ -88,8 +93,8 @@ pub fn builtin(attr: TokenStream, item: TokenStream) -> TokenStream {
 
             #[automatically_derived]
             impl Builtin for #what {
-                fn is_transparent(&self) -> bool { 
-                    true 
+                fn is_transparent(&self) -> bool {
+                    true
                 }
             }
         },

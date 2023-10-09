@@ -1,8 +1,8 @@
 use std::rc::Rc;
 
 use crate::lang::{EvalResult, Signal};
-use crate::{error::*, internal_err};
 use crate::object::*;
+use crate::{error::*, internal_err};
 
 pub trait Context: std::fmt::Debug + std::fmt::Display {
     fn get(&mut self, name: String) -> EvalResult {
@@ -98,7 +98,7 @@ pub trait Context: std::fmt::Debug + std::fmt::Display {
                     (k, v) => match self.eval(v) {
                         Ok(elem) => Ok(vec![(k, elem)].into_iter()),
                         Err(e) => Err(e),
-                    }
+                    },
                 })
                 .collect::<Result<Vec<_>, _>>()?
                 .into_iter()

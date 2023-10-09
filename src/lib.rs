@@ -6,9 +6,9 @@ pub mod utils;
 pub mod error;
 pub mod parser;
 
+pub mod callable;
 pub mod context;
 pub mod lang;
-pub mod callable;
 
-pub mod repl;
 pub mod object;
+pub mod repl;

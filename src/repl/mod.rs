@@ -1,10 +1,8 @@
 mod release;
 
 #[cfg(feature = "repl")]
-mod repl;
-
-#[cfg(feature = "repl")]
-pub use repl::*;
+mod core;
+pub use core::*;
 
 #[cfg(feature = "repl")]
 pub mod highlight;

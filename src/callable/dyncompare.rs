@@ -37,4 +37,3 @@ impl PartialEq<dyn DynCompare> for dyn DynCompare {
         self.dyn_eq(other)
     }
 }
-

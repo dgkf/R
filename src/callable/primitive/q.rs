@@ -1,7 +1,7 @@
 use r_derive::*;
 
-use crate::lang::*;
 use crate::callable::core::*;
+use crate::lang::*;
 use crate::object::ExprList;
 
 #[derive(Debug, Clone, PartialEq)]
