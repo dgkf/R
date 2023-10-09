@@ -1,6 +1,6 @@
 use std::ops::Deref;
 
-use super::coercion::{MinimallyNumeric, CoercibleInto, CommonNum};
+use super::coercion::{CoercibleInto, CommonNum, MinimallyNumeric};
 
 /// Zip iterators into recycling vectors, extending to longest length
 ///
@@ -15,10 +15,7 @@ use super::coercion::{MinimallyNumeric, CoercibleInto, CommonNum};
 /// let z: Vec<_> = zip_recycle(x.into_iter(), y.into_iter()).collect();
 /// ````
 ///
-pub fn zip_recycle<L, R, LItem, RItem>(
-    l: L,
-    r: R,
-) -> impl Iterator<Item = (LItem, RItem)>
+pub fn zip_recycle<L, R, LItem, RItem>(l: L, r: R) -> impl Iterator<Item = (LItem, RItem)>
 where
     L: ExactSizeIterator + Iterator<Item = LItem> + Clone,
     R: ExactSizeIterator + Iterator<Item = RItem> + Clone,
@@ -53,9 +50,11 @@ where
     // and those numerics should be coercible to a common numeric
     (LNum, RNum): CommonNum<Common = Output>,
 {
-    i.into_iter()
-        .map(|(l, r)| (
+    i.into_iter().map(|(l, r)| {
+        (
             CoercibleInto::<LNum>::coerce_into(l.clone()),
-            CoercibleInto::<RNum>::coerce_into(r.clone())
-        ).as_common())
+            CoercibleInto::<RNum>::coerce_into(r.clone()),
+        )
+            .into_common()
+    })
 }

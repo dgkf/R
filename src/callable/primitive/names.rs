@@ -34,12 +34,7 @@ impl Callable for PrimitiveNames {
                     .into())
             }
             Environment(e) => {
-                let mut names = e
-                    .values
-                    .borrow()
-                    .keys()
-                    .map(|k| k.clone())
-                    .collect::<Vec<String>>();
+                let mut names = e.values.borrow().keys().cloned().collect::<Vec<String>>();
 
                 names.sort();
                 Ok(names.into())

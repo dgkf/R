@@ -1,11 +1,12 @@
 extern crate r_derive;
 
-use crate::error::RError;
-use crate::object::{Obj, Expr, ExprList};
 use crate::callable::builtins::BUILTIN;
 use crate::callable::dyncompare::*;
-use crate::{lang::*, internal_err};
+use crate::context::Context;
+use crate::error::RError;
 use crate::object::List;
+use crate::object::{Expr, ExprList, Obj};
+use crate::{internal_err, lang::*};
 
 impl std::fmt::Debug for Box<dyn Callable> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -38,15 +39,15 @@ pub trait Callable {
         let mut formals = self.formals();
         let ellipsis: List = vec![].into();
         let matched_args: List = vec![].into();
-        
+
         // assign named args to corresponding formals
         let mut i: usize = 0;
         'outer: while i < args.values.borrow().len() {
             'inner: {
-                // check argname with immutable borrow, but drop scope. If 
+                // check argname with immutable borrow, but drop scope. If
                 // found, drop borrow so we can mutably assign it
                 if let (Some(argname), _) = &args.values.borrow()[i] {
-                    if let Some((Some(_), _)) = formals.remove_named(&argname) {
+                    if let Some((Some(_), _)) = formals.remove_named(argname) {
                         break 'inner;
                     }
                 }
@@ -55,13 +56,17 @@ pub trait Callable {
                 continue 'outer;
             }
 
-            matched_args.values
+            matched_args
+                .values
                 .borrow_mut()
-                .push(args.values.borrow_mut().remove(i));               
+                .push(args.values.borrow_mut().remove(i));
         }
 
+        // TODO(bug): need to evaluate trailing unassigned params that have
+        // a default value before popping off remaining trailing params
+
         // remove any Ellipsis param, and any trailing unassigned params
-        formals.pop_trailing();
+        let remainder = formals.pop_trailing();
 
         // backfill unnamed args, populating ellipsis with overflow
         let argsiter = args.values.borrow_mut().clone().into_iter();
@@ -86,17 +91,34 @@ pub trait Callable {
 
         // add back in parameter defaults that weren't filled with args
         for (param, default) in formals.into_iter() {
+            matched_args.values.borrow_mut().push((
+                param,
+                Obj::Closure(default, stack.last_frame().env().clone()),
+            ));
+        }
+
+        if let Some(Expr::Ellipsis(Some(name))) = remainder.get(0) {
             matched_args
                 .values
                 .borrow_mut()
-                .push((param, Obj::Closure(default, stack.last_frame().env().clone())));
+                .push((Some(name), Obj::List(ellipsis.clone())))
+        } else if !remainder.is_empty() {
+            matched_args
+                .values
+                .borrow_mut()
+                .push((Some("...".to_string()), Obj::List(ellipsis.clone())))
         }
 
         Ok((matched_args, ellipsis))
     }
 
-    fn match_arg_exprs(&self, args: ExprList, stack: &mut CallStack) -> Result<(List, List), Signal> {
+    fn match_arg_exprs(
+        &self,
+        args: ExprList,
+        stack: &mut CallStack,
+    ) -> Result<(List, List), Signal> {
         let args: List = stack.parent_frame().eval_list_lazy(args)?.try_into()?;
+        let args = args.dedup_last();
         self.match_args(args, stack)
     }
 
@@ -105,7 +127,12 @@ pub trait Callable {
         self.call_matched(args, ellipsis, stack)
     }
 
-    fn call_matched(&self, mut _args: List, mut _ellipsis: List, _stack: &mut CallStack) -> EvalResult {
+    fn call_matched(
+        &self,
+        mut _args: List,
+        mut _ellipsis: List,
+        _stack: &mut CallStack,
+    ) -> EvalResult {
         unimplemented!()
     }
 
@@ -116,6 +143,7 @@ pub trait Callable {
     }
 }
 
+#[derive(Default)]
 pub struct FormatState {
     // // character width of indentation
     // indent_size: usize,
@@ -125,17 +153,6 @@ pub struct FormatState {
     // start: usize,
     // // width of desired formatted code
     // width: usize,
-}
-
-impl Default for FormatState {
-    fn default() -> Self {
-        FormatState {
-            // indent_size: 2,
-            // indent_count: 0,
-            // start: 0,
-            // width: 80,
-        }
-    }
 }
 
 pub trait Format {
@@ -188,6 +205,7 @@ pub enum SymKind {
     Function,
     Infix,
     Prefix,
+    Postfix,
     PostfixCall(&'static str, &'static str),
 }
 
@@ -208,6 +226,7 @@ where
             Function => format!("{sym}({})", args),
             Infix => format!("{} {sym} {}", args.values[0], args.values[1]),
             Prefix => format!("{sym}{}", args.values[0]),
+            Postfix => format!("{}{sym}", args.values[0]),
             PostfixCall(l, r) => format!("{sym}{l}{}{r}", args),
         }
     }
@@ -261,7 +280,7 @@ impl Format for String {
 
 impl Callable for String {
     fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
-        (stack.last_frame().env.clone().get(self.clone())?).call(args, stack)
+        (stack.last_frame().env().clone().get(self.clone())?).call(args, stack)
     }
 }
 
@@ -269,7 +288,9 @@ impl Format for Obj {}
 
 impl Callable for Obj {
     fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
-        let Obj::Function(_, body, _) = self else { return internal_err!() };
+        let Obj::Function(_, body, _) = self else {
+            return internal_err!();
+        };
 
         // body is a primitive, call directly
         if let Expr::Primitive(f) = body {
@@ -282,17 +303,16 @@ impl Callable for Obj {
     }
 
     fn call_matched(&self, args: List, ellipsis: List, stack: &mut CallStack) -> EvalResult {
-        let Obj::Function(_, body, _) = self else { return internal_err!() };
+        let Obj::Function(_, body, _) = self else {
+            return internal_err!();
+        };
 
         stack
             .last_frame()
             .env()
             .insert("...".to_string(), Obj::List(ellipsis));
 
-        stack
-            .last_frame()
-            .env()
-            .append(Obj::List(args));
+        stack.last_frame().env().append(Obj::List(args));
 
         // evaluate body in local scope
         stack.eval(body.clone())

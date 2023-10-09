@@ -453,7 +453,7 @@ dependencies = [
 
 [[package]]
 name = "r"
-version = "0.2.0"
+version = "0.3.1"
 dependencies = [
  "crossterm 0.27.0",
  "getrandom",

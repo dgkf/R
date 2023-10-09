@@ -1,8 +1,9 @@
 use r_derive::*;
 
+use crate::callable::core::*;
+use crate::context::Context;
 use crate::error::*;
 use crate::lang::*;
-use crate::callable::core::*;
 use crate::object::*;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -24,14 +25,16 @@ impl Callable for PrimitivePaste {
         let named_indices: Vec<usize> = vals
             .iter()
             .enumerate()
-            .filter(|(_, (k, _))| *k == Some("collapse".to_string()) || *k == Some("sep".to_string()))
+            .filter(|(_, (k, _))| {
+                *k == Some("collapse".to_string()) || *k == Some("sep".to_string())
+            })
             .map(|(i, _)| i)
             .collect();
 
         // remove named sep and collapse args from our arguments and populate values
         for i in named_indices.iter().rev() {
             let (Some(k), v) = vals.remove(*i) else {
-                continue
+                continue;
             };
             match (k.as_str(), v) {
                 ("sep", Obj::Vector(v)) => {
@@ -49,8 +52,10 @@ impl Callable for PrimitivePaste {
                 }
                 ("collapse", _) => {
                     return Err(Signal::Error(RError::WithCallStack(
-                        Box::new(RError::Other("collapse parameter must be NULL or a character string.".to_string())),
-                        stack.clone()
+                        Box::new(RError::Other(
+                            "collapse parameter must be NULL or a character string.".to_string(),
+                        )),
+                        stack.clone(),
                     )))
                 }
                 _ => continue,
@@ -60,9 +65,11 @@ impl Callable for PrimitivePaste {
         // coerce all of our remaining arguments into vectors of strings
         let vec_s_vec: Vec<Vec<String>> = vals
             .into_iter()
-            .map(|(_, v)| match v.as_character()? {
-                Obj::Vector(v) => Ok(v.into()),
-                _ => unreachable!(),
+            .map(|(_, v)| -> Result<Vec<String>, Signal> {
+                match v.as_character()? {
+                    Obj::Vector(v) => Ok(v.into()),
+                    _ => unreachable!(),
+                }
             })
             .collect::<Result<_, _>>()?;
 
@@ -73,19 +80,18 @@ impl Callable for PrimitivePaste {
         // as we should known the exact length of all the output strings, but would
         // have an overhead of pre-calculating sizes.
         let mut output = vec!["".to_string(); max_len];
-        for i in 0..vec_s_vec.len() {
-            for j in 0..output.len() {
+        (0..vec_s_vec.len()).for_each(|i| {
+            (0..output.len()).for_each(|j| {
                 let vec_len = vec_s_vec[i].len();
                 if i > 0 {
                     output[j].push_str(sep.as_str())
                 };
                 // Need to ignore null
-                if vec_len == 0 {
-                    continue;
+                if vec_len != 0 {
+                    output[j].push_str(vec_s_vec[i][j % vec_len].as_str())
                 }
-                output[j].push_str(vec_s_vec[i][j % vec_len].as_str())
-            }
-        }
+            });
+        });
 
         if should_collapse {
             output = vec![output.join(&collapse)];
@@ -98,21 +104,18 @@ impl Callable for PrimitivePaste {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::r;
     use crate::object::types::*;
+    use crate::r;
 
     #[test]
     fn numeric_input() {
-        assert_eq!(
-            r!{ paste(1, 2, collapse = NULL) }, 
-            r!{ "1 2" }
-        );
+        assert_eq!(r! { paste(1, 2, collapse = NULL) }, r! { "1 2" });
     }
 
     #[test]
     fn only_null() {
         assert_eq!(
-            r!{ paste(null) }, 
+            r! { paste(null) },
             Ok(Obj::Vector(Vector::from(Vec::<Character>::new())))
         );
     }
@@ -120,64 +123,61 @@ mod test {
     #[test]
     fn ignore_null() {
         assert_eq!(
-            r!{ paste(1.1, null, 2, false, "a", c(1.0, 2.0)) },
-            r!{ c("1.1  2 false a 1", "1.1  2 false a 2") }
+            r! { paste(1.1, null, 2, false, "a", c(1.0, 2.0)) },
+            r! { c("1.1  2 false a 1", "1.1  2 false a 2") }
         )
     }
 
     #[test]
     fn sep_param() {
         assert_eq!(
-            r!{ paste(1.1, null, 2, false, "a", c(1.0, 2.0), sep = "+") },
-            r!{ c("1.1++2+false+a+1", "1.1++2+false+a+2") }
+            r! { paste(1.1, null, 2, false, "a", c(1.0, 2.0), sep = "+") },
+            r! { c("1.1++2+false+a+1", "1.1++2+false+a+2") }
         )
     }
 
     #[test]
     fn param_recycling() {
         assert_eq!(
-            r!{ paste(c(1, 2, 3, 4, 5), c("st", "nd", "rd", c("th", "th")), sep = "") },
-            r!{ c("1st", "2nd", "3rd", "4th", "5th") }
+            r! { paste(c(1, 2, 3, 4, 5), c("st", "nd", "rd", c("th", "th")), sep = "") },
+            r! { c("1st", "2nd", "3rd", "4th", "5th") }
         )
     }
 
     #[test]
     fn collapse_param() {
         assert_eq!(
-            r!{ paste(1.1, null, 2, false, "a", c(1.0, 2.0), collapse = "+") },
-            r!{ "1.1  2 false a 1+1.1  2 false a 2" }
+            r! { paste(1.1, null, 2, false, "a", c(1.0, 2.0), collapse = "+") },
+            r! { "1.1  2 false a 1+1.1  2 false a 2" }
         )
     }
 
     #[test]
     fn non_vec_collapse() {
-        assert_eq!(
-            r!{ paste(1, 2, 3, collapse = "+") },
-            r!{ "1 2 3" }
-        )
+        assert_eq!(r! { paste(1, 2, 3, collapse = "+") }, r! { "1 2 3" })
     }
 
     #[test]
     fn collapse_and_sep() {
         assert_eq!(
-            r!{ paste(c(1, 2), 3, 4, 5, sep = "-", collapse = "+") },
-            r!{ "1-3-4-5+2-3-4-5" }
+            r! { paste(c(1, 2), 3, 4, 5, sep = "-", collapse = "+") },
+            r! { "1-3-4-5+2-3-4-5" }
         )
     }
 
     #[test]
     fn param_from_parent_frame() {
         assert_eq!(
-            r!{ x <- "<collapse>"; paste(c("a", "b"), collapse = x) },
-            r!{ "a<collapse>b" }
+            r! { x <- "<collapse>"; paste(c("a", "b"), collapse = x) },
+            r! { "a<collapse>b" }
         )
     }
 
     #[test]
     fn collapse_empty_string() {
         assert_eq!(
-            r!{ paste("a", c("b", "c"), collapse = "") },
-            r!{ "a ba c" }
+            r! { paste("a", c("b", "c"), collapse = "") },
+            r! { "a ba c" }
         )
     }
 }

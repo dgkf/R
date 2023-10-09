@@ -1,11 +1,12 @@
-use wasm_bindgen::prelude::*;
 use std::rc::Rc;
+use wasm_bindgen::prelude::*;
 
-use crate::lang::{CallStack, Context, Signal, Cond};
-use crate::object::Environment;
-use pest::Parser;
-use crate::parser::{RParser, parse, Rule};
 use super::release::session_header;
+use crate::context::Context;
+use crate::lang::{CallStack, Cond, Signal};
+use crate::object::Environment;
+use crate::parser::{parse, RParser, Rule};
+use pest::Parser;
 
 #[wasm_bindgen]
 pub fn wasm_session_header() -> String {
@@ -16,12 +17,12 @@ pub fn wasm_session_header() -> String {
 pub fn wasm_env() -> JsValue {
     let global_env = Rc::new(Environment {
         parent: Some(Environment::from_builtins()),
-        ..Default::default()        
+        ..Default::default()
     });
 
-    let cb = Closure::<dyn Fn(String) -> Option<String>>::new(move |line: String| 
+    let cb = Closure::<dyn Fn(String) -> Option<String>>::new(move |line: String| {
         wasm_eval_in(&global_env, line.as_str())
-    );
+    });
 
     let ret = cb.as_ref().clone();
     cb.forget();
@@ -44,6 +45,6 @@ pub fn wasm_eval_in(env: &Rc<Environment>, input: &str) -> Option<String> {
             }
         }
         Err(Signal::Thunk) => None,
-        Err(e) => Some(format!("{e}"))
+        Err(e) => Some(format!("{e}")),
     }
 }

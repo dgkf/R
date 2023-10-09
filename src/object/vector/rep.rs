@@ -18,6 +18,12 @@ pub enum Rep<T> {
     // Iter(Box<dyn Iterator<Item = &T>>)
 }
 
+impl<T: AtomicMode + Clone + Default> Default for Rep<T> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<T: AtomicMode + Clone + Default> Rep<T> {
     /// Create an empty vector
     ///
@@ -56,7 +62,7 @@ impl<T: AtomicMode + Clone + Default> Rep<T> {
         match self {
             Rep::Subset(v, Subsets(subsets)) => {
                 let mut subsets = subsets.clone();
-                subsets.push(subset.into());
+                subsets.push(subset);
                 Rep::Subset(v.clone(), Subsets(subsets))
             }
         }
@@ -69,6 +75,11 @@ impl<T: AtomicMode + Clone + Default> Rep<T> {
                 [.., last] => std::cmp::min(v.clone().borrow().len(), last.len()),
             },
         }
+    }
+
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
     }
 
     /// Get a single element from a vector
@@ -109,7 +120,7 @@ impl<T: AtomicMode + Clone + Default> Rep<T> {
                 let rvc = rv.clone();
                 let rvb = rvc.borrow();
 
-                let lv_len = lvb.len().clone();
+                let lv_len = lvb.len();
                 let l_indices = ls.clone().into_iter().take_while(|(i, _)| i < &lv_len);
                 let r_indices = rs.clone().into_iter().take_while(|(i, _)| i < &lv_len);
 
@@ -288,10 +299,7 @@ impl<T: AtomicMode + Clone + Default> Rep<T> {
                 let vc = v.clone();
                 let vb = vc.borrow();
                 let index = subsets.get_index_at(index)?;
-                match vb.get(index) {
-                    Some(x) => Some(x.clone()),
-                    None => None,
-                }
+                vb.get(index).cloned()
             }
         }
     }
@@ -760,13 +768,13 @@ where
 #[cfg(test)]
 mod test {
     use super::OptionNA::*;
-    use crate::utils::SameType;
-    use crate::object::{types::*, VecPartialCmp};
     use crate::object::rep::Rep;
+    use crate::object::{types::*, VecPartialCmp};
+    use crate::utils::SameType;
 
     #[test]
     fn vector_add() {
-        let x = Rep::from((1..=10).into_iter().collect::<Vec<_>>());
+        let x = Rep::from((1..=10).collect::<Vec<_>>());
         let y = Rep::from(vec![2, 5, 6, 2, 3]);
 
         let z = x + y;
@@ -779,7 +787,7 @@ mod test {
 
     #[test]
     fn vector_mul() {
-        let x = Rep::from((1..=10).into_iter().collect::<Vec<_>>());
+        let x = Rep::from((1..=10).collect::<Vec<_>>());
         let y = Rep::from(vec![Some(2), NA, Some(6), NA, Some(3)]);
 
         let z = x * y;

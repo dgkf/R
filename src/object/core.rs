@@ -1,12 +1,13 @@
 use std::rc::Rc;
 
-use crate::{lang::Signal, error::RError, internal_err};
+use crate::{error::RError, internal_err, lang::Signal};
 
 use super::*;
 
-#[derive(Debug, Clone)]
+#[derive(Default, Debug, Clone)]
 pub enum Obj {
     // Data structures
+    #[default]
     Null,
     Vector(Vector),
     List(List),
@@ -34,15 +35,16 @@ impl PartialEq for Obj {
             (Obj::Expr(l), Obj::Expr(r)) => l == r,
             (Obj::Closure(lc, lenv), Obj::Closure(rc, renv)) => lc == rc && lenv == renv,
             (Obj::Function(largs, lbody, lenv), Obj::Function(rargs, rbody, renv)) => {
-                largs == rargs && lbody == rbody && 
-                Obj::Environment(lenv.clone()) == Obj::Environment(renv.clone())
+                largs == rargs
+                    && lbody == rbody
+                    && Obj::Environment(lenv.clone()) == Obj::Environment(renv.clone())
             }
             (Obj::Environment(l), Obj::Environment(r)) => {
                 l.values.as_ptr() == r.values.as_ptr()
                     && (match (&l.parent, &r.parent) {
                         (None, None) => true,
                         (Some(lp), Some(rp)) => {
-                            Rc::<Environment>::as_ptr(&lp) == Rc::<Environment>::as_ptr(&rp)
+                            Rc::<Environment>::as_ptr(lp) == Rc::<Environment>::as_ptr(rp)
                         }
                         _ => false,
                     })
@@ -65,7 +67,7 @@ impl TryInto<i32> for Obj {
         use RError::CannotBeCoercedToInteger;
 
         let Obj::Vector(Vector::Integer(v)) = self.as_integer()? else {
-            return internal_err!()
+            return internal_err!();
         };
 
         match v.inner().clone().borrow()[..] {
@@ -90,7 +92,7 @@ impl TryInto<f64> for Obj {
         use RError::CannotBeCoercedToNumeric;
 
         let Obj::Vector(Vector::Numeric(v)) = self.as_numeric()? else {
-            return internal_err!()
+            return internal_err!();
         };
 
         match v.inner().clone().borrow()[..] {
@@ -104,7 +106,7 @@ impl TryInto<Vec<f64>> for Obj {
     type Error = Signal;
     fn try_into(self) -> Result<Vec<f64>, Self::Error> {
         let Obj::Vector(Vector::Numeric(v)) = self.as_numeric()? else {
-            return internal_err!()
+            return internal_err!();
         };
 
         Ok(v.inner()
@@ -118,4 +120,3 @@ impl TryInto<Vec<f64>> for Obj {
             .collect())
     }
 }
-

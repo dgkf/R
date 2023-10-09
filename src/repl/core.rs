@@ -4,13 +4,14 @@ use std::rc::Rc;
 
 use super::highlight::RHighlighter;
 use super::prompt::RPrompt;
-use super::validator::RValidator;
 use super::release::*;
-use crate::lang::{CallStack, Cond, Context, Signal, EvalResult};
+use super::validator::RValidator;
+use crate::context::Context;
+use crate::lang::{CallStack, Cond, EvalResult, Signal};
 use crate::object::Environment;
 use crate::parser::parse;
 
-pub fn repl<P>(history: Option<&P>) -> Result<(), ()>
+pub fn repl<P>(history: Option<&P>) -> Result<(), Signal>
 where
     P: AsRef<Path>,
 {
@@ -38,7 +39,7 @@ where
     };
 
     // initialize our repl prompt
-    let prompt = RPrompt::default();
+    let prompt = RPrompt;
 
     // REPL
     loop {
@@ -61,7 +62,7 @@ where
                             Err(e) => print!("{e}"),
                         }
                     }
-                    Err(e) => eprintln!("{e}")
+                    Err(e) => eprint!("{e}"),
                 }
             }
             Ok(reedline::Signal::CtrlD) => break,
@@ -79,12 +80,12 @@ where
 pub fn eval(input: &str) -> EvalResult {
     let global_env = Rc::new(Environment {
         parent: Some(Environment::from_builtins()),
-        ..Default::default()        
+        ..Default::default()
     });
 
     let mut stack = CallStack::from(global_env.clone());
     match parse(input) {
         Ok(expr) => stack.eval_and_finalize(expr),
-        Err(e) => Err(e)
+        Err(e) => Err(e),
     }
 }

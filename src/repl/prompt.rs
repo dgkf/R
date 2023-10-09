@@ -1,16 +1,11 @@
 use std::borrow::Cow;
 
 use reedline::{
-    Prompt, PromptEditMode, PromptHistorySearch, PromptHistorySearchStatus, PromptViMode, Color
+    Color, Prompt, PromptEditMode, PromptHistorySearch, PromptHistorySearchStatus, PromptViMode,
 };
 
-#[derive(Clone)]
+#[derive(Default, Clone)]
 pub struct RPrompt;
-impl RPrompt {
-    pub fn default() -> Self {
-        RPrompt {}
-    }
-}
 
 impl Prompt for RPrompt {
     fn render_prompt_left(&self) -> Cow<str> {

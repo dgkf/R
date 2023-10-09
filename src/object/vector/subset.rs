@@ -28,9 +28,9 @@ impl Subset {
             }),
             Subset::Range(range) => {
                 if range.start <= index && index < range.end {
-                    return Some(range.start + index);
+                    Some(range.start + index)
                 } else {
-                    return None;
+                    None
                 }
             }
             Subset::Mask(mask) => mask
@@ -58,6 +58,11 @@ impl Subset {
         }
     }
 
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
     pub fn filter<'a, I>(
         &self,
         mut iter: I,
@@ -71,7 +76,7 @@ impl Subset {
 
                 // fastest case, when no indices are selected
                 if l == 0 {
-                    return Box::new(vec![].into_iter());
+                    Box::new(vec![].into_iter())
 
                 // very fast case, when one index is selected
                 } else if l == 1 {
@@ -108,10 +113,10 @@ impl Subset {
                                         *i += 1;
                                     }
 
-                                    return Some(vec![(xi_orig, x); n]);
+                                    Some(vec![(xi_orig, x); n])
                                 },
                             )
-                            .flat_map(|i| i),
+                            .flatten(),
                     )
                 // worst case, indices in random order
                 } else {
@@ -126,7 +131,7 @@ impl Subset {
                             OptionNA::Some(i) => *i,
                         })
                         .enumerate()
-                        .map(|(i, v)| (v, i.clone())) // cast NAs to -1's
+                        .map(|(i, v)| (v, i)) // cast NAs to -1's
                         .collect::<Vec<_>>();
 
                     // sort by index to get (sorted indices, order)

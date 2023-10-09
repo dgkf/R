@@ -22,7 +22,7 @@ impl Subsets {
     ///
     pub fn get_index_at(&self, mut index: usize) -> Option<usize> {
         let Subsets(subsets) = self;
-        for subset in subsets.into_iter().rev() {
+        for subset in subsets.iter().rev() {
             match subset.get_index_at(index) {
                 Some(i) => index = i,
                 None => return None,
@@ -62,7 +62,7 @@ impl IntoIterator for NamedSubsets {
     type IntoIter = Box<dyn Iterator<Item = Self::Item>>;
 
     fn into_iter(self) -> Self::IntoIter {
-        let mut iter = Box::new((0_usize..).map(|i| (i, Some(i))).into_iter()) as Self::IntoIter;
+        let mut iter = Box::new((0_usize..).map(|i| (i, Some(i)))) as Self::IntoIter;
         let Subsets(subsets) = self.subsets;
         for subset in subsets {
             match subset {
@@ -76,7 +76,7 @@ impl IntoIterator for NamedSubsets {
                         Some(n) => iter.map(|(i, _)| i).take(n).collect(),
                         None => {
                             // figure out the absolute maximum value we may require
-                            let mut n = 0 as usize;
+                            let mut n = 0_usize;
                             for name in names.borrow().iter() {
                                 let OptionNA::Some(name) = name else { continue };
                                 let name_max = snames
@@ -87,7 +87,7 @@ impl IntoIterator for NamedSubsets {
                                 n = std::cmp::max(n, *name_max)
                             }
                             iter.map(|(i, _)| i).take(n + 1).collect()
-                        },
+                        }
                     };
 
                     // for each name, find the first index in the subset
@@ -131,7 +131,7 @@ impl IntoIterator for Subsets {
     ///
     fn into_iter(self) -> Self::IntoIter {
         let Subsets(subsets) = self;
-        let mut iter = Box::new((0_usize..).map(|i| (i, Some(i))).into_iter()) as Self::IntoIter;
+        let mut iter = Box::new((0_usize..).map(|i| (i, Some(i)))) as Self::IntoIter;
         for subset in subsets {
             iter = subset.filter(iter);
         }
@@ -145,7 +145,7 @@ mod test {
 
     #[test]
     fn subset_range() {
-        let x: Vector = (1..=10).into_iter().collect::<Vec<_>>().into();
+        let x: Vector = (1..=10).collect::<Vec<_>>().into();
         let result = x.subset((2..6).into()).materialize();
         let expect = Vector::from(vec![3, 4, 5, 6]);
         assert_eq!(result, expect)
@@ -153,7 +153,7 @@ mod test {
 
     #[test]
     fn subset_sequential_indices() {
-        let x: Vector = (1..=10).into_iter().collect::<Vec<_>>().into();
+        let x: Vector = (1..=10).collect::<Vec<_>>().into();
         let result = x.subset(vec![2, 3, 4, 5].into()).materialize();
         let expect = Vector::from(vec![3, 4, 5, 6]);
         assert_eq!(result, expect)
@@ -161,7 +161,7 @@ mod test {
 
     #[test]
     fn subset_sequential_repeating_indices() {
-        let x: Vector = (1..=10).into_iter().collect::<Vec<_>>().into();
+        let x: Vector = (1..=10).collect::<Vec<_>>().into();
         let result = x.subset(vec![2, 3, 3, 3, 5, 5].into()).materialize();
         let expect = Vector::from(vec![3, 4, 4, 4, 6, 6]);
         assert_eq!(result, expect)
@@ -169,7 +169,7 @@ mod test {
 
     #[test]
     fn subset_indices_with_gap() {
-        let x: Vector = (1..=10).into_iter().collect::<Vec<_>>().into();
+        let x: Vector = (1..=10).collect::<Vec<_>>().into();
         let result = x.subset(vec![2, 8].into()).materialize();
         let expect = Vector::from(vec![3, 9]);
         assert_eq!(result, expect);
@@ -177,7 +177,7 @@ mod test {
 
     #[test]
     fn subset_empty_indices() {
-        let x: Vector = (1..=10).into_iter().collect::<Vec<_>>().into();
+        let x: Vector = (1..=10).collect::<Vec<_>>().into();
         let result = x.subset(vec![].into()).materialize();
         let expect = Vector::from(Vec::new() as Vec<i32>);
         assert_eq!(result, expect);
@@ -185,7 +185,7 @@ mod test {
 
     #[test]
     fn subset_single_index() {
-        let x: Vector = (1..=10).into_iter().collect::<Vec<_>>().into();
+        let x: Vector = (1..=10).collect::<Vec<_>>().into();
         let result = x.subset(vec![6].into()).materialize();
         let expect = Vector::from(vec![7]);
         assert_eq!(result, expect);
@@ -193,7 +193,7 @@ mod test {
 
     #[test]
     fn subset_unsorted_indices() {
-        let x: Vector = (1..=10).into_iter().collect::<Vec<_>>().into();
+        let x: Vector = (1..=10).collect::<Vec<_>>().into();
         let result = x.subset(vec![6, 2, 1, 4].into()).materialize();
         let expect = Vector::from(vec![7, 3, 2, 5]);
         assert_eq!(result, expect);
@@ -201,7 +201,7 @@ mod test {
 
     #[test]
     fn subset_repeated_indices() {
-        let x: Vector = (1..=10).into_iter().collect::<Vec<_>>().into();
+        let x: Vector = (1..=10).collect::<Vec<_>>().into();
         let result = x.subset(vec![6, 2, 6, 6].into()).materialize();
         let expect = Vector::from(vec![7, 3, 7, 7]);
         assert_eq!(result, expect);
@@ -209,7 +209,7 @@ mod test {
 
     #[test]
     fn subset_by_range() {
-        let x: Vector = (1..=10).into_iter().collect::<Vec<_>>().into();
+        let x: Vector = (1..=10).collect::<Vec<_>>().into();
         let result = x.subset((3..6).into()).materialize();
         let expect = Vector::from(vec![4, 5, 6]);
         assert_eq!(result, expect);
@@ -217,7 +217,7 @@ mod test {
 
     #[test]
     fn nested_subsets() {
-        let x: Vector = (1..=10).into_iter().collect::<Vec<_>>().into();
+        let x: Vector = (1..=10).collect::<Vec<_>>().into();
         let result = x
             .subset((3..6).into())
             .subset(vec![2, 1].into())
@@ -228,7 +228,7 @@ mod test {
 
     #[test]
     fn subset_assignment() {
-        let x: Vector = (1..=10).into_iter().collect::<Vec<_>>().into();
+        let x: Vector = (1..=10).collect::<Vec<_>>().into();
         let mut subset = x.subset((3..6).into()).subset(vec![2, 1].into());
         let y: Vector = vec![101, 102].into();
         let _ = subset.assign(crate::object::Obj::Vector(y));

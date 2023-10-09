@@ -1,15 +1,14 @@
 /// Do not edit directly!
-/// 
+///
 /// The contents of this file are built by build.rs
 ///
-
 use std::collections::HashMap;
 
-use::lazy_static::lazy_static;
+use ::lazy_static::lazy_static;
 
 use crate::callable::core::Builtin;
-use crate::callable::primitive::*;
 use crate::callable::operators::*;
+use crate::callable::primitive::*;
 
 lazy_static! {
     pub static ref BUILTIN: HashMap<&'static str, Box<dyn Builtin>> = {
@@ -19,6 +18,7 @@ lazy_static! {
             ("+", Box::new(InfixAdd) as Box<dyn Builtin>),
             ("-", Box::new(InfixSub) as Box<dyn Builtin>),
             ("-", Box::new(PrefixSub) as Box<dyn Builtin>),
+            ("..", Box::new(PrefixPack) as Box<dyn Builtin>),
             ("*", Box::new(InfixMul) as Box<dyn Builtin>),
             ("/", Box::new(InfixDiv) as Box<dyn Builtin>),
             ("^", Box::new(InfixPow) as Box<dyn Builtin>),
@@ -36,6 +36,7 @@ lazy_static! {
             ("|>", Box::new(InfixPipe) as Box<dyn Builtin>),
             (":", Box::new(InfixColon) as Box<dyn Builtin>),
             ("$", Box::new(InfixDollar) as Box<dyn Builtin>),
+            ("..", Box::new(PostfixPack) as Box<dyn Builtin>),
             ("[[", Box::new(PostfixIndex) as Box<dyn Builtin>),
             ("[", Box::new(PostfixVecIndex) as Box<dyn Builtin>),
             ("q", Box::new(PrimitiveQ) as Box<dyn Builtin>),

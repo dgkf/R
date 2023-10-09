@@ -1,23 +1,18 @@
-use crate::{parser::*, lang::{CallStack, Signal}};
+use crate::{
+    lang::{CallStack, Signal},
+    parser::*,
+};
 
 use core::fmt;
 use pest::error::LineColLocation::Pos;
 
 #[macro_export]
 macro_rules! internal_err {
-    () => { 
-        crate::error::RError::Internal(
-            None, 
-            std::file!(), 
-            std::line!()
-        ).into()
+    () => {
+        $crate::error::RError::Internal(None, std::file!(), std::line!()).into()
     };
-    ( $x:expr ) => { 
-        crate::error::RError::Internal(
-            Some($x.to_string()),
-            std::file!(), 
-            std::line!()
-        ).into() 
+    ( $x:expr ) => {
+        $crate::error::RError::Internal(Some($x.to_string()), std::file!(), std::line!()).into()
     };
 }
 
@@ -25,9 +20,6 @@ macro_rules! internal_err {
 pub enum RError {
     VariableNotFound(String),
     IncorrectContext(String),
-    ParseFailureVerbose(pest::error::Error<Rule>),
-    ParseFailure(pest::error::Error<Rule>),
-    ParseUnexpected(Rule),
     NotInterpretableAsLogical,
     ConditionIsNotScalar,
     CannotBeCoercedToCharacter,
@@ -39,12 +31,20 @@ pub enum RError {
     ArgumentInvalid(String),
     Other(String),
 
+    // parsing errors
+    ParseFailureVerbose(Box<pest::error::Error<Rule>>),
+    ParseFailure(Box<pest::error::Error<Rule>>),
+    ParseUnexpected(Rule),
+
     // temporary workaround until we propagate call stack to all error locations
-    WithCallStack(Box<RError>, CallStack),      
+    WithCallStack(Box<RError>, CallStack),
 
     // in-dev errors
     Unimplemented(Option<String>),
     Internal(Option<String>, &'static str, u32),
+
+    // features
+    FeatureDisabledRestArgs,
 }
 
 impl RError {
@@ -58,39 +58,44 @@ impl RError {
                 _ => format!("Parse failed at {:?}", e.line_col),
             },
             RError::ParseUnexpected(rule) => {
-                format!("Parse failed. Found {:#?}", rule)
+                format!("Parse failed. Found unexpected parsing rule '{:#?}'", rule)
             }
             RError::NotInterpretableAsLogical => {
-                format!("argument is not interpretable as logical")
+                "argument is not interpretable as logical".to_string()
             }
-            RError::ConditionIsNotScalar => {
-                format!("the condition has length > 1")
-            }
+            RError::ConditionIsNotScalar => "the condition has length > 1".to_string(),
             RError::CannotBeCoercedToCharacter => {
-                format!("object cannot be coerced to type 'character'")
-            },
+                "object cannot be coerced to type 'character'".to_string()
+            }
             RError::CannotBeCoercedToLogical => {
-                format!("object cannot be coerced to type 'logical'")
+                "object cannot be coerced to type 'logical'".to_string()
             }
             RError::CannotBeCoercedToInteger => {
-                format!("object cannot be coerced to type 'integer'")
+                "object cannot be coerced to type 'integer'".to_string()
             }
             RError::CannotBeCoercedToNumeric => {
-                format!("object cannot be coerced to type 'numeric'")
+                "object cannot be coerced to type 'numeric'".to_string()
             }
             RError::CannotBeCoercedTo(to) => {
                 format!("object cannot be coerced to type '{to}'")
             }
-            RError::Other(s) => {
-                format!("{}", s)
-            }
+            RError::Other(s) => s.to_string(),
             RError::WithCallStack(e, c) => format!("{}\n{c}", e.as_str()),
             RError::ArgumentMissing(s) => format!("argument '{s}' is missing with no default"),
             RError::ArgumentInvalid(s) => format!("argument '{s}' is invalid"),
-            RError::Unimplemented(Some(s)) => format!("Uh, oh! Looks like '{s}' is only partially implemented"),
-            RError::Unimplemented(_) => format!("Uh, oh! You tried to do something that is only partially implemented"),
+            RError::Unimplemented(Some(s)) => {
+                format!("Uh, oh! Looks like '{s}' is only partially implemented")
+            }
+            RError::Unimplemented(_) => {
+                "Uh, oh! You tried to do something that is only partially implemented".to_string()
+            }
             RError::Internal(None, file, line) => format!("Internal Error ({file}:{line})"),
-            RError::Internal(Some(msg), file, line) => format!("Internal Error ({file}:{line})\n{msg}"),
+            RError::Internal(Some(msg), file, line) => {
+                format!("Internal Error ({file}:{line})\n{msg}")
+            }
+            RError::FeatureDisabledRestArgs => {
+                "..rest syntax currently disabled. To enable, re-build with\n\n    cargo build --features rest-args\n".to_string()
+            }
         }
     }
 }
@@ -101,14 +106,14 @@ impl fmt::Display for RError {
     }
 }
 
-impl Into<Signal> for RError {
-    fn into(self) -> Signal {
-        Signal::Error(self)
+impl From<RError> for Signal {
+    fn from(val: RError) -> Self {
+        Signal::Error(val)
     }
 }
 
-impl<T> Into<Result<T, Signal>> for RError {
-    fn into(self) -> Result<T, Signal> {
-        Err(Signal::Error(self))
+impl<T> From<RError> for Result<T, Signal> {
+    fn from(val: RError) -> Self {
+        Err(Signal::Error(val))
     }
 }

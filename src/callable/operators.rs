@@ -1,8 +1,9 @@
 use r_derive::*;
 
 use super::core::*;
+use crate::context::Context;
 use crate::error::RError;
-use crate::lang::{CallStack, Context, EvalResult};
+use crate::lang::{CallStack, EvalResult};
 use crate::object::types::*;
 use crate::object::*;
 
@@ -43,6 +44,15 @@ impl Callable for PrefixSub {
     fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
         let what = stack.eval(args.unnamed_unary_arg())?;
         -what
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+#[builtin(sym = "..", kind = Prefix)]
+pub struct PrefixPack;
+impl Callable for PrefixPack {
+    fn call(&self, _args: ExprList, _stack: &mut CallStack) -> EvalResult {
+        RError::IncorrectContext("..".to_string()).into()
     }
 }
 
@@ -254,7 +264,7 @@ impl Callable for InfixColon {
         if let Some((llhs, lrhs)) = colon_args(&arg1) {
             // since we're rearranging calls here, we might need to modify the call stack
             let args = ExprList::from(vec![(None, llhs), (None, lrhs), (None, arg2)]);
-            return InfixColon.call(args, stack);
+            InfixColon.call(args, stack)
 
         // tertiary case
         } else if let Some((_, arg3)) = argstream.next() {
@@ -279,7 +289,7 @@ impl Callable for InfixColon {
                         v += by;
                         v
                     }))
-                    .take_while(|x| if &start <= &end { x <= &end } else { x >= &end })
+                    .take_while(|x| if start <= end { x <= &end } else { x >= &end })
                     .collect::<Vec<f64>>(),
             )));
 
@@ -288,16 +298,9 @@ impl Callable for InfixColon {
             let start: i32 = stack.eval(arg1)?.as_integer()?.try_into()?;
             let end: i32 = stack.eval(arg2)?.as_integer()?.try_into()?;
             return Ok(Obj::Vector(Vector::from(if start <= end {
-                (start..=end)
-                    .map(|i| i as f64)
-                    .into_iter()
-                    .collect::<Vec<f64>>()
+                (start..=end).map(|i| i as f64).collect::<Vec<f64>>()
             } else {
-                (end..=start)
-                    .map(|i| i as f64)
-                    .into_iter()
-                    .rev()
-                    .collect::<Vec<f64>>()
+                (end..=start).map(|i| i as f64).rev().collect::<Vec<f64>>()
             })));
         }
     }
@@ -347,6 +350,15 @@ impl Callable for InfixDollar {
             }
             _ => unimplemented!(),
         }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+#[builtin(sym = "..", kind = Postfix)]
+pub struct PostfixPack;
+impl Callable for PostfixPack {
+    fn call(&self, _args: ExprList, _stack: &mut CallStack) -> EvalResult {
+        RError::IncorrectContext("..".to_string()).into()
     }
 }
 

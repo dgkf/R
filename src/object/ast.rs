@@ -8,9 +8,10 @@ pub enum Expr {
     Null,
     NA,
     Inf,
+    More,
     Continue,
     Break,
-    Ellipsis,
+    Ellipsis(Option<String>),
     Missing,
     Bool(bool),
     Number(f64),
@@ -32,7 +33,7 @@ impl PartialEq for Expr {
             (Inf, Inf) => true,
             (Continue, Continue) => true,
             (Break, Break) => true,
-            (Ellipsis, Ellipsis) => true,
+            (Ellipsis(l), Ellipsis(r)) => l == r,
             (Missing, Missing) => true,
             (Bool(l), Bool(r)) => l == r,
             (Number(l), Number(r)) => l == r,
@@ -79,7 +80,8 @@ impl fmt::Display for Expr {
             Expr::String(x) => write!(f, "\"{}\"", x),
             Expr::Symbol(x) => write!(f, "{}", x),
             Expr::List(x) => write!(f, "{}", x),
-            Expr::Ellipsis => write!(f, "..."),
+            Expr::Ellipsis(None) => write!(f, "..."),
+            Expr::Ellipsis(Some(s)) => write!(f, "..{s}"),
             Expr::Call(what, args) => match &**what {
                 Expr::Primitive(p) => write!(f, "{}", p.rfmt_call(args)),
                 Expr::String(s) | Expr::Symbol(s) => write!(f, "{}({})", s, args),
@@ -105,7 +107,7 @@ impl fmt::Display for ExprList {
             .iter()
             .enumerate()
             .map(|(i, v)| match (&self.keys[i], v) {
-                (Some(k), Expr::Missing) => format!("{}", k),
+                (Some(k), Expr::Missing) => k.to_string(),
                 (Some(k), _) => format!("{} = {}", k, v),
                 (None, v) => format!("{}", v),
             })
@@ -123,7 +125,7 @@ impl IntoIterator for ExprList {
     type IntoIter = <Zip<IntoIter<Option<String>>, IntoIter<Expr>> as IntoIterator>::IntoIter;
 
     fn into_iter(self) -> Self::IntoIter {
-        self.keys.into_iter().zip(self.values.into_iter())
+        self.keys.into_iter().zip(self.values)
     }
 }
 
@@ -167,9 +169,15 @@ impl ExprList {
     }
 
     pub fn get_named(&self, key: &String) -> Option<Expr> {
-        let first_name_index = self.keys.iter().position(|i| i.as_ref() == Some(key));
+        // self.keys.iter()
+        //     .enumerate().rev()
+        //     .find(move |(_, i)| *i == &Some(key.clone()))
+        //     .and_then(|(idx, _)| self.values.get(self.keys.len().saturating_sub(idx)))
+        //     .and_then(|expr| Some(expr.clone()))
+
+        let first_name_index = self.keys.iter().rev().position(|i| i.as_ref() == Some(key));
         match first_name_index {
-            Some(index) => Some(self.values[index].clone()),
+            Some(index) => self.values.get(index).cloned(),
             _ => None,
         }
     }
@@ -205,10 +213,9 @@ impl ExprList {
     }
 
     pub fn position_ellipsis(&self) -> Option<usize> {
-        self.values.iter().position(|i| match i {
-            Expr::Ellipsis => true,
-            _ => false,
-        })
+        self.values
+            .iter()
+            .position(|i| matches!(i, Expr::Ellipsis(_)))
     }
 
     pub fn pop_trailing(&mut self) -> ExprList {
@@ -315,6 +322,11 @@ impl ExprList {
     pub fn len(&self) -> usize {
         self.values.len()
     }
+
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
 }
 
 impl From<Vec<Expr>> for ExprList {
@@ -337,6 +349,6 @@ impl From<Expr> for ExprList {
 
 impl From<Vec<(Option<String>, Expr)>> for ExprList {
     fn from(values: Vec<(Option<String>, Expr)>) -> Self {
-        ExprList::from_iter(values.into_iter())
+        ExprList::from_iter(values)
     }
 }

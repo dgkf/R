@@ -37,17 +37,16 @@ impl Callable for PrimitiveRnorm {
         // all random numbers at once from the same distribution
         if len == 1 {
             let mean = mean
-                .get(0)
-                .map_or(ArgumentInvalid(String::from("mean")).into(), |x| Ok(x))?;
+                .first()
+                .map_or(ArgumentInvalid(String::from("mean")).into(), Ok)?;
             let std = std
-                .get(0)
-                .map_or(ArgumentInvalid(String::from("std")).into(), |x| Ok(x))?;
+                .first()
+                .map_or(ArgumentInvalid(String::from("std")).into(), Ok)?;
 
             let normal = Normal::new(*mean, *std).unwrap();
 
             Ok(Obj::Vector(Vector::from(
                 (1..=n)
-                    .into_iter()
                     .map(|_| normal.sample(&mut rng))
                     .collect::<Vec<f64>>(),
             )))

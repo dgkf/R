@@ -1,5 +1,5 @@
-use nu_ansi_term::Style;
 use nu_ansi_term::Color;
+use nu_ansi_term::Style;
 use reedline::Highlighter;
 use reedline::StyledText;
 
@@ -30,8 +30,14 @@ impl RHighlighter {
     }
 }
 
+impl Default for RHighlighter {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Highlighter for RHighlighter {
-    fn highlight<'l>(&self, line: &'l str, _pos: usize) -> StyledText {
+    fn highlight(&self, line: &str, _pos: usize) -> StyledText {
         let mut styled_text = StyledText::new();
         match RParser::parse(Rule::hl, line) {
             Ok(pairs) => {
