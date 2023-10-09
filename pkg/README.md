@@ -10,7 +10,7 @@ Check out the [live demo](https://dgkf.github.io/R/)
 cargo run
 ```
 ```r
-# R version 0.3.0 -- "Days of Abandon"
+# R version 0.3.1 -- "Art Smock"
 
 x <- function(a = 1, ...) { a + c(...) }
 # function(a = 1, ...) {
@@ -61,6 +61,68 @@ kws <- (na, null, inf, true, false)
 There are plenty of more substantial [changes being considered](https://github.com/dgkf/R/issues?q=is%3Aissue+is%3Aopen+label%3Ameta-proposal). 
 If you enjoy mulling over the direction of syntax and features, feel
 free to join the conversation.
+
+### Experiments
+
+All experiments are feature-gated and enabled by running (or building) with 
+
+```sh
+cargo run --features "<feature>"
+```
+
+Please try them out and share your thoughts in the corresponding issues!
+
+#### Ellipsis packing and unpacking
+
+> [!NOTE]  
+> **feature:** `rest-args` (discussed in #48, #49)
+
+Current work is focused on `..args` named ellipsis arguments and `..args`
+unpacking in function calls. However, due to the experimental nature of this
+syntax it is currently behind a feature gate.
+
+```r
+f <- function(..args) {
+  args
+}
+
+f(1, 2, 3)  # collect ellipsis args into a named variable
+# (1, 2, 3)
+```
+
+```r
+args <- (a = 1, b = 2, c = 3)
+f <- function(a, b, c) {
+  a + b + c
+}
+
+f(..args)  # unpack lists into arguments
+# [1] 6
+
+more_args <- (c = 10)
+f(..args, ..more_args)  # duplicate names okay, last instance takes priority
+# [1] 13
+```
+
+#### Tail Recursion
+
+> [!NOTE]  
+> **feature:** `tail-call-optimization` (discussed in #60)
+
+Tail recursion allows for arbitrarily recursive call stacks - or, more 
+accurately, it discards frames from the call stack in this special case
+allowing for recursion without overflowing of the call stack.
+
+```r
+f <- function(n) if (n > 0) f(n - 1) else "done"
+f(10000)
+# [1] "done"
+```
+
+The details of how this is achieves requires the tail call's arguments to be
+executed _eagerly_ instead of R's typical _lazy_ argument evaluation. This 
+change can result in some unexpected behaviors that need discussion before
+the feature can be fully introduced.
 
 ### Performance
 
