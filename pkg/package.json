@@ -1,6 +1,15 @@
 {
   "name": "r",
+  "collaborators": [
+    "Doug Kelkhoff"
+  ],
+  "description": "An experimental reimaginging of R",
   "version": "0.3.1",
+  "license": "SEE LICENSE IN LICENSE.md",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dgkf/R/"
+  },
   "files": [
     "r_bg.wasm",
     "r.js",
