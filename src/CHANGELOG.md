@@ -4,6 +4,11 @@
 
 ## Major Changes
 
+* License was changed to be `GPL-3`. The contributor license agreement (`CLA`)
+  used in the development repository will remain in place with a grace period
+  for comment. With it comes a copyright and warranty disclaimer as recommended
+  in the `GPL`, which should make long-time R users feel right at home.
+
 * Added simplest-case destructuring assignment.
 
   ```r

@@ -1,7 +1,14 @@
 [package]
 name = "r"
+description = "An experimental reimaginging of R"
+authors = ["Doug Kelkhoff"]
 version = "0.3.1"
 edition = "2021"
+
+license-file = "LICENSE.md"
+
+repository = "https://github.com/dgkf/R/"
+readme = "README.md"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
