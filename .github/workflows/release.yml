@@ -122,7 +122,7 @@ jobs:
 
       - uses: actions/upload-artifact@v3
         with:
-          name: bins-${{ matrix.build }}
+          name: r-${{ matrix.build }}
           path: dist
 
   publish:
@@ -140,7 +140,7 @@ jobs:
         if: env.preview == 'false'
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: dist/*
+          file: r-*
           file_glob: true
           tag: ${{ github.ref_name }}
           overwrite: true
@@ -150,4 +150,4 @@ jobs:
         if: env.preview == 'true'
         with:
           name: release
-          path: dist/*
+          path: r-*
