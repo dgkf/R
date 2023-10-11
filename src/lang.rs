@@ -884,7 +884,10 @@ impl Context for Obj {
                 self.environment().unwrap(),
             )),
             Expr::More => Ok(Obj::Null),
+
+            // bubbles up to where a symbol can be attached for context
             Expr::Missing => Err(Error::Missing.into()),
+
             x => internal_err!(format!("Can't evaluate Context::eval(Obj, {x:?})")),
         }
     }
@@ -920,7 +923,10 @@ impl Context for Rc<Environment> {
             Expr::Continue => Err(Signal::Condition(Cond::Continue)),
             Expr::Primitive(p) => Ok(Obj::Function(p.formals(), Expr::Primitive(p), self.clone())),
             Expr::More => Ok(Obj::Null),
+
+            // bubbles up to where a symbol can be attached for context
             Expr::Missing => Err(Error::Missing.into()),
+
             x => internal_err!(format!(
                 "Can't evaluate Context::eval(Rc<Envrionment>, {x:?})"
             )),
