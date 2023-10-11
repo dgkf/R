@@ -117,15 +117,7 @@ jobs:
         shell: bash
         run: |
           mkdir -p dist
-          if [ "${{ matrix.os }}" = "windows-2019" ]; then
-            cp "target/${{ matrix.target }}/release/hx.exe" "dist/"
-          else
-            cp "target/${{ matrix.target }}/release/hx" "dist/"
-          fi
-          if [ -d runtime/grammars/sources ]; then
-            rm -rf runtime/grammars/sources
-          fi
-          cp -r runtime dist
+          cp "target/${{ matrix.target }}/release/r{,.exe}" "dist/"
 
       - uses: actions/upload-artifact@v3
         with:
