@@ -3,12 +3,12 @@ on:
   push:
     branches:
       - main
-    # tags:
-    # - 'v[0-9]+.[0-9]+'
-    # - 'v[0-9]+.[0-9]+.[0-9]+'
+    tags:
+      - 'v[0-9]+.[0-9]+'
+      - 'v[0-9]+.[0-9]+.[0-9]+'
   pull_request:
-    # branches:
-    #   - main
+    branches:
+      - main
 
 env:
   # Preview mode: Publishes the build output as a CI artifact instead of creating
@@ -17,7 +17,6 @@ env:
   # if the repository is a fork.
   preview: ${{ !startsWith(github.ref, 'refs/tags/') }}
   
-
 jobs:
   dist:
     name: Dist
@@ -37,101 +36,101 @@ jobs:
       matrix:
         build: [x86_64-linux] # , x86_64-macos, x86_64-windows]
         include:
-        - build: x86_64-linux
-          os: ubuntu-latest
-          rust: stable
-          target: x86_64-unknown-linux-gnu
-          cross: false
-    #     # - build: aarch64-linux
-    #     #   os: ubuntu-latest
-    #     #   rust: stable
-    #     #   target: aarch64-unknown-linux-gnu
-    #     #   cross: true
-    #     # - build: riscv64-linux
-    #     #   os: ubuntu-latest
-    #     #   rust: stable
-    #     #   target: riscv64gc-unknown-linux-gnu
-    #     #   cross: true
-    #     # - build: x86_64-macos
-    #     #   os: macos-latest
-    #     #   rust: stable
-    #     #   target: x86_64-apple-darwin
-    #     #   cross: false
-    #     # - build: x86_64-windows
-    #     #   os: windows-latest
-    #     #   rust: stable
-    #     #   target: x86_64-pc-windows-msvc
-    #     #   cross: false
+          - build: x86_64-linux
+            os: ubuntu-latest
+            rust: stable
+            target: x86_64-unknown-linux-gnu
+            cross: false
+          # - build: aarch64-linux
+          #   os: ubuntu-latest
+          #   rust: stable
+          #   target: aarch64-unknown-linux-gnu
+          #   cross: true
+          # - build: riscv64-linux
+          #   os: ubuntu-latest
+          #   rust: stable
+          #   target: riscv64gc-unknown-linux-gnu
+          #   cross: true
+          # - build: x86_64-macos
+          #   os: macos-latest
+          #   rust: stable
+          #   target: x86_64-apple-darwin
+          #   cross: false
+          # - build: x86_64-windows
+          #   os: windows-latest
+          #   rust: stable
+          #   target: x86_64-pc-windows-msvc
+          #   cross: false
 
     steps:
       - name: test
         shell: bash
         run: echo here
 
-      # - name: Checkout sources
-      #   uses: actions/checkout@v4
+      - name: Checkout sources
+        uses: actions/checkout@v4
 
-      # - name: Download grammars
-      #   uses: actions/download-artifact@v3
+      - name: Download grammars
+        uses: actions/download-artifact@v3
 
-      # # The rust-toolchain action ignores rust-toolchain.toml files.
-      # # Removing this before building with cargo ensures that the rust-toolchain
-      # # is considered the same between installation and usage.
-      # - name: Remove the rust-toolchain.toml file
-      #   run: rm rust-toolchain.toml
+      # The rust-toolchain action ignores rust-toolchain.toml files.
+      # Removing this before building with cargo ensures that the rust-toolchain
+      # is considered the same between installation and usage.
+      - name: Remove the rust-toolchain.toml file
+        run: rm -f rust-toolchain.toml
 
-      # - name: Install ${{ matrix.rust }} toolchain
-      #   uses: dtolnay/rust-toolchain@1.72.1
-      #   with:
-      #     toolchain: ${{ matrix.rust }}
-      #     target: ${{ matrix.target }}
+      - name: Install ${{ matrix.rust }} toolchain
+        uses: dtolnay/rust-toolchain@1.72.1
+        with:
+          toolchain: ${{ matrix.rust }}
+          target: ${{ matrix.target }}
 
-      # - name: Install Cross
-      #   if: "matrix.cross"
-      #   run: |
-      #     cargo install cross
-      #     echo "CARGO=cross" >> $GITHUB_ENV
-      #     echo "TARGET_FLAGS=--target ${{ matrix.target }}" >> $GITHUB_ENV
-      #     echo "TARGET_DIR=./target/${{ matrix.target }}" >> $GITHUB_ENV
+      - name: Install Cross
+        if: "matrix.cross"
+        run: |
+          cargo install cross
+          echo "CARGO=cross" >> $GITHUB_ENV
+          echo "TARGET_FLAGS=--target ${{ matrix.target }}" >> $GITHUB_ENV
+          echo "TARGET_DIR=./target/${{ matrix.target }}" >> $GITHUB_ENV
 
-      # - name: Show command used for Cargo
-      #   run: |
-      #     echo "cargo command is: ${{ env.CARGO }}"
-      #     echo "target flag is: ${{ env.TARGET_FLAGS }}"
+      - name: Show command used for Cargo
+        run: |
+          echo "cargo command is: ${{ env.CARGO }}"
+          echo "target flag is: ${{ env.TARGET_FLAGS }}"
 
-      # - name: Run cargo test
-      #   if: "!matrix.skip_tests"
-      #   run: ${{ env.CARGO }} test --release --locked --target ${{ matrix.target }} --workspace
+      - name: Run cargo test
+        if: "!matrix.skip_tests"
+        run: ${{ env.CARGO }} test --release --locked --target ${{ matrix.target }} --workspace
 
-      # - name: Set profile.release.strip = true
-      #   shell: bash
-      #   run: |
-      #     cat >> .cargo/config.toml <<EOF
-      #     [profile.release]
-      #     strip = true
-      #     EOF
+      - name: Set profile.release.strip = true
+        shell: bash
+        run: |
+          cat >> .cargo/config.toml <<EOF
+          [profile.release]
+          strip = true
+          EOF
 
-      # - name: Build release binary
-      #   run: ${{ env.CARGO }} build --release --locked --target ${{ matrix.target }}
+      - name: Build release binary
+        run: ${{ env.CARGO }} build --release --locked --target ${{ matrix.target }}
 
-      # - name: Build archive
-      #   shell: bash
-      #   run: |
-      #     mkdir -p dist
-      #     if [ "${{ matrix.os }}" = "windows-2019" ]; then
-      #       cp "target/${{ matrix.target }}/release/hx.exe" "dist/"
-      #     else
-      #       cp "target/${{ matrix.target }}/release/hx" "dist/"
-      #     fi
-      #     if [ -d runtime/grammars/sources ]; then
-      #       rm -rf runtime/grammars/sources
-      #     fi
-      #     cp -r runtime dist
+      - name: Build archive
+        shell: bash
+        run: |
+          mkdir -p dist
+          if [ "${{ matrix.os }}" = "windows-2019" ]; then
+            cp "target/${{ matrix.target }}/release/hx.exe" "dist/"
+          else
+            cp "target/${{ matrix.target }}/release/hx" "dist/"
+          fi
+          if [ -d runtime/grammars/sources ]; then
+            rm -rf runtime/grammars/sources
+          fi
+          cp -r runtime dist
 
-      # - uses: actions/upload-artifact@v3
-      #   with:
-      #     name: bins-${{ matrix.build }}
-      #     path: dist
+      - uses: actions/upload-artifact@v3
+        with:
+          name: bins-${{ matrix.build }}
+          path: dist
 
   publish:
     name: Publish
