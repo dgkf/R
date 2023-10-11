@@ -16,6 +16,7 @@ env:
   # activated if the CI run was triggered by events other than pushed tags, or
   # if the repository is a fork.
   preview: ${{ !startsWith(github.ref, 'refs/tags/') }}
+  
 
 jobs:
   dist:
@@ -30,127 +31,135 @@ jobs:
       TARGET_DIR: ./target
       # Emit backtraces on panics.
       RUST_BACKTRACE: 1
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false # don't fail other jobs if one fails
-      matrix:
-        build: [x86_64-linux, x86_64-macos, x86_64-windows]
-        include:
-        - build: x86_64-linux
-          os: ubuntu-latest
-          rust: stable
-          target: x86_64-unknown-linux-gnu
-          cross: false
-        # - build: aarch64-linux
-        #   os: ubuntu-latest
-        #   rust: stable
-        #   target: aarch64-unknown-linux-gnu
-        #   cross: true
-        # - build: riscv64-linux
-        #   os: ubuntu-latest
-        #   rust: stable
-        #   target: riscv64gc-unknown-linux-gnu
-        #   cross: true
-        # - build: x86_64-macos
-        #   os: macos-latest
-        #   rust: stable
-        #   target: x86_64-apple-darwin
-        #   cross: false
-        # - build: x86_64-windows
-        #   os: windows-latest
-        #   rust: stable
-        #   target: x86_64-pc-windows-msvc
-        #   cross: false
+    # runs-on: ${{ matrix.os }}
+    # strategy:
+    #   fail-fast: false # don't fail other jobs if one fails
+    #   matrix:
+    #     build: [x86_64-linux] # , x86_64-macos, x86_64-windows]
+    #     include:
+    #     - build: x86_64-linux
+    #       os: ubuntu-latest
+    #       rust: stable
+    #       target: x86_64-unknown-linux-gnu
+    #       cross: false
+    #     # - build: aarch64-linux
+    #     #   os: ubuntu-latest
+    #     #   rust: stable
+    #     #   target: aarch64-unknown-linux-gnu
+    #     #   cross: true
+    #     # - build: riscv64-linux
+    #     #   os: ubuntu-latest
+    #     #   rust: stable
+    #     #   target: riscv64gc-unknown-linux-gnu
+    #     #   cross: true
+    #     # - build: x86_64-macos
+    #     #   os: macos-latest
+    #     #   rust: stable
+    #     #   target: x86_64-apple-darwin
+    #     #   cross: false
+    #     # - build: x86_64-windows
+    #     #   os: windows-latest
+    #     #   rust: stable
+    #     #   target: x86_64-pc-windows-msvc
+    #     #   cross: false
 
     steps:
-      - name: Checkout sources
-        uses: actions/checkout@v4
-
-      - name: Download grammars
-        uses: actions/download-artifact@v3
-
-      # The rust-toolchain action ignores rust-toolchain.toml files.
-      # Removing this before building with cargo ensures that the rust-toolchain
-      # is considered the same between installation and usage.
-      - name: Remove the rust-toolchain.toml file
-        run: rm rust-toolchain.toml
-
-      - name: Install ${{ matrix.rust }} toolchain
-        uses: dtolnay/rust-toolchain@1.72.1
-        with:
-          toolchain: ${{ matrix.rust }}
-          target: ${{ matrix.target }}
-
-      - name: Install Cross
-        if: "matrix.cross"
-        run: |
-          cargo install cross
-          echo "CARGO=cross" >> $GITHUB_ENV
-          echo "TARGET_FLAGS=--target ${{ matrix.target }}" >> $GITHUB_ENV
-          echo "TARGET_DIR=./target/${{ matrix.target }}" >> $GITHUB_ENV
-
-      - name: Show command used for Cargo
-        run: |
-          echo "cargo command is: ${{ env.CARGO }}"
-          echo "target flag is: ${{ env.TARGET_FLAGS }}"
-
-      - name: Run cargo test
-        if: "!matrix.skip_tests"
-        run: ${{ env.CARGO }} test --release --locked --target ${{ matrix.target }} --workspace
-
-      - name: Set profile.release.strip = true
+      - name: test
         shell: bash
-        run: |
-          cat >> .cargo/config.toml <<EOF
-          [profile.release]
-          strip = true
-          EOF
+        run: echo here
 
-      - name: Build release binary
-        run: ${{ env.CARGO }} build --release --locked --target ${{ matrix.target }}
+      # - name: Checkout sources
+      #   uses: actions/checkout@v4
 
-      - name: Build archive
-        shell: bash
-        run: |
-          mkdir -p dist
-          if [ "${{ matrix.os }}" = "windows-2019" ]; then
-            cp "target/${{ matrix.target }}/release/hx.exe" "dist/"
-          else
-            cp "target/${{ matrix.target }}/release/hx" "dist/"
-          fi
-          if [ -d runtime/grammars/sources ]; then
-            rm -rf runtime/grammars/sources
-          fi
-          cp -r runtime dist
+      # - name: Download grammars
+      #   uses: actions/download-artifact@v3
 
-      - uses: actions/upload-artifact@v3
-        with:
-          name: bins-${{ matrix.build }}
-          path: dist
+      # # The rust-toolchain action ignores rust-toolchain.toml files.
+      # # Removing this before building with cargo ensures that the rust-toolchain
+      # # is considered the same between installation and usage.
+      # - name: Remove the rust-toolchain.toml file
+      #   run: rm rust-toolchain.toml
+
+      # - name: Install ${{ matrix.rust }} toolchain
+      #   uses: dtolnay/rust-toolchain@1.72.1
+      #   with:
+      #     toolchain: ${{ matrix.rust }}
+      #     target: ${{ matrix.target }}
+
+      # - name: Install Cross
+      #   if: "matrix.cross"
+      #   run: |
+      #     cargo install cross
+      #     echo "CARGO=cross" >> $GITHUB_ENV
+      #     echo "TARGET_FLAGS=--target ${{ matrix.target }}" >> $GITHUB_ENV
+      #     echo "TARGET_DIR=./target/${{ matrix.target }}" >> $GITHUB_ENV
+
+      # - name: Show command used for Cargo
+      #   run: |
+      #     echo "cargo command is: ${{ env.CARGO }}"
+      #     echo "target flag is: ${{ env.TARGET_FLAGS }}"
+
+      # - name: Run cargo test
+      #   if: "!matrix.skip_tests"
+      #   run: ${{ env.CARGO }} test --release --locked --target ${{ matrix.target }} --workspace
+
+      # - name: Set profile.release.strip = true
+      #   shell: bash
+      #   run: |
+      #     cat >> .cargo/config.toml <<EOF
+      #     [profile.release]
+      #     strip = true
+      #     EOF
+
+      # - name: Build release binary
+      #   run: ${{ env.CARGO }} build --release --locked --target ${{ matrix.target }}
+
+      # - name: Build archive
+      #   shell: bash
+      #   run: |
+      #     mkdir -p dist
+      #     if [ "${{ matrix.os }}" = "windows-2019" ]; then
+      #       cp "target/${{ matrix.target }}/release/hx.exe" "dist/"
+      #     else
+      #       cp "target/${{ matrix.target }}/release/hx" "dist/"
+      #     fi
+      #     if [ -d runtime/grammars/sources ]; then
+      #       rm -rf runtime/grammars/sources
+      #     fi
+      #     cp -r runtime dist
+
+      # - uses: actions/upload-artifact@v3
+      #   with:
+      #     name: bins-${{ matrix.build }}
+      #     path: dist
 
   publish:
     name: Publish
     needs: [dist]
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout sources
-        uses: actions/checkout@v4
+      - name: test
+        shell: bash
+        run: echo here
 
-      - uses: actions/download-artifact@v3
+      # - name: Checkout sources
+      #   uses: actions/checkout@v4
 
-      - name: Upload binaries to release
-        uses: svenstaro/upload-release-action@v2
-        if: env.preview == 'false'
-        with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: dist/*
-          file_glob: true
-          tag: ${{ github.ref_name }}
-          overwrite: true
+      # - uses: actions/download-artifact@v3
+
+      # - name: Upload binaries to release
+      #   uses: svenstaro/upload-release-action@v2
+      #   if: env.preview == 'false'
+      #   with:
+      #     repo_token: ${{ secrets.GITHUB_TOKEN }}
+      #     file: dist/*
+      #     file_glob: true
+      #     tag: ${{ github.ref_name }}
+      #     overwrite: true
       
-      - name: Upload binaries as artifact
-        uses: actions/upload-artifact@v3
-        if: env.preview == 'true'
-        with:
-          name: release
-          path: dist/*
+      # - name: Upload binaries as artifact
+      #   uses: actions/upload-artifact@v3
+      #   if: env.preview == 'true'
+      #   with:
+      #     name: release
+      #     path: dist/*
