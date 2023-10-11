@@ -12,7 +12,13 @@ readme = "README.md"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[[bin]]
+name = "r"
+path = "src/bin.rs"
+
 [lib]
+name = "r"
+path = "src/lib.rs"
 crate-type = ["cdylib", "rlib"]
 
 [profile.release]
