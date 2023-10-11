@@ -117,7 +117,7 @@ jobs:
         shell: bash
         run: |
           mkdir -p dist
-          cp "target/${{ matrix.target }}/release/r{,.exe}" "dist/"
+          cp target/${{ matrix.target }}/release/r{,.exe} dist/ | true
 
       - uses: actions/upload-artifact@v3
         with:
