@@ -11,60 +11,50 @@ on:
       - main
 
 env:
-  # Preview mode: Publishes the build output as a CI artifact instead of creating
-  # a release, allowing for manual inspection of the output. This mode is
-  # activated if the CI run was triggered by events other than pushed tags, or
-  # if the repository is a fork.
+  # whether artifacts should be published to ci-job (previewed) or as release
   preview: ${{ !startsWith(github.ref, 'refs/tags/') }}
   
 jobs:
   build:
     name: Build
     env:
-      # For some builds, we use cross to test on 32-bit and big-endian
-      # systems.
-      CARGO: cargo
-      # When CARGO is set to CROSS, this is set to `--target matrix.target`.
-      TARGET_FLAGS: ""
-      # When CARGO is set to CROSS, TARGET_DIR includes matrix.target.
-      TARGET_DIR: ./target
-      # Emit backtraces on panics.
-      RUST_BACKTRACE: 1
+      CARGO: cargo  # 'cross' used for 32-bit and big-endian systems
+      RUST_BACKTRACE: 1  # emit backtrace on panics
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false # don't fail other jobs if one fails
       matrix:
-        build: [x86_64-linux] # , x86_64-macos, x86_64-windows]
+        build: [x86_64-linux, x86_64-macos, x86_64-windows]
         include:
           - build: x86_64-linux
             os: ubuntu-latest
             rust: stable
-            target: x86_64-unknown-linux-gnu
+            target: x86_64-unknown-linux-musl
             cross: false
 
-          # - build: aarch64-linux
-          #   os: ubuntu-latest
-          #   rust: stable
-          #   target: aarch64-unknown-linux-gnu
-          #   cross: true
+          - build: aarch64-linux
+            os: ubuntu-latest
+            rust: stable
+            target: aarch64-unknown-linux-gnu
+            cross: true
 
-          # - build: riscv64-linux
-          #   os: ubuntu-latest
-          #   rust: stable
-          #   target: riscv64gc-unknown-linux-gnu
-          #   cross: true
+          - build: riscv64-linux
+            os: ubuntu-latest
+            rust: stable
+            target: riscv64gc-unknown-linux-gnu
+            cross: true
 
-          # - build: x86_64-macos
-          #   os: macos-latest
-          #   rust: stable
-          #   target: x86_64-apple-darwin
-          #   cross: false
+          - build: x86_64-macos
+            os: macos-latest
+            rust: stable
+            target: x86_64-apple-darwin
+            cross: false
 
-          # - build: x86_64-windows
-          #   os: windows-latest
-          #   rust: stable
-          #   target: x86_64-pc-windows-msvc
-          #   cross: false
+          - build: x86_64-windows
+            os: windows-latest
+            rust: stable
+            target: x86_64-pc-windows-msvc
+            cross: false
 
     steps:
       - name: Checkout sources
@@ -90,8 +80,6 @@ jobs:
         run: |
           cargo install cross
           echo "CARGO=cross" >> $GITHUB_ENV
-          echo "TARGET_FLAGS=--target ${{ matrix.target }}" >> $GITHUB_ENV
-          echo "TARGET_DIR=./target/${{ matrix.target }}" >> $GITHUB_ENV
 
       - name: Show command used for Cargo
         run: |
