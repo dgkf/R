@@ -167,7 +167,7 @@ impl<T: AtomicMode + Clone + Default> Rep<T> {
 
     /// Test the mode of the internal vector type
     ///
-    /// Internally, this is defined by the [r::vector::vectors::AtomicMode]
+    /// Internally, this is defined by the [crate::object::coercion::AtomicMode]
     /// implementation of the vector's element type.
     ///
     pub fn is_numeric(&self) -> bool {
@@ -191,9 +191,10 @@ impl<T: AtomicMode + Clone + Default> Rep<T> {
 
     /// Convert a Vector into a vector of a specific class of internal type
     ///
-    /// The internal type only needs to satisfy [CoerceInto] for the `Mode`,
-    /// and for the `Mode` type to implement [Atomic]. Generally, this
-    /// is used more directly via [Self::as_logical], [Self::as_integer],
+    /// The internal type only needs to satisfy
+    /// [crate::object::coercion::CoercibleInto] for the `Mode`, and for the `Mode`
+    /// type to implement [crate::object::coercion::AtomicMode]. Generally,
+    /// this is used more directly via [Self::as_logical], [Self::as_integer],
     /// [Self::as_numeric] and [Self::as_character], which predefine the output
     /// type of the mode.
     ///
@@ -266,8 +267,8 @@ impl<T: AtomicMode + Clone + Default> Rep<T> {
     /// vectorized comparison operators and likely does not need to be used
     /// outside of that context.
     ///
-    /// See [r::vecops::VecPartialCmp] for vectorized comparison operator
-    /// implementations.
+    /// See [crate::object::vector::VecPartialCmp] for vectorized comparison
+    /// operator implementations.
     ///
     pub fn vectorized_partial_cmp<R, C>(self, other: Rep<R>) -> Vec<Option<std::cmp::Ordering>>
     where

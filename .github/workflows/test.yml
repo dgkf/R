@@ -1,4 +1,4 @@
-name: Test
+name: Check
 on:
   pull_request:
   push:
@@ -7,7 +7,7 @@ on:
 
 jobs:
   test:
-    name: Test Suite
+    name: Tests
     runs-on: ${{ matrix.os }}
     env:
       RUST_BACKTRACE: 1
