@@ -107,8 +107,8 @@ jobs:
         shell: bash
         run: |
           mkdir -p dist
-          find ./target/${{ matrix.target }}/release/r* -type f -executable \
-            -exec cp {} dist/ \;
+          ls ./target/${{ matrix.target }}/release/r*
+          cp ./target/${{ matrix.target }}/release/r dist/
 
       - uses: actions/upload-artifact@v3
         with:
