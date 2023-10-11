@@ -7,7 +7,7 @@ use crate::callable::{core::*, keywords::*, operators::*};
 /// and return a `RExpr`, with a few more specific internal parsers returning
 /// `RExprList`s or tuples of parsed expressions.
 ///
-use crate::error::RError;
+use crate::error::Error;
 use crate::internal_err;
 use crate::lang::Signal;
 use crate::object::{Expr, ExprList};
@@ -50,14 +50,14 @@ pub fn parse(s: &str) -> ParseResult {
 
         // for any expressions
         Ok(pairs) => parse_expr(pairs),
-        Err(e) => Err(RError::ParseFailureVerbose(Box::new(e)).into()),
+        Err(e) => Err(Error::ParseFailureVerbose(Box::new(e)).into()),
     }
 }
 
 pub fn parse_args(s: &str) -> ParseListResult {
     match RParser::parse(Rule::repl, s) {
         Ok(mut pairs) => parse_pairlist(pairs.next().map_or(internal_err!(), Ok)?),
-        Err(e) => Err(RError::ParseFailureVerbose(Box::new(e)).into()),
+        Err(e) => Err(Error::ParseFailureVerbose(Box::new(e)).into()),
     }
 }
 
@@ -89,7 +89,7 @@ fn parse_expr(pairs: Pairs<Rule>) -> ParseResult {
                 Rule::eq => Box::new(InfixEqual),
                 Rule::neq => Box::new(InfixNotEqual),
                 Rule::pipe => Box::new(InfixPipe),
-                rule => return Err(RError::ParseUnexpected(rule).into()),
+                rule => return Err(Error::ParseUnexpected(rule).into()),
             };
 
             Ok(Expr::Call(Box::new(Expr::Primitive(op)), args))
@@ -131,7 +131,7 @@ fn parse_primary(pair: Pair<Rule>) -> ParseResult {
         Rule::more => Ok(Expr::More),
 
         #[cfg(not(feature = "rest-args"))]
-        Rule::more => Err(RError::FeatureDisabledRestArgs.into()),
+        Rule::more => Err(Error::FeatureDisabledRestArgs.into()),
 
         // atomic values
         Rule::number => Ok(Expr::Number(
@@ -153,7 +153,7 @@ fn parse_primary(pair: Pair<Rule>) -> ParseResult {
         Rule::symbol_backticked => Ok(Expr::Symbol(String::from(pair.as_str()))),
 
         // otherwise fail
-        rule => Err(RError::ParseUnexpected(rule).into()),
+        rule => Err(Error::ParseUnexpected(rule).into()),
     }
 }
 
@@ -276,9 +276,9 @@ fn parse_postfix(pair: Pair<Rule>) -> Result<(Expr, ExprList), Signal> {
         }
 
         #[cfg(not(feature = "rest-args"))]
-        Rule::more => Err(RError::FeatureDisabledRestArgs.into()),
+        Rule::more => Err(Error::FeatureDisabledRestArgs.into()),
 
-        rule => Err(RError::ParseUnexpected(rule).into()),
+        rule => Err(Error::ParseUnexpected(rule).into()),
     }
 }
 
@@ -321,9 +321,9 @@ fn parse_prefixed(pair: Pair<Rule>) -> ParseResult {
             Rule::more => Expr::Ellipsis(Some(result.to_string())),
 
             #[cfg(not(feature = "rest-args"))]
-            Rule::more => return Err(RError::FeatureDisabledRestArgs.into()),
+            Rule::more => return Err(Error::FeatureDisabledRestArgs.into()),
 
-            rule => return Err(RError::ParseUnexpected(rule).into()),
+            rule => return Err(Error::ParseUnexpected(rule).into()),
         }
     }
 

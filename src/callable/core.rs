@@ -3,7 +3,7 @@ extern crate r_derive;
 use crate::callable::builtins::BUILTIN;
 use crate::callable::dyncompare::*;
 use crate::context::Context;
-use crate::error::RError;
+use crate::error::Error;
 use crate::object::List;
 use crate::object::{Expr, ExprList, Obj};
 use crate::{internal_err, lang::*};
@@ -91,10 +91,10 @@ pub trait Callable {
 
         // add back in parameter defaults that weren't filled with args
         for (param, default) in formals.into_iter() {
-            matched_args.values.borrow_mut().push((
-                param,
-                Obj::Closure(default, stack.last_frame().env().clone()),
-            ));
+            matched_args
+                .values
+                .borrow_mut()
+                .push((param, Obj::Closure(default, stack.env().clone())));
         }
 
         if let Some(Expr::Ellipsis(Some(name))) = remainder.get(0) {
@@ -250,7 +250,7 @@ where
 impl Builtin for String {}
 
 pub fn builtin(s: &str) -> Result<Box<dyn Builtin>, Signal> {
-    let err = RError::VariableNotFound(s.to_string());
+    let err = Error::VariableNotFound(s.to_string());
     <Box<dyn Builtin>>::try_from(s).or(Err(err.into()))
 }
 
@@ -261,14 +261,18 @@ impl TryFrom<&str> for Box<dyn Builtin> {
     }
 }
 
-pub fn force_closures(vals: List, stack: &mut CallStack) -> Vec<(Option<String>, Obj)> {
-    // Force any closures that were created during call. This helps with using
-    // variables as argument for sep and collapse parameters.
+pub fn force_closures(
+    vals: List,
+    stack: &mut CallStack,
+) -> Result<Vec<(Option<String>, Obj)>, Signal> {
     vals.values
         .borrow_mut()
         .clone()
         .into_iter()
-        .map(|(k, v)| (k, v.clone().force(stack).unwrap_or(Obj::Null))) // TODO: raise this error
+        .map(|(k, v)| match (k, v.force(stack)) {
+            (k, Ok(v)) => Ok((k, v)),
+            (_, Err(e)) => Err(e),
+        })
         .collect()
 }
 
@@ -307,12 +311,8 @@ impl Callable for Obj {
             return internal_err!();
         };
 
-        stack
-            .last_frame()
-            .env()
-            .insert("...".to_string(), Obj::List(ellipsis));
-
-        stack.last_frame().env().append(Obj::List(args));
+        stack.env().insert("...".to_string(), Obj::List(ellipsis));
+        stack.env().append(Obj::List(args));
 
         // evaluate body in local scope
         stack.eval(body.clone())
@@ -349,6 +349,33 @@ mod test {
                 y(10, 100)
             "}},
             r! { 126 }
+        );
+    }
+
+    #[test]
+    fn calls_appropriately_scope_parameter_defaults() {
+        assert_eq!(
+            r! {{"
+                f <- function(x = a) {
+                    a <- 3
+                    x
+                }
+
+                f(10)
+            "}},
+            r! { 10 }
+        );
+
+        assert_eq!(
+            r! {{"
+                f <- function(x = a) {
+                    a <- 3
+                    x
+                }
+
+                f()
+            "}},
+            r! { 3 }
         );
     }
 

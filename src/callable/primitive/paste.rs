@@ -1,7 +1,6 @@
 use r_derive::*;
 
 use crate::callable::core::*;
-use crate::context::Context;
 use crate::error::*;
 use crate::lang::*;
 use crate::object::*;
@@ -10,49 +9,45 @@ use crate::object::*;
 #[builtin(sym = "paste")]
 pub struct PrimitivePaste;
 impl Callable for PrimitivePaste {
-    fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
-        let Obj::List(vals) = stack.parent_frame().eval_list_lazy(args)? else {
-            unreachable!()
-        };
+    fn formals(&self) -> ExprList {
+        ExprList::from(vec![
+            (None, Expr::Ellipsis(None)),
+            (Some(String::from("sep")), Expr::String(" ".to_string())),
+            (Some(String::from("collapse")), Expr::Null),
+        ])
+    }
 
-        let mut vals = force_closures(vals, stack);
+    fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
+        let (args, ellipsis) = self.match_arg_exprs(args, stack)?;
+
+        let ellipsis = force_closures(ellipsis, stack)?;
+        let args = force_closures(args, stack)?;
 
         let mut sep = String::from(" ");
         let mut should_collapse = false;
         let mut collapse = String::new();
 
-        // find non-ellipsis arg indices
-        let named_indices: Vec<usize> = vals
-            .iter()
-            .enumerate()
-            .filter(|(_, (k, _))| {
-                *k == Some("collapse".to_string()) || *k == Some("sep".to_string())
-            })
-            .map(|(i, _)| i)
-            .collect();
-
         // remove named sep and collapse args from our arguments and populate values
-        for i in named_indices.iter().rev() {
-            let (Some(k), v) = vals.remove(*i) else {
-                continue;
-            };
+        for (k, v) in args.iter().rev() {
+            let Some(k) = k else { continue };
+
             match (k.as_str(), v) {
                 ("sep", Obj::Vector(v)) => {
-                    sep = v.into();
+                    sep = (*v).clone().into();
                 }
                 ("sep", _) => {
-                    return Err(Signal::Error(RError::Other(
+                    return Err(Signal::Error(Error::Other(
                         "sep parameter must be a character value.".to_string(),
                     )));
                 }
                 ("collapse", Obj::Null) => continue,
                 ("collapse", Obj::Vector(v)) => {
                     should_collapse = true;
-                    collapse = v.into();
+                    collapse = (*v).clone().into();
                 }
                 ("collapse", _) => {
-                    return Err(Signal::Error(RError::WithCallStack(
-                        Box::new(RError::Other(
+                    return Err(Signal::Error(Error::WithCallStack(
+                        Box::new(Error::Other(
                             "collapse parameter must be NULL or a character string.".to_string(),
                         )),
                         stack.clone(),
@@ -63,7 +58,7 @@ impl Callable for PrimitivePaste {
         }
 
         // coerce all of our remaining arguments into vectors of strings
-        let vec_s_vec: Vec<Vec<String>> = vals
+        let vec_s_vec: Vec<Vec<String>> = ellipsis
             .into_iter()
             .map(|(_, v)| -> Result<Vec<String>, Signal> {
                 match v.as_character()? {

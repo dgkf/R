@@ -33,7 +33,7 @@ impl From<Cond> for EvalResult {
 #[derive(Debug, Clone, PartialEq)]
 pub enum Signal {
     Condition(Cond),
-    Error(RError),
+    Error(Error),
     Return(Obj, bool), // (value, visibility)
     Tail(Expr, bool),  // (value expr, visibility)
     Thunk,             // used when evaluating null opts like comments
@@ -65,22 +65,21 @@ impl Obj {
 
     pub fn force(self, stack: &mut CallStack) -> EvalResult {
         match self {
-            // TODO(feat):
-            // this is quosure behavior, but do we also want closures that
-            // don't evaluate in a new frame, but rather just in originating
-            // environment?
-            Obj::Closure(expr, env) => {
-                stack.add_frame(expr.clone(), env.clone());
-                let result = stack.eval(expr);
-                stack.pop_frame_and_return(result)
+            // special case for symbols, which are treated as argument promises
+            Obj::Closure(Expr::Symbol(s), env) => {
+                match stack.eval_in(Expr::Symbol(s.clone()), env)?.force(stack) {
+                    Err(Signal::Error(Error::Missing)) => Err(Error::ArgumentMissing(s).into()),
+                    other => other,
+                }
             }
+            Obj::Closure(expr, env) => stack.eval_in(expr, env)?.force(stack),
             _ => Ok(self),
         }
     }
 
     pub fn assign(self, value: Obj) -> EvalResult {
         // TODO(ERROR) cleanup
-        let err = RError::Other("Invalid target for assignment".to_string());
+        let err = Error::Other("Invalid target for assignment".to_string());
 
         match self {
             Obj::Vector(mut v) => {
@@ -99,7 +98,7 @@ impl Obj {
         match self {
             Obj::Vector(v) => Ok(Obj::Vector(v.as_integer())),
             Obj::Null => Ok(Obj::Vector(Vector::from(Vec::<Integer>::new()))),
-            _ => Err(Signal::Error(RError::CannotBeCoercedToInteger)),
+            _ => Err(Signal::Error(Error::CannotBeCoercedToInteger)),
         }
     }
 
@@ -107,7 +106,7 @@ impl Obj {
         match self {
             Obj::Vector(v) => Ok(Obj::Vector(v.as_numeric())),
             Obj::Null => Ok(Obj::Vector(Vector::from(Vec::<Numeric>::new()))),
-            _ => RError::CannotBeCoercedToNumeric.into(),
+            _ => Error::CannotBeCoercedToNumeric.into(),
         }
     }
 
@@ -115,7 +114,7 @@ impl Obj {
         match self {
             Obj::Vector(v) => Ok(Obj::Vector(v.as_logical())),
             Obj::Null => Ok(Obj::Vector(Vector::from(Vec::<Logical>::new()))),
-            _ => RError::CannotBeCoercedToLogical.into(),
+            _ => Error::CannotBeCoercedToLogical.into(),
         }
     }
 
@@ -123,7 +122,7 @@ impl Obj {
         match self {
             Obj::Vector(v) => Ok(Obj::Vector(v.as_character())),
             Obj::Null => Ok(Obj::Vector(Vector::from(Vec::<Character>::new()))),
-            _ => RError::CannotBeCoercedToCharacter.into(),
+            _ => Error::CannotBeCoercedToCharacter.into(),
         }
     }
 
@@ -131,7 +130,7 @@ impl Obj {
         match self {
             Obj::Null => Ok(Obj::Vector(Vector::from(Vec::<Logical>::new()))),
             Obj::Vector(_) => Ok(self),
-            _ => RError::CannotBeCoercedTo("vector").into(),
+            _ => Error::CannotBeCoercedTo("vector").into(),
         }
     }
 
@@ -142,17 +141,17 @@ impl Obj {
             Obj::Vector(rvec) => match rvec {
                 Numeric(v) => match v.inner().clone().borrow()[..] {
                     [Some(x)] => Ok(x as usize),
-                    _ => Err(Signal::Error(RError::CannotBeCoercedToInteger)),
+                    _ => Err(Signal::Error(Error::CannotBeCoercedToInteger)),
                 },
                 Integer(v) => match v.inner().clone().borrow()[..] {
                     [Some(x)] => Ok(x as usize),
-                    _ => Err(Signal::Error(RError::CannotBeCoercedToInteger)),
+                    _ => Err(Signal::Error(Error::CannotBeCoercedToInteger)),
                 },
                 Logical(v) => match v.inner().clone().borrow()[..] {
                     [Some(true)] => Ok(1_usize),
-                    _ => Err(Signal::Error(RError::CannotBeCoercedToInteger)),
+                    _ => Err(Signal::Error(Error::CannotBeCoercedToInteger)),
                 },
-                _ => Err(Signal::Error(RError::CannotBeCoercedToInteger)),
+                _ => Err(Signal::Error(Error::CannotBeCoercedToInteger)),
             },
             _ => internal_err!(), // emit an appropriate error message
         }
@@ -164,8 +163,8 @@ impl Obj {
             Obj::Null => None,
             Obj::List(_) => None,
             Obj::Expr(_) => None,
-            Obj::Closure(_, _) => None,
-            Obj::Function(_, _, _) => None,
+            Obj::Closure(..) => None,
+            Obj::Function(..) => None,
             Obj::Environment(_) => None,
         }
     }
@@ -220,7 +219,7 @@ impl Obj {
     }
 
     pub fn try_get_named(&mut self, name: &str) -> EvalResult {
-        use RError::{ArgumentMissing, VariableNotFound};
+        use Error::{ArgumentMissing, VariableNotFound};
         match self.get_named(name) {
             Some(Obj::Closure(Expr::Missing, _)) => Err(ArgumentMissing(name.into()).into()),
             Some(x) => Ok(x),
@@ -277,10 +276,10 @@ impl TryInto<bool> for Obj {
     fn try_into(self) -> Result<bool, Self::Error> {
         match self {
             Obj::Vector(v) => match TryInto::<bool>::try_into(v) {
-                Err(_) => Err(Signal::Error(RError::CannotBeCoercedToLogical)),
+                Err(_) => Err(Signal::Error(Error::CannotBeCoercedToLogical)),
                 Ok(ok) => Ok(ok),
             },
-            _ => Err(Signal::Error(RError::CannotBeCoercedToLogical)),
+            _ => Err(Signal::Error(Error::CannotBeCoercedToLogical)),
         }
     }
 }
@@ -557,12 +556,23 @@ impl CallStack {
         self.frames.len()
     }
 
-    pub fn add_child_frame(&mut self, call: Expr, env: Rc<Environment>) -> usize {
-        let local_env = Rc::new(Environment {
+    pub fn child_frame(&mut self) -> Rc<Environment> {
+        self.child_frame_of(self.env())
+    }
+
+    fn child_frame_of(&self, env: Rc<Environment>) -> Rc<Environment> {
+        Rc::new(Environment {
             parent: Some(env.clone()),
             ..Default::default()
-        });
+        })
+    }
 
+    pub fn add_child_frame(&mut self, call: Expr) -> usize {
+        self.add_child_frame_of(call, self.env())
+    }
+
+    pub fn add_child_frame_of(&mut self, call: Expr, env: Rc<Environment>) -> usize {
+        let local_env = self.child_frame_of(env);
         self.add_frame(call, local_env)
     }
 
@@ -607,7 +617,7 @@ impl CallStack {
 impl Display for CallStack {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         for (i, frame) in self.frames.iter().enumerate().skip(1) {
-            writeln!(f, "{}: {} {}", i, frame.call, frame.clone())?;
+            writeln!(f, "{}: {}", i, frame.clone())?;
         }
         Ok(())
     }
@@ -632,7 +642,7 @@ impl From<Rc<Environment>> for CallStack {
 impl Context for CallStack {
     fn assign_lazy(&mut self, to: Expr, from: Expr) -> EvalResult {
         const LIST: &str = "list";
-        let err = Err(Signal::Error(RError::IncorrectContext("<-".to_string())));
+        let err = Err(Signal::Error(Error::IncorrectContext("<-".to_string())));
 
         if let Expr::Call(what, mut args) = to {
             match *what {
@@ -656,13 +666,12 @@ impl Context for CallStack {
     }
 
     fn assign(&mut self, to: Expr, from: Obj) -> EvalResult {
-        use Signal::*;
-        let err = Err(Signal::Error(RError::IncorrectContext("<-".to_string())));
+        let err = Err(Signal::Error(Error::IncorrectContext("<-".to_string())));
 
         match (to, from) {
             (Expr::String(s) | Expr::Symbol(s), from) => {
                 self.env().insert(s, from.clone());
-                Return(from, false).into()
+                Signal::Return(from, false).into()
             }
             (Expr::List(l), Obj::List(args)) => {
                 let mut i = 1;
@@ -684,7 +693,7 @@ impl Context for CallStack {
                     }
                 }
 
-                Return(Obj::List(args), false).into()
+                Signal::Return(Obj::List(args), false).into()
             }
             _ => err,
         }
@@ -694,7 +703,7 @@ impl Context for CallStack {
         self.last_frame().env().clone()
     }
 
-    fn eval_call(&mut self, expr: Expr) -> EvalResult {
+    fn eval_call(&mut self, expr: Expr, env: Rc<Environment>) -> EvalResult {
         let Expr::Call(what, args) = expr.clone() else {
             return internal_err!();
         };
@@ -702,14 +711,14 @@ impl Context for CallStack {
         match *what {
             Expr::Primitive(f) if f.is_transparent() => f.call(args, self),
             Expr::Primitive(f) => {
-                self.add_frame(expr, self.last_frame().env().clone());
+                self.add_frame(expr.clone(), env);
                 let result = f.call(args, self);
                 self.pop_frame_and_return(result)
             }
             Expr::String(name) | Expr::Symbol(name) if builtin(&name).is_ok() => {
-                let f = builtin(&name)?;
-                self.add_frame(expr, self.last_frame().env().clone());
-                let result = f.call(args, self);
+                let obj = builtin(&name)?;
+                self.add_frame(expr.clone(), env);
+                let result = obj.call(args, self);
                 self.pop_frame_and_return(result)
             }
             Expr::String(name) | Expr::Symbol(name) => {
@@ -719,14 +728,14 @@ impl Context for CallStack {
                 let obj = self.env().get(name.clone())?;
 
                 // ensure our call target expression has an encapsulating environment
-                let Some(env) = obj.environment() else {
-                    return internal_err!();
+                let env = if let Some(env) = obj.environment() {
+                    self.child_frame_of(env)
+                } else {
+                    env
                 };
 
-                // introduce a new call frame and evaluate body in new frame
-                self.add_child_frame(expr, env.clone());
-
                 // handle tail call recursion
+                self.add_frame(expr.clone(), env.clone());
                 let mut result = obj.call(args, self);
 
                 // intercept and rearrange call stack to handle tail calls
@@ -744,28 +753,38 @@ impl Context for CallStack {
 
                         // pop tail frame and add a new local frame
                         self.frames.pop();
-                        self.add_child_frame(tail, env.clone());
+                        self.add_child_frame_of(tail, env.clone());
 
                         // call with pre-matched args
                         result = what_obj.call_matched(args, ellipsis, self);
                         continue;
                     }
 
-                    result = self.eval_call(tail);
+                    result = self.eval_call(tail, env.clone());
                 }
 
                 // evaluate any lingering tail calls in the current frame
                 while let Err(Tail(expr, _vis)) = result {
-                    result = self.eval(expr)
+                    result = self.eval_in(expr, env.clone())
                 }
 
                 self.pop_frame_and_return(result)
             }
             _ => {
-                self.add_frame(expr, self.last_frame().env().clone());
+                self.add_child_frame(expr.clone());
                 let result = (self.eval(*what)?).call(args, self);
                 self.pop_frame_and_return(result)
             }
+        }
+    }
+
+    fn eval_in(&mut self, expr: Expr, env: Rc<Environment>) -> EvalResult {
+        use Expr::*;
+        match expr {
+            List(x) => self.eval_list_lazy(x),
+            Symbol(s) => env.clone().get(s),
+            Call(..) => self.eval_call(expr, env),
+            _ => self.last_frame().eval(expr),
         }
     }
 
@@ -774,7 +793,7 @@ impl Context for CallStack {
         match expr {
             List(x) => self.eval_list_lazy(x),
             Symbol(s) => self.get(s),
-            Call(..) => self.eval_call(expr),
+            Call(..) => self.eval_call(expr, self.env()),
             _ => self.last_frame().eval(expr),
         }
     }
@@ -788,7 +807,7 @@ impl Context for CallStack {
             result = self.eval(expr)
         }
 
-        result
+        result.and_then(|i| i.force(self))
     }
 
     fn get(&mut self, name: String) -> EvalResult {
@@ -818,7 +837,7 @@ impl Context for CallStack {
                 self.env(),
             ))
         } else {
-            Err(Signal::Error(RError::VariableNotFound(name)))
+            Err(Signal::Error(Error::VariableNotFound(name)))
         }
     }
 
@@ -865,7 +884,8 @@ impl Context for Obj {
                 self.environment().unwrap(),
             )),
             Expr::More => Ok(Obj::Null),
-            x => internal_err!(format!("Can't evaluate Context::eval(Rc<Envrionment>, {x}")),
+            Expr::Missing => Err(Error::Missing.into()),
+            x => internal_err!(format!("Can't evaluate Context::eval(Obj, {x:?})")),
         }
     }
 
@@ -900,10 +920,14 @@ impl Context for Rc<Environment> {
             Expr::Continue => Err(Signal::Condition(Cond::Continue)),
             Expr::Primitive(p) => Ok(Obj::Function(p.formals(), Expr::Primitive(p), self.clone())),
             Expr::More => Ok(Obj::Null),
-            x => internal_err!(format!("Can't evaluate Context::eval(Rc<Envrionment>, {x}")),
+            Expr::Missing => Err(Error::Missing.into()),
+            x => internal_err!(format!(
+                "Can't evaluate Context::eval(Rc<Envrionment>, {x:?})"
+            )),
         }
     }
 
+    #[inline]
     fn get(&mut self, name: String) -> EvalResult {
         Environment::get(self, name)
     }

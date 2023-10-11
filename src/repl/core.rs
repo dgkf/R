@@ -59,7 +59,14 @@ where
                         match stack.eval_and_finalize(expr) {
                             Err(Signal::Condition(Cond::Terminate)) => break,
                             Ok(val) => println!("{val}"),
-                            Err(e) => print!("{e}"),
+                            Err(Signal::Return(value, true)) => {
+                                print!("{value}")
+                            }
+                            Err(Signal::Return(_value, false)) => (),
+                            Err(e) => {
+                                print!("{e}");
+                                print!("traceback:\n{stack}");
+                            }
                         }
                     }
                     Err(e) => eprint!("{e}"),

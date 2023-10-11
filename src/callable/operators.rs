@@ -2,7 +2,7 @@ use r_derive::*;
 
 use super::core::*;
 use crate::context::Context;
-use crate::error::RError;
+use crate::error::Error;
 use crate::lang::{CallStack, EvalResult};
 use crate::object::types::*;
 use crate::object::*;
@@ -52,7 +52,7 @@ impl Callable for PrefixSub {
 pub struct PrefixPack;
 impl Callable for PrefixPack {
     fn call(&self, _args: ExprList, _stack: &mut CallStack) -> EvalResult {
-        RError::IncorrectContext("..".to_string()).into()
+        Error::IncorrectContext("..".to_string()).into()
     }
 }
 
@@ -274,7 +274,7 @@ impl Callable for InfixColon {
             let end: f64 = stack.eval(arg3)?.try_into()?;
 
             if by == 0.0 {
-                return RError::Other("Cannot increment by 0".to_string()).into();
+                return Error::Other("Cannot increment by 0".to_string()).into();
             }
 
             if (end - start) / by < 0.0 {
@@ -358,7 +358,7 @@ impl Callable for InfixDollar {
 pub struct PostfixPack;
 impl Callable for PostfixPack {
     fn call(&self, _args: ExprList, _stack: &mut CallStack) -> EvalResult {
-        RError::IncorrectContext("..".to_string()).into()
+        Error::IncorrectContext("..".to_string()).into()
     }
 }
 

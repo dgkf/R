@@ -2,7 +2,7 @@ use r_derive::builtin;
 use rand_distr::{Distribution, Normal};
 
 use crate::callable::core::*;
-use crate::error::RError;
+use crate::error::Error;
 use crate::lang::*;
 use crate::object::*;
 
@@ -19,9 +19,9 @@ impl Callable for PrimitiveRnorm {
     }
 
     fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
-        use RError::ArgumentInvalid;
+        use Error::ArgumentInvalid;
         let (vals, _) = self.match_arg_exprs(args, stack)?;
-        let vals = force_closures(vals, stack);
+        let vals = force_closures(vals, stack)?;
         let mut vals = Obj::List(List::from(vals));
 
         let n: i32 = vals.try_get_named("n")?.try_into()?;

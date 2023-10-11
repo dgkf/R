@@ -18,10 +18,10 @@ impl Callable for PrimitiveNames {
         use Obj::*;
         match x {
             Null => Ok(Null),
-            Closure(_, _) => Ok(Null),
+            Closure(..) => Ok(Null),
             Vector(_) => Ok(Null), // named vectors currently not supported...
             Expr(_) => Ok(Null),   // handle arg lists?
-            Function(_, _, _) => Ok(Null), // return formals?
+            Function(..) => Ok(Null), // return formals?
             List(x) => {
                 Ok(x.values
                     .borrow()
@@ -45,14 +45,14 @@ impl Callable for PrimitiveNames {
 
 #[cfg(test)]
 mod test {
-    use crate::error::RError;
+    use crate::error::Error;
     use crate::r;
 
     #[test]
     fn no_args() {
         assert_eq!(
             r! { names() },
-            RError::ArgumentMissing(String::from("x")).into()
+            Error::ArgumentMissing(String::from("x")).into()
         )
     }
 

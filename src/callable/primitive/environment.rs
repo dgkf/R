@@ -2,7 +2,7 @@ use r_derive::*;
 
 use crate::callable::core::*;
 use crate::context::Context;
-use crate::error::RError;
+use crate::error::Error;
 use crate::lang::*;
 use crate::object::*;
 
@@ -32,7 +32,7 @@ impl Callable for PrimitiveEnvironment {
             Obj::Closure(_, e) => Ok(Obj::Environment(e.clone())),
             Obj::Function(_, _, e) => Ok(Obj::Environment(e.clone())),
             Obj::Environment(e) => Ok(Obj::Environment(e.clone())),
-            _ => RError::ArgumentInvalid(String::from("fun")).into(),
+            _ => Error::ArgumentInvalid(String::from("fun")).into(),
         }
     }
 }

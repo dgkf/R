@@ -2,7 +2,7 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use crate::error::RError;
+use crate::error::Error;
 use crate::lang::EvalResult;
 
 use super::*;
@@ -20,7 +20,7 @@ pub struct List {
 impl From<Vec<(Option<String>, Obj)>> for List {
     fn from(value: Vec<(Option<String>, Obj)>) -> Self {
         let mut result = List {
-            values: Rc::new(RefCell::new(value)),
+            values: Rc::new(RefCell::new(value.clone())),
             ..Default::default()
         };
 
@@ -197,7 +197,7 @@ impl List {
     }
 
     pub fn try_get(&self, index: Obj) -> EvalResult {
-        let err = RError::Other("Cannot use object for indexing".to_string());
+        let err = Error::Other("Cannot use object for indexing".to_string());
         match index.as_vector()? {
             Obj::Vector(v) => Ok(Obj::List(self.subset(v.try_into()?))),
             _ => Err(err.into()),
@@ -205,8 +205,8 @@ impl List {
     }
 
     pub fn try_get_inner(&self, index: Obj) -> EvalResult {
-        let err_invalid = RError::Other("Cannot use object for indexing".to_string());
-        let err_index_invalid = RError::Other("Index out of bounds".to_string());
+        let err_invalid = Error::Other("Cannot use object for indexing".to_string());
+        let err_index_invalid = Error::Other("Index out of bounds".to_string());
 
         match index.as_vector()? {
             Obj::Vector(v) if v.len() == 1 => {

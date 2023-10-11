@@ -70,7 +70,7 @@ impl fmt::Display for Expr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Expr::Null => write!(f, "NULL"),
-            Expr::Missing => write!(f, ""),
+            Expr::Missing => write!(f, "<missing>"),
             Expr::Break => write!(f, "break"),
             Expr::Continue => write!(f, "continue"),
             Expr::Bool(true) => write!(f, "TRUE"),

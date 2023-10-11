@@ -5,37 +5,50 @@ use crate::object::*;
 use crate::{error::*, internal_err};
 
 pub trait Context: std::fmt::Debug + std::fmt::Display {
+    #[inline]
     fn get(&mut self, name: String) -> EvalResult {
         (*self).env().get(name)
     }
 
+    #[inline]
     fn get_ellipsis(&mut self) -> EvalResult {
-        let err = Err(Signal::Error(RError::IncorrectContext("...".to_string())));
+        let err = Err(Signal::Error(Error::IncorrectContext("...".to_string())));
         self.get("...".to_string()).or(err)
     }
 
+    #[inline]
     fn assign_lazy(&mut self, _to: Expr, _from: Expr) -> EvalResult {
-        Err(Signal::Error(RError::IncorrectContext("<-".to_string())))
+        Err(Signal::Error(Error::IncorrectContext("<-".to_string())))
     }
 
+    #[inline]
     fn assign(&mut self, _to: Expr, _from: Obj) -> EvalResult {
-        Err(Signal::Error(RError::IncorrectContext("<-".to_string())))
+        Err(Signal::Error(Error::IncorrectContext("<-".to_string())))
     }
 
     fn env(&self) -> Rc<Environment>;
 
-    fn eval_call(&mut self, expr: Expr) -> EvalResult {
+    #[inline]
+    fn eval_call(&mut self, expr: Expr, _env: Rc<Environment>) -> EvalResult {
         self.eval(expr)
     }
 
+    #[inline]
     fn eval(&mut self, expr: Expr) -> EvalResult {
         self.env().eval(expr)
     }
 
+    #[inline]
+    fn eval_in(&mut self, expr: Expr, mut env: Rc<Environment>) -> EvalResult {
+        env.eval(expr)
+    }
+
+    #[inline]
     fn eval_and_finalize(&mut self, expr: Expr) -> EvalResult {
         self.eval(expr)
     }
 
+    #[inline]
     fn eval_binary(&mut self, exprs: (Expr, Expr)) -> Result<(Obj, Obj), Signal> {
         Ok((self.eval(exprs.0)?, self.eval(exprs.1)?))
     }

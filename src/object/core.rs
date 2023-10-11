@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use crate::{error::RError, internal_err, lang::Signal};
+use crate::{error::Error, internal_err, lang::Signal};
 
 use super::*;
 
@@ -64,7 +64,7 @@ impl PartialEq for Obj {
 impl TryInto<i32> for Obj {
     type Error = Signal;
     fn try_into(self) -> Result<i32, Self::Error> {
-        use RError::CannotBeCoercedToInteger;
+        use Error::CannotBeCoercedToInteger;
 
         let Obj::Vector(Vector::Integer(v)) = self.as_integer()? else {
             return internal_err!();
@@ -89,7 +89,7 @@ where
 impl TryInto<f64> for Obj {
     type Error = Signal;
     fn try_into(self) -> Result<f64, Self::Error> {
-        use RError::CannotBeCoercedToNumeric;
+        use Error::CannotBeCoercedToNumeric;
 
         let Obj::Vector(Vector::Numeric(v)) = self.as_numeric()? else {
             return internal_err!();

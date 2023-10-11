@@ -1,7 +1,7 @@
 use std::fmt::Debug;
 use std::fmt::Display;
 
-use crate::error::RError;
+use crate::error::Error;
 use crate::lang::EvalResult;
 use crate::object::Obj;
 
@@ -64,7 +64,7 @@ impl Vector {
 
     pub fn try_get(&self, index: Obj) -> EvalResult {
         let err =
-            RError::Other("Vector index cannot be coerced into a valid indexing type.".to_string());
+            Error::Other("Vector index cannot be coerced into a valid indexing type.".to_string());
         match (self, index.as_vector()?) {
             (Vector::Numeric(v), Obj::Vector(i)) => {
                 Ok(Obj::Vector(Vector::from(v.subset(i.try_into()?))))
@@ -93,7 +93,7 @@ impl Vector {
 
     pub fn assign(&mut self, other: Obj) -> EvalResult {
         let err =
-            RError::Other("Cannot assign to a vector from a different type".to_string()).into();
+            Error::Other("Cannot assign to a vector from a different type".to_string()).into();
         match (self, other) {
             (Vector::Numeric(l), Obj::Vector(Vector::Numeric(r))) => {
                 Ok(Obj::Vector(Vector::from(l.assign(r))))
