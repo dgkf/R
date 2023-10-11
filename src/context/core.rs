@@ -24,8 +24,12 @@ pub trait Context: std::fmt::Debug + std::fmt::Display {
 
     fn env(&self) -> Rc<Environment>;
 
-    fn eval_call(&mut self, expr: Expr) -> EvalResult {
-        self.eval(expr)
+    fn eval_call_in(&mut self, expr: Expr, env: Rc<Environment>) -> EvalResult {
+        self.eval_in(expr, env)
+    }
+
+    fn eval_in(&mut self, expr: Expr, env: Rc<Environment>) -> EvalResult {
+        env.clone().eval(expr)
     }
 
     fn eval(&mut self, expr: Expr) -> EvalResult {

@@ -261,14 +261,20 @@ impl TryFrom<&str> for Box<dyn Builtin> {
     }
 }
 
-pub fn force_closures(vals: List, stack: &mut CallStack) -> Vec<(Option<String>, Obj)> {
+pub fn force_closures(
+    vals: List,
+    stack: &mut CallStack,
+) -> Result<Vec<(Option<String>, Obj)>, Signal> {
     // Force any closures that were created during call. This helps with using
     // variables as argument for sep and collapse parameters.
     vals.values
         .borrow_mut()
         .clone()
         .into_iter()
-        .map(|(k, v)| (k, v.clone().force(stack).unwrap_or(Obj::Null))) // TODO: raise this error
+        .map(|(k, v)| match (k, v.force(stack)) {
+            (k, Ok(v)) => Ok((k, v)),
+            (_, Err(e)) => Err(e),
+        })
         .collect()
 }
 

@@ -693,7 +693,7 @@ impl Context for CallStack {
         self.last_frame().env().clone()
     }
 
-    fn eval_call(&mut self, expr: Expr) -> EvalResult {
+    fn eval_call_in(&mut self, expr: Expr, _env: Rc<Environment>) -> EvalResult {
         let Expr::Call(what, args) = expr.clone() else {
             return internal_err!();
         };
@@ -768,12 +768,22 @@ impl Context for CallStack {
         }
     }
 
+    fn eval_in(&mut self, expr: Expr, env: Rc<Environment>) -> EvalResult {
+        use Expr::*;
+        match expr {
+            List(x) => self.eval_list_lazy(x),
+            Symbol(s) => env.clone().get(s),
+            Call(..) => self.eval_call_in(expr, env),
+            _ => self.last_frame().eval(expr),
+        }
+    }
+
     fn eval(&mut self, expr: Expr) -> EvalResult {
         use Expr::*;
         match expr {
             List(x) => self.eval_list_lazy(x),
             Symbol(s) => self.get(s),
-            Call(..) => self.eval_call(expr),
+            Call(..) => self.eval_call_in(expr, self.env()),
             _ => self.last_frame().eval(expr),
         }
     }
