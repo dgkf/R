@@ -6,16 +6,14 @@ pub const RELEASE_VERSION: &str = env!("CARGO_PKG_VERSION");
 pub const AUTHORS: &str = env!("CARGO_PKG_AUTHORS");
 pub const YEAR: &str = "2023";
 
-pub const COPYRIGHT_LONG_INST: &str = "cargo run -- --warranty";
+pub const COPYRIGHT_LONG_INST: &str = "--warranty";
 lazy_static::lazy_static! {
     static ref COPYRIGHT: String = format!(
 "Copyright (C) {YEAR} {AUTHORS}  
   
 This program comes with ABSOLUTELY NO WARRANTY. This is free software, 
 and you are welcome to redistribute it under certain conditions. For more
-information, restart with:
-
-    {COPYRIGHT_LONG_INST}");
+information, restart with `{COPYRIGHT_LONG_INST}`.");
 }
 
 lazy_static::lazy_static! {
