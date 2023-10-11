@@ -31,17 +31,17 @@ jobs:
       TARGET_DIR: ./target
       # Emit backtraces on panics.
       RUST_BACKTRACE: 1
-    # runs-on: ${{ matrix.os }}
-    # strategy:
-    #   fail-fast: false # don't fail other jobs if one fails
-    #   matrix:
-    #     build: [x86_64-linux] # , x86_64-macos, x86_64-windows]
-    #     include:
-    #     - build: x86_64-linux
-    #       os: ubuntu-latest
-    #       rust: stable
-    #       target: x86_64-unknown-linux-gnu
-    #       cross: false
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false # don't fail other jobs if one fails
+      matrix:
+        build: [x86_64-linux] # , x86_64-macos, x86_64-windows]
+        include:
+        - build: x86_64-linux
+          os: ubuntu-latest
+          rust: stable
+          target: x86_64-unknown-linux-gnu
+          cross: false
     #     # - build: aarch64-linux
     #     #   os: ubuntu-latest
     #     #   rust: stable
