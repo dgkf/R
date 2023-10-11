@@ -11,7 +11,7 @@ use crate::lang::EvalResult;
 
 use super::{Expr, ExprList, Obj};
 
-#[derive(Default, Clone, PartialEq)]
+#[derive(Debug, Default, Clone, PartialEq)]
 pub struct Environment {
     pub values: RefCell<HashMap<String, Obj>>,
     pub parent: Option<Rc<Environment>>,
@@ -54,7 +54,11 @@ impl Environment {
     pub fn get(&self, name: String) -> EvalResult {
         // search in this environment for value by name
         if let Some(value) = self.values.borrow().get(&name) {
-            Ok(value.clone())
+            let result = value.clone();
+            match result {
+                Obj::Closure(expr, env) => Obj::Environment(env).eval(expr),
+                _ => Ok(result),
+            }
 
         // if not found, search through parent if available
         } else if let Some(parent) = &self.parent {
@@ -77,35 +81,17 @@ impl Environment {
 
 impl Display for Environment {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "<environment {:?}>", self.values.as_ptr())
-    }
-}
+        write!(f, "<environment {:?}", self.values.as_ptr())?;
 
-impl std::fmt::Debug for Environment {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "Environment {{ values: {:?}, parent: {:?} }}",
-            self.values.as_ptr(),
-            self.parent.clone().map(|i| i.values.as_ptr()),
-        )?;
+        // // print defined variable names
+        // if self.values.borrow().len() > 0 { write!(f, " [")?; }
+        // for (i, k) in self.values.borrow().keys().enumerate() {
+        //     if i > 0 { write!(f, ", ")?; }
+        //     write!(f, "{}", k)?;
+        // }
+        // if self.values.borrow().len() > 0 { write!(f, "]")?; }
 
-        // print defined variable names
-        if self.values.borrow().len() > 0 {
-            write!(f, " [")?;
-        }
-
-        for (i, k) in self.values.borrow().keys().enumerate() {
-            if i > 0 {
-                write!(f, ", ")?;
-            }
-            write!(f, "{}", k)?;
-        }
-
-        if self.values.borrow().len() > 0 {
-            write!(f, "]")?;
-        }
-
+        write!(f, ">")?;
         Ok(())
     }
 }

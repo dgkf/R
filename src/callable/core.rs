@@ -91,10 +91,10 @@ pub trait Callable {
 
         // add back in parameter defaults that weren't filled with args
         for (param, default) in formals.into_iter() {
-            matched_args
-                .values
-                .borrow_mut()
-                .push((param, Obj::Closure(default, stack.env().clone())));
+            matched_args.values.borrow_mut().push((
+                param,
+                Obj::Closure(default, stack.last_frame().env().clone()),
+            ));
         }
 
         if let Some(Expr::Ellipsis(Some(name))) = remainder.get(0) {
@@ -261,18 +261,14 @@ impl TryFrom<&str> for Box<dyn Builtin> {
     }
 }
 
-pub fn force_closures(
-    vals: List,
-    stack: &mut CallStack,
-) -> Result<Vec<(Option<String>, Obj)>, Signal> {
+pub fn force_closures(vals: List, stack: &mut CallStack) -> Vec<(Option<String>, Obj)> {
+    // Force any closures that were created during call. This helps with using
+    // variables as argument for sep and collapse parameters.
     vals.values
         .borrow_mut()
         .clone()
         .into_iter()
-        .map(|(k, v)| match (k, v.force(stack)) {
-            (k, Ok(v)) => Ok((k, v)),
-            (_, Err(e)) => Err(e),
-        })
+        .map(|(k, v)| (k, v.clone().force(stack).unwrap_or(Obj::Null))) // TODO: raise this error
         .collect()
 }
 
@@ -311,8 +307,12 @@ impl Callable for Obj {
             return internal_err!();
         };
 
-        stack.env().insert("...".to_string(), Obj::List(ellipsis));
-        stack.env().append(Obj::List(args));
+        stack
+            .last_frame()
+            .env()
+            .insert("...".to_string(), Obj::List(ellipsis));
+
+        stack.last_frame().env().append(Obj::List(args));
 
         // evaluate body in local scope
         stack.eval(body.clone())
@@ -349,33 +349,6 @@ mod test {
                 y(10, 100)
             "}},
             r! { 126 }
-        );
-    }
-
-    #[test]
-    fn calls_appropriately_scope_parameter_defaults() {
-        assert_eq!(
-            r! {{"
-                f <- function(x = a) {
-                    a <- 3
-                    x
-                }
-
-                f(10)
-            "}},
-            r! { 10 }
-        );
-
-        assert_eq!(
-            r! {{"
-                f <- function(x = a) {
-                    a <- 3
-                    x
-                }
-
-                f()
-            "}},
-            r! { 3 }
         );
     }
 

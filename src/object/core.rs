@@ -1,6 +1,8 @@
 use std::rc::Rc;
 
-use crate::{error::Error, internal_err, lang::Signal};
+use crate::error::Error;
+use crate::internal_err;
+use crate::lang::Signal;
 
 use super::*;
 

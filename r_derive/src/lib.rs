@@ -76,11 +76,7 @@ pub fn builtin(attr: TokenStream, item: TokenStream) -> TokenStream {
             }
 
             #[automatically_derived]
-            impl Builtin for #what {
-                fn is_transparent(&self) -> bool {
-                    true
-                }
-            }
+            impl Builtin for #what {}
         },
         Builtin::Keyword => quote! {
             #item

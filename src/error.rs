@@ -27,6 +27,7 @@ pub enum Error {
     CannotBeCoercedToInteger,
     CannotBeCoercedToLogical,
     CannotBeCoercedTo(&'static str),
+
     Missing,
     ArgumentMissing(String),
     ArgumentInvalid(String),
@@ -82,7 +83,6 @@ impl Error {
             }
             Error::Other(s) => s.to_string(),
             Error::WithCallStack(e, c) => format!("{}\n{c}", e.as_str()),
-            Error::Missing => "value missing with no default".to_string(),
             Error::ArgumentMissing(s) => format!("argument '{s}' is missing with no default"),
             Error::ArgumentInvalid(s) => format!("argument '{s}' is invalid"),
             Error::Unimplemented(Some(s)) => {
@@ -98,6 +98,7 @@ impl Error {
             Error::FeatureDisabledRestArgs => {
                 "..rest syntax currently disabled. To enable, re-build with\n\n    cargo build --features rest-args\n".to_string()
             }
+            Error::Missing => "object is missing".to_string(),
         }
     }
 }

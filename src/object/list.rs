@@ -20,7 +20,7 @@ pub struct List {
 impl From<Vec<(Option<String>, Obj)>> for List {
     fn from(value: Vec<(Option<String>, Obj)>) -> Self {
         let mut result = List {
-            values: Rc::new(RefCell::new(value.clone())),
+            values: Rc::new(RefCell::new(value)),
             ..Default::default()
         };
 
