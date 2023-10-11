@@ -118,7 +118,7 @@ jobs:
         run: |
           mkdir -p dist
           find ./target/${{ matrix.target }}/release/r* -type f -executable \
-            -exec cp {} . \;
+            -exec cp {} dist/ \;
 
       - uses: actions/upload-artifact@v3
         with:
