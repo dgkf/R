@@ -39,7 +39,7 @@ jobs:
           - build: riscv64-linux
             os: ubuntu-latest
             rust: stable
-            target: riscv64gc-unknown-linux-musl
+            target: riscv64gc-unknown-linux-gnu
             cross: true
 
           - build: x86_64-macos
