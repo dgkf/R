@@ -127,6 +127,11 @@ jobs:
 
       - uses: actions/download-artifact@v3
 
+      - name: Check Artifacts
+        shell: bash
+        run: |
+          tree -L 3
+
       - name: Upload binaries to release
         uses: softprops/action-gh-release@v1
         if: env.preview == 'false'
