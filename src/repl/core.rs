@@ -58,8 +58,15 @@ where
                         let mut stack = CallStack::from(global_env.clone());
                         match stack.eval_and_finalize(expr) {
                             Err(Signal::Condition(Cond::Terminate)) => break,
+                            Err(Signal::Return(value, true)) => {
+                                print!("{value}")
+                            }
+                            Err(Signal::Return(_value, false)) => (),
+                            Err(e) => {
+                                print!("{e}");
+                                print!("traceback:\n{stack}");
+                            }
                             Ok(val) => println!("{val}"),
-                            Err(e) => print!("{e}"),
                         }
                     }
                     Err(e) => eprint!("{e}"),

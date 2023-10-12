@@ -9,7 +9,7 @@ use crate::context::Context;
 use crate::error::Error;
 use crate::lang::EvalResult;
 
-use super::{Expr, ExprList, Obj};
+use super::{Expr, ExprList, List, Obj};
 
 #[derive(Debug, Default, Clone, PartialEq)]
 pub struct Environment {
@@ -36,18 +36,13 @@ impl Environment {
         self.values.borrow_mut().insert(name, value);
     }
 
-    pub fn append(&self, values: Obj) {
-        match values {
-            Obj::List(x) => {
-                for (key, value) in x.values.borrow().iter() {
-                    if let Some(name) = key {
-                        self.values.borrow_mut().insert(name.clone(), value.clone());
-                    } else {
-                        println!("Dont' know what to do with value...")
-                    }
-                }
+    pub fn append(&self, l: List) {
+        for (key, value) in l.values.borrow().iter() {
+            if let Some(name) = key {
+                self.values.borrow_mut().insert(name.clone(), value.clone());
+            } else {
+                println!("Dont' know what to do with value...")
             }
-            _ => unimplemented!(),
         }
     }
 

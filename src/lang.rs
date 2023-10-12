@@ -65,6 +65,12 @@ impl Obj {
 
     pub fn force(self, stack: &mut CallStack) -> EvalResult {
         match self {
+            // special case for symbols, which are treated as argument promises
+            Obj::Closure(Expr::Symbol(s), mut env) => match env.get(s.clone()) {
+                Err(Signal::Error(Error::Missing)) => Err(Error::ArgumentMissing(s).into()),
+                Ok(result) => result.force(stack),
+                other => other,
+            },
             // TODO(feat):
             // this is quosure behavior, but do we also want closures that
             // don't evaluate in a new frame, but rather just in originating
@@ -607,7 +613,7 @@ impl CallStack {
 impl Display for CallStack {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         for (i, frame) in self.frames.iter().enumerate().skip(1) {
-            writeln!(f, "{}: {} {}", i, frame.call, frame.clone())?;
+            writeln!(f, "{}: {}", i, frame.clone())?;
         }
         Ok(())
     }
@@ -693,7 +699,7 @@ impl Context for CallStack {
         self.last_frame().env().clone()
     }
 
-    fn eval_call_in(&mut self, expr: Expr, _env: Rc<Environment>) -> EvalResult {
+    fn eval_call(&mut self, expr: Expr) -> EvalResult {
         let Expr::Call(what, args) = expr.clone() else {
             return internal_err!();
         };
@@ -768,22 +774,12 @@ impl Context for CallStack {
         }
     }
 
-    fn eval_in(&mut self, expr: Expr, env: Rc<Environment>) -> EvalResult {
-        use Expr::*;
-        match expr {
-            List(x) => self.eval_list_lazy(x),
-            Symbol(s) => env.clone().get(s),
-            Call(..) => self.eval_call_in(expr, env),
-            _ => self.last_frame().eval(expr),
-        }
-    }
-
     fn eval(&mut self, expr: Expr) -> EvalResult {
         use Expr::*;
         match expr {
             List(x) => self.eval_list_lazy(x),
             Symbol(s) => self.get(s),
-            Call(..) => self.eval_call_in(expr, self.env()),
+            Call(..) => self.eval_call(expr),
             _ => self.last_frame().eval(expr),
         }
     }

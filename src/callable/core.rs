@@ -313,14 +313,8 @@ impl Callable for Obj {
             return internal_err!();
         };
 
-        stack
-            .last_frame()
-            .env()
-            .insert("...".to_string(), Obj::List(ellipsis));
-
-        stack.last_frame().env().append(Obj::List(args));
-
-        // evaluate body in local scope
+        stack.env().insert("...".to_string(), Obj::List(ellipsis));
+        stack.env().append(args);
         stack.eval(body.clone())
     }
 
@@ -335,6 +329,22 @@ impl Callable for Obj {
 #[cfg(test)]
 mod test {
     use crate::r;
+
+    #[test]
+    fn recursion_works_as_expected() {
+        assert_eq!(r! { f <- function(a) { a + b }; b <- 3; f(2) }, r! { 5 });
+
+        assert_eq!(
+            r! {{"
+                x <- function(n) { 
+                    if (n > 0) x(n - 1) else 'done'
+                }
+
+                x(10)
+            "}},
+            r! { "done" }
+        );
+    }
 
     #[test]
     fn calls_find_symbols_in_parent_envs() {
@@ -355,6 +365,31 @@ mod test {
                 y(10, 100)
             "}},
             r! { 126 }
+        );
+    }
+
+    #[test]
+    fn calls_appropriately_scope_parameter_defaults() {
+        assert_eq!(
+            r! {{"
+                f <- function(x = a) {
+                    a <- 3
+                    x
+                }
+                f(10)
+            "}},
+            r! { 10 }
+        );
+
+        assert_eq!(
+            r! {{"
+                f <- function(x = a) {
+                    a <- 3
+                    x
+                }
+                f()
+            "}},
+            r! { 3 }
         );
     }
 

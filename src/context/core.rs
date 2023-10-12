@@ -5,41 +5,50 @@ use crate::object::*;
 use crate::{error::*, internal_err};
 
 pub trait Context: std::fmt::Debug + std::fmt::Display {
+    #[inline]
     fn get(&mut self, name: String) -> EvalResult {
         (*self).env().get(name)
     }
 
+    #[inline]
     fn get_ellipsis(&mut self) -> EvalResult {
         let err = Err(Signal::Error(Error::IncorrectContext("...".to_string())));
         self.get("...".to_string()).or(err)
     }
 
+    #[inline]
     fn assign_lazy(&mut self, _to: Expr, _from: Expr) -> EvalResult {
         Err(Signal::Error(Error::IncorrectContext("<-".to_string())))
     }
 
+    #[inline]
     fn assign(&mut self, _to: Expr, _from: Obj) -> EvalResult {
         Err(Signal::Error(Error::IncorrectContext("<-".to_string())))
     }
 
     fn env(&self) -> Rc<Environment>;
 
-    fn eval_call_in(&mut self, expr: Expr, env: Rc<Environment>) -> EvalResult {
-        self.eval_in(expr, env)
+    #[inline]
+    fn eval_call(&mut self, expr: Expr) -> EvalResult {
+        self.eval(expr)
     }
 
-    fn eval_in(&mut self, expr: Expr, env: Rc<Environment>) -> EvalResult {
-        env.clone().eval(expr)
-    }
-
+    #[inline]
     fn eval(&mut self, expr: Expr) -> EvalResult {
         self.env().eval(expr)
     }
 
+    #[inline]
+    fn eval_in(&mut self, expr: Expr, mut env: Rc<Environment>) -> EvalResult {
+        env.eval(expr)
+    }
+
+    #[inline]
     fn eval_and_finalize(&mut self, expr: Expr) -> EvalResult {
         self.eval(expr)
     }
 
+    #[inline]
     fn eval_binary(&mut self, exprs: (Expr, Expr)) -> Result<(Obj, Obj), Signal> {
         Ok((self.eval(exprs.0)?, self.eval(exprs.1)?))
     }
@@ -62,8 +71,13 @@ pub trait Context: std::fmt::Debug + std::fmt::Display {
                             internal_err!()
                         }
                     }
-                    (k, e @ (Expr::Call(..) | Expr::Symbol(..))) => {
-                        let elem = vec![(k, Obj::Closure(e, self.env()))];
+                    // Avoid creating a new closure just to point to another, just reuse it
+                    (k, Expr::Symbol(s)) => match self.env().get(s.clone()) {
+                        Ok(c @ Obj::Closure(..)) => Ok(vec![(k, c)].into_iter()),
+                        _ => Ok(vec![(k, Obj::Closure(Expr::Symbol(s), self.env()))].into_iter()),
+                    },
+                    (k, c @ Expr::Call(..)) => {
+                        let elem = vec![(k, Obj::Closure(c, self.env()))];
                         Ok(elem.into_iter())
                     }
                     (k, v) => {
