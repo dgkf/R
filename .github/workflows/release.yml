@@ -110,7 +110,7 @@ jobs:
         run: |
           mkdir -p dist
           ls ./target/${{ matrix.target }}/release/r*
-          cp ./target/${{ matrix.target }}/release/r dist/
+          cp ./target/${{ matrix.target }}/release/r dist/r-${{ matrix.build }}
 
       - uses: actions/upload-artifact@v3
         with:
@@ -137,7 +137,7 @@ jobs:
         uses: softprops/action-gh-release@v1
         if: env.preview == 'false'
         with:
-          files: dist/*
+          files: dist/**/*
       
       - name: Upload binaries as artifact
         uses: actions/upload-artifact@v3
