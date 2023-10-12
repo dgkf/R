@@ -49,7 +49,7 @@
 
 // repl line feed parsing
 
-    repl = _{ WS* ~ expr ~ WS* ~ comment? ~ eoi }
+    repl = _{ WS* ~ expr ~ WS* ~ comment? ~ eoi | WS* ~ block_exprs ~ WS* ~ eoi }
 
 // expression basics
 
