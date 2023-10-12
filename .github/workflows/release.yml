@@ -8,6 +8,10 @@ on:
     branches:
       - main
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 env:
   # whether artifacts should be published to ci-job (previewed) or as release
   preview: ${{ !startsWith(github.ref, 'refs/tags/') }}
