@@ -245,3 +245,47 @@ impl Callable for KeywordBlock {
         Ok(value)
     }
 }
+#[cfg(test)]
+mod test {
+    use crate::r;
+
+    #[test]
+    fn repeat_with_break() {
+        assert_eq!(
+            r! {{"
+               sum <- 0
+               repeat {
+                   if (sum >= 3) break
+                   sum <- sum + 1
+               }
+            "}},
+            r! { 3 }
+        );
+    }
+
+    #[test]
+    fn while_simple() {
+        assert_eq!(
+            r! {{"
+               sum <- 0
+               while (sum < 3) {
+                   sum <- sum + 1
+               }
+            "}},
+            r! { 3 }
+        );
+    }
+
+    #[test]
+    fn for_simple() {
+        assert_eq!(
+            r! {{"
+               sum <- 0
+               for (i in 1:3) {
+                   sum <- sum + i
+               }
+            "}},
+            r! { 6 }
+        );
+    }
+}
