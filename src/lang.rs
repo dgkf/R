@@ -50,8 +50,8 @@ impl Display for Signal {
         match self {
             Signal::Return(obj, true) => writeln!(f, "{obj}"),
             Signal::Return(_, false) => Ok(()),
-            Signal::Tail(..) => write!(f, "Whoops, a tail is loose!"),
-            Signal::Condition(_) => write!(f, "Signal used at top level"),
+            Signal::Tail(..) => writeln!(f, "Whoops, a tail is loose!"),
+            Signal::Condition(_) => writeln!(f, "Signal used at top level"),
             Signal::Error(e) => writeln!(f, "{e}"),
             Signal::Thunk => write!(f, ""),
         }
@@ -667,7 +667,7 @@ impl Context for CallStack {
         match (to, from) {
             (Expr::String(s) | Expr::Symbol(s), from) => {
                 self.env().insert(s, from.clone());
-                Signal::Return(from, false).into()
+                Ok(from)
             }
             (Expr::List(l), Obj::List(args)) => {
                 let mut i = 1;
@@ -688,8 +688,7 @@ impl Context for CallStack {
                         _ => return internal_err!(),
                     }
                 }
-
-                Signal::Return(Obj::List(args), false).into()
+                Ok(Obj::List(args))
             }
             _ => err,
         }

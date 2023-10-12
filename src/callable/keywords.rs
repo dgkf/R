@@ -103,7 +103,7 @@ impl Callable for KeywordFor {
             index += 1;
 
             stack.last_frame().env().insert(var.clone(), value);
-            eval_result = stack.eval(body.clone());
+            eval_result = stack.eval_and_finalize(body.clone());
 
             use Cond::*;
             use Signal::*;
@@ -147,9 +147,9 @@ impl Callable for KeywordWhile {
 
         loop {
             // handle while condition
-            let cond_result = stack.eval(cond.clone())?;
+            let cond_result = stack.eval_and_finalize(cond.clone())?;
             if cond_result.try_into()? {
-                eval_result = stack.eval(body.clone());
+                eval_result = stack.eval_and_finalize(body.clone());
             } else {
                 break;
             }
@@ -164,7 +164,7 @@ impl Callable for KeywordWhile {
             }
 
             // update result
-            result = eval_result.expect("unhandled eval err");
+            result = eval_result?;
         }
 
         Ok(result)
@@ -190,7 +190,7 @@ impl Callable for KeywordRepeat {
         let mut result = Obj::Null;
 
         loop {
-            eval_result = stack.eval(body.clone());
+            eval_result = stack.eval_and_finalize(body.clone());
 
             // handle control flow signals during execution
             match eval_result {
@@ -202,7 +202,7 @@ impl Callable for KeywordRepeat {
             }
 
             // update result
-            result = eval_result.expect("unhandled eval err");
+            result = eval_result?;
         }
 
         Ok(result)
@@ -232,14 +232,16 @@ impl Format for KeywordBlock {
 
 impl Callable for KeywordBlock {
     fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
-        let mut value = Ok(Obj::Null);
+        let mut value = Obj::Null;
         let n = args.values.len().saturating_sub(1);
+
         for (i, expr) in args.values.into_iter().enumerate() {
             value = match i {
-                i if i == n => Tail(expr, true).into(),
-                _ => stack.eval(expr),
+                i if i == n => return Tail(expr, true).into(),
+                _ => stack.eval_and_finalize(expr)?,
             };
         }
-        value
+
+        Ok(value)
     }
 }
