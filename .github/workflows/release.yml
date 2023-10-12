@@ -126,7 +126,8 @@ jobs:
         uses: actions/checkout@v4
 
       - uses: actions/download-artifact@v3
-        path: dist
+        with:
+          path: dist
 
       - name: Display structure of downloaded files
         working-directory: dist
