@@ -1,4 +1,4 @@
-pub const RELEASE_NAME: &str = "Art Smock";
+pub const RELEASE_NAME: &str = "Eurydice";
 
 pub const GIT_HASH: &str = env!("GIT_HASH");
 pub const RELEASE_VERSION: &str = env!("CARGO_PKG_VERSION");

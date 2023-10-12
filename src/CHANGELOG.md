@@ -1,5 +1,27 @@
 # dev
 
+# 0.3.2 "Eurydice"
+
+## Changes
+
+* Tracebacks are now available on error.
+
+## Notable Bugs Addressed
+
+* Control flow `if-else`, `repeat`, `while` and `for` have been fixed following
+  some bugs introduced by the new `Tail` return type. 
+
+## Internals
+
+* Many internal `panic!`s have been further moved to captured errors.
+
+* `Closure`s of `Symbol`s (an approximation for `Promise`s) will now evaluate
+  a bit more quickly by avoiding adding frames to the call stack.
+
+* `Closure`s that propegate to a nested call will no longer introduce a new 
+  wrapping `Closure`, instead propegating the existing `Closure` value and 
+  avoiding the extra layer of indirection.
+
 # 0.3.1 "Art Smock"
 
 ## Major Changes
