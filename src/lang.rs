@@ -19,12 +19,14 @@ pub enum Cond {
 }
 
 impl From<Cond> for Signal {
+    #[inline]
     fn from(val: Cond) -> Self {
         Signal::Condition(val)
     }
 }
 
 impl From<Cond> for EvalResult {
+    #[inline]
     fn from(val: Cond) -> Self {
         Into::<Signal>::into(val).into()
     }
@@ -37,12 +39,6 @@ pub enum Signal {
     Return(Obj, bool), // (value, visibility)
     Tail(Expr, bool),  // (value expr, visibility)
     Thunk,             // used when evaluating null opts like comments
-}
-
-impl From<Signal> for EvalResult {
-    fn from(val: Signal) -> Self {
-        Err(val)
-    }
 }
 
 impl Display for Signal {

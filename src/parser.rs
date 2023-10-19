@@ -174,7 +174,7 @@ fn parse_named(pair: Pair<Rule>) -> Result<(Option<String>, Expr), Signal> {
     Ok((Some(name), parse_expr(inner)?))
 }
 
-fn parse_pairlist(pair: Pair<Rule>) -> ParseListResult {
+pub fn parse_pairlist(pair: Pair<Rule>) -> ParseListResult {
     let exprs: ExprList = pair
         .into_inner()
         .map(|i| match i.as_rule() {
