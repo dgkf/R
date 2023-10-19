@@ -1,5 +1,9 @@
 # dev
 
+## Changes
+
+* Adding new primitive functions, `eval()`, `quote()` and `print()`
+
 # 0.3.2 "Eurydice"
 
 ## Changes

@@ -21,7 +21,7 @@ fn scrape_builtins(paths: String) -> Result<Vec<(String, String)>, ()> {
     let mut builtins = vec![];
     let paths = std::fs::read_dir(paths).map_err(|_| ())?;
     let mut paths = paths.into_iter().filter_map(|i| i.ok()).collect::<Vec<_>>();
-    paths.sort_by(|l, r| l.file_name().cmp(&r.file_name()));
+    paths.sort_by_key(|l| l.file_name());
 
     let re = RegexBuilder::new(r#"#\[builtin\(.*\bsym\s*=\s*\"(.*)\".*\)\].*struct\s+(\w+?)"#)
         .multi_line(true)
