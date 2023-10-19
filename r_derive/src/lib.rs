@@ -32,14 +32,15 @@ impl Parse for Builtin {
                     Expr::Lit(ExprLit {
                         lit: Lit::Str(s), ..
                     }),
-                ) if k.is_ident("sym") => {
-                    symbol = Some(s);
-                }
+                ) => match k {
+                    sym if sym.is_ident("sym") => symbol = Some(s),
+                    _ => (),
+                },
                 (k, e) if k.is_ident("kind") => {
                     kind = e;
                 }
                 _ => todo!(),
-            }
+            };
         }
 
         match symbol {

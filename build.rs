@@ -20,6 +20,8 @@ macro_rules! log {
 fn scrape_builtins(paths: String) -> Result<Vec<(String, String)>, ()> {
     let mut builtins = vec![];
     let paths = std::fs::read_dir(paths).map_err(|_| ())?;
+    let mut paths = paths.into_iter().filter_map(|i| i.ok()).collect::<Vec<_>>();
+    paths.sort_by(|l, r| l.file_name().cmp(&r.file_name()));
 
     let re = RegexBuilder::new(r#"#\[builtin\(.*\bsym\s*=\s*\"(.*)\".*\)\].*struct\s+(\w+?)"#)
         .multi_line(true)
@@ -29,9 +31,7 @@ fn scrape_builtins(paths: String) -> Result<Vec<(String, String)>, ()> {
         .build()
         .expect("Regex is malformed");
 
-    for path in paths {
-        let Ok(file) = path else { continue };
-
+    for file in paths {
         match file.file_type() {
             Ok(filetype) if filetype.is_file() => {
                 let content = fs::read_to_string(file.path()).expect("File not found.");

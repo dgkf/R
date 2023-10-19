@@ -16,6 +16,13 @@ macro_rules! internal_err {
     };
 }
 
+#[macro_export]
+macro_rules! err {
+    ( $x:expr ) => {
+        $crate::error::Error::Other($x.to_string()).into()
+    };
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum Error {
     VariableNotFound(String),
@@ -118,5 +125,17 @@ impl From<Error> for Signal {
 impl<T> From<Error> for Result<T, Signal> {
     fn from(val: Error) -> Self {
         Err(Signal::Error(val))
+    }
+}
+
+impl From<&str> for Signal {
+    fn from(msg: &str) -> Self {
+        Signal::Error(Error::Other(msg.to_string()))
+    }
+}
+
+impl<T> From<Signal> for Result<T, Signal> {
+    fn from(value: Signal) -> Self {
+        Err(value)
     }
 }
