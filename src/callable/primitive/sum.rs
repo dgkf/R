@@ -53,22 +53,42 @@ impl Callable for PrimitiveSum {
             for obj in objects {
                 match obj {
                     Obj::Vector(vect) => {
-                        let rep = match vect {
-                            Vector::Numeric(repr) => repr.as_numeric(),
-                            Vector::Logical(repr) => repr.as_numeric(),
-                            Vector::Integer(repr) => repr.as_numeric(),
+                        match vect {
+                            Vector::Logical(repr) => {
+                                for x in repr.inner().borrow().iter() {
+                                    match *x {
+                                        OptionNA::NA => {
+                                            let rep: Rep<OptionNA<f64>> = Rep::from(vec![OptionNA::NA]);
+                                            return EvalResult::Ok(Obj::Vector(Vector::from(rep)));
+                                        }
+                                        OptionNA::Some(x) => sum += x as i32 as f64,
+                                    }
+                                }
+                            }
+                            Vector::Integer(repr) => {
+                                for x in repr.inner().borrow().iter() {
+                                    match *x {
+                                        OptionNA::NA => {
+                                            let rep: Rep<OptionNA<f64>> = Rep::from(vec![OptionNA::NA]);
+                                            return EvalResult::Ok(Obj::Vector(Vector::from(rep)));
+                                        }
+                                        OptionNA::Some(x) => sum += x as f64,
+                                    }
+                                }
+                            },
+                            Vector::Numeric(repr) => {
+                                for x in repr.inner().borrow().iter() {
+                                    match *x {
+                                        OptionNA::NA => {
+                                            let rep: Rep<OptionNA<f64>> = Rep::from(vec![OptionNA::NA]);
+                                            return EvalResult::Ok(Obj::Vector(Vector::from(rep)));
+                                        }
+                                        OptionNA::Some(x) => sum += x,
+                                    }
+                                }
+                            },
                             _ => unreachable!(),
                         };
-                        let xs = rep.inner();
-                        for x in xs.borrow().iter() {
-                            match *x {
-                                OptionNA::NA => {
-                                    let rep: Rep<OptionNA<f64>> = Rep::from(vec![OptionNA::NA]);
-                                    return EvalResult::Ok(Obj::Vector(Vector::from(rep)));
-                                }
-                                OptionNA::Some(x) => sum += x,
-                            }
-                        }
                     }
                     _ => unreachable!(),
                 }
@@ -80,21 +100,31 @@ impl Callable for PrimitiveSum {
             for obj in objects {
                 match obj {
                     Obj::Vector(vect) => {
-                        let rep = match vect {
-                            Vector::Logical(repr) => repr.as_integer(),
-                            Vector::Integer(repr) => repr.as_integer(),
+                        match vect {
+                            Vector::Logical(repr) => {
+                                for x in repr.inner().borrow().iter() {
+                                    match *x {
+                                        OptionNA::NA => {
+                                            let rep: Rep<OptionNA<i32>> = Rep::from(vec![OptionNA::NA]);
+                                            return EvalResult::Ok(Obj::Vector(Vector::from(rep)));
+                                        }
+                                        OptionNA::Some(x) => sum += x as i32,
+                                    }
+                                }
+                            }
+                            Vector::Integer(repr) => {
+                                for x in repr.inner().borrow().iter() {
+                                    match *x {
+                                        OptionNA::NA => {
+                                            let rep: Rep<OptionNA<i32>> = Rep::from(vec![OptionNA::NA]);
+                                            return EvalResult::Ok(Obj::Vector(Vector::from(rep)));
+                                        }
+                                        OptionNA::Some(x) => sum += x,
+                                    }
+                                }
+                            },
                             _ => unreachable!(),
                         };
-                        let xs = rep.inner();
-                        for x in xs.borrow().iter() {
-                            match *x {
-                                OptionNA::NA => {
-                                    let rep: Rep<OptionNA<i32>> = Rep::from(vec![OptionNA::NA]);
-                                    return EvalResult::Ok(Obj::Vector(Vector::from(rep)));
-                                }
-                                OptionNA::Some(x) => sum += x,
-                            }
-                        }
                     }
                     _ => unreachable!(),
                 }
@@ -111,6 +141,26 @@ mod tests {
     #[test]
     fn sum_empty() {
         assert_eq!(r! {sum()}, r! {0.0},)
+    }
+
+    // FIXME: Overly aggressive conversion to Numeric, representations for NAs
+    // #[test]
+    // fn sum_add() {
+    //     assert_eq!(r! {sum(1L, 2L)}, r! {1L + 2L});
+    // }
+    // #[test]
+    // fn sum_na_logical() {
+    //     assert_eq!(r! {sum(NA, true)}, r! {NA + 0L});
+    // }
+    //
+    // #[test]
+    // fn sum_na_integer() {
+    //     assert_eq!(r! {sum(NA, 1L)}, r! {NA * 1L});
+    // }
+
+    #[test]
+    fn sum_na_numeric() {
+        assert_eq!(r! {sum(NA, 1)}, r! {NA * 1});
     }
 
     #[test]
