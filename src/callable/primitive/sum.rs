@@ -41,7 +41,7 @@ impl Callable for PrimitiveSum {
                 }
                 _ => {
                     return EvalResult::Err(Signal::Error(Error::Other(String::from(
-                        "All inputs must be of type logical, numeric or character.",
+                        "All inputs must be of type numeric, integer or logical.",
                     ))))
                 }
             }
