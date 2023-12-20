@@ -158,4 +158,12 @@ mod tests {
             r! {{"1"}},
         )
     }
+
+    #[test]
+    fn sum_named_args() {
+        assert_eq!(
+            r! {{"sum(a = 1, b = 2)"}},
+            r! {{"3"}},
+        )
+    }
 }
