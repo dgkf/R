@@ -57,7 +57,8 @@ impl Callable for PrimitiveSum {
                                 for x in repr.inner().borrow().iter() {
                                     match *x {
                                         OptionNA::NA => {
-                                            let rep: Rep<OptionNA<f64>> = Rep::from(vec![OptionNA::NA]);
+                                            let rep: Rep<OptionNA<f64>> =
+                                                Rep::from(vec![OptionNA::NA]);
                                             return EvalResult::Ok(Obj::Vector(Vector::from(rep)));
                                         }
                                         OptionNA::Some(x) => sum += x as i32 as f64,
@@ -68,24 +69,26 @@ impl Callable for PrimitiveSum {
                                 for x in repr.inner().borrow().iter() {
                                     match *x {
                                         OptionNA::NA => {
-                                            let rep: Rep<OptionNA<f64>> = Rep::from(vec![OptionNA::NA]);
+                                            let rep: Rep<OptionNA<f64>> =
+                                                Rep::from(vec![OptionNA::NA]);
                                             return EvalResult::Ok(Obj::Vector(Vector::from(rep)));
                                         }
                                         OptionNA::Some(x) => sum += x as f64,
                                     }
                                 }
-                            },
+                            }
                             Vector::Numeric(repr) => {
                                 for x in repr.inner().borrow().iter() {
                                     match *x {
                                         OptionNA::NA => {
-                                            let rep: Rep<OptionNA<f64>> = Rep::from(vec![OptionNA::NA]);
+                                            let rep: Rep<OptionNA<f64>> =
+                                                Rep::from(vec![OptionNA::NA]);
                                             return EvalResult::Ok(Obj::Vector(Vector::from(rep)));
                                         }
                                         OptionNA::Some(x) => sum += x,
                                     }
                                 }
-                            },
+                            }
                             _ => return internal_err!(),
                         };
                     }
@@ -104,7 +107,8 @@ impl Callable for PrimitiveSum {
                                 for x in repr.inner().borrow().iter() {
                                     match *x {
                                         OptionNA::NA => {
-                                            let rep: Rep<OptionNA<i32>> = Rep::from(vec![OptionNA::NA]);
+                                            let rep: Rep<OptionNA<i32>> =
+                                                Rep::from(vec![OptionNA::NA]);
                                             return EvalResult::Ok(Obj::Vector(Vector::from(rep)));
                                         }
                                         OptionNA::Some(x) => sum += x as i32,
@@ -115,13 +119,14 @@ impl Callable for PrimitiveSum {
                                 for x in repr.inner().borrow().iter() {
                                     match *x {
                                         OptionNA::NA => {
-                                            let rep: Rep<OptionNA<i32>> = Rep::from(vec![OptionNA::NA]);
+                                            let rep: Rep<OptionNA<i32>> =
+                                                Rep::from(vec![OptionNA::NA]);
                                             return EvalResult::Ok(Obj::Vector(Vector::from(rep)));
                                         }
                                         OptionNA::Some(x) => sum += x,
                                     }
                                 }
-                            },
+                            }
                             _ => return internal_err!(),
                         };
                     }
@@ -210,9 +215,6 @@ mod tests {
 
     #[test]
     fn sum_named_args() {
-        assert_eq!(
-            r! {{"sum(a = 1, b = 2)"}},
-            r! {{"3"}},
-        )
+        assert_eq!(r! {{"sum(a = 1, b = 2)"}}, r! {{"3"}},)
     }
 }
