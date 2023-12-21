@@ -24,3 +24,5 @@ mod rnorm;
 pub use rnorm::PrimitiveRnorm;
 mod runif;
 pub use runif::PrimitiveRunif;
+mod sum;
+pub use sum::PrimitiveSum;
