@@ -5,6 +5,7 @@ use crate::error::*;
 use crate::lang::*;
 use crate::object::rep::Rep;
 use crate::object::*;
+use crate::internal_err;
 
 #[derive(Debug, Clone, PartialEq)]
 #[builtin(sym = "sum")]
