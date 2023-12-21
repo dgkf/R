@@ -339,3 +339,18 @@ fn parse_list(pair: Pair<Rule>) -> ParseResult {
     let args = parse_pairlist(pair)?;
     Ok(Expr::List(args))
 }
+
+#[cfg(test)]
+mod test {
+    use crate::{r, r_expect};
+
+    #[test]
+    fn prefix_with_space() {
+        r_expect! { - 1 + 1 == 0 }
+    }
+
+    #[test]
+    fn postfix_with_space() {
+        r_expect! { c (1) == true }
+    }
+}
