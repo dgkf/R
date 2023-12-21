@@ -23,7 +23,7 @@ y <- function(...) x(...)
 # <environment 0x6000005b8e28>
 
 y(4, 3, 2, 1)
-# [1] 7 6 5 
+# [1] 7 6 5
 ```
 
 This amounts to (most) of R's grammar parsing, basic primitives, scope
@@ -32,8 +32,8 @@ management and ellipsis argument passing.
 ## What's different?
 
 This project is not just a rewrite of R, but a playground for features and
-reinterpretations. It is not meant to reimplement a compatible R layer, but 
-to rethink some of R's assumptions. 
+reinterpretations. It is not meant to reimplement a compatible R layer, but
+to rethink some of R's assumptions.
 
 ### Syntax
 
@@ -58,13 +58,13 @@ kws <- (na, null, inf, true, false)
 (a, b) <- (1, 2)
 ```
 
-There are plenty of more substantial [changes being considered](https://github.com/dgkf/R/issues?q=is%3Aissue+is%3Aopen+label%3Ameta-proposal). 
+There are plenty of more substantial [changes being considered](https://github.com/dgkf/R/issues?q=is%3Aissue+is%3Aopen+label%3Ameta-proposal).
 If you enjoy mulling over the direction of syntax and features, feel
 free to join the conversation.
 
 ### Experiments
 
-All experiments are feature-gated and enabled by running (or building) with 
+All experiments are feature-gated and enabled by running (or building) with
 
 ```sh
 cargo run --features "<feature>"
@@ -74,7 +74,7 @@ Please try them out and share your thoughts in the corresponding issues!
 
 #### Ellipsis packing and unpacking
 
-> [!NOTE]  
+> [!NOTE]
 > **feature:** `rest-args` (discussed in [#48](https://github.com/dgkf/R/issues/48), [#49](https://github.com/dgkf/R/issues/49))
 
 Current work is focused on `..args` named ellipsis arguments and `..args`
@@ -106,10 +106,10 @@ f(..args, ..more_args)  # duplicate names okay, last instance takes priority
 
 #### Tail Recursion
 
-> [!NOTE]  
+> [!NOTE]
 > **feature:** `tail-call-optimization` (discussed in [#60](https://github.com/dgkf/R/issues/60))
 
-Tail recursion allows for arbitrarily recursive call stacks - or, more 
+Tail recursion allows for arbitrarily recursive call stacks - or, more
 accurately, it discards frames from the call stack in this special case
 allowing for recursion without overflowing of the call stack.
 
@@ -120,34 +120,34 @@ f(10000)
 ```
 
 The details of how this is achieves requires the tail call's arguments to be
-executed _eagerly_ instead of R's typical _lazy_ argument evaluation. This 
+executed _eagerly_ instead of R's typical _lazy_ argument evaluation. This
 change can result in some unexpected behaviors that need discussion before
 the feature can be fully introduced.
 
 ### Performance
 
 You might be thinking `rust` is fast, and therefore this project must be
-fast. Well, unfortunately you'd be wrong. That's probably more of a 
-reflection on me than `rust`. To get the basic skeleton in place, 
+fast. Well, unfortunately you'd be wrong. That's probably more of a
+reflection on me than `rust`. To get the basic skeleton in place,
 my focus has been on getting things working, not on getting them working
 _well_. For now, expect this interpreter to be about ***1000x*** slower
-than R. 
+than R.
 
 I'm feeling good about the general structure of the internals, but there
-have been plenty of quick proofs of concept that involve excess copies, 
+have been plenty of quick proofs of concept that involve excess copies,
 extra loops, panics and probably less-than-ideal data structures.
-If you're an optimization fiend and you want to help narrow the gap with 
+If you're an optimization fiend and you want to help narrow the gap with
 R, your help would be very much appreciated!
 
 ## Why
 
-This project is primarily a personal exploration into language design. 
+This project is primarily a personal exploration into language design.
 
 At the outset, many of the choices are researched one-by-one and are almost
-certainly naive implementations. My goal is to learn and explore, and in 
+certainly naive implementations. My goal is to learn and explore, and in
 that way the project is already a success in my eyes. Beyond advancing my own
 understanding of language internals, I'd love to see the project garner enough
-interest to become self-sustaining. 
+interest to become self-sustaining.
 
 If you see value in the project for anything beyond prototyping ideas, then
 pushing the project toward something practical is contingent on your support.
@@ -162,10 +162,10 @@ own. Somethings I want to aim for:
   interpret R code).
 - Improved R constructs for complex calls, including argument packing and
   unpacking, partial function calls, destructuring assignment
-- Guardrails on non-standard-evaluation, allowing for user-facing 
+- Guardrails on non-standard-evaluation, allowing for user-facing
   domain-specific-languages, while allowing a more rigid evaluation scheme
-  internally. 
-- Lean into the things that `rust` does well, such as threading, arguably 
+  internally.
+- Lean into the things that `rust` does well, such as threading, arguably
   async evaluation, first-class data structures and algebraic error types.
 - Learn from more general languages like `TypeScript` to better understand
   how static typing can be comfortably embedded in a high-level language.
@@ -184,17 +184,3 @@ contribute. In order of increasing complexity, this might include:
 
 Any and all contributions are appreciated, and you'll earn yourself a mention
 in release notes!
-
-## License
-
-I welcome other contributors, but also have not thoughtfully selected a long-
-term license yet. For now there's a CLA in place so that the license can
-be altered later on. I don't intend to keep it around forever. If you have
-suggestions or considerations for selecting an appropriate license, your
-feedback would be much appreciated.
-
-My current preference is toward a copyleft license like GPL as opposed to a
-permissive license like MIT, as I believe that languages are a best-case
-candidate for such licenses and it fits well with the ethos of the R community
-as being scientific-community first. If you disagree strongly with that
-decision, now is your time to let me know.
