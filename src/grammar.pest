@@ -58,8 +58,8 @@
         comment = _{ "#" ~ ( !NEWLINE ~ !eoi ~ ANY )* }
 
         atomic = _{ prefixed | standalone }
-            prefixed = { prefix* ~ postfixed }
-            postfixed = { atom ~ postfix* }
+            prefixed = { prefix* ~ WS* ~ postfixed }
+            postfixed = { atom ~ WS_NO_NL* ~ postfix* }
 
         infix = _{ 
                 assign | 
@@ -167,7 +167,7 @@
 
 // atomic value types
 
-    number = @{ "-"? ~ (number_leading | number_trailing) }
+    number = @{ number_leading | number_trailing }
         number_leading = { ("0" | ASCII_NONZERO_DIGIT ~ ASCII_DIGIT*) ~ ("." ~ ASCII_DIGIT*)? }
         number_trailing = { "." ~ ASCII_DIGIT+ }
 
