@@ -86,10 +86,10 @@ impl Callable for PrimitiveSum {
                                     }
                                 }
                             },
-                            _ => unreachable!(),
+                            _ => return internal_err!(),
                         };
                     }
-                    _ => unreachable!(),
+                    _ => return internal_err!(),
                 }
             }
             EvalResult::Ok(Obj::Vector(Vector::from(Rep::from(vec![sum]))))
