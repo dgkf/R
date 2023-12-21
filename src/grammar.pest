@@ -1,8 +1,8 @@
 //
-// Since newlines are sometimes meaningful syntax, we need to specify what 
-// whitespace is permitted where. 
+// Since newlines are sometimes meaningful syntax, we need to specify what
+// whitespace is permitted where.
 //
-// This might be easier in future versions of `pest`, though the addition of 
+// This might be easier in future versions of `pest`, though the addition of
 // this feature has not moved much since the middle of 2022:
 // https://github.com/pest-parser/pest/issues/271
 //
@@ -14,13 +14,13 @@
     WB = _{ eoi | !ASCII_ALPHA } // boundary
     CAPTURE_WS = { WS+ }
     eoi  = _{ !ANY }  // since EOI does not parse silently, define our own
-    
+
 
 // highlighting
 //
-// Syntax highlighting uses a parallel grammar (trying to reuse as much as 
-// possible), that tries to be minimally recursive. In the future this might 
-// shift to using something like a treesitter grammar, but for now this is 
+// Syntax highlighting uses a parallel grammar (trying to reuse as much as
+// possible), that tries to be minimally recursive. In the future this might
+// shift to using something like a treesitter grammar, but for now this is
 // just a minimal product for building the infrastructure for highlighting
 // into the repl
 //
@@ -61,15 +61,15 @@
             prefixed = { prefix* ~ WS* ~ postfixed }
             postfixed = { atom ~ WS_NO_NL* ~ postfix* }
 
-        infix = _{ 
-                assign | 
-                add | subtract | multiply | divide | modulo | power | 
-                pipe | 
-                colon | 
-                gte | lte | gt | eq | neq | lt | 
-                or | vor | and | vand | 
+        infix = _{
+                assign |
+                add | subtract | multiply | divide | modulo | power |
+                pipe |
+                colon |
+                gte | lte | gt | eq | neq | lt |
+                or | vor | and | vand |
                 special |
-                dollar | 
+                dollar |
                 doublecolon | triplecolon
             }
 
@@ -107,11 +107,11 @@
 
         prefix = _{ subtract | negate | more }
             negate = { "!" }
- 
+
         postfix = _{ call | index | vector_index | more }
             call         = { "("  ~ pairs ~  ")" }
             index        = { "[[" ~ pairs ~ "]]" }
-            vector_index = { "["  ~ pairs ~  "]" }           
+            vector_index = { "["  ~ pairs ~  "]" }
 
         standalone = _{ more }
 
@@ -121,7 +121,7 @@
 
         paren_expr = _{ "(" ~ WS* ~ expr ~ WS* ~ ")" }
 
-        atom = _{ 
+        atom = _{
               block
             | paren_expr
             | kw_function
@@ -138,9 +138,9 @@
             | val_true
             | val_false
             | integer_expr
-            | string_expr 
-            | number 
-            | symbol 
+            | string_expr
+            | number
+            | symbol
             | list
             | vec
         }
@@ -172,7 +172,7 @@
         number_trailing = { "." ~ ASCII_DIGIT+ }
 
     integer_expr = _{ integer ~ "L" }
-        integer = @{ "-"? ~ ( ASCII_NONZERO_DIGIT ~ ASCII_DIGIT* | "0" ) }
+        integer = @{( ASCII_NONZERO_DIGIT ~ ASCII_DIGIT* | "0" ) }
 
     string_expr = _{ "\"" ~ double_quoted_string ~ "\"" | "'" ~ single_quoted_string ~ "'" }
         single_quoted_string = @{ single_quoted_string_char* }
