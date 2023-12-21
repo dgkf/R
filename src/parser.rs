@@ -342,15 +342,21 @@ fn parse_list(pair: Pair<Rule>) -> ParseResult {
 
 #[cfg(test)]
 mod test {
-    use crate::{r, r_expect};
+    use crate::r;
 
     #[test]
     fn prefix_with_space() {
-        r_expect! { - 1 + 1 == 0 }
+        assert_eq! {
+            r! {{"- 1"}},
+            r! { -1 }
+        }
     }
 
     #[test]
     fn postfix_with_space() {
-        r_expect! { c (1) == true }
+        assert_eq! {
+            r! {{"c (1)"}},
+            r! {{"c(1)"}}
+        }
     }
 }
