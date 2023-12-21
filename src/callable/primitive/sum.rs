@@ -22,8 +22,7 @@ impl Callable for PrimitiveSum {
             return EvalResult::Ok(Obj::Vector(Vector::from(Rep::from(vec![0.0]))));
         }
 
-        let objects: Vec<Obj> = force_closures(ellipsis, stack)
-            .unwrap()
+        let objects: Vec<Obj> = force_closures(ellipsis, stack)?
             .into_iter()
             .map(|(_, value)| value)
             .collect();
