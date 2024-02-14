@@ -17,12 +17,12 @@ macro_rules! r {
         {
             // test if token is a string literal and evaluate directly
             if let Some(s) = (&$expr as &dyn std::any::Any).downcast_ref::<&str>() {
-                crate::repl::eval(&s)
+                $crate::repl::eval(&s)
 
             // otherwise stringify token before evaluating
             } else {
                 let expr = stringify!($expr);
-                crate::repl::eval(expr)           
+                $crate::repl::eval(expr)
             }
         }
     }};
@@ -32,7 +32,7 @@ macro_rules! r {
     { $($expr:tt)+ } => {{
         {
             let expr = stringify!($($expr)+);
-            crate::repl::eval(expr)
+            $crate::repl::eval(expr)
         }
     }};
 }
@@ -44,12 +44,12 @@ macro_rules! r_expect {
         {
             // test if token is a string literal and evaluate directly
             if let Some(s) = (&$expr as &dyn std::any::Any).downcast_ref::<&str>() {
-                assert_eq!(crate::repl::eval(&s), r!{ true })
+                assert_eq!($crate::repl::eval(&s), r!{ true })
 
             // otherwise stringify token before evaluating
             } else {
                 let expr = stringify!($expr);
-                assert_eq!(crate::repl::eval(expr), r!{ true })
+                assert_eq!($crate::repl::eval(expr), r!{ true })
             }
         }
     }};
@@ -59,7 +59,7 @@ macro_rules! r_expect {
     { $($expr:tt)+ } => {{
         {
             let expr = stringify!($($expr)+);
-            assert_eq!(crate::repl::eval(expr), r!{ true })
+            assert_eq!($crate::repl::eval(expr), r!{ true })
         }
     }};
 }

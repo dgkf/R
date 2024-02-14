@@ -2,8 +2,8 @@ use r_derive::*;
 
 use crate::callable::core::*;
 use crate::lang::*;
-use crate::object::*;
 use crate::object::types::*;
+use crate::object::*;
 
 #[derive(Debug, Clone, PartialEq)]
 #[builtin(sym = "c")]
@@ -82,7 +82,6 @@ impl Callable for PrimitiveC {
                                 _ => unreachable!(),
                             }),
                     )
-                    .map(|i| i.clone())
                     .collect::<Vec<Character>>(),
             ))),
             Vector::Numeric(v) => Ok(Obj::Vector(Vector::from(
@@ -103,7 +102,6 @@ impl Callable for PrimitiveC {
                                 _ => unreachable!(),
                             }),
                     )
-                    .map(|i| i.clone())
                     .collect::<Vec<Numeric>>(),
             ))),
             Vector::Integer(v) => Ok(Obj::Vector(Vector::from(

@@ -1,4 +1,4 @@
-pub const GIT_HASH: &'static str = env!("GIT_HASH");
+pub const GIT_HASH: &str = env!("GIT_HASH");
 
 pub fn session_header() -> String {
     let dev = if GIT_HASH.len() > 0 {

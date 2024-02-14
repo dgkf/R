@@ -1,8 +1,8 @@
 use r_derive::*;
 
-use crate::lang::*;
-use crate::object::{ExprList, Expr, Obj};
 use super::core::*;
+use crate::lang::*;
+use crate::object::{Expr, ExprList, Obj};
 
 #[derive(Debug, Clone, PartialEq)]
 #[builtin]
@@ -30,7 +30,7 @@ impl Callable for KeywordIf {
         if cond {
             stack.eval(args.next().unwrap())
         } else {
-            stack.eval(args.skip(1).next().unwrap_or(Expr::Null))
+            stack.eval(args.nth(1).unwrap_or(Expr::Null))
         }
     }
 }

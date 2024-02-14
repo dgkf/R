@@ -1,10 +1,10 @@
 extern crate r_derive;
 
-use crate::object::{Obj, Expr, ExprList};
 use crate::callable::builtins::BUILTIN;
 use crate::callable::dyncompare::*;
 use crate::lang::*;
 use crate::object::List;
+use crate::object::{Expr, ExprList, Obj};
 
 impl std::fmt::Debug for Box<dyn Callable> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -45,10 +45,10 @@ pub trait Callable {
         let mut i: usize = 0;
         'outer: while i < args.values.borrow().len() {
             'inner: {
-                // check argname with immutable borrow, but drop scope. If 
+                // check argname with immutable borrow, but drop scope. If
                 // found, drop borrow so we can mutably assign it
                 if let (Some(argname), _) = &args.values.borrow()[i] {
-                    if let Some((Some(_), _)) = formals.remove_named(&argname) {
+                    if let Some((Some(_), _)) = formals.remove_named(argname) {
                         break 'inner;
                     }
                 }
@@ -57,9 +57,10 @@ pub trait Callable {
                 continue 'outer;
             }
 
-            matched_args.values
+            matched_args
+                .values
                 .borrow_mut()
-                .push(args.values.borrow_mut().remove(i));               
+                .push(args.values.borrow_mut().remove(i));
         }
 
         // remove any Ellipsis param, and any trailing unassigned params
@@ -102,7 +103,12 @@ pub trait Callable {
         self.call_matched(Obj::List(args), Obj::List(ellipsis), stack)
     }
 
-    fn call_matched(&self, mut _args: Obj, mut _ellipsis: Obj, _stack: &mut CallStack) -> EvalResult {
+    fn call_matched(
+        &self,
+        mut _args: Obj,
+        mut _ellipsis: Obj,
+        _stack: &mut CallStack,
+    ) -> EvalResult {
         unimplemented!()
     }
 
@@ -113,6 +119,7 @@ pub trait Callable {
     }
 }
 
+#[derive(Default)]
 pub struct FormatState {
     // // character width of indentation
     // indent_size: usize,
@@ -122,17 +129,6 @@ pub struct FormatState {
     // start: usize,
     // // width of desired formatted code
     // width: usize,
-}
-
-impl Default for FormatState {
-    fn default() -> Self {
-        FormatState {
-            // indent_size: 2,
-            // indent_count: 0,
-            // start: 0,
-            // width: 80,
-        }
-    }
 }
 
 pub trait Format {

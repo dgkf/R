@@ -1,12 +1,11 @@
-use nu_ansi_term::Style;
 use nu_ansi_term::Color;
+use nu_ansi_term::Style;
 use pest::Parser;
 use reedline::Highlighter;
 use reedline::StyledText;
 
 // use crate::{ast::RExpr};
-use crate::parser::ExprParser;
-use crate::parser::Rule;
+use crate::parser::*;
 
 #[derive(Debug, Clone)]
 pub enum ExprHighlights {
@@ -22,19 +21,20 @@ pub enum ExprHighlights {
     None,
 }
 
-pub struct ExprHighlighter { }
+pub struct ExprHighlighter {}
 
 impl ExprHighlighter {
     #[must_use]
     pub fn new() -> Self {
-        Self { }
+        Self {}
     }
 }
 
 impl Highlighter for ExprHighlighter {
     fn highlight<'l>(&self, line: &'l str, _pos: usize) -> StyledText {
         let mut styled_text = StyledText::new();
-        match  ExprParser::parse(Rule::hl, line) {
+        use en::*;
+        match ExprParser::parse(Rule::hl, line) {
             Ok(pairs) => {
                 for pair in pairs.into_iter() {
                     let style = match pair.as_rule() {

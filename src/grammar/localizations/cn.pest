@@ -1,6 +1,7 @@
 loc_if = _{ "假使" }
 loc_else = _{ "否則" }
 loc_for = _{ "取" }
+loc_in = _{ "in" }
 loc_while = _{ "當" }
 loc_repeat = _{ "重复" }
 loc_return = _{ "傳回" }

@@ -1,5 +1,5 @@
-use std::{fs, env};
-use regex::{RegexBuilder, Captures};
+use regex::{Captures, RegexBuilder};
+use std::{env, fs};
 
 /// Log to cargo's warning output
 ///
@@ -18,7 +18,6 @@ macro_rules! log {
 }
 
 fn scrape_builtins(paths: String) -> Result<Vec<(String, String)>, ()> {
-
     let mut builtins = vec![];
     let paths = std::fs::read_dir(paths).map_err(|_| ())?;
 
@@ -31,9 +30,7 @@ fn scrape_builtins(paths: String) -> Result<Vec<(String, String)>, ()> {
         .expect("Regex is malformed");
 
     for path in paths {
-        let Ok(file) = path else {
-            continue            
-        };
+        let Ok(file) = path else { continue };
 
         match file.file_type() {
             Ok(filetype) if filetype.is_file() => {
@@ -42,33 +39,31 @@ fn scrape_builtins(paths: String) -> Result<Vec<(String, String)>, ()> {
                 for (_, [sym, ty]) in re.captures_iter(&content).map(|c| c.extract()) {
                     log!("  - {ty} as '{sym}'");
                     builtins.push((String::from(sym), String::from(ty)))
-                };
-            },
+                }
+            }
             Ok(filetype) if filetype.is_dir() => {
                 let dirpath = file.path().into_os_string().into_string().map_err(|_| ())?;
                 let mut dirbuiltins = scrape_builtins(dirpath)?;
                 builtins.append(&mut dirbuiltins);
-            },
-            _ => continue
+            }
+            _ => continue,
         }
-        
     }
 
     Ok(builtins)
 }
 
 fn update_builtins_table(path: String, builtins: Vec<(String, String)>) -> Result<(), ()> {
-    let content = fs::read_to_string(&path)
-        .expect("Unable to read builtins table file.");
+    let content = fs::read_to_string(&path).expect("Unable to read builtins table file.");
 
-    let re = RegexBuilder::new(r#"(// builtins start)\s*(\n\s*?).*(\n\s*?// builtins end)"#)
+    let re = RegexBuilder::new(r"(// builtins start)\s*(\n\s*?).*(\n\s*?// builtins end)")
         .multi_line(true)
         .dot_matches_new_line(true)
         .swap_greed(true)
         .crlf(true)
         .build()
         .expect("Regex is malformed");
- 
+
     let content = re.replace(&content, |cap: &Captures| {
         let mut res = String::from("");
         let (_, [head, ws, tail]) = cap.extract();
@@ -91,12 +86,14 @@ fn git_hash() -> String {
     let unknown = String::from("unknown");
 
     let changes = !Command::new("git")
-        .args(&["diff", "--cached", "--exit-code"])
+        .args(["diff", "--cached", "--exit-code"])
         .status()
         .expect("Error encountered while checking for git changes")
         .success();
 
-    if changes { return unknown }
+    if changes {
+        return unknown;
+    }
 
     Command::new("git")
         .arg("rev-parse")
@@ -110,12 +107,12 @@ fn git_hash() -> String {
 fn main() -> Result<(), ()> {
     // embed git hash as environment variable GIT_SHA for use in header
     println!("cargo:rustc-env=GIT_HASH={}", git_hash());
-    
-    // iterate through callable module files and scan for uses of 
+
+    // iterate through callable module files and scan for uses of
     // `#[builtin(.. sym = "sym" ..)]`
     println!("cargo:rerun-if-changed=build.rs");
     println!("cargo:rerun-if-changed=src/callable");
-    let builtins = scrape_builtins("src/callable".into())?;    
+    let builtins = scrape_builtins("src/callable".into())?;
     update_builtins_table("src/callable/builtins.rs".into(), builtins)?;
 
     Ok(())

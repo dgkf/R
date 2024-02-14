@@ -1,6 +1,7 @@
 loc_if = _{ "if" }
 loc_else = _{ "else" }
 loc_for = _{ "for" }
+loc_in = _{ "in" }
 loc_while = _{ "while" }
 loc_repeat = _{ "repeat" }
 loc_return = _{ "return" }

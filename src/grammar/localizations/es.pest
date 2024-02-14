@@ -1,6 +1,7 @@
 loc_if = _{ "si" }
 loc_else = _{ "sino" }
 loc_for = _{ "para" }
+loc_in = _{ "en" }
 loc_while = _{ "mientras" }
 loc_repeat = _{ "repetir" }
 loc_return = _{ "retornar" }

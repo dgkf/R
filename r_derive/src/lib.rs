@@ -2,7 +2,7 @@ extern crate proc_macro;
 
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::{parse_macro_input, DeriveInput, parse::Parse, LitStr, Expr};
+use syn::{parse::Parse, parse_macro_input, DeriveInput, Expr, LitStr};
 
 #[derive(Clone)]
 enum Builtin {
@@ -18,8 +18,8 @@ struct Sym {
 
 impl Parse for Builtin {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
-        use syn::{parse_quote, ExprLit, Lit, MetaNameValue, Token};
         use syn::punctuated::Punctuated;
+        use syn::{parse_quote, ExprLit, Lit, MetaNameValue, Token};
 
         let vars = Punctuated::<MetaNameValue, Token![,]>::parse_terminated(input)?.into_iter();
         let mut symbol: Option<LitStr> = None;
@@ -27,9 +27,14 @@ impl Parse for Builtin {
 
         for var in vars {
             match (var.path, var.value) {
-                (k, Expr::Lit(ExprLit { lit: Lit::Str(s), .. })) if k.is_ident("sym") => {
+                (
+                    k,
+                    Expr::Lit(ExprLit {
+                        lit: Lit::Str(s), ..
+                    }),
+                ) if k.is_ident("sym") => {
                     symbol = Some(s);
-                },
+                }
                 (k, e) if k.is_ident("kind") => {
                     kind = e;
                 }
@@ -38,8 +43,8 @@ impl Parse for Builtin {
         }
 
         match symbol {
-            Some(sym) => Ok(Builtin::Sym(Sym{ sym, kind })),
-            None => Ok(Builtin::Keyword)
+            Some(sym) => Ok(Builtin::Sym(Sym { sym, kind })),
+            None => Ok(Builtin::Keyword),
         }
     }
 }
@@ -103,6 +108,7 @@ pub fn derive_translate(_input: TokenStream) -> TokenStream {
                     Rule::loc_if => crate::parser::Rule::loc_if,
                     Rule::loc_else => crate::parser::Rule::loc_else,
                     Rule::loc_for => crate::parser::Rule::loc_for,
+                    Rule::loc_in => crate::parser::Rule::loc_in,
                     Rule::loc_while => crate::parser::Rule::loc_while,
                     Rule::loc_repeat => crate::parser::Rule::loc_repeat,
                     Rule::loc_return => crate::parser::Rule::loc_return,
@@ -217,6 +223,35 @@ pub fn derive_translate(_input: TokenStream) -> TokenStream {
                     Rule::vec => crate::parser::Rule::vec,
                 }
             }
+        }
+    };
+
+    output.into()
+}
+
+#[proc_macro_derive(PrattOps)]
+pub fn derive_pratt_ops(_input: TokenStream) -> TokenStream {
+    let output = quote! {
+        pub fn pratt_parser() -> &'static pest::pratt_parser::PrattParser<Rule> {
+            use once_cell::sync::OnceCell;
+            static INSTANCE: OnceCell<pest::pratt_parser::PrattParser<Rule>> = OnceCell::new();
+            INSTANCE.get_or_init(|| {
+                use pest::pratt_parser::{Assoc::*, Op};
+                use Rule::*;
+
+                // Precedence is defined lowest to highest
+                pest::pratt_parser::PrattParser::new()
+                    .op(Op::infix(assign, Right))
+                    .op(Op::infix(or, Left) | Op::infix(vor, Left))
+                    .op(Op::infix(and, Left) | Op::infix(vand, Left))
+                    .op(Op::infix(lt, Left) | Op::infix(gt, Left) | Op::infix(lte, Left) | Op::infix(gte, Left) | Op::infix(eq, Left) | Op::infix(neq, Left))
+                    .op(Op::infix(add, Left) | Op::infix(subtract, Left))
+                    .op(Op::infix(multiply, Left) | Op::infix(divide, Left))
+                    .op(Op::infix(modulo, Left) | Op::infix(special, Left) | Op::infix(pipe, Left))
+                    .op(Op::infix(power, Left))
+                    .op(Op::infix(colon, Left))
+                    .op(Op::infix(dollar, Left))
+            })
         }
     };
 

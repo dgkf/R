@@ -4,9 +4,9 @@ use std::rc::Rc;
 
 use super::highlight::ExprHighlighter;
 use super::prompt::RPrompt;
-use super::validator::ExprValidator;
 use super::release::*;
-use crate::lang::{CallStack, Cond, Context, RSignal, EvalResult};
+use super::validator::ExprValidator;
+use crate::lang::{CallStack, Cond, Context, EvalResult, RSignal};
 use crate::object::Environment;
 use crate::parser::*;
 
@@ -17,7 +17,7 @@ where
     println!("{}", session_header());
     let global_env = Rc::new(Environment {
         parent: Some(Environment::from_builtins()),
-        ..Default::default()        
+        ..Default::default()
     });
 
     // initialize parser
@@ -52,7 +52,9 @@ where
                 }
 
                 // otherwise parse and evaluate entry
-                let parse_res = parse_with(es::ExprParser, es::Rule::repl, &line);
+                use en::*;
+                let parse_res = parse_with(&ExprParser, pratt_parser(), Rule::expr, &line);
+                println!("{parse_res:?}");
                 match parse_res {
                     Ok(expr) => {
                         let mut stack = CallStack::from(global_env.clone());
@@ -83,12 +85,12 @@ pub fn eval(input: &str) -> EvalResult {
     // initialize global env
     let global_env = Rc::new(Environment {
         parent: Some(Environment::from_builtins()),
-        ..Default::default()        
+        ..Default::default()
     });
 
     let mut stack = CallStack::from(global_env.clone());
-    match parse_with(ExprParser, Rule::repl, input) {
+    match parse_with(&ExprParser, pratt_parser(), Rule::repl, input) {
         Ok(expr) => stack.eval(expr),
-        Err(e) => Err(e)
+        Err(e) => Err(e),
     }
 }

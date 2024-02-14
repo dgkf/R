@@ -1,4 +1,7 @@
-use crate::{parser::*, lang::{CallStack, RSignal}};
+use crate::{
+    lang::{CallStack, RSignal},
+    parser::*,
+};
 
 use core::fmt;
 use pest::error::LineColLocation::Pos;
@@ -20,7 +23,7 @@ pub enum RError {
     Other(String),
 
     // temporary workaround until we propagate call stack to all error locations
-    WithCallStack(Box<RError>, CallStack),      
+    WithCallStack(Box<RError>, CallStack),
 
     // in-dev errors
     Unimplemented(Option<String>),
@@ -40,28 +43,28 @@ impl RError {
                 format!("Parse failed. Found {:#?}", rule)
             }
             RError::NotInterpretableAsLogical => {
-                format!("argument is not interpretable as logical")
+                "argument is not interpretable as logical".to_string()
             }
-            RError::ConditionIsNotScalar => {
-                format!("the condition has length > 1")
-            }
+            RError::ConditionIsNotScalar => "the condition has length > 1".to_string(),
             RError::CannotBeCoercedToLogical => {
-                format!("object cannot be coerced to type 'logical'")
+                "object cannot be coerced to type 'logical'".to_string()
             }
             RError::CannotBeCoercedToInteger => {
-                format!("object cannot be coerced to type 'integer'")
+                "object cannot be coerced to type 'integer'".to_string()
             }
             RError::CannotBeCoercedToNumeric => {
-                format!("object cannot be coerced to type 'numeric'")
+                "object cannot be coerced to type 'numeric'".to_string()
             }
-            RError::Other(s) => {
-                format!("{}", s)
-            }
+            RError::Other(s) => s.to_string(),
             RError::WithCallStack(e, c) => format!("{}\n{c}", e.as_str()),
             RError::ArgumentMissing(s) => format!("argument '{s}' is missing with no default"),
             RError::ArgumentInvalid(s) => format!("argument '{s}' is invalid."),
-            RError::Unimplemented(Some(s)) => format!("Uh, oh! Looks like '{s}' is only partially implemented."),
-            RError::Unimplemented(_) => format!("Uh, oh! You tried to do something that is only partially implemented."),
+            RError::Unimplemented(Some(s)) => {
+                format!("Uh, oh! Looks like '{s}' is only partially implemented.")
+            }
+            RError::Unimplemented(_) => {
+                "Uh, oh! You tried to do something that is only partially implemented.".to_string()
+            }
         }
     }
 }
