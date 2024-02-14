@@ -33,7 +33,7 @@ impl ExprHighlighter {
 impl Highlighter for ExprHighlighter {
     fn highlight<'l>(&self, line: &'l str, _pos: usize) -> StyledText {
         let mut styled_text = StyledText::new();
-        use en::*;
+        use es::*;
         match ExprParser::parse(Rule::hl, line) {
             Ok(pairs) => {
                 for pair in pairs.into_iter() {

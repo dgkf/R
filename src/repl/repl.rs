@@ -52,9 +52,8 @@ where
                 }
 
                 // otherwise parse and evaluate entry
-                use en::*;
+                use es::*;
                 let parse_res = parse_with(&ExprParser, pratt_parser(), Rule::expr, &line);
-                println!("{parse_res:?}");
                 match parse_res {
                     Ok(expr) => {
                         let mut stack = CallStack::from(global_env.clone());
