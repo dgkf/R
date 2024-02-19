@@ -1,5 +1,7 @@
 # dev
 
+# 0.3.3 "Beautiful You"
+
 ## Changes
 
 * Adding localizations. To start, only English (`en`), Spanish (`es`) and

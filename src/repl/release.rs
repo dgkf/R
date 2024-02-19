@@ -1,12 +1,12 @@
 use crate::parser::Localization;
 
-pub const RELEASE_NAME: &str = "Eurydice";
+pub const RELEASE_NAME: &str = "Beautiful You";
 
 pub const GIT_HASH: &str = env!("GIT_HASH");
 pub const RELEASE_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 pub const AUTHORS: &str = env!("CARGO_PKG_AUTHORS");
-pub const YEAR: &str = "2023";
+pub const YEAR: &str = "2024";
 
 pub const COPYRIGHT_LONG_INST: &str = "--warranty";
 lazy_static::lazy_static! {
