@@ -41,9 +41,9 @@ pub enum Error {
     Other(String),
 
     // parsing errors
-    ParseFailureVerbose(Box<pest::error::Error<Rule>>),
-    ParseFailure(Box<pest::error::Error<Rule>>),
-    ParseUnexpected(Rule),
+    ParseFailureVerbose(Box<pest::error::Error<en::Rule>>),
+    ParseFailure(Box<pest::error::Error<en::Rule>>),
+    ParseUnexpected(en::Rule),
 
     // temporary workaround until we propagate call stack to all error locations
     WithCallStack(Box<Error>, CallStack),

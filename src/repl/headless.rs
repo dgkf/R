@@ -10,7 +10,7 @@ use pest::Parser;
 
 #[wasm_bindgen]
 pub fn wasm_session_header() -> String {
-    session_header()
+    session_header(true, Localization::En)
 }
 
 #[wasm_bindgen]
