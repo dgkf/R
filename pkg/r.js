@@ -137,7 +137,7 @@ function __wbg_adapter_20(arg0, arg1, arg2) {
         const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
         const ptr0 = passStringToWasm0(arg2, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
         const len0 = WASM_VECTOR_LEN;
-        wasm.wasm_bindgen__convert__closures__invoke1__h3389b07c2a9dee72(retptr, arg0, arg1, ptr0, len0);
+        wasm.wasm_bindgen__convert__closures__invoke1__h5b85ada496addd6e(retptr, arg0, arg1, ptr0, len0);
         var r0 = getInt32Memory0()[retptr / 4 + 0];
         var r1 = getInt32Memory0()[retptr / 4 + 1];
         let v2;
@@ -151,15 +151,38 @@ function __wbg_adapter_20(arg0, arg1, arg2) {
     }
 }
 
+function isLikeNone(x) {
+    return x === undefined || x === null;
+}
 /**
+* @param {boolean} warranty
+* @param {string | undefined} locale
+* @returns {Cli}
+*/
+export function wasm_cli_args(warranty, locale) {
+    var ptr0 = isLikeNone(locale) ? 0 : passStringToWasm0(locale, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    var len0 = WASM_VECTOR_LEN;
+    const ret = wasm.wasm_cli_args(warranty, ptr0, len0);
+    return Cli.__wrap(ret);
+}
+
+function _assertClass(instance, klass) {
+    if (!(instance instanceof klass)) {
+        throw new Error(`expected instance of ${klass.name}`);
+    }
+    return instance.ptr;
+}
+/**
+* @param {Cli} args
 * @returns {string}
 */
-export function wasm_session_header() {
+export function wasm_session_header(args) {
     let deferred1_0;
     let deferred1_1;
     try {
         const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
-        wasm.wasm_session_header(retptr);
+        _assertClass(args, Cli);
+        wasm.wasm_session_header(retptr, args.__wbg_ptr);
         var r0 = getInt32Memory0()[retptr / 4 + 0];
         var r1 = getInt32Memory0()[retptr / 4 + 1];
         deferred1_0 = r0;
@@ -172,21 +195,26 @@ export function wasm_session_header() {
 }
 
 /**
+* @param {Cli} args
 * @returns {any}
 */
-export function wasm_env() {
-    const ret = wasm.wasm_env();
+export function wasm_runtime(args) {
+    _assertClass(args, Cli);
+    const ret = wasm.wasm_runtime(args.__wbg_ptr);
     return takeObject(ret);
 }
 
 /**
+* @param {Cli} args
 * @param {string} input
 * @returns {boolean}
 */
-export function wasm_parses_successfully(input) {
-    const ptr0 = passStringToWasm0(input, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.wasm_parses_successfully(ptr0, len0);
+export function wasm_parses_successfully(args, input) {
+    _assertClass(args, Cli);
+    var ptr0 = args.__destroy_into_raw();
+    const ptr1 = passStringToWasm0(input, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ret = wasm.wasm_parses_successfully(ptr0, ptr1, len1);
     return ret !== 0;
 }
 
@@ -195,6 +223,64 @@ function handleError(f, args) {
         return f.apply(this, args);
     } catch (e) {
         wasm.__wbindgen_exn_store(addHeapObject(e));
+    }
+}
+/**
+*/
+export const Localization = Object.freeze({ En:0,"0":"En",Es:1,"1":"Es",Cn:2,"2":"Cn",Pirate:3,"3":"Pirate",Emoji:4,"4":"Emoji", });
+/**
+* Run the R REPL
+*/
+export class Cli {
+
+    static __wrap(ptr) {
+        ptr = ptr >>> 0;
+        const obj = Object.create(Cli.prototype);
+        obj.__wbg_ptr = ptr;
+
+        return obj;
+    }
+
+    __destroy_into_raw() {
+        const ptr = this.__wbg_ptr;
+        this.__wbg_ptr = 0;
+
+        return ptr;
+    }
+
+    free() {
+        const ptr = this.__destroy_into_raw();
+        wasm.__wbg_cli_free(ptr);
+    }
+    /**
+    * Localization to use for runtime
+    * @returns {number}
+    */
+    get locale() {
+        const ret = wasm.__wbg_get_cli_locale(this.__wbg_ptr);
+        return ret >>> 0;
+    }
+    /**
+    * Localization to use for runtime
+    * @param {number} arg0
+    */
+    set locale(arg0) {
+        wasm.__wbg_set_cli_locale(this.__wbg_ptr, arg0);
+    }
+    /**
+    * Show the extended warranty information at startup
+    * @returns {boolean}
+    */
+    get warranty() {
+        const ret = wasm.__wbg_get_cli_warranty(this.__wbg_ptr);
+        return ret !== 0;
+    }
+    /**
+    * Show the extended warranty information at startup
+    * @param {boolean} arg0
+    */
+    set warranty(arg0) {
+        wasm.__wbg_set_cli_warranty(this.__wbg_ptr, arg0);
     }
 }
 
@@ -348,8 +434,8 @@ function __wbg_get_imports() {
         const ret = wasm.memory;
         return addHeapObject(ret);
     };
-    imports.wbg.__wbindgen_closure_wrapper1478 = function(arg0, arg1, arg2) {
-        const ret = makeClosure(arg0, arg1, 730, __wbg_adapter_20);
+    imports.wbg.__wbindgen_closure_wrapper1744 = function(arg0, arg1, arg2) {
+        const ret = makeClosure(arg0, arg1, 580, __wbg_adapter_20);
         return addHeapObject(ret);
     };
 

@@ -185,6 +185,30 @@
       padding-right: 0;
     }
 
+    .dropup-content {
+      display: none;
+      position: absolute;
+      background-color: color-mix(in lch, var(--fg) 50%, var(--bg));
+      bottom: 0;
+      box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+      padding: 0em 1em;
+      z-index: 1;
+    }
+
+    .dropup-content a {
+      color: color-mix(in lch, var(--fg) 75%, var(--bg));
+      font-weight: bold;
+      text-decoration: none;
+    }
+
+    .dropup-content a:hover {
+      color: var(--fg);
+    }
+
+    .dropup:hover .dropup-content {
+      display: block;
+    }
+
     .submit {
       background: #58F;
       color: white;
@@ -243,6 +267,11 @@
       mask-image: url("assets/github.svg");
     }
 
+    .i-translate {
+      -webkit-mask-image: url("assets/translate.svg");
+      mask-image: url("assets/translate.svg");
+    }
+
     #prompt {
       box-sizing: border-box;
       font-family: monospace, mono;
@@ -272,11 +301,106 @@
   <body>
     <script type="module">
       import init, * as r from "./pkg/r.js";
+
+      const params = new URLSearchParams(window.location.search);
+      const locale = params.get('locale');
+
+      var prompt = "";
+      switch(locale) {
+        case "es": 
+          prompt = "suma <- 0\npara (i en 1:10) {\n  si (i %% 2 == 0) {\n    suma <- suma + i\n  }\n}";
+          break;
+        case "en": 
+          prompt = "sum <- 0\nfor (i in 1:10) {\n  if (i %% 2 == 0) {\n    sum <- sum + i\n  }\n}";
+          break;
+      };
+      
       window.r = await init().then(() => { 
-        history_push("output", r.wasm_session_header());
+        const args = r.wasm_cli_args(false, locale);
+        history_push("output", r.wasm_session_header(args));
+
+        var localized_prompt_start = "";
+        switch (locale) {
+          case "emoji": 
+            localized_prompt_start = `
+👛 <- 0
+🫡 (🪙 👈 1:10) {
+  🤔 (🪙 %% 3 == 0) {
+    💫
+  } 🤷 🤔 (🪙 %% 5 == 0) {
+    💔
+  }
+  👛 <- 👛 + 🪙
+}
+👛
+`;
+            break;
+          case "pirate": 
+            localized_prompt_start = `
+booty <- 0
+thar (i be 1:10) {
+  ho (i %% 3 == 0) {
+    ahead!
+  } heave ho (i %% 5 == 0) {
+    mutiny!
+  }
+  booty <- booty + i
+}
+booty
+`;
+            break;
+          case "cn":
+            localized_prompt_start = `
+和 <- 0
+取 (i 自 1:10) {
+  假使 (i %% 3 == 0) {
+    繼續
+  } 否則 假使 (i %% 5 == 0) {
+    中斷
+  }
+  和 <- 和 + i
+}
+和
+`;
+            break;
+          case "es":
+            localized_prompt_start = `
+suma <- 0
+para (i en 1:10) {
+  si (i %% 3 == 0) {
+    continuar
+  } sino si (i %% 5 == 0) {
+    romper    
+  }
+  suma <- suma + i
+}
+suma
+`;
+            break;
+          default:
+            localized_prompt_start = `
+sum <- 0
+for (i in 1:10) {
+  if (i %% 3 == 0) {
+    continue
+  } else if (i %% 5 == 0) {
+    break
+  }
+  sum <- sum + i
+}
+sum
+`;
+        }
+
+        let prompt = document.getElementById("prompt")
+        prompt.value = localized_prompt_start.trim();
+        prompt.rows = prompt.value.split("\n").length;       
+
         return {
-          "eval": r.wasm_env(),
-          "header": r.wasm_session_header(),
+          "prompt": localized_prompt_start,
+          "args": args,
+          "eval": r.wasm_runtime(args),
+          "header": r.wasm_session_header(args),
           "validate": r.wasm_parses_successfully,
           "history": {
             "log": [],
@@ -326,7 +450,7 @@
 
           // if code is a complete expression, run it
           if (at_end) {
-            if (r.validate(prompt().value)) {
+            if (r.validate(r.args, prompt().value)) {
               run();
               event.preventDefault();
               return;
@@ -431,7 +555,7 @@
       function prompt_clear() {
         r.history.log.selected = null;
         let elem = prompt();
-        elem.value = '';     
+        elem.value = '';
         elem.rows = 1;
         elem.focus();
       }
@@ -506,9 +630,8 @@
           </div>
         </div>
         <textarea id="prompt" name="prompt" cols="40" rows="1" 
-          spellcheck="false" autocorrect="off" autocomplete="off" autocapitalize="none"
-># check out the progress so far!
-names(parent(environment()))</textarea>
+          spellcheck="false" autocorrect="off" autocomplete="off" autocapitalize="none">
+        </textarea>
         <div class="flex-row">
           <div class="btn clear" onclick="clear_history()">clear</div>
           <div class = "btn-group">
@@ -522,6 +645,14 @@ names(parent(environment()))</textarea>
             <div class="btn btn-slim icon i-down-arrow" onclick="font_size_adjust(8/9)" alt="decrease font size"></div>
             <div class="btn btn-slim font-reset" onclick="font_size(1)">Aa</div>
             <div class="btn btn-slim icon i-up-arrow" onclick="font_size_adjust(9/8)" alt="increase font size"></div>
+          </div>
+          <div class="btn-group dropup">
+            <div class="btn icon i-translate" alt="localization"></div>
+            <div class="dropup-content">
+              <p><a href="?locale=en">English</a></p>
+              <p><a href="?locale=es">Español</a></p>
+              <p><a href="?locale=cn">中文</a></p>
+            </div>
           </div>
           <div class="btn submit" onclick="run()">run</div>
         </div>
