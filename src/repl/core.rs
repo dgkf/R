@@ -28,8 +28,8 @@ where
     };
 
     let mut line_editor = Reedline::create()
-        .with_validator(Box::new(locale.clone()))
-        .with_highlighter(Box::new(locale.clone()))
+        .with_validator(Box::new(locale))
+        .with_highlighter(Box::new(locale))
         .with_history(Box::new(history));
 
     // initialize our repl prompt

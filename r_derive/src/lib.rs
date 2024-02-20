@@ -289,13 +289,13 @@ pub fn derive_localized_parser(input: TokenStream) -> TokenStream {
 
                     // for any expressions
                     Ok(pairs) => parse_expr(self, pratt_parser(), pairs),
-                    Err(e) => {
+                    Err(_e) => {
                         Err(Error::Other("".into()).into())
                     } // need to coerce Error<R> to Error<en::Rule>
                 }
             }
 
-            fn parse_highlight(&self, input: &str) -> Result<Vec<(String, Style)>, ()> {
+            fn parse_highlight(&self, input: &str) -> HighlightResult {
                 let pairs = <Self as pest::Parser<Rule>>::parse(Rule::hl, input);
                 match pairs {
                     Ok(pairs) => Ok(pairs
@@ -306,7 +306,7 @@ pub fn derive_localized_parser(input: TokenStream) -> TokenStream {
                             )
                         })
                         .collect()),
-                    Err(_) => Err(()),
+                    Err(_e) => Err(Error::Other("".into()).into()),
                 }
             }
         }

@@ -1,8 +1,9 @@
-use crate::parser::*;
+use crate::{lang::Signal, parser::*};
 
+pub type HighlightResult = Result<Vec<(String, Style)>, Signal>;
 pub trait LocalizedParser: std::marker::Sync {
     fn parse_input(&self, input: &str) -> ParseResult;
-    fn parse_highlight(&self, input: &str) -> Result<Vec<(String, Style)>, ()>;
+    fn parse_highlight(&self, input: &str) -> HighlightResult;
 }
 
 #[cfg_attr(feature = "wasm", wasm_bindgen::prelude::wasm_bindgen)]
@@ -29,7 +30,7 @@ impl LocalizedParser for Localization {
         }
     }
 
-    fn parse_highlight(&self, input: &str) -> Result<Vec<(String, Style)>, ()> {
+    fn parse_highlight(&self, input: &str) -> HighlightResult {
         use Localization::*;
         match self {
             En => LocalizedParser::parse_highlight(&en::Parser, input),
