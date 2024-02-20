@@ -304,16 +304,6 @@
 
       const params = new URLSearchParams(window.location.search);
       const locale = params.get('locale');
-
-      var prompt = "";
-      switch(locale) {
-        case "es": 
-          prompt = "suma <- 0\npara (i en 1:10) {\n  si (i %% 2 == 0) {\n    suma <- suma + i\n  }\n}";
-          break;
-        case "en": 
-          prompt = "sum <- 0\nfor (i in 1:10) {\n  if (i %% 2 == 0) {\n    sum <- sum + i\n  }\n}";
-          break;
-      };
       
       window.r = await init().then(() => { 
         const args = r.wasm_cli_args(false, locale);
@@ -370,7 +360,7 @@ para (i en 1:10) {
   si (i %% 3 == 0) {
     continuar
   } sino si (i %% 5 == 0) {
-    romper    
+    interrumpir
   }
   suma <- suma + i
 }
