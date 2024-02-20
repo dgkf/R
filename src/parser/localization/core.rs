@@ -7,14 +7,16 @@ pub trait LocalizedParser: std::marker::Sync {
 }
 
 #[cfg_attr(feature = "wasm", wasm_bindgen::prelude::wasm_bindgen)]
-#[derive(Debug, Copy, Clone, Default, PartialEq, strum::Display, strum::EnumString)]
+#[derive(Debug, Copy, Clone, Default, PartialEq, clap::ValueEnum, strum::EnumString)]
 #[strum(serialize_all = "snake_case")]
 pub enum Localization {
     #[default]
     En,
     Es,
     Cn,
+    #[value(skip)]
     Pirate,
+    #[value(skip)]
     Emoji,
 }
 
