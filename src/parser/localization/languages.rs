@@ -49,3 +49,11 @@ pub mod pirate {
     #[grammar = "grammar/grammar.pest"]
     pub struct Parser;
 }
+
+pub mod emoji {
+    use r_derive::{LocalizedParser, Translate};
+    #[derive(Parser, Clone, Copy, Translate, LocalizedParser)]
+    #[grammar = "grammar/localizations/emoji.pest"]
+    #[grammar = "grammar/grammar.pest"]
+    pub struct Parser;
+}

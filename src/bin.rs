@@ -1,18 +1,13 @@
-use clap::Parser;
+use r::cli::Cli;
 use r::lang::Signal;
-use r::parser::Localization;
 use r::repl::repl;
 
-#[derive(Parser, Debug)]
-struct Cli {
-    #[arg(short, long, default_value_t = Localization::En)]
-    locale: Localization,
+#[cfg(feature = "wasm")]
+fn main() {}
 
-    #[arg(long)]
-    warranty: bool,
-}
-
+#[cfg(not(feature = "wasm"))]
 fn main() -> Result<(), Signal> {
+    use clap::Parser;
     let cli = Cli::parse();
     let history = "/tmp/history.txt".to_string();
     repl(cli.locale, Some(&history), cli.warranty)
