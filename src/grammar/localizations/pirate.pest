@@ -1,0 +1,16 @@
+loc_if = _{ "ho" }
+loc_else = _{ "heave" }
+loc_for = _{ "thar" }
+loc_in = _{ "be" }
+loc_while = _{ "whilst" }
+loc_repeat = _{ "maroon" }
+loc_return = _{ "X marks the" }
+loc_break = _{ "mutiny!" }
+loc_continue = _{ "ahead!" }
+loc_function = _{ "Ahoy" }
+loc_fn = _{ "ahoy" }
+loc_na = _{ "BILGE" | "bilge" }
+loc_null = _{ "HORNSWAGGLE" | "hornswaggle" }
+loc_inf = _{ "BEYOND" | "beyond" }
+loc_true = _{ "AYE" | "aye" }
+loc_false = _{ "NAY" | "nay" }

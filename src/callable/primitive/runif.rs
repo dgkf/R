@@ -44,7 +44,7 @@ impl Callable for PrimitiveRunif {
             let max = max
                 .first()
                 .map_or(ArgumentInvalid(String::from("max")).into(), Ok)?;
-            let between = Uniform::try_from(*min..=*max).unwrap();
+            let between = Uniform::from(*min..=*max);
 
             Ok(Obj::Vector(Vector::from(
                 (1..=n)

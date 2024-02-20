@@ -1,6 +1,12 @@
 # dev
 
+# 0.3.3 "Beautiful You"
+
 ## Changes
+
+* Adding localizations. To start, only English (`en`), Spanish (`es`) and
+  Chinese (`es`). Can be    specified using the `--locale` flag when starting
+  the REPL.
 
 * Adding new primitive functions, `eval()`, `quote()` and `print()`
 

@@ -1,10 +1,12 @@
-pub const RELEASE_NAME: &str = "Eurydice";
+use crate::parser::Localization;
+
+pub const RELEASE_NAME: &str = "Beautiful You";
 
 pub const GIT_HASH: &str = env!("GIT_HASH");
 pub const RELEASE_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 pub const AUTHORS: &str = env!("CARGO_PKG_AUTHORS");
-pub const YEAR: &str = "2023";
+pub const YEAR: &str = "2024";
 
 pub const COPYRIGHT_LONG_INST: &str = "--warranty";
 lazy_static::lazy_static! {
@@ -34,20 +36,22 @@ You should have received a copy of the GNU General Public License
 along with this program. If not, see <https://www.gnu.org/licenses/>.");
 }
 
-pub fn session_header() -> String {
-    let args: Vec<String> = std::env::args().collect();
-
+pub fn session_header(show_warranty: bool, locale: &Localization) -> String {
     let dev = if !GIT_HASH.is_empty() {
         format!(" (dev {:.8})", GIT_HASH)
     } else {
         String::from("")
     };
 
-    let license_info: &str = if args.contains(&"--warranty".to_string()) {
+    let license_info: &str = if show_warranty {
         COPYRIGHT_LONG.as_str()
     } else {
         COPYRIGHT.as_str()
     };
 
-    format!("R version {RELEASE_VERSION} -- \"{RELEASE_NAME}\"{dev}\n{license_info}\n",)
+    if locale == &Localization::Pirate {
+        format!("Arr version {RELEASE_VERSION} -- \"{RELEASE_NAME}\"{dev}\n{license_info}\n",)
+    } else {
+        format!("R version {RELEASE_VERSION} -- \"{RELEASE_NAME}\"{dev}\n{license_info}\n",)
+    }
 }

@@ -29,9 +29,9 @@
         hl_kws = _{ hl_infix | hl_reserved | hl_control | hl_call | hl_value | hl_num | hl_sym | hl_str | hl_ops | hl_brackets | hl_comment | hl_other }
         hl_comment = { comment }
         hl_control = { hl_control_kws ~ WB }
-        hl_control_kws = _{ "if" | "else" | "for" | "while" | "repeat" | "return" | "break" | "continue" }
+        hl_control_kws = _{ loc_else | loc_if | loc_in | loc_for | loc_while | loc_repeat | loc_return | loc_break | loc_continue }
         hl_reserved = { hl_reserved_kws ~ WB }
-        hl_reserved_kws = _{ "function" | "fn" }
+        hl_reserved_kws = _{ loc_function | loc_fn }
         hl_value = { hl_value_kws ~ WB }
         hl_value_kws = _{ val_null | val_na | val_inf | val_true | val_false }
         hl_call = _{ hl_callname ~ CAPTURE_WS* ~ hl_open }
@@ -147,23 +147,23 @@
 
 // keyworded (kw) syntax
 
-    kw_function_or_fn = _{ "function" | "fn" }
+    kw_function_or_fn = _{ loc_function | loc_fn }
     kw_function = { kw_function_or_fn ~ WS* ~ list ~ WS* ~ expr }
-    kw_if_else = { "if" ~ WS* ~ "(" ~ WS* ~ expr ~ WS* ~ ")" ~ WS* ~ expr ~ ( WS* ~ "else" ~ WS* ~ expr )? }
-    kw_for = { "for" ~ WS* ~ "(" ~ WS* ~ symbol ~ WS+ ~ "in" ~ WS+ ~ expr ~ WS* ~ ")" ~ WS* ~ expr }
-    kw_while = { "while" ~ WS* ~ "(" ~ WS* ~ expr ~ WS* ~ ")" ~ WS* ~ expr }
-    kw_repeat = { "repeat" ~ WS* ~ expr }
-    kw_break = { "break" }
-    kw_continue = { "continue" }
-    kw_return = { "return" ~ WS* ~ expr }
+    kw_if_else = { loc_if ~ WS* ~ "(" ~ WS* ~ expr ~ WS* ~ ")" ~ WS* ~ expr ~ ( WS* ~ loc_else ~ WS* ~ expr )? }
+    kw_for = { loc_for ~ WS* ~ "(" ~ WS* ~ symbol ~ WS+ ~ loc_in ~ WS+ ~ expr ~ WS* ~ ")" ~ WS* ~ expr }
+    kw_while = { loc_while ~ WS* ~ "(" ~ WS* ~ expr ~ WS* ~ ")" ~ WS* ~ expr }
+    kw_repeat = { loc_repeat ~ WS* ~ expr }
+    kw_break = { loc_break }
+    kw_continue = { loc_continue }
+    kw_return = { loc_return ~ WS* ~ expr }
 
 // reserved value (val) types
 
-    val_null = { ( "NULL" | "null" ) ~ WB }
-    val_na = { ( "NA" | "na" ) ~ WB }
-    val_inf = { ( "Inf" | "inf" ) ~ WB }
-    val_true = { ( "TRUE" | "true" ) ~ WB }
-    val_false = { ( "FALSE" | "false" ) ~ WB }
+    val_null = { ( loc_null ) ~ WB }
+    val_na = { ( loc_na ) ~ WB }
+    val_inf = { ( loc_inf ) ~ WB }
+    val_true = { ( loc_true ) ~ WB }
+    val_false = { ( loc_false ) ~ WB }
 
 // atomic value types
 
@@ -187,7 +187,7 @@
     symbol = _{ symbol_with_backticks | symbol_ident }
         symbol_with_backticks = _{ "`" ~ symbol_backticked ~ "`" }
         symbol_backticked = ${ ( !"`" ~ ANY )* }
-        symbol_ident = ${ ( ASCII_ALPHA | "_" ) ~ ( ASCII_ALPHANUMERIC | "_" )* }
+        symbol_ident = ${ ( LETTER | OTHER_SYMBOL | "_" ) ~ ( ASCII_ALPHANUMERIC | "_" )* }
 
     list = { "(" ~ pairs ~ ")" }
         pairs = _{ ( ( WS* ~ elem ~ WS* ~ "," )* ~ WS* ~ elem? )? ~ WS* }

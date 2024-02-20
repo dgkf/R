@@ -1,0 +1,16 @@
+loc_if = _{ "🤔" }
+loc_else = _{ "🤷" }
+loc_for = _{ "🫡" }
+loc_in = _{ "👈" }
+loc_while = _{ "🥱" }
+loc_repeat = _{ "😵‍💫" }
+loc_return = _{ "💁" }
+loc_break = _{ "💔" }
+loc_continue = _{ "💫" }
+loc_function = _{ "🤖" }
+loc_fn = _{ loc_function }
+loc_na = _{ "😶‍🌫️" }
+loc_null = _{ "🫥" }
+loc_inf = _{ "👽" }
+loc_true = _{ "💯" }
+loc_false = _{ "🔥" }

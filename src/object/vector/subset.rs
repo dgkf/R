@@ -81,7 +81,7 @@ impl Subset {
                 // very fast case, when one index is selected
                 } else if l == 1 {
                     let msg = "Expected at least one element to index by";
-                    if let OptionNA::Some(to_first) = i.clone().borrow().get(0).expect(msg) {
+                    if let OptionNA::Some(to_first) = i.clone().borrow().first().expect(msg) {
                         Box::new(iter.skip(*to_first as usize).take(1))
                     } else {
                         let (i_orig, _) = iter.next().unwrap_or((0, None));

@@ -1,0 +1,16 @@
+loc_if = _{ "假使" }
+loc_else = _{ "否則" }
+loc_for = _{ "取" }
+loc_in = _{ "自" }
+loc_while = _{ "當" }
+loc_repeat = _{ "重复" }
+loc_return = _{ "傳回" }
+loc_break = _{ "中斷" }
+loc_continue = _{ "繼續" }
+loc_function = _{ "函数" }
+loc_fn = _{ loc_function }
+loc_na = _{ "不适用" }
+loc_null = _{ "空" }
+loc_inf = _{ "无穷" }
+loc_true = _{ "真" | "實" }
+loc_false = _{ "假" | "虛" }

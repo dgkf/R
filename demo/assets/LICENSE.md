@@ -2,11 +2,11 @@
 
 ## SVG icons from [svgrepo.com](https://www.svgrepo.com)
 
-### Chevrons, Sun, Moon
+### Chevrons, Sun, Moon, Translate
 
-COLLECTION: Solar Linear Icons
-LICENSE: CC Attribution License
-AUTHOR: Solar Icons
+COLLECTION: Phosphor Thin Icons
+LICENSE: MIT License
+AUTHOR: phosphor
 
 ### GitHub Logo
 

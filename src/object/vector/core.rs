@@ -300,7 +300,7 @@ impl From<Vec<String>> for Vector {
 impl From<Vector> for String {
     fn from(val: Vector) -> Self {
         match val.as_character() {
-            Vector::Character(v) => match v.inner().clone().borrow().get(0) {
+            Vector::Character(v) => match v.inner().clone().borrow().first() {
                 Some(OptionNA::Some(s)) => s.clone(),
                 Some(OptionNA::NA) => "NA".to_string(),
                 None => "".to_string(),

@@ -2,41 +2,35 @@ use reedline::{FileBackedHistory, Reedline};
 use std::path::Path;
 use std::rc::Rc;
 
-use super::highlight::RHighlighter;
 use super::prompt::RPrompt;
 use super::release::*;
-use super::validator::RValidator;
 use crate::context::Context;
 use crate::lang::{CallStack, Cond, EvalResult, Signal};
 use crate::object::Environment;
-use crate::parser::parse;
+use crate::parser::{Localization, LocalizedParser};
 
-pub fn repl<P>(history: Option<&P>) -> Result<(), Signal>
+pub fn repl<P>(locale: Localization, history: Option<&P>, warranty: bool) -> Result<(), Signal>
 where
     P: AsRef<Path>,
 {
-    println!("{}", session_header());
+    println!("{}", session_header(warranty, &locale));
     let global_env = Rc::new(Environment {
         parent: Some(Environment::from_builtins()),
         ..Default::default()
     });
 
-    let line_editor = Reedline::create()
-        .with_validator(Box::new(RValidator))
-        .with_highlighter(Box::new(RHighlighter::new()));
-
-    let mut line_editor = if let Some(_history_path) = history {
+    let history = if let Some(_history_path) = history {
         println!("Restoring session history...");
-
-        let history = Box::new(
-            FileBackedHistory::with_file(1000, "/tmp/history.txt".into())
-                .expect("Error configuring history with file"),
-        );
-
-        line_editor.with_history(history)
+        FileBackedHistory::with_file(1000, "/tmp/history.txt".into())
+            .expect("Error configuring history with file")
     } else {
-        line_editor
+        FileBackedHistory::new(1000)
     };
+
+    let mut line_editor = Reedline::create()
+        .with_validator(Box::new(locale))
+        .with_highlighter(Box::new(locale))
+        .with_history(Box::new(history));
 
     // initialize our repl prompt
     let prompt = RPrompt;
@@ -52,7 +46,7 @@ where
                 }
 
                 // otherwise parse and evaluate entry
-                let parse_res = parse(&line);
+                let parse_res = locale.parse_input(&line);
                 match parse_res {
                     Ok(expr) => {
                         let mut stack = CallStack::from(global_env.clone());
@@ -90,8 +84,9 @@ pub fn eval(input: &str) -> EvalResult {
         ..Default::default()
     });
 
+    let locale = Localization::En;
     let mut stack = CallStack::from(global_env.clone());
-    match parse(input) {
+    match locale.parse_input(input) {
         Ok(expr) => stack.eval_and_finalize(expr),
         Err(e) => Err(e),
     }
