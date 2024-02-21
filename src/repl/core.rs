@@ -58,7 +58,7 @@ where
                             Err(Signal::Return(_value, false)) => (),
                             Err(e) => {
                                 print!("{e}");
-                                print!("traceback:\n{stack}");
+                                print!("backtrace:\n{stack}");
                             }
                             Ok(val) => println!("{val}"),
                         }

@@ -1,9 +1,10 @@
 #[derive(Debug, Copy, Clone, Default, PartialEq, strum::EnumString, strum::Display)]
 #[strum(serialize_all = "snake_case")]
 pub enum Style {
-    Reserved,
     Keyword,
     ControlFlow,
+    Signal,
+    Function,
     Call,
     Symbol,
     Value,
@@ -30,7 +31,9 @@ impl From<Style> for nu_ansi_term::Style {
             Number => Style::new().fg(Color::Rgb(240, 158, 130)),
             String => Style::new().fg(Color::Rgb(158, 206, 106)),
             Comment => Style::new().fg(Color::Rgb(100, 100, 100)),
-            Reserved | ControlFlow => Style::new().fg(Color::Rgb(187, 154, 246)).italic(),
+            Function => Style::new().fg(Color::Rgb(82, 132, 250)).italic().bold(),
+            ControlFlow => Style::new().fg(Color::Rgb(187, 154, 246)).italic(),
+            Signal => Style::new().fg(Color::Rgb(214, 99, 255)),
             Brackets | Operators | Infix => Style::new().fg(Color::Rgb(170, 170, 190)),
             _ => Style::new().fg(Color::White),
         }

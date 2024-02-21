@@ -8,8 +8,8 @@
       --dark-bg: rgb(0, 0, 0);
       --dark-fg: rgb(224, 224, 224);
 
-      --light-bg: rgb(224, 224, 224);
-      --light-fg: rgb(0, 0, 0);
+      --light-bg: rgb(232, 232, 232);
+      --light-fg: rgb(12, 12, 12);
 
       --bg: var(--dark-bg);
       --fg: var(--dark-fg);
@@ -41,7 +41,7 @@
       font-family: sans-serif, sans;
       padding: 0;
       margin: 0;
-      background: color-mix(in lch, var(--bg) 90%, var(--fg));
+      background: var(--bg);
       color: var(--fg);
     }
 
@@ -111,19 +111,19 @@
     }
 
     .input:hover {
-      background: color-mix(in lch, var(--bg) 75%, var(--fg));
-    }
-
-    .input:active {
-      background: color-mix(in lch, var(--bg) 65%, var(--fg));
-    }
-
-    .input, .output {
       background: color-mix(in lch, var(--bg) 85%, var(--fg));
     }
 
-    .output {
+    .input:active {
       background: color-mix(in lch, var(--bg) 80%, var(--fg));
+    }
+
+    .input, .output {
+      background: color-mix(in lch, var(--bg) 95%, var(--fg));
+    }
+
+    .output {
+      background: color-mix(in lch, var(--bg) 90%, var(--fg));
       color: color-mix(in lch, var(--bg) 20%, var(--fg));
     }
 
@@ -255,7 +255,7 @@
       width: 100%;
       resize: vertical;
 
-      background: var(--bg);
+      background: color-mix(in lch, var(--bg) 90%, var(--fg));
       color: var(--fg);
 
       border-radius: 1em;

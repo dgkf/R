@@ -24,10 +24,14 @@
   color: rgb(100, 100, 100);
 }
 
-.dark .style-reserved {
+.dark .style-function {
   font-weight: bold;
   font-style: italic;
   color: rgb(82, 132, 250);
+}
+
+.dark .style-signal {
+  color: rgb(214, 99, 255);
 }
 
 .dark .style-control_flow {
@@ -43,7 +47,7 @@
 
 .light .style-symbol {
   font-weight: bold;
-  color: color-mix(in lch, var(--fg) 65%, var(--bg));
+  color: color-mix(in lch, var(--fg) 60%, var(--bg));
 }
 
 .light .style-call {
@@ -67,10 +71,14 @@
   color: rgb(100, 100, 100);
 }
 
-.light .style-reserved {
+.light .style-function {
   font-weight: bold;
   font-style: italic;
   color: rgb(41, 92, 210);
+}
+
+.light .style-signal {
+  color: rgb(189, 17, 250);
 }
 
 .light .style-control_flow {

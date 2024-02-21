@@ -2,6 +2,7 @@ use lazy_static::lazy_static;
 use r_derive::*;
 
 use crate::callable::core::*;
+use crate::context::Context;
 use crate::err;
 use crate::lang::*;
 use crate::object::*;
@@ -39,6 +40,8 @@ impl Callable for PrimitiveEval {
             return err!("Argument 'envir' should be an environment or data context.");
         };
 
-        Obj::Closure(expr, envir.clone()).force(stack)
+        stack.add_frame(expr.clone(), envir);
+        let result = stack.eval(expr);
+        stack.pop_frame_and_return(result)
     }
 }
