@@ -1,0 +1,83 @@
+.dark .style-symbol {
+  font-weight: bold;
+  color: var(--fg);
+}
+
+.dark .style-call {
+  font-style: italic;
+  color: rgb(122, 164, 247);
+}
+
+.dark .style-value {
+  color: rgb(255, 158, 101);
+}
+
+.dark .style-number {
+  color: rgb(240, 158, 130);
+}
+
+.dark .style-string {
+  color: rgb(158, 206, 106);
+}
+
+.dark .style-comment {
+  color: rgb(100, 100, 100);
+}
+
+.dark .style-reserved {
+  font-weight: bold;
+  font-style: italic;
+  color: rgb(82, 132, 250);
+}
+
+.dark .style-control_flow {
+  font-style: italic;
+  color: rgb(187, 154, 246);
+}
+
+.dark .style-brackets, .dark .style-operators, .dark .style-infix {
+  color: rgb(170, 170, 170);
+}
+
+
+
+.light .style-symbol {
+  font-weight: bold;
+  color: color-mix(in lch, var(--fg) 65%, var(--bg));
+}
+
+.light .style-call {
+  font-style: italic;
+  color: rgb(108, 43, 224);
+}
+
+.light .style-value {
+  color: rgb(193, 82, 44);
+}
+
+.light .style-number {
+  color: rgb(195, 93, 33);
+}
+
+.light .style-string {
+  color: rgb(63, 120, 0);
+}
+
+.light .style-comment {
+  color: rgb(100, 100, 100);
+}
+
+.light .style-reserved {
+  font-weight: bold;
+  font-style: italic;
+  color: rgb(41, 92, 210);
+}
+
+.light .style-control_flow {
+  font-style: italic;
+  color: rgb(89, 25, 204);
+}
+
+.light .style-brackets, .light .style-operators, .light .style-infix {
+  color: rgb(117, 117, 117);
+}

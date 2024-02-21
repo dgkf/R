@@ -1,4 +1,5 @@
-#[derive(Debug, Clone)]
+#[derive(Debug, Copy, Clone, Default, PartialEq, strum::EnumString, strum::Display)]
+#[strum(serialize_all = "snake_case")]
 pub enum Style {
     Reserved,
     Keyword,
@@ -12,6 +13,7 @@ pub enum Style {
     Operators,
     Infix,
     Comment,
+    #[default]
     None,
 }
 

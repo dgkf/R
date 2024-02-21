@@ -1,9 +1,16 @@
 use crate::parser::Localization;
 
+#[cfg(feature = "wasm")]
+use serde::{Deserialize, Serialize};
+
 /// Run the R REPL
-#[cfg_attr(feature = "wasm", wasm_bindgen::prelude::wasm_bindgen)]
+#[cfg_attr(
+    feature = "wasm",
+    wasm_bindgen::prelude::wasm_bindgen,
+    derive(Serialize, Deserialize)
+)]
 #[cfg_attr(not(feature = "wasm"), derive(clap::Parser))]
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct Cli {
     /// Localization to use for runtime
     #[cfg_attr(not(feature = "wasm"), arg(short, long, default_value = "en"))]
