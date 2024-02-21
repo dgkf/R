@@ -9,30 +9,32 @@ use crate::object::Environment;
 use crate::parser::*;
 
 #[wasm_bindgen]
-pub fn wasm_cli_args(warranty: bool, locale: Option<String>) -> Cli {
-    use std::str::FromStr;
+extern "C" {
+    #[wasm_bindgen(js_namespace = console)]
+    fn log(s: &str);
+}
 
-    Cli {
-        locale: FromStr::from_str(&locale.unwrap_or("".to_string())).unwrap_or_default(),
-        warranty,
-    }
+pub fn wasm_args(js: JsValue) -> Cli {
+    use gloo_utils::format::JsValueSerdeExt;
+    js.into_serde().unwrap_or_default()
 }
 
 #[wasm_bindgen]
-pub fn wasm_session_header(args: &Cli) -> String {
+pub fn wasm_session_header(args: JsValue) -> String {
+    let args = wasm_args(args);
     session_header(args.warranty, &args.locale)
 }
 
 #[wasm_bindgen]
-pub fn wasm_runtime(args: &Cli) -> JsValue {
-    let local_args: Cli = args.clone();
+pub fn wasm_runtime(args: JsValue) -> JsValue {
+    let args = wasm_args(args);
     let global_env = Rc::new(Environment {
         parent: Some(Environment::from_builtins()),
         ..Default::default()
     });
 
     let cb = Closure::<dyn Fn(String) -> Option<String>>::new(move |line: String| {
-        wasm_eval_in(&local_args, &global_env, line.as_str())
+        wasm_eval_in(&args, &global_env, line.as_str())
     });
 
     let ret = cb.as_ref().clone();
@@ -41,8 +43,25 @@ pub fn wasm_runtime(args: &Cli) -> JsValue {
 }
 
 #[wasm_bindgen]
-pub fn wasm_parses_successfully(args: Cli, input: &str) -> bool {
+pub fn wasm_parses_successfully(args: JsValue, input: &str) -> bool {
+    let args = wasm_args(args);
     args.locale.parse_input(input).is_ok()
+}
+
+/// returns a stream of strings. Each pair represents a style and text
+#[wasm_bindgen]
+pub fn wasm_highlight(args: JsValue, input: &str) -> Vec<JsValue> {
+    let args = wasm_args(args);
+
+    log(&format!("{args:?}"));
+
+    args.locale
+        .parse_highlight(input)
+        .unwrap_or_default()
+        .into_iter()
+        .flat_map(|(text, style)| vec![style.to_string(), text.to_string()])
+        .map(JsValue::from)
+        .collect()
 }
 
 pub fn wasm_eval_in(args: &Cli, env: &Rc<Environment>, input: &str) -> Option<String> {
