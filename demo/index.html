@@ -27,13 +27,13 @@
   </head>
   <body>
     <script type="module">
-      import init, * as r from "./pkg/r.js";
+    import init, * as r from "./pkg/r.js";
 
-      const params = new URLSearchParams(window.location.search);
-      const locale = params.get('locale');
-      const args = { "warranty": false, "locale": locale };
+    const params = new URLSearchParams(window.location.search);
+    const locale = params.get('locale');
+    const args = { "warranty": false, "locale": locale };
 
-      window.r = await init().then(() => { 
+    window.r = await init().then(() => { 
         history_push("output", r.wasm_session_header(args));
 
         var localized_prompt_start = "";
@@ -51,9 +51,9 @@
 }
 👛
 `;
-            break;
-          case "pirate": 
-            localized_prompt_start = `
+          break;
+        case "pirate": 
+          localized_prompt_start = `
 booty <- 0
 thar (i be 1:10) {
   ho (i %% 3 == 0) {
@@ -65,9 +65,9 @@ thar (i be 1:10) {
 }
 booty
 `;
-            break;
-          case "cn":
-            localized_prompt_start = `
+          break;
+        case "cn":
+          localized_prompt_start = `
 和 <- 0
 取 (i 自 1:10) {
   假使 (i %% 3 == 0) {
@@ -79,9 +79,9 @@ booty
 }
 和
 `;
-            break;
-          case "es":
-            localized_prompt_start = `
+          break;
+        case "es":
+          localized_prompt_start = `
 suma <- 0
 para (i en 1:10) {
   si (i %% 3 == 0) {
@@ -93,9 +93,9 @@ para (i en 1:10) {
 }
 suma
 `;
-            break;
-          default:
-            localized_prompt_start = `
+          break;
+        default:
+          localized_prompt_start = `
 sum <- 0
 for (i in 1:10) {
   if (i %% 3 == 0) {
@@ -107,62 +107,69 @@ for (i in 1:10) {
 }
 sum
 `;
+      }
+
+      let prompt = document.getElementById("prompt-input")
+      prompt.value = localized_prompt_start.trim();
+      prompt.rows = prompt.value.split("\n").length;       
+
+      return {
+        "args": args,
+        "prompt": localized_prompt_start,
+        "eval": r.wasm_runtime(args),
+        "highlight": (input) => r.wasm_highlight(args, input),
+        "header": r.wasm_session_header(args),
+        "validate": (input) => r.wasm_parses_successfully(args, input),
+        "history": {
+          "log": [],
+          "selected": null
         }
+      }
+    }
+  );
+  </script>
 
-        let prompt = document.getElementById("prompt")
-        prompt.value = localized_prompt_start.trim();
-        prompt.rows = prompt.value.split("\n").length;       
-
-        return {
-          "args": args,
-          "prompt": localized_prompt_start,
-          "eval": r.wasm_runtime(args),
-          "highlight": (input) => r.wasm_highlight(args, input),
-          "header": r.wasm_session_header(args),
-          "validate": (input) => r.wasm_parses_successfully(args, input),
-          "history": {
-            "log": [],
-            "selected": null
-          }
-        }
-      });
-    </script>
-
-    <div class="background">
+  <div class="background">
       <div class="container">
-          <div class="history-scroll" id="history-scroll">
-            <div class="history-scroll-pad"></div>
-            <div class="history" id="history">
-          </div>
-        </div>
-        <textarea id="prompt" name="prompt" cols="40" rows="1" 
-          spellcheck="false" autocorrect="off" autocomplete="off" autocapitalize="none">
-        </textarea>
-        <div class="flex-row">
-          <div class="btn clear" onclick="clear_history()">clear</div>
-          <div class = "btn-group">
-            <div id="light-mode" class="icon i-sun" onclick="theme_light()" alt="switch to light mode"></div>
-            <div id="dark-mode" class="icon i-moon" onclick="theme_dark()" alt="switch to dark mode" style="display: none;"></div>
-          </div>
-          <div class="btn-group">
-            <a class="btn icon i-github" href="https://github.com/dgkf/R" target="_blank" alt="GitHub"></a>
-          </div>
-          <div class="btn-group">
-            <div class="btn btn-slim icon i-down-arrow" onclick="font_size_adjust(8/9)" alt="decrease font size"></div>
-            <div class="btn btn-slim font-reset" onclick="font_size(1)">Aa</div>
-            <div class="btn btn-slim icon i-up-arrow" onclick="font_size_adjust(9/8)" alt="increase font size"></div>
-          </div>
-          <div class="btn-group dropup">
-            <div class="btn icon i-translate" alt="localization"></div>
-            <div class="dropup-content">
-              <p><a href="?locale=en">English</a></p>
-              <p><a href="?locale=es">Español</a></p>
-              <p><a href="?locale=cn">中文</a></p>
-            </div>
-          </div>
-          <div class="btn submit" onclick="run()">run</div>
+        <div class="history-scroll" id="history-scroll">
+          <div class="history-scroll-pad"></div>
+          <div class="history" id="history">
         </div>
       </div>
+
+      <div id="prompt">
+        <div id="prompt-highlights"></div>
+        <textarea id="prompt-input" name="prompt" cols="40" rows="1" 
+          spellcheck="false" autocorrect="off" autocomplete="off" autocapitalize="none">
+        </textarea>
+      </div>
+
+      <div class="flex-row">
+        <div class="btn clear" onclick="clear_history()">clear</div>
+        <div class = "btn-group">
+          <div id="light-mode" class="icon i-sun" onclick="theme_light()" alt="switch to light mode"></div>
+          <div id="dark-mode" class="icon i-moon" onclick="theme_dark()" alt="switch to dark mode" style="display: none;"></div>
+        </div>
+        <div class="btn-group">
+          <a class="btn icon i-github" href="https://github.com/dgkf/R" target="_blank" alt="GitHub"></a>
+        </div>
+        <div class="btn-group">
+          <div class="btn btn-slim icon i-down-arrow" onclick="font_size_adjust(8/9)" alt="decrease font size"></div>
+          <div class="btn btn-slim font-reset" onclick="font_size(1)">Aa</div>
+          <div class="btn btn-slim icon i-up-arrow" onclick="font_size_adjust(9/8)" alt="increase font size"></div>
+        </div>
+        <div class="btn-group dropup">
+          <div class="btn icon i-translate" alt="localization"></div>
+          <div class="dropup-content">
+            <p><a href="?locale=en">English</a></p>
+            <p><a href="?locale=es">Español</a></p>
+            <p><a href="?locale=cn">中文</a></p>
+          </div>
+        </div>
+        <div class="btn submit" onclick="run()">run</div>
+      </div>
     </div>
-  </body>
+  </div>
+
+</body>
 </html>

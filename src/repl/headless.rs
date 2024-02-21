@@ -52,9 +52,6 @@ pub fn wasm_parses_successfully(args: JsValue, input: &str) -> bool {
 #[wasm_bindgen]
 pub fn wasm_highlight(args: JsValue, input: &str) -> Vec<JsValue> {
     let args = wasm_args(args);
-
-    log(&format!("{args:?}"));
-
     args.locale
         .parse_highlight(input)
         .unwrap_or_default()

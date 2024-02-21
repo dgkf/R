@@ -1,13 +1,30 @@
+function prompt() {
+  return document.getElementById("prompt-input");
+}
+
 addEventListener("DOMContentLoaded", (event) => {
   theme_dark();
-  let prompt = document.getElementById("prompt");
-  prompt.addEventListener("keydown", prompt_input);
+
+  let prompt = document.getElementById("prompt-input")
+  prompt.addEventListener("keydown", (event) => prompt_input(prompt, event));
+  prompt.addEventListener("input", (event) => prompt_highlight(prompt, event));
+  prompt.addEventListener("keyup", (event) => prompt_highlight(prompt, event));
+  prompt.addEventListener("change", (event) => prompt_highlight(prompt, event));
+
+  // resize prompt to fit default input, give focus and move cursor to end
   prompt_resize();
   prompt.focus();
   prompt_cursor(Infinity);
 });
 
-function prompt_input(event) {
+function prompt_highlight(prompt, event) {
+  const hl = highlight(r.highlight(prompt.value));
+  const hl_div = document.getElementById("prompt-highlights");
+  hl_div.innerHTML = '';
+  hl_div.appendChild(hl);  
+}
+
+function prompt_input(prompt, event) {
   let at = event.target.selectionStart;
   let to = event.target.selectionEnd;
 
@@ -38,7 +55,7 @@ function prompt_input(event) {
 
     // if code is a complete expression, run it
     if (at_end) {
-      if (r.validate(prompt().value)) {
+      if (r.validate(prompt.value)) {
         run();
         event.preventDefault();
         return;
@@ -48,15 +65,11 @@ function prompt_input(event) {
 
   // add or remove lines based on input
   if (event.key == "Enter") {
-    let prompt = document.getElementById("prompt");
     prompt.rows = prompt.value.split("\n").length + 1;
   }
 
   if (event.key == "Backspace") {
-    let prompt = document.getElementById("prompt");
     let val = prompt.value;
-    console.log(at, to);
-    console.log("'" + prompt.value.substring(at, to + 1) + "'");
     prompt.rows = prompt.value.split("\n").length - (prompt.value.substring(at - 1, to).split("\n").length - 1)
   }
 }
@@ -139,10 +152,8 @@ function unexpected_error(elem) {
 }
 
 function run() {
-  let prompt = document.getElementById("prompt");
-
   // read code and print to history
-  let code = prompt.value;
+  let code = prompt().value;
   if (!code.trim()) { return prompt_clear(); }
 
   r.history.log.push(code);
@@ -161,10 +172,6 @@ function run() {
 
   // clear prompt & restore focus
   prompt_clear();
-}
-
-function prompt() {
-  return document.getElementById("prompt")
 }
 
 function prompt_clear() {
