@@ -219,33 +219,33 @@
     }
 
     .i-moon {
-      -webkit-mask-image: url("/assets/img/moon.svg");
-      mask-image: url("/assets/img/moon.svg");
+      -webkit-mask-image: url("../img/moon.svg");
+      mask-image: url("../img/moon.svg");
     }
 
     .i-sun {
-      -webkit-mask-image: url("/assets/img/sun.svg");
-      mask-image: url("/assets/img/sun.svg");
+      -webkit-mask-image: url("../img/sun.svg");
+      mask-image: url("../img/sun.svg");
     }
 
     .i-down-arrow {
-      -webkit-mask-image: url("/assets/img/down-arrow.svg");
-      mask-image: url("/assets/img/down-arrow.svg");
+      -webkit-mask-image: url("../img/down-arrow.svg");
+      mask-image: url("../img/down-arrow.svg");
     }
 
     .i-up-arrow {
-      -webkit-mask-image: url("/assets/img/up-arrow.svg");
-      mask-image: url("/assets/img/up-arrow.svg");
+      -webkit-mask-image: url("../img/up-arrow.svg");
+      mask-image: url("../img/up-arrow.svg");
     }
 
     .i-github {
-      -webkit-mask-image: url("/assets/img/github.svg");
-      mask-image: url("/assets/img/github.svg");
+      -webkit-mask-image: url("../img/github.svg");
+      mask-image: url("../img/github.svg");
     }
 
     .i-translate {
-      -webkit-mask-image: url("/assets/img/translate.svg");
-      mask-image: url("/assets/img/translate.svg");
+      -webkit-mask-image: url("../img/translate.svg");
+      mask-image: url("../img/translate.svg");
     }
 
     #prompt {
