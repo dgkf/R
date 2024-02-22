@@ -33,7 +33,7 @@
     const locale = params.get('locale');
     const args = { "warranty": false, "locale": locale };
 
-    window.r = await init().then(() => { 
+    await init().then(() => { 
         history_push("output", r.wasm_session_header(args));
 
         var localized_prompt_start = "";
@@ -109,13 +109,9 @@ sum
 `;
       }
 
-      let prompt = document.getElementById("prompt-input")
-      prompt.value = localized_prompt_start.trim();
-      prompt.rows = prompt.value.split("\n").length;       
-
-      return {
+      window.r = {
         "args": args,
-        "prompt": localized_prompt_start,
+        "prompt": localized_prompt_start.trim(),
         "eval": r.wasm_runtime(args),
         "highlight": (input) => r.wasm_highlight(args, input),
         "header": r.wasm_session_header(args),
@@ -124,9 +120,8 @@ sum
           "log": [],
           "selected": null
         }
-      }
-    }
-  );
+      };
+    }).then(initialize_prompt);
   </script>
 
   <div class="background">
@@ -138,10 +133,10 @@ sum
       </div>
 
       <div id="prompt">
-        <div id="prompt-highlights"></div>
-        <textarea id="prompt-input" name="prompt" cols="40" rows="1" 
+        <textarea id="prompt-input" name="prompt" cols="40" rows="1"
           spellcheck="false" autocorrect="off" autocomplete="off" autocapitalize="none">
         </textarea>
+        <div id="prompt-display"></div>
       </div>
 
       <div class="flex-row">

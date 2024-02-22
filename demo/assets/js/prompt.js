@@ -2,24 +2,28 @@ function prompt() {
   return document.getElementById("prompt-input");
 }
 
-addEventListener("DOMContentLoaded", (event) => {
+function initialize_prompt() {
   theme_dark();
 
-  let prompt = document.getElementById("prompt-input")
+  let prompt = document.getElementById("prompt-input");
   prompt.addEventListener("keydown", (event) => prompt_input(prompt, event));
   prompt.addEventListener("input", (event) => prompt_highlight(prompt, event));
   prompt.addEventListener("keyup", (event) => prompt_highlight(prompt, event));
   prompt.addEventListener("change", (event) => prompt_highlight(prompt, event));
 
-  // resize prompt to fit default input, give focus and move cursor to end
-  prompt_resize();
-  prompt.focus();
+  prompt_set(r.prompt);
+  prompt_focus();
   prompt_cursor(Infinity);
-});
+};
 
 function prompt_highlight(prompt, event) {
+  // Notes on performance:
+  // - Currently re-highlights all input on every event... probably unnecessary
+  // - Can definitely be smarter about only updating highlights when
+  //   certain keys are pressed
+  // - Highlighting probably only needs current line of input
   const hl = highlight(r.highlight(prompt.value));
-  const hl_div = document.getElementById("prompt-highlights");
+  const hl_div = document.getElementById("prompt-display");
   hl_div.innerHTML = '';
   hl_div.appendChild(hl);  
 }
@@ -45,7 +49,7 @@ function prompt_input(prompt, event) {
   }
 
   // possibly submit code
-  if (event.key == "Enter") {
+  if (event.key == "Enter" && !event.shiftKey) {
     // if ctrl is held
     if (event.ctrlKey || event.getModifierState("Meta")) {
       run();
@@ -158,6 +162,9 @@ function run() {
 
   r.history.log.push(code);
   let input = history_push("input", highlight(r.highlight(code)));
+
+  // clear prompt
+  prompt_clear();
   
   // get result and print to history
   try { 
@@ -170,8 +177,8 @@ function run() {
     node.scrollIntoView();
   }
 
-  // clear prompt & restore focus
-  prompt_clear();
+  // restore prompt focus
+  prompt_focus();
 }
 
 function prompt_clear() {
@@ -179,12 +186,20 @@ function prompt_clear() {
   let elem = prompt();
   elem.value = '';
   elem.rows = 1;
+  elem.dispatchEvent(new Event('change'));
   elem.focus();
+}
+
+function prompt_focus()  {
+  let elem = prompt();
+  elem.focus();  
 }
 
 function prompt_set(input) {
   let elem = prompt();
-  elem.value = input;
+  elem.value = r.prompt;
+  elem.rows = elem.value.split("\n").length;
+  elem.dispatchEvent(new Event('change'));
   prompt_resize();
 }
 

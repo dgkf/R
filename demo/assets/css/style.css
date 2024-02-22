@@ -66,7 +66,7 @@
       justify-content: space-between;
     }
 
-    body, #prompt {
+    body, #prompt, #prompt-input {
       font-size: calc(1rem * var(--font-scale));
     }
 
@@ -248,7 +248,7 @@
       mask-image: url("../img/translate.svg");
     }
 
-    #prompt > #prompt-highlights, #prompt > #prompt-input {
+    #prompt-display, #prompt-input {
       box-sizing: border-box;
       font-family: monospace, mono;
       line-height: 1.4em;
@@ -263,11 +263,38 @@
       padding: 1em;
     }
 
-    #prompt:focus {
-      outline: 0;
-      border-color: color-mix(in lch, var(--bg) 70%, var(--fg));
-    }
-
     #prompt-input::-webkit-scrollbar {
       display: none;
     }
+
+
+
+    #prompt {
+      position: relative;  
+    }
+
+    #prompt-input {
+      position: relative; 
+      z-index: 100000;
+
+      color: transparent !important;
+      caret-color: var(--fg) !important;
+      background: transparent !important;
+      border-color: transparent !important;
+    }
+
+    #prompt-display {
+      position: absolute;
+      top: 0;
+      height: 100%;
+      padding-top: 0.7em;
+    }
+
+    #prompt-input:focus {
+      outline: 0;
+    }
+
+    #prompt-input:focus + #prompt-display {
+      border-color: color-mix(in lch, var(--bg) 70%, var(--fg));
+    }
+
