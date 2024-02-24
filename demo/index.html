@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en-US">
   <head>
-    <meta charset="utf-8" />
+    <meta charset="utf-16" />
 
     <title>dgkf/R</title>
     <meta name="description" content="A reimagining of R"/>
@@ -34,7 +34,7 @@
     const args = { "warranty": false, "locale": locale };
 
     await init().then(() => { 
-        history_push("output", r.wasm_session_header(args));
+        history_push("output", r.wasm_session_header(args), null, false);
 
         var localized_prompt_start = "";
         switch (locale) {

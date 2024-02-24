@@ -28,6 +28,8 @@ pub fn wasm_session_header(args: JsValue) -> String {
 #[wasm_bindgen]
 pub fn wasm_runtime(args: JsValue) -> JsValue {
     let args = wasm_args(args);
+    log(&format!("Launching runtime with args: {args:?}"));
+
     let global_env = Rc::new(Environment {
         parent: Some(Environment::from_builtins()),
         ..Default::default()

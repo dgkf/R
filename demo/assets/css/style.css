@@ -168,7 +168,7 @@
       bottom: 0;
       box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
       padding: 0em 1em;
-      z-index: 1;
+      z-index: 1000;
     }
 
     .dropup-content a {
@@ -275,8 +275,6 @@
 
     #prompt-input {
       position: relative; 
-      z-index: 100000;
-
       color: transparent !important;
       caret-color: var(--fg) !important;
       background: transparent !important;
@@ -288,6 +286,7 @@
       top: 0;
       height: 100%;
       padding-top: 0.7em;
+      z-index: -1000;
     }
 
     #prompt-input:focus {

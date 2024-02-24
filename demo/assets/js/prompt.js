@@ -8,8 +8,11 @@ function initialize_prompt() {
   let prompt = document.getElementById("prompt-input");
   prompt.addEventListener("keydown", (event) => prompt_input(prompt, event));
   prompt.addEventListener("input", (event) => prompt_highlight(prompt, event));
-  prompt.addEventListener("keyup", (event) => prompt_highlight(prompt, event));
+  // prompt.addEventListener("keyup", (event) => prompt_highlight(prompt, event));
   prompt.addEventListener("change", (event) => prompt_highlight(prompt, event));
+
+  node = clear_history();
+  node.scrollIntoView();
 
   prompt_set(r.prompt);
   prompt_focus();
@@ -22,13 +25,16 @@ function prompt_highlight(prompt, event) {
   // - Can definitely be smarter about only updating highlights when
   //   certain keys are pressed
   // - Highlighting probably only needs current line of input
-  const hl = highlight(r.highlight(prompt.value));
   const hl_div = document.getElementById("prompt-display");
+  const hl = highlight(r.highlight(prompt.value));
   hl_div.innerHTML = '';
   hl_div.appendChild(hl);  
 }
 
 function prompt_input(prompt, event) {
+  if (event.skip_prompt_handler) { return; }
+
+  const indent_chars = 2;
   let at = event.target.selectionStart;
   let to = event.target.selectionEnd;
 
@@ -36,12 +42,18 @@ function prompt_input(prompt, event) {
   let at_end = to >= event.target.value.length;
 
   // go back in history (toward end, oldest)
-  if (event.key == "ArrowUp" && at_start) {
-    return prompt_set(history_increment(-1));
+  if (event.key == "ArrowUp" && at_start && r.history.log.length > 0) {
+    prompt_set(history_increment(-1));
+    event.target.selectionStart = 0;
+    event.target.selectionEnd = 0;
+    return; 
 
   // go forward in history (toward start, most recent)
-  } else if (event.key == "ArrowDown" && at_end) {
-    return prompt_set(history_increment(1));
+  } else if (event.key == "ArrowDown" && at_end && r.history.log.length > 0) {
+    prompt_set(history_increment(1));
+    event.target.selectionStart = event.target.value.length;
+    event.target.selectionEnd = event.target.value.length;
+    return;
 
   // otherwise, if other keys are pressed, reset selected in history
   } else if (event.key != "ArrowUp" && event.key != "ArrowDown") {
@@ -69,12 +81,110 @@ function prompt_input(prompt, event) {
 
   // add or remove lines based on input
   if (event.key == "Enter") {
-    prompt.rows = prompt.value.split("\n").length + 1;
+    // split our input into lines
+    const splits = prompt.value.slice(0, at).split("\n");
+    const line = splits[splits.length - 1];
+
+    // determine whehter our current line should introduce an indent
+    const paren_open = (line.match(/[\(\{\]]/g) || []).length;
+    const paren_close = (line.match(/[\)\}\]]/g) || []).length;
+    const do_indent = paren_open > paren_close;
+
+    // calculate new indentation
+    const ws = line.match(/^ */g)[0].length;
+    const indent = " ".repeat(ws + do_indent * indent_chars);
+
+    event.preventDefault();
+    document.execCommand("insertText", false, '\n' + indent);
+    prompt_resize();
+    return;
   }
 
+  // Backspace - delete indent groups of spaces
   if (event.key == "Backspace") {
-    let val = prompt.value;
-    prompt.rows = prompt.value.split("\n").length - (prompt.value.substring(at - 1, to).split("\n").length - 1)
+    if (at == to) {
+      for (var i = 0; i < indent_chars; i++) {
+        if (prompt.value[event.target.selectionStart - i - 1] != ' ') break;
+      }
+      event.target.selectionStart -= i;
+    }
+    document.execCommand("delete");
+    event.preventDefault();
+    prompt_resize();
+    return;
+  }
+
+  // Home - goes to start of line
+  if (event.key == "Home" || (event.key == "ArrowLeft" && event.metaKey)) {
+    pos = prompt.value.lastIndexOf("\n", at - 1);
+    pos = pos + prompt.value.slice(pos + 1).search(/[^ \n\r]/g);
+    event.target.selectionStart = pos + 1;
+    event.target.selectionEnd = pos + 1;
+    event.preventDefault();
+    return;
+  }
+
+  // Tab - indent groups, or insert a indent worth of spaces
+  if (event.key == "Tab") {
+    const at_nl = prompt.value.slice(0, at).lastIndexOf("\n");
+    const slice = prompt.value.slice(at_nl - 1, to);
+
+    if (event.shiftKey && at != to) {
+      // find newline positions and insert indent after each
+      var n = 0; var row_n = 0;
+      var pos = to;
+
+      // for each line, delete an indent of spaces from start
+      while (pos > at_nl) {
+        pos = prompt.value.lastIndexOf("\n", pos - 1);
+        event.target.selectionStart = pos + 1;
+        event.target.selectionEnd = pos + 1;
+        row_n = 0;
+        for (var i = 0; i < indent_chars; i ++) {
+          if (prompt.value[event.target.selectionStart + i] != ' ') break;
+          event.target.selectionEnd += 1;
+          n += 1; row_n += 1;
+        }
+        if (row_n > 0) document.execCommand("delete");
+      }
+
+      // restore selection with new indentation
+      event.target.selectionStart = at - row_n;
+      event.target.selectionEnd = to - n;
+
+    } else if (event.shiftKey) {
+      event.target.selectionStart = prompt.value.lastIndexOf("\n", at) + 1;
+      event.target.selectionEnd = event.target.selectionStart;
+      for (var i = 0; i < indent_chars; i ++) {
+        if (prompt.value[event.target.selectionEnd] != ' ') break;
+        event.target.selectionEnd += 1;
+      }
+      const n = event.target.selectionEnd - event.target.selectionStart;
+      if (n > 0) document.execCommand("delete");
+      event.target.selectionStart = at - n;
+
+    } else if (!event.shiftKey && at != to){
+      // find newline positions and insert indent after each
+      var n = 0;
+      var pos = to;
+      while (pos > at_nl) {
+        pos = prompt.value.lastIndexOf("\n", pos - 1);
+        event.target.selectionStart = pos + 1;
+        event.target.selectionEnd = pos + 1;
+        document.execCommand("insertText", false, " ".repeat(indent_chars));
+        n += 1;
+      }
+
+      // restore selection with new indentation
+      event.target.selectionStart = at + indent_chars;
+      event.target.selectionEnd = to + n * indent_chars;
+    } else {
+      document.execCommand("insertText", false, " ".repeat(indent_chars));
+    }
+
+    prompt.dispatchEvent(new Event('change'));
+    event.preventDefault();
+    return;
   }
 }
 
@@ -104,7 +214,7 @@ function highlight(stream) {
   return div
 }
 
-function history_push(type, content, elem) {
+function history_push(type, content, elem, log) {
   let parent = elem || document.getElementById("history");
 
   if (!(content instanceof Element)) {
@@ -182,7 +292,7 @@ function run() {
 }
 
 function prompt_clear() {
-  r.history.log.selected = null;
+  r.history.selected = null;
   let elem = prompt();
   elem.value = '';
   elem.rows = 1;
@@ -197,7 +307,7 @@ function prompt_focus()  {
 
 function prompt_set(input) {
   let elem = prompt();
-  elem.value = r.prompt;
+  elem.value = input;
   elem.rows = elem.value.split("\n").length;
   elem.dispatchEvent(new Event('change'));
   prompt_resize();
@@ -208,6 +318,7 @@ function prompt_cursor(n) {
   if (n > elem.value.length) n = elem.value.length;
   if (n < 0) n = 0;
   elem.selectionStart = n;
+  elem.selectionEnd = n;
 }
 
 function prompt_resize() {
@@ -217,7 +328,7 @@ function prompt_resize() {
 
 function clear_history() {
   document.getElementById("history").innerHTML = '';
-  history_push("output", r.header);
+  return history_push("output", r.header);
 }
 
 function font_size(value) {

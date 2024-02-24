@@ -308,7 +308,7 @@ pub fn derive_localized_parser(input: TokenStream) -> TokenStream {
                             )
                         })
                         .collect()),
-                    Err(_e) => Err(Error::Other("".into()).into()),
+                    Err(e) => Err(Error::Other(format!("{e}").into()).into()),
                 }
             }
         }
