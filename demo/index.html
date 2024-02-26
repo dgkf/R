@@ -32,9 +32,16 @@
     import init, * as r from "./pkg/r.js";
 
     const params = new URLSearchParams(window.location.search);
-    const locale = params.get('locale');
-    const args = { "warranty": false, "locale": locale };
+    const locale = params.get("locale") || "en";
+    var experiments = (params.get("experiments") || "").split(",").filter((x) => x.length)
 
+    const args = { 
+      "warranty": false, 
+      "locale": locale, 
+      "experiments": experiments
+    };
+
+    console.log(args);
     await init().then(() => { 
         var localized_prompt_start = "";
         switch (locale) {
@@ -109,6 +116,7 @@ sum
 `;
       }
 
+      window.r = r;
       const r_env = {
         "args": args,
         "initial": localized_prompt_start.trim(),

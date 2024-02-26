@@ -750,28 +750,29 @@ impl Context for CallStack {
                 let mut result = obj.call(args, self);
 
                 // intercept and rearrange call stack to handle tail calls
-                #[cfg(feature = "tail-call-optimization")]
-                while let Err(Tail(Expr::Call(what, args), _vis)) = result {
-                    let tail = Expr::Call(what.clone(), args.clone());
+                if crate::experiments::use_tail_calls(None) {
+                    while let Err(Tail(Expr::Call(what, args), _vis)) = result {
+                        let tail = Expr::Call(what.clone(), args.clone());
 
-                    // tail is recursive call if it calls out to same object
-                    // that was called to enter current frame
-                    let what_obj = self.eval(*what)?;
-                    if what_obj == self.last_frame().to {
-                        // eagerly evaluate and match argument expressions in tail frame
-                        let args: List = self.eval_list_eager(args)?.try_into()?;
-                        let (args, ellipsis) = what_obj.match_args(args, self)?;
+                        // tail is recursive call if it calls out to same object
+                        // that was called to enter current frame
+                        let what_obj = self.eval(*what)?;
+                        if what_obj == self.last_frame().to {
+                            // eagerly evaluate and match argument expressions in tail frame
+                            let args: List = self.eval_list_eager(args)?.try_into()?;
+                            let (args, ellipsis) = what_obj.match_args(args, self)?;
 
-                        // pop tail frame and add a new local frame
-                        self.frames.pop();
-                        self.add_child_frame(tail, env.clone());
+                            // pop tail frame and add a new local frame
+                            self.frames.pop();
+                            self.add_child_frame(tail, env.clone());
 
-                        // call with pre-matched args
-                        result = what_obj.call_matched(args, ellipsis, self);
-                        continue;
+                            // call with pre-matched args
+                            result = what_obj.call_matched(args, ellipsis, self);
+                            continue;
+                        }
+
+                        result = self.eval_call(tail);
                     }
-
-                    result = self.eval_call(tail);
                 }
 
                 // evaluate any lingering tail calls in the current frame

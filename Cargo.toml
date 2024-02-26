@@ -57,14 +57,11 @@ strum = { version = "0.26.1", features = ["derive"] }
 
 [features]
 default = ["repl"]
-tail-call-optimization = []
-rest-args = []
 repl = [
   "dep:crossterm", 
   "dep:reedline", 
   "dep:nu-ansi-term"
 ]
-
 wasm = [
   "dep:wasm-bindgen", 
   "getrandom/js"  # rand requires getrandom be built with js feature for wasm

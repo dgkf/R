@@ -91,12 +91,13 @@ where
 
         // reserved symbols
         en::Rule::ellipsis => Ok(Expr::Ellipsis(None)),
-
-        #[cfg(feature = "rest-args")]
-        en::Rule::more => Ok(Expr::More),
-
-        #[cfg(not(feature = "rest-args"))]
-        en::Rule::more => Err(Error::FeatureDisabledRestArgs.into()),
+        en::Rule::more => {
+            if crate::experiments::use_rest_args(None) {
+                Ok(Expr::More)
+            } else {
+                Err(Error::FeatureDisabledRestArgs.into())
+            }
+        }
 
         // atomic values
         en::Rule::number => Ok(Expr::Number(
@@ -306,14 +307,14 @@ where
             parse_pairlist(parser, pratt, pair)?,
         )),
 
-        #[cfg(feature = "rest-args")]
         en::Rule::more => {
-            let val = pair.as_str();
-            Ok((Expr::Ellipsis(Some(val.to_string())), ExprList::new()))
+            if crate::experiments::use_rest_args(None) {
+                let val = pair.as_str();
+                Ok((Expr::Ellipsis(Some(val.to_string())), ExprList::new()))
+            } else {
+                Err(Error::FeatureDisabledRestArgs.into())
+            }
         }
-
-        #[cfg(not(feature = "rest-args"))]
-        en::Rule::more => Err(Error::FeatureDisabledRestArgs.into()),
 
         rule => Err(Error::ParseUnexpected(rule).into()),
     }
@@ -363,11 +364,13 @@ where
                 Expr::new_primitive_call(PrefixSub, args)
             }
 
-            #[cfg(feature = "rest-args")]
-            en::Rule::more => Expr::Ellipsis(Some(result.to_string())),
-
-            #[cfg(not(feature = "rest-args"))]
-            en::Rule::more => return Err(Error::FeatureDisabledRestArgs.into()),
+            en::Rule::more => {
+                if crate::experiments::use_rest_args(None) {
+                    Expr::Ellipsis(Some(result.to_string()))
+                } else {
+                    return Err(Error::FeatureDisabledRestArgs.into());
+                }
+            }
 
             rule => return Err(Error::ParseUnexpected(rule).into()),
         }

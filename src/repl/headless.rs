@@ -2,7 +2,7 @@ use std::rc::Rc;
 use wasm_bindgen::prelude::*;
 
 use super::release::session_header;
-use crate::cli::Cli;
+use crate::cli::{Cli, Experiment};
 use crate::context::Context;
 use crate::lang::{CallStack, Cond, Signal};
 use crate::object::Environment;
@@ -14,6 +14,7 @@ extern "C" {
     fn log(s: &str);
 }
 
+#[wasm_bindgen]
 pub fn wasm_args(js: JsValue) -> Cli {
     use gloo_utils::format::JsValueSerdeExt;
     js.into_serde().unwrap_or_default()
@@ -29,6 +30,9 @@ pub fn wasm_session_header(args: JsValue) -> String {
 pub fn wasm_runtime(args: JsValue) -> JsValue {
     let args = wasm_args(args);
     log(&format!("Launching runtime with args: {args:?}"));
+
+    crate::experiments::use_tail_calls(Some(args.experiments.contains(&Experiment::TailCalls)));
+    crate::experiments::use_rest_args(Some(args.experiments.contains(&Experiment::RestArgs)));
 
     let global_env = Rc::new(Environment {
         parent: Some(Environment::from_builtins()),

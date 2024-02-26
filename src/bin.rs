@@ -1,4 +1,4 @@
-use r::cli::Cli;
+use r::cli::{Cli, Experiment};
 use r::lang::Signal;
 use r::repl::repl;
 
@@ -9,6 +9,7 @@ fn main() {}
 fn main() -> Result<(), Signal> {
     use clap::Parser;
     let cli = Cli::parse();
+
     let history = "/tmp/history.txt".to_string();
-    repl(cli.locale, Some(&history), cli.warranty)
+    repl(cli.locale, Some(&history), cli.warranty, cli.experiments)
 }

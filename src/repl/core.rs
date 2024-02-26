@@ -4,15 +4,24 @@ use std::rc::Rc;
 
 use super::prompt::RPrompt;
 use super::release::*;
+use crate::cli::Experiment;
 use crate::context::Context;
 use crate::lang::{CallStack, Cond, EvalResult, Signal};
 use crate::object::Environment;
 use crate::parser::{Localization, LocalizedParser};
 
-pub fn repl<P>(locale: Localization, history: Option<&P>, warranty: bool) -> Result<(), Signal>
+pub fn repl<P>(
+    locale: Localization,
+    history: Option<&P>,
+    warranty: bool,
+    experiments: Vec<Experiment>,
+) -> Result<(), Signal>
 where
     P: AsRef<Path>,
 {
+    crate::experiments::use_tail_calls(Some(experiments.contains(&Experiment::TailCalls)));
+    crate::experiments::use_rest_args(Some(experiments.contains(&Experiment::RestArgs)));
+
     println!("{}", session_header(warranty, &locale));
     let global_env = Rc::new(Environment {
         parent: Some(Environment::from_builtins()),
