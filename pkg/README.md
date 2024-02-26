@@ -67,7 +67,7 @@ free to join the conversation.
 All experiments are feature-gated and enabled by running (or building) with 
 
 ```sh
-cargo run --features "<feature>"
+cargo run -- --experiments "<experiment>"
 ```
 
 Please try them out and share your thoughts in the corresponding issues!
@@ -75,7 +75,7 @@ Please try them out and share your thoughts in the corresponding issues!
 #### Ellipsis packing and unpacking
 
 > [!NOTE]  
-> **feature:** `rest-args` (discussed in [#48](https://github.com/dgkf/R/issues/48), [#49](https://github.com/dgkf/R/issues/49))
+> `--experiments rest-args` (discussed in [#48](https://github.com/dgkf/R/issues/48), [#49](https://github.com/dgkf/R/issues/49))
 
 Current work is focused on `..args` named ellipsis arguments and `..args`
 unpacking in function calls. However, due to the experimental nature of this
@@ -107,7 +107,7 @@ f(..args, ..more_args)  # duplicate names okay, last instance takes priority
 #### Tail Recursion
 
 > [!NOTE]  
-> **feature:** `tail-call-optimization` (discussed in [#60](https://github.com/dgkf/R/issues/60))
+> `--experiments tail-calls` (discussed in [#60](https://github.com/dgkf/R/issues/60)) 
 
 Tail recursion allows for arbitrarily recursive call stacks - or, more 
 accurately, it discards frames from the call stack in this special case

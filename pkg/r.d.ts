@@ -1,6 +1,11 @@
 /* tslint:disable */
 /* eslint-disable */
 /**
+* @param {any} js
+* @returns {Cli}
+*/
+export function wasm_args(js: any): Cli;
+/**
 * @param {any} args
 * @returns {string}
 */
@@ -25,6 +30,12 @@ export function wasm_parses_successfully(args: any, input: string): boolean;
 export function wasm_highlight(args: any, input: string): any[];
 /**
 */
+export enum Experiment {
+  TailCalls = 0,
+  RestArgs = 1,
+}
+/**
+*/
 export enum Localization {
   En = 0,
   Es = 1,
@@ -38,9 +49,13 @@ export enum Localization {
 export class Cli {
   free(): void;
 /**
+* Enable experimental language features
+*/
+  experiments: any[];
+/**
 * Localization to use for runtime
 */
-  locale: number;
+  locale: Localization;
 /**
 * Show the extended warranty information at startup
 */
@@ -51,6 +66,7 @@ export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembl
 
 export interface InitOutput {
   readonly memory: WebAssembly.Memory;
+  readonly wasm_args: (a: number) => number;
   readonly wasm_session_header: (a: number, b: number) => void;
   readonly wasm_runtime: (a: number) => number;
   readonly wasm_parses_successfully: (a: number, b: number, c: number) => number;
@@ -60,11 +76,13 @@ export interface InitOutput {
   readonly __wbg_set_cli_locale: (a: number, b: number) => void;
   readonly __wbg_get_cli_warranty: (a: number) => number;
   readonly __wbg_set_cli_warranty: (a: number, b: number) => void;
+  readonly __wbg_get_cli_experiments: (a: number, b: number) => void;
+  readonly __wbg_set_cli_experiments: (a: number, b: number, c: number) => void;
   readonly __wbindgen_malloc: (a: number, b: number) => number;
   readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
   readonly __wbindgen_export_2: WebAssembly.Table;
   readonly __wbindgen_add_to_stack_pointer: (a: number) => number;
-  readonly wasm_bindgen__convert__closures__invoke1__h3fb32b18c6643176: (a: number, b: number, c: number, d: number, e: number) => void;
+  readonly wasm_bindgen__convert__closures__invoke1__hb65858ceeaa6016b: (a: number, b: number, c: number, d: number, e: number) => void;
   readonly __wbindgen_free: (a: number, b: number, c: number) => void;
   readonly __wbindgen_exn_store: (a: number) => void;
 }
