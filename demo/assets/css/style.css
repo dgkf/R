@@ -66,7 +66,7 @@
       justify-content: space-between;
     }
 
-    body, #prompt, #prompt-input {
+    body, .prompt * {
       font-size: calc(1rem * var(--font-scale));
     }
 
@@ -87,7 +87,7 @@
     }
 
     .history-scroll {
-      height: 100%;
+      margin-top: auto;
       overflow-x: hidden;
       overflow-y: scroll;
       scrollbar-width: none;
@@ -248,7 +248,11 @@
       mask-image: url("../img/translate.svg");
     }
 
-    #prompt-display, #prompt-input {
+    .prompt-input-container {
+      position: relative;  
+    }
+
+    .prompt-input, .prompt-highlight {
       box-sizing: border-box;
       font-family: monospace, mono;
       line-height: 1.4em;
@@ -263,25 +267,11 @@
       padding: 1em;
     }
 
-    #prompt-input::-webkit-scrollbar {
-      display: none;
+    .prompt {
+      margin-top: auto;
     }
 
-
-
-    #prompt {
-      position: relative;  
-    }
-
-    #prompt-input {
-      position: relative; 
-      color: transparent !important;
-      caret-color: var(--fg) !important;
-      background: transparent !important;
-      border-color: transparent !important;
-    }
-
-    #prompt-display {
+    .prompt-highlight {
       position: absolute;
       top: 0;
       height: 100%;
@@ -289,11 +279,23 @@
       z-index: -1000;
     }
 
-    #prompt-input:focus {
+    .prompt-input {
+      position: relative; 
+      color: transparent !important;
+      caret-color: var(--fg) !important;
+      background: transparent !important;
+      border-color: transparent !important;
+    }
+
+    .prompt-input::-webkit-scrollbar {
+      display: none;
+    }
+
+    .prompt-input:focus {
       outline: 0;
     }
 
-    #prompt-input:focus + #prompt-display {
+    .prompt-input:focus + .prompt-highlight {
       border-color: color-mix(in lch, var(--bg) 70%, var(--fg));
     }
 

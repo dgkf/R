@@ -23,9 +23,11 @@
 
     <link rel="stylesheet" href="assets/css/style.css">
     <link rel="stylesheet" href="assets/css/theme.css">
-    <script src="assets/js/prompt.js"></script>
+
+    <script id="promptjs" src="assets/prompt/src.js"></script>
+    <link rel="stylesheet" href="assets/prompt/style.css">
   </head>
-  <body>
+  <body class="dark">
     <script type="module">
     import init, * as r from "./pkg/r.js";
 
@@ -34,8 +36,6 @@
     const args = { "warranty": false, "locale": locale };
 
     await init().then(() => { 
-        history_push("output", r.wasm_session_header(args), null, false);
-
         var localized_prompt_start = "";
         switch (locale) {
           case "emoji": 
@@ -109,9 +109,9 @@ sum
 `;
       }
 
-      window.r = {
+      const r_env = {
         "args": args,
-        "prompt": localized_prompt_start.trim(),
+        "initial": localized_prompt_start.trim(),
         "eval": r.wasm_runtime(args),
         "highlight": (input) => r.wasm_highlight(args, input),
         "header": r.wasm_session_header(args),
@@ -121,49 +121,20 @@ sum
           "selected": null
         }
       };
-    }).then(initialize_prompt);
+
+      return r_env
+    }).then((r) => {
+      (new Repl(".prompt"))
+        .with_eval_callback(r.eval)
+        .with_validate_callback(r.validate)
+        .with_highlight_callback(r.highlight)
+        .with_initial_header(r.header)
+        .with_initial_input(r.initial)
+    });
   </script>
 
-  <div class="background">
-      <div class="container">
-        <div class="history-scroll" id="history-scroll">
-          <div class="history-scroll-pad"></div>
-          <div class="history" id="history">
-        </div>
-      </div>
-
-      <div id="prompt">
-        <textarea id="prompt-input" name="prompt" cols="40" rows="1"
-          spellcheck="false" autocorrect="off" autocomplete="off" autocapitalize="none">
-        </textarea>
-        <div id="prompt-display"></div>
-      </div>
-
-      <div class="flex-row">
-        <div class="btn clear" onclick="clear_history()">clear</div>
-        <div class = "btn-group">
-          <div id="light-mode" class="icon i-sun" onclick="theme_light()" alt="switch to light mode"></div>
-          <div id="dark-mode" class="icon i-moon" onclick="theme_dark()" alt="switch to dark mode" style="display: none;"></div>
-        </div>
-        <div class="btn-group">
-          <a class="btn icon i-github" href="https://github.com/dgkf/R" target="_blank" alt="GitHub"></a>
-        </div>
-        <div class="btn-group">
-          <div class="btn btn-slim icon i-down-arrow" onclick="font_size_adjust(8/9)" alt="decrease font size"></div>
-          <div class="btn btn-slim font-reset" onclick="font_size(1)">Aa</div>
-          <div class="btn btn-slim icon i-up-arrow" onclick="font_size_adjust(9/8)" alt="increase font size"></div>
-        </div>
-        <div class="btn-group dropup">
-          <div class="btn icon i-translate" alt="localization"></div>
-          <div class="dropup-content">
-            <p><a href="?locale=en">English</a></p>
-            <p><a href="?locale=es">Español</a></p>
-            <p><a href="?locale=cn">中文</a></p>
-          </div>
-        </div>
-        <div class="btn submit" onclick="run()">run</div>
-      </div>
-    </div>
+  <div class="container">
+    <div class="prompt"></div>
   </div>
 
 </body>
