@@ -69,17 +69,19 @@ class Repl {
     }
 
     // load html elements from templates
-    const templates = prompt_templates.content;
-    const history = templates.querySelector("#history").content;
-    const buttons = templates.querySelector("#buttons").content;
+    var templates = prompt_templates.content;
+    var history = templates.querySelector("#history").content;
+    var buttons = templates.querySelector("#buttons").content;
     this.#elem_container = templates.querySelector("#container").content;
     this.#elem_input = this.#elem_container.querySelector(".prompt-input");
     this.#elem_highlight = this.#elem_container.querySelector(".prompt-highlight")
     this.#elem_history = history.querySelector(".history");
 
     // add history before, buttons after
-    this.#elem_container.insertBefore(history, this.#elem_container.firstChild);
-    this.#elem_container.appendChild(buttons);
+    history = this.#elem_container.insertBefore(history, this.#elem_container.firstChild);
+    history = this.#elem_container.firstElementChild;
+    buttons = this.#elem_container.appendChild(buttons);
+    buttons = this.#elem_container.lastElementChild;
 
     // add keyboard listeners
     this.#elem_input.addEventListener("keydown", (e) => {
@@ -93,6 +95,8 @@ class Repl {
       this.#highlight_input(e);
     });
     // textarea.addEventListener("keyup", #handle_key_input);
+    buttons.querySelector(".submit").addEventListener("click", (e) => this.run());
+    buttons.querySelector(".clear").addEventListener("click", (e) => this.#history_clear());
 
     parent.appendChild(this.#elem_container);
   }
@@ -375,7 +379,7 @@ class Repl {
 
   #history_clear() {
     this.#elem_history.innerHTML = '';
-    return this.#history_push("output", this.initial_input);
+    return this.#history_push("output", this.initial_header);
   }
 
   #history_increment(n) {
@@ -465,7 +469,7 @@ class Repl {
   #templates = `
     <template id="container">
       <div class="prompt-input-container">
-        <textarea class="prompt-input" name="prompt" rows="1" spellcheck="true" autocomplete="off" autocapitalize="none"></textarea>
+        <textarea class="prompt-input" name="prompt" rows="1" spellcheck="false" autocomplete="off" autocapitalize="none"></textarea>
         <div class="prompt-highlight"></div>
       </div>
     </template>
