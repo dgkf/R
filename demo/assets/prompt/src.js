@@ -370,7 +370,12 @@ class Repl {
     content.classList.add("history-cell");
     content.classList.add(type);
 
-    if (click === undefined) click = () => this.set(content.firstChild.innerText);
+    if (click === undefined) click = () => {
+      this.set(content.firstChild.innerText);
+      this.focus();
+      this.set_cursor_pos(Infinity);
+    };
+
     if (click instanceof Function) content.onclick = click;
     
     parent.appendChild(content);
