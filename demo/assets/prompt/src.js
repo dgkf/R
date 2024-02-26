@@ -322,7 +322,7 @@ class Repl {
         span.className = "style-" + style;
         span.innerHTML = texts[j];
         pre.appendChild(span);
-        j += 1;
+        j++;
       }
 
       i += 2;
@@ -490,8 +490,7 @@ class Repl {
       <div class="flex-row">
         <div class="btn clear">clear</div>
         <div class = "btn-group">
-          <div id="light-mode" class="icon i-sun" onclick="theme_light()" alt="switch to light mode"></div>
-          <div id="dark-mode" class="icon i-moon" onclick="theme_dark()" alt="switch to dark mode" style="display: none;"></div>
+          <div class="icon i-mode" onclick="theme_toggle()" alt="switch darkness mode"></div>
         </div>
         <div class="btn-group">
           <a class="btn icon i-github" href="https://github.com/dgkf/R" target="_blank" alt="GitHub"></a>
@@ -527,38 +526,20 @@ function font_size_adjust(perc) {
   font_size(scale * perc)
 }
 
-function theme_light_icon() {
-  return document.getElementById("light-mode");
+function theme_toggle() {
+  const root = document.documentElement;
+  if (root.classList.contains("light")) {
+    root.classList.remove("light");
+    root.classList.add("dark");
+  } else if (root.classList.contains("dark")) {
+    root.classList.remove("dark");
+    root.classList.add("light");
+  } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+    root.classList.add("dark");
+    theme_toggle();
+  } else {
+    root.classList.add("light");
+    theme_toggle();
+  }
 }
-
-function theme_dark_icon() {
-  return document.getElementById("dark-mode");
-}
-
-function theme_light() {
-  let root = document.querySelector(":root");
-  root.style.setProperty("--bg", "var(--light-bg)")
-  root.style.setProperty("--fg", "var(--light-fg)")
-
-  let body = document.querySelector("body");
-  body.classList.add("light");
-  body.classList.remove("dark");
-
-  theme_light_icon().style.display = "none";
-  theme_dark_icon().style.display = "initial";
-}
-
-function theme_dark() {
-  let root = document.querySelector(":root");
-  root.style.setProperty("--bg", "var(--dark-bg)")
-  root.style.setProperty("--fg", "var(--dark-fg)")
-
-  let body = document.querySelector("body");
-  body.classList.add("dark");
-  body.classList.remove("light");
-
-  theme_light_icon().style.display = "initial";
-  theme_dark_icon().style.display = "none";
-}
-
 
