@@ -1,4 +1,4 @@
-use r::cli::{Cli, Experiment};
+use r::cli::Cli;
 use r::lang::Signal;
 use r::repl::repl;
 
