@@ -138,8 +138,10 @@ pub fn derive_translate(_input: TokenStream) -> TokenStream {
                     Rule::hl_comment => en::Rule::hl_comment,
                     Rule::hl_control => en::Rule::hl_control,
                     Rule::hl_control_kws => en::Rule::hl_control_kws,
-                    Rule::hl_reserved => en::Rule::hl_reserved,
-                    Rule::hl_reserved_kws => en::Rule::hl_reserved_kws,
+                    Rule::hl_function => en::Rule::hl_function,
+                    Rule::hl_function_kws => en::Rule::hl_function_kws,
+                    Rule::hl_signal => en::Rule::hl_signal,
+                    Rule::hl_signal_kws => en::Rule::hl_signal_kws,
                     Rule::hl_value => en::Rule::hl_value,
                     Rule::hl_value_kws => en::Rule::hl_value_kws,
                     Rule::hl_call => en::Rule::hl_call,
@@ -306,7 +308,7 @@ pub fn derive_localized_parser(input: TokenStream) -> TokenStream {
                             )
                         })
                         .collect()),
-                    Err(_e) => Err(Error::Other("".into()).into()),
+                    Err(e) => Err(Error::Other(format!("{e}").into()).into()),
                 }
             }
         }

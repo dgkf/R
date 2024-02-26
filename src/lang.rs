@@ -608,9 +608,29 @@ impl CallStack {
 
 impl Display for CallStack {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        // find most recent frame with same environment
+        let origins = self
+            .frames
+            .iter()
+            .enumerate()
+            .map(|(i, frame)| {
+                self.frames
+                    .iter()
+                    .take(i)
+                    .rev()
+                    .position(|prev| {
+                        Obj::Environment(prev.env.clone()) == Obj::Environment(frame.env.clone())
+                    })
+                    // ignore previous frame, std eval
+                    .and_then(|n| if n > 1 { Some(n) } else { None })
+                    .map(|n| i.saturating_sub(n))
+            })
+            .collect::<Vec<_>>();
+
         for (i, frame) in self.frames.iter().enumerate().skip(1) {
-            writeln!(f, "{}: {}", i, frame.clone())?;
+            writeln!(f, "{}: {} => {:?}", i, frame.clone(), origins[i])?;
         }
+
         Ok(())
     }
 }
@@ -653,8 +673,8 @@ impl Context for CallStack {
             }
         }
 
-        let result = self.eval(from)?;
-        self.assign(to, result)
+        let result = self.eval_and_finalize(from);
+        self.assign(to, result?)
     }
 
     fn assign(&mut self, to: Expr, from: Obj) -> EvalResult {
@@ -730,28 +750,29 @@ impl Context for CallStack {
                 let mut result = obj.call(args, self);
 
                 // intercept and rearrange call stack to handle tail calls
-                #[cfg(feature = "tail-call-optimization")]
-                while let Err(Tail(Expr::Call(what, args), _vis)) = result {
-                    let tail = Expr::Call(what.clone(), args.clone());
+                if crate::experiments::use_tail_calls(None) {
+                    while let Err(Tail(Expr::Call(what, args), _vis)) = result {
+                        let tail = Expr::Call(what.clone(), args.clone());
 
-                    // tail is recursive call if it calls out to same object
-                    // that was called to enter current frame
-                    let what_obj = self.eval(*what)?;
-                    if what_obj == self.last_frame().to {
-                        // eagerly evaluate and match argument expressions in tail frame
-                        let args: List = self.eval_list_eager(args)?.try_into()?;
-                        let (args, ellipsis) = what_obj.match_args(args, self)?;
+                        // tail is recursive call if it calls out to same object
+                        // that was called to enter current frame
+                        let what_obj = self.eval(*what)?;
+                        if what_obj == self.last_frame().to {
+                            // eagerly evaluate and match argument expressions in tail frame
+                            let args: List = self.eval_list_eager(args)?.try_into()?;
+                            let (args, ellipsis) = what_obj.match_args(args, self)?;
 
-                        // pop tail frame and add a new local frame
-                        self.frames.pop();
-                        self.add_child_frame(tail, env.clone());
+                            // pop tail frame and add a new local frame
+                            self.frames.pop();
+                            self.add_child_frame(tail, env.clone());
 
-                        // call with pre-matched args
-                        result = what_obj.call_matched(args, ellipsis, self);
-                        continue;
+                            // call with pre-matched args
+                            result = what_obj.call_matched(args, ellipsis, self);
+                            continue;
+                        }
+
+                        result = self.eval_call(tail);
                     }
-
-                    result = self.eval_call(tail);
                 }
 
                 // evaluate any lingering tail calls in the current frame

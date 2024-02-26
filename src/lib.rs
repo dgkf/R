@@ -5,6 +5,7 @@ pub mod callable;
 pub mod cli;
 pub mod context;
 pub mod error;
+pub mod experiments;
 pub mod lang;
 pub mod object;
 pub mod parser;
