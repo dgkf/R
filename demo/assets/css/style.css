@@ -7,8 +7,8 @@
     }
 
     .light {
-      --bg: rgb(232, 232, 232);
-      --fg: rgb(12, 12, 12); 
+      --bg-rgb: 232, 232, 232;
+      --fg-rgb: 12, 12, 12) 
       --gray0: #D0D0D0;
       --gray1: #FFFFFF;
       --gray2: #E0E0E0;
@@ -18,8 +18,8 @@
     }
 
     .dark {
-      --bg: rgb(0, 0, 0);
-      --fg: rgb(224, 224, 224);
+      --bg-rgb: 0, 0, 0;
+      --fg-rgb: 224, 224, 224;
       --gray0: #000;
       --gray1: #121212;
       --gray2: #202020;  
@@ -37,6 +37,9 @@
     }
 
     body {
+      --bg: rgb(var(--bg-rgb));
+      --fg: rgb(var(--fg-rgb));
+
       font-family: sans-serif, sans;
       padding: 0;
       margin: 0;
@@ -60,8 +63,20 @@
       bottom: 0.5%;
     }
 
-    .flex-row {
+    .header {
+      position: absolute;
+      justify-content: center;
       display: flex;
+      column-gap: 10%;
+      width: 100%;
+      z-index: 1000;
+      padding: 0.5em;
+      background: rgba(var(--fg-rgb), 10%);
+    }
+
+    .flex-column {
+      display: flex;
+      flex-direction: column;
       justify-content: space-between;
     }
 
@@ -70,6 +85,10 @@
     }
 
     @media only screen and (min-width: 768px) {
+      .header {
+        column-gap: 5%;
+      }
+
       .container {
         left: 10%;
         right: 10%;
@@ -85,7 +104,7 @@
       }
     }
 
-    .history-scroll {
+    .output-scroll {
       height: 100%;
       overflow-x: hidden;
       overflow-y: scroll;
@@ -94,18 +113,17 @@
       -webkit-mask-image: -webkit-linear-gradient(bottom, rgba(0,0,0,1) max(15em, 35vh), rgba(0,0,0,0.2) max(25em, 60vh));
     }
 
-    .history-scroll::-webkit-scrollbar {
+    .output-scroll::-webkit-scrollbar {
       display: none;
     }
 
-    .history-scroll-pad {
+    .output-scroll-pad {
       height: inherit;
     }
 
-    .history-cell {
+    .output-cell {
       color: var(--fg);
       padding: 0.25em 0.5em;
-      border-radius: 0.5em;
       margin: 0.25em 0;
     }
 
@@ -118,6 +136,7 @@
     }
 
     .input, .output {
+      border-radius: 0.5em;
       background: var(--gray2);
     }
 
@@ -152,7 +171,6 @@
 
     .btn-group {
       display: flex;
-      padding: 0.4em 0.5em 0;
     }
 
     .btn-slim {
@@ -160,28 +178,34 @@
       padding-right: 0;
     }
 
-    .dropup-content {
+    .dropdown {
+      position: relative;
+    }
+
+    .dropdown-content {
       display: none;
       position: absolute;
       background-color: var(--gray2);
-      bottom: 0;
       box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
       padding: 0em 1em;
       z-index: 1000;
+      top: 100%;
+      left: 50%;
+      transform: translate(-50%, 0%);
     }
 
-    .dropup-content a {
+    .dropdown-content a {
       color: var(--fg);
       opacity: 50%;
       font-weight: bold;
       text-decoration: none;
     }
 
-    .dropup-content a:hover {
+    .dropdown-content a:hover {
       opacity: 100%;
     }
 
-    .dropup:hover .dropup-content {
+    .dropdown:hover .dropdown-content {
       display: block;
     }
 
@@ -216,6 +240,14 @@
       mask-position: 50% 50%;
 
       background-color: var(--gray7);
+    }
+
+    .icon-text:hover {
+      color: var(--fg);
+    }
+
+    .icon:hover {
+      background-color: var(--fg);  
     }
 
     .dark .i-mode {
@@ -272,7 +304,7 @@
       background: var(--gray1);
       color: var(--fg);
 
-      border-radius: 1em;
+      border-radius: 0.5em;
       border-width: 0.2em;
       border-style: solid;
       border-color: var(--gray2);
@@ -289,6 +321,42 @@
       height: 100%;
       padding-top: 0.7em;
       z-index: -1000;
+    }
+
+    @media (hover: hover) {
+      .prompt-run {
+        visibility: hidden;
+        opacity: 0%;
+      }
+    }
+
+    .prompt-run {
+      position: absolute;
+      top: 1em;
+      right: 1em;
+
+      background: var(--gray7);
+      padding: 1em;
+
+      vertical-align: middle;
+      cursor: pointer;
+      -webkit-mask-repeat: no-repeat;
+      mask-repeat: no-repeat;
+      -webkit-mask-size: contain;
+      mask-size: contain;
+      -webkit-mask-position: 50% 50%;
+      mask-position: 50% 50%;
+      -webkit-mask-image: url("../img/play.svg");
+      mask-image: url("../img/play.svg"); 
+    }
+
+    .prompt-input:hover ~ .prompt-run, .prompt-run:hover {
+      visibility: visible;
+      opacity: 100%;
+    }
+
+    .prompt-run:hover {
+      background: var(--fg);
     }
 
     .prompt-input {
