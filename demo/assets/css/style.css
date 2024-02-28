@@ -8,7 +8,7 @@
 
     .light {
       --bg-rgb: 232, 232, 232;
-      --fg-rgb: 12, 12, 12) 
+      --fg-rgb: 12, 12, 12;
       --gray0: #D0D0D0;
       --gray1: #FFFFFF;
       --gray2: #E0E0E0;
@@ -125,6 +125,7 @@
       color: var(--fg);
       padding: 0.25em 0.5em;
       margin: 0.25em 0;
+      border-radius: 0.5em;
     }
 
     .input:hover {
@@ -156,7 +157,7 @@
     .btn {
       display: inline;
       border-radius: 0.5em;
-      color: var(--gray7);
+      color: rgba(var(--fg-rgb), 50%);
 
       font-size: 1.2em;
       font-weight: bold;
@@ -238,7 +239,7 @@
       -webkit-mask-position: 50% 50%;
       mask-position: 50% 50%;
 
-      background-color: var(--gray7);
+      background-color: rgba(var(--fg-rgb), 50%);
     }
 
     .icon-text:hover {
