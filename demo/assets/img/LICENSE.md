@@ -2,7 +2,7 @@
 
 ## SVG icons from [svgrepo.com](https://www.svgrepo.com)
 
-### Chevrons, Sun, Moon, Translate
+### Chevrons, Sun, Moon, Translate, Play
 
 COLLECTION: Phosphor Thin Icons
 LICENSE: MIT License

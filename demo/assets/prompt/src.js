@@ -2,21 +2,68 @@ class Repl {
   #elem_container;
   #elem_input;
   #elem_highlight;
-  #elem_history;
+  #elem_output;
 
   eval;  // (input: String) => output: String;
   highlight = (input) => ["none", input];  // (input: String) => [String...]; // of style, text pairs
   validate = (elem) => true;  // (input: String) => bool;
-  initial_input = "";  // String
-  initial_header = "";  // String
+  initial_input = "";         // String
+  initial_header = "";        // String
+  initial_run = false;        // bool: whether to immediately run input
   indent = 2;
-  history = {
-    "selected": undefined,  // index in log
-    "log": []  // array of previous inputs
+
+  output = {
+    "mode": "single",         // "history" or "single"
+    "location": "above",      // "above" or "below"
+    "selected": undefined,    // index in log
+    "log": []                 // array of previous inputs
   };
 
-  constructor(parent) {
-    this.initializePromptContainer(parent)
+  constructor(parent, params) {
+    if (parent === undefined) parent = ".prompt";
+    if (typeof parent === "string") {
+      document.querySelectorAll(parent).forEach((e) => {
+        new this.constructor(e, params)
+      });
+      return;
+    }
+
+    if (params === undefined) params = {};
+    const data = parent.dataset;
+
+    this.eval = params.eval ||
+      this.eval;
+    this.validate = params.validate ||
+      this.validate;
+    this.highlight = params.highlight ||
+      this.highlight;
+    this.indent = params.indent ||
+      data.indent ||
+      this.indent;
+    this.output.mode = (params.output && params.output.mode) ||
+      data.outputMode ||
+      this.output.mode;
+    this.output.location = (params.output && params.output.location ) || 
+      data.outputLocation || 
+      this.output.location;
+
+    this.initialize_prompt_container(parent)
+
+    this.initial_input = params.initial_input ||
+      (data.initialInput && data.initialInput.replace(/\\n/g, "\n")) ||
+      this.initial_input;
+    if (this.initial_input) this.with_initial_input(this.initial_input);
+
+    this.initial_header = params.initial_header ||
+      data.initialHeader ||
+      this.initial_header;
+    if (this.initial_header) this.with_initial_header(this.initial_header);
+
+    this.initial_run = params.initial_run ||
+      data.initialRun ||
+      this.initial_run;
+
+    if (this.initial_run) this.run();
   }
 
   with_eval_callback(fn) {
@@ -46,20 +93,12 @@ class Repl {
 
   with_initial_header(header) {
     this.initial_header = header;
-    const node = this.#history_push("output", this.initial_header, null, false);
+    const node = this.#output_push("output", this.initial_header, null, false);
     node.scrollIntoView();
     return this
   }
 
-  initializePromptContainer(parent) {
-    if (parent === undefined) parent = ".prompt"
-    if (typeof parent === "string") {
-      document.querySelectorAll(parent).forEach((e) => {
-        this.initializePromptContainer(e)
-      });
-      return;
-    }
-
+  initialize_prompt_container(parent) {
     // auto-append templates into document
     if (!document.querySelector("template#prompt_templates")) {
       const elem = document.createElement("template");
@@ -70,18 +109,29 @@ class Repl {
 
     // load html elements from templates
     var templates = prompt_templates.content;
-    var history = templates.querySelector("#history").content;
-    var buttons = templates.querySelector("#buttons").content;
-    this.#elem_container = templates.querySelector("#container").content;
+    var output = templates.querySelector("#output").content.cloneNode(true);
+    this.#elem_container = templates.querySelector("#container").content.cloneNode(true);
     this.#elem_input = this.#elem_container.querySelector(".prompt-input");
     this.#elem_highlight = this.#elem_container.querySelector(".prompt-highlight")
-    this.#elem_history = history.querySelector(".history");
+    this.#elem_output = output.querySelector(".output-container");
 
-    // add history before, buttons after
-    history = this.#elem_container.insertBefore(history, this.#elem_container.firstChild);
-    history = this.#elem_container.firstElementChild;
-    buttons = this.#elem_container.appendChild(buttons);
-    buttons = this.#elem_container.lastElementChild;
+    // add output before, buttons after
+    if (this.output.location === "above") {
+      this.#elem_container.insertBefore(output, this.#elem_container.firstChild);
+    } else if (this.output.location === "below") {
+      this.#elem_container.appendChild(output);
+    }
+
+    // update hotkey indicators by OS
+    var run = this.#elem_container.querySelector(".prompt-run");
+    if (window.navigator.platform.startsWith("Mac")) {
+      run.title = "Cmd + Enter"
+    } else {
+      run.title = "Ctrl + Enter"
+    }
+
+    // add run button 
+    run.addEventListener("click", (e) => this.run());
 
     // add keyboard listeners
     this.#elem_input.addEventListener("keydown", (e) => {
@@ -94,9 +144,6 @@ class Repl {
     this.#elem_input.addEventListener("change", (e) => { 
       this.#highlight_input(e);
     });
-    // textarea.addEventListener("keyup", #handle_key_input);
-    buttons.querySelector(".submit").addEventListener("click", (e) => this.run());
-    buttons.querySelector(".clear").addEventListener("click", (e) => this.#history_clear());
 
     parent.appendChild(this.#elem_container);
   }
@@ -105,21 +152,24 @@ class Repl {
     if (code === undefined) code = this.#elem_input.value;
     if (!code.trim()) { return this.clear(); }
 
-    this.history.log.push(code);
-    let input = this.#history_push("input", this.#markup_highlight(code));
+    this.output.log.push(code);
 
-    // clear prompt
-    this.clear();
+    var output = this.#elem_output;
+    if (this.output.mode === "history") {
+      output = this.#output_push("input", this.#markup_highlight(code));
+      this.clear();
+    }
   
-    // get result and print to history
+    // get result and print to output
     try { 
       let result = this.eval(code);
-      let node = this.#history_push("output", result, input);
+      if (this.output.mode === "single") this.#elem_output.innerHTML = "";
+      let node = this.#output_push("output", result, output);
       node.scrollIntoView();
     } catch (error) {
       console.log(error);
       let node = this.#markup_unexpected_error();
-      input.appendChild(node);
+      output.appendChild(node);
       node.scrollIntoView();
     }
 
@@ -140,7 +190,7 @@ class Repl {
 
   clear() {
     const e = this.#elem_input;
-    this.history.selected = null;
+    this.output.selected = null;
     e.value = '';
     e.rows = 1;
     e.dispatchEvent(new Event('change'));
@@ -161,16 +211,16 @@ class Repl {
     this.#elem_input.rows = this.#elem_input.value.split("\n").length;  
   };
 
-  #do_history_prev() {
-    const input = this.#history_increment(-1);
+  #do_output_prev() {
+    const input = this.#output_increment(-1);
     this.set(input);
     event.target.selectionStart = 0;
     event.target.selectionEnd = 0;
     return input;
   };
 
-  #do_history_next() {
-    const input = this.#history_increment(1);
+  #do_output_next() {
+    const input = this.#output_increment(1);
     this.set(input);
     this.#elem_input.selectionStart = this.#elem_input.value.length;
     this.#elem_input.selectionEnd = this.#elem_input.value.length;
@@ -334,7 +384,7 @@ class Repl {
 
   #markup_unexpected_error() {
     let node = document.createElement("div");
-    node.className = "history-cell error";
+    node.className = "output-cell error";
 
     var text = document.createElement("pre");
     text.textContent = "Error: An unexpected error was encountered!";
@@ -356,8 +406,8 @@ class Repl {
     return node;
   }
 
-  #history_push(type, content, elem, click) {
-    let parent = elem || this.#elem_history;
+  #output_push(type, content, elem, click) {
+    let parent = elem || this.#elem_output;
 
     if (!(content instanceof Element)) {
       let node = document.createElement("div");
@@ -367,7 +417,7 @@ class Repl {
       content = node;
     }
 
-    content.classList.add("history-cell");
+    content.classList.add("output-cell");
     content.classList.add(type);
 
     if (click === undefined) click = () => {
@@ -382,17 +432,17 @@ class Repl {
     return content;  
   }
 
-  #history_clear() {
-    this.#elem_history.innerHTML = '';
-    return this.#history_push("output", this.initial_header);
+  #output_clear() {
+    this.#elem_output.innerHTML = '';
+    return this.#output_push("output", this.initial_header);
   }
 
-  #history_increment(n) {
-    let l = this.history.log.length;
+  #output_increment(n) {
+    let l = this.output.log.length;
     if (!l) { return; }
     n = (n % l) + l;
-    this.history.selected = ((this.history.selected || 0) + n) % l;
-    return this.history.log[this.history.selected]
+    this.output.selected = ((this.output.selected || 0) + n) % l;
+    return this.output.log[this.output.selected]
   }
 
   #highlight_input(event) {
@@ -409,17 +459,17 @@ class Repl {
     let at_start = e.selectionStart <= 0;
     let at_end = e.selectionEnd >= e.value.length;
 
-    // go back in history (toward end, oldest)
-    if (event.key == "ArrowUp" && at_start && this.history.log.length > 0) {
-      return this.#do_history_prev();
+    // go back in output (toward end, oldest)
+    if (event.key == "ArrowUp" && at_start && this.output.log.length > 0) {
+      return this.#do_output_prev();
 
-    // go forward in history (toward start, most recent)
-    } else if (event.key == "ArrowDown" && at_end && this.history.log.length > 0) {
-      return this.#do_history_next();
+    // go forward in output (toward start, most recent)
+    } else if (event.key == "ArrowDown" && at_end && this.output.log.length > 0) {
+      return this.#do_output_next();
 
-    // otherwise, if other keys are pressed, reset selected in history
+    // otherwise, if other keys are pressed, reset selected in output
     } else if (event.key != "ArrowUp" && event.key != "ArrowDown") {
-      this.history.selected = null;
+      this.output.selected = null;
     }
 
     if (event.key == "Enter" && !event.shiftKey) {
@@ -476,39 +526,14 @@ class Repl {
       <div class="prompt-input-container">
         <textarea class="prompt-input" name="prompt" rows="1" spellcheck="false" autocomplete="off" autocapitalize="none"></textarea>
         <div class="prompt-highlight"></div>
+        <div class="prompt-run" title="Meta + Enter"></div>
       </div>
     </template>
 
-    <template id="history">
-      <div class="history-scroll">
-        <div class="history-scroll-pad"></div>
-        <div class="history"></div>
-      </div>
-    </template>
-
-    <template id="buttons">
-      <div class="flex-row">
-        <div class="btn clear">clear</div>
-        <div class = "btn-group">
-          <div class="icon i-mode" onclick="theme_toggle()" alt="switch darkness mode"></div>
-        </div>
-        <div class="btn-group">
-          <a class="btn icon i-github" href="https://github.com/dgkf/R" target="_blank" alt="GitHub"></a>
-        </div>
-        <div class="btn-group">
-          <div class="btn btn-slim icon i-down-arrow" onclick="font_size_adjust(8/9)" alt="decrease font size"></div>
-          <div class="btn btn-slim font-reset" onclick="font_size(1)">Aa</div>
-          <div class="btn btn-slim icon i-up-arrow" onclick="font_size_adjust(9/8)" alt="increase font size"></div>
-        </div>
-        <div class="btn-group dropup">
-          <div class="btn icon i-translate" alt="localization"></div>
-          <div class="dropup-content">
-            <p><a href="?locale=en">English</a></p>
-            <p><a href="?locale=es">Español</a></p>
-            <p><a href="?locale=cn">中文</a></p>
-          </div>
-        </div>
-        <div class="btn submit" >run</div>
+    <template id="output">
+      <div class="output-scroll">
+        <div class="output-scroll-pad"></div>
+        <div class="output-container"></div>
       </div>
     </template>
   `
