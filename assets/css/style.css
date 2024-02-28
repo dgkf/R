@@ -72,7 +72,7 @@
       z-index: 1000;
       background: rgba(var(--fg-rgb), 10%);
       backdrop-filter: blur(10px);
-      padding: 0.5em;
+      padding-bottom: 0.5em;
       padding-top: calc(0.5em + env(safe-area-inset-top, 0em));
     }
 
@@ -89,6 +89,8 @@
     @media only screen and (min-width: 768px) {
       .header {
         column-gap: 5%;
+        padding-bottom: 1em;
+        padding-top: calc(1em + env(safe-area-inset-top, 0em));
       }
 
       .container {
@@ -164,8 +166,7 @@
       font-size: 1.2em;
       font-weight: bold;
 
-      padding: 0.3em 0.5em 0em 0.5em;
-      margin: 0.2em 0 0 0;
+      padding: 0em 0.5em;
 
       cursor: pointer;
       user-select: none;
