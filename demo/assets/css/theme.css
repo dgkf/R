@@ -43,6 +43,10 @@
   color: rgb(117, 117, 117);
 }
 
+.style-error {
+  text-decoration: underline red wavy 1px;
+}
+
 
 
 .dark .style-symbol {

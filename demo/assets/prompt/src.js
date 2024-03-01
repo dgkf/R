@@ -2,7 +2,9 @@ class Repl {
   #elem_container;
   #elem_input;
   #elem_highlight;
+  #elem_diagnostics;
   #elem_output;
+  #timeouts = {};
 
   eval;  // (input: String) => output: String;
   highlight = (input) => ["none", input];  // (input: String) => [String...]; // of style, text pairs
@@ -113,6 +115,7 @@ class Repl {
     this.#elem_container = templates.querySelector("#container").content.cloneNode(true);
     this.#elem_input = this.#elem_container.querySelector(".prompt-input");
     this.#elem_highlight = this.#elem_container.querySelector(".prompt-highlight")
+    this.#elem_diagnostics = this.#elem_container.querySelector(".prompt-diagnostics")
     this.#elem_output = output.querySelector(".output-container");
 
     // add output before, buttons after
@@ -139,10 +142,12 @@ class Repl {
     });
     this.#elem_input.addEventListener("input", (e) => {
       this.#highlight_input(e)
+      this.#validate()
       this.#recalculate_rows();
     });
     this.#elem_input.addEventListener("change", (e) => { 
-      this.#highlight_input(e);
+      // this.#highlight_input(e);
+      // this.#validate()
     });
 
     parent.appendChild(this.#elem_container);
@@ -180,7 +185,7 @@ class Repl {
   set(input) {
     this.#elem_input.value = input;
     this.#elem_input.rows = this.#elem_input.value.split("\n").length;
-    this.#elem_input.dispatchEvent(new Event('change'));
+    this.#elem_input.dispatchEvent(new Event('input'));
     this.#recalculate_rows();
   };
 
@@ -193,7 +198,7 @@ class Repl {
     this.output.selected = null;
     e.value = '';
     e.rows = 1;
-    e.dispatchEvent(new Event('change'));
+    e.dispatchEvent(new Event('input'));
     e.focus(); 
   };
 
@@ -342,7 +347,50 @@ class Repl {
 
   #validate(code) {
     if (code === undefined) code = this.#elem_input.value;
-    return this.validate(code);
+    let errors = this.validate(code);
+
+    // console.log(errors);
+    // for (i in errors) {
+    //   console.log(i);
+    //   x = { "start": e[i].start(), "end": e[i].end(), "message": e[i].message() };
+    //   console.log(x)
+    // }
+
+    if (errors.length > 0) {
+      clearTimeout(this.#timeouts.diagnostics);
+      this.#timeouts.diagnostics = setTimeout(() => {
+        const markup = this.#markup_errors(code, errors);
+        this.#timeouts.diagnostics && this.#elem_diagnostics.replaceChildren(markup);
+      }, 1000)
+    } else {
+      clearTimeout(this.#timeouts.diagnostics);
+      this.#elem_diagnostics.replaceChildren([]);
+    }   
+
+    return this.validate(code).length === 0;
+  }
+
+  #markup_errors(code, errors) {
+    if (code === undefined) code = this.#elem_input.value;
+
+    var frag = document.createDocumentFragment();
+    errors.forEach((e) => {
+      var div = document.createElement("div");
+
+      var pad = document.createElement("span");
+      pad.textContent = code.slice(0, e.start() - 1).replace(/[^\n]/g, " ");
+      div.appendChild(pad);
+
+      var err = document.createElement("span");
+      err.textContent = " ".repeat(e.end() - e.start() + 1);
+      err.classList.add("style-error");
+      err.title = e.message();
+      div.appendChild(err)
+
+      frag.appendChild(div);            
+    })
+    
+    return frag;    
   }
 
   #markup_highlight(code) {
@@ -354,32 +402,20 @@ class Repl {
 
     if (code === undefined) code = this.#elem_input.value;
     let stream = this.highlight(code);
-
-    var div = document.createElement("div");
-    var pre = document.createElement("pre");
-    div.appendChild(pre);
+    const frag = document.createDocumentFragment();
 
     var i = 0;
     var j = 0;
     while (i < stream.length) {
       let style = stream[i];
-      let texts = stream[i+1].split("\n");
-
-      j = 0;
-      while (j < texts.length) {
-        if (j > 0) pre.appendChild(document.createElement("br"));
-        var span = document.createElement("span");
-        span.className = "style-" + style;
-        span.innerHTML = texts[j];
-        pre.appendChild(span);
-        j++;
-      }
-
+      var span = document.createElement("span");
+      span.className = "style-" + style;
+      span.textContent = stream[i+1];
+      frag.appendChild(span);
       i += 2;
     }
-  
-    this.#elem_highlight.innerHTML = '';
-    return div;
+
+    return frag;
   }
 
   #markup_unexpected_error() {
@@ -409,19 +445,24 @@ class Repl {
   #output_push(type, content, elem, click) {
     let parent = elem || this.#elem_output;
 
-    if (!(content instanceof Element)) {
+    if (typeof content === "string") {
       let node = document.createElement("div");
       let text = document.createElement("pre");
       text.textContent = content;
       node.appendChild(text);
+      content = node;
+    } else if (content instanceof DocumentFragment) {
+      let node = document.createElement("div");
+      node.replaceChildren(content);
       content = node;
     }
 
     content.classList.add("output-cell");
     content.classList.add(type);
 
+    let click_contents = content.textContent;
     if (click === undefined) click = () => {
-      this.set(content.firstChild.innerText);
+      this.set(click_contents);
       this.focus();
       this.set_cursor_pos(Infinity);
     };
@@ -448,8 +489,7 @@ class Repl {
   #highlight_input(event) {
     const div = this.#elem_highlight;
     const hl = this.#markup_highlight(this.#elem_input.value);
-    div.innerHTML = '';
-    div.appendChild(hl);  
+    div.replaceChildren(hl);
   }
 
   #handle_key_input(event) {
@@ -526,6 +566,7 @@ class Repl {
       <div class="prompt-input-container">
         <textarea class="prompt-input" name="prompt" rows="1" spellcheck="false" autocomplete="off" autocapitalize="none"></textarea>
         <div class="prompt-highlight"></div>
+        <div class="prompt-diagnostics"></div>
         <div class="prompt-run" title="Meta + Enter"></div>
       </div>
     </template>

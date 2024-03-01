@@ -41,9 +41,9 @@ pub enum Error {
     Other(String),
 
     // parsing errors
-    ParseFailureVerbose(Box<pest::error::Error<en::Rule>>),
-    ParseFailure(Box<pest::error::Error<en::Rule>>),
-    ParseUnexpected(en::Rule),
+    ParseFailureVerbose(pest::error::Error<en::Rule>),
+    ParseFailure(pest::error::Error<en::Rule>),
+    ParseUnexpected(en::Rule, (usize, usize)),
 
     // temporary workaround until we propagate call stack to all error locations
     WithCallStack(Box<Error>, CallStack),
@@ -66,7 +66,7 @@ impl Error {
                 Pos((line, col)) => format!("Parse failed at Line {}, Column {}", line, col),
                 _ => format!("Parse failed at {:?}", e.line_col),
             },
-            Error::ParseUnexpected(rule) => {
+            Error::ParseUnexpected(rule, _span) => {
                 format!("Parse failed. Found unexpected parsing rule '{:#?}'", rule)
             }
             Error::NotInterpretableAsLogical => {
@@ -106,6 +106,39 @@ impl Error {
                 "..rest syntax currently disabled. To enable, re-build with\n\n    cargo build --features rest-args\n".to_string()
             }
             Error::Missing => "object is missing".to_string(),
+        }
+    }
+
+    pub fn from_parse_error<R>(input: &str, error: pest::error::Error<R>) -> Error
+    where
+        R: pest::RuleType + Into<en::Rule>,
+    {
+        use pest::error::Error as E;
+        use pest::error::ErrorVariant::*;
+        use pest::error::InputLocation;
+        use pest::{Position, Span};
+        let variant = match error.variant {
+            ParsingError {
+                positives: p,
+                negatives: n,
+            } => ParsingError {
+                positives: p.into_iter().map(|i| i.into()).collect(),
+                negatives: n.into_iter().map(|i| i.into()).collect(),
+            },
+            CustomError { message } => CustomError { message },
+        };
+
+        match error.location {
+            InputLocation::Pos(p) => {
+                let pos = Position::new(input, p).unwrap();
+                let err = E::new_from_pos(variant, pos);
+                Error::ParseFailure(err)
+            }
+            InputLocation::Span((s, e)) => {
+                let span = Span::new(input, s, e).unwrap();
+                let err = E::new_from_span(variant, span);
+                Error::ParseFailure(err)
+            }
         }
     }
 }

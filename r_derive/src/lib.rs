@@ -291,9 +291,7 @@ pub fn derive_localized_parser(input: TokenStream) -> TokenStream {
 
                     // for any expressions
                     Ok(pairs) => parse_expr(self, pratt_parser(), pairs),
-                    Err(_e) => {
-                        Err(Error::Other("".into()).into())
-                    } // need to coerce Error<R> to Error<en::Rule>
+                    Err(e) => Err(Signal::Error(Error::from_parse_error(input, e))),
                 }
             }
 
@@ -308,7 +306,7 @@ pub fn derive_localized_parser(input: TokenStream) -> TokenStream {
                             )
                         })
                         .collect()),
-                    Err(e) => Err(Error::Other(format!("{e}").into()).into()),
+                    Err(e) => Err(Signal::Error(Error::from_parse_error(input, e))),
                 }
             }
         }

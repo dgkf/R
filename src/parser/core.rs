@@ -50,7 +50,10 @@ where
                 en::Rule::eq => Box::new(InfixEqual),
                 en::Rule::neq => Box::new(InfixNotEqual),
                 en::Rule::pipe => Box::new(InfixPipe),
-                rule => return Err(Error::ParseUnexpected(rule).into()),
+                rule => {
+                    let span = (op.as_span().start(), op.as_span().end());
+                    return Err(Error::ParseUnexpected(rule, span).into());
+                }
             };
 
             Ok(Expr::Call(Box::new(Expr::Primitive(op)), args))
@@ -119,7 +122,10 @@ where
         en::Rule::symbol_backticked => Ok(Expr::Symbol(String::from(pair.as_str()))),
 
         // otherwise fail
-        rule => Err(Error::ParseUnexpected(rule).into()),
+        rule => {
+            let span = (pair.as_span().start(), pair.as_span().end());
+            Err(Error::ParseUnexpected(rule, span).into())
+        }
     }
 }
 
@@ -316,7 +322,10 @@ where
             }
         }
 
-        rule => Err(Error::ParseUnexpected(rule).into()),
+        rule => {
+            let span = (pair.as_span().start(), pair.as_span().end());
+            Err(Error::ParseUnexpected(rule, span).into())
+        }
     }
 }
 
@@ -372,7 +381,10 @@ where
                 }
             }
 
-            rule => return Err(Error::ParseUnexpected(rule).into()),
+            rule => {
+                let span = (prev.as_span().start(), prev.as_span().end());
+                return Err(Error::ParseUnexpected(rule, span).into());
+            }
         }
     }
 
