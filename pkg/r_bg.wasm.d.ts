@@ -1,10 +1,14 @@
 /* tslint:disable */
 /* eslint-disable */
 export const memory: WebAssembly.Memory;
+export function __wbg_parseerror_free(a: number): void;
+export function parseerror_start(a: number): number;
+export function parseerror_end(a: number): number;
+export function parseerror_message(a: number, b: number): void;
 export function wasm_args(a: number): number;
 export function wasm_session_header(a: number, b: number): void;
 export function wasm_runtime(a: number): number;
-export function wasm_parses_successfully(a: number, b: number, c: number): number;
+export function wasm_parse_errors(a: number, b: number, c: number, d: number): void;
 export function wasm_highlight(a: number, b: number, c: number, d: number): void;
 export function __wbg_cli_free(a: number): void;
 export function __wbg_get_cli_locale(a: number): number;

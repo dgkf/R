@@ -210,18 +210,6 @@ export function wasm_runtime(args) {
     return takeObject(ret);
 }
 
-/**
-* @param {any} args
-* @param {string} input
-* @returns {boolean}
-*/
-export function wasm_parses_successfully(args, input) {
-    const ptr0 = passStringToWasm0(input, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.wasm_parses_successfully(addHeapObject(args), ptr0, len0);
-    return ret !== 0;
-}
-
 let cachedUint32Memory0 = null;
 
 function getUint32Memory0() {
@@ -241,6 +229,31 @@ function getArrayJsValueFromWasm0(ptr, len) {
     }
     return result;
 }
+/**
+* Check whether an input produces parse errors
+*
+* Returns Option::None if no errors are found, or
+* Option::Some((start, end, message)) when an error is produced.
+* @param {any} args
+* @param {string} input
+* @returns {(ParseError)[]}
+*/
+export function wasm_parse_errors(args, input) {
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        const ptr0 = passStringToWasm0(input, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        wasm.wasm_parse_errors(retptr, addHeapObject(args), ptr0, len0);
+        var r0 = getInt32Memory0()[retptr / 4 + 0];
+        var r1 = getInt32Memory0()[retptr / 4 + 1];
+        var v2 = getArrayJsValueFromWasm0(r0, r1).slice();
+        wasm.__wbindgen_free(r0, r1 * 4, 4);
+        return v2;
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
+    }
+}
+
 /**
 * returns a stream of strings. Each pair represents a style and text
 * @param {any} args
@@ -282,10 +295,10 @@ function handleError(f, args) {
 }
 /**
 */
-export const Localization = Object.freeze({ En:0,"0":"En",Es:1,"1":"Es",Cn:2,"2":"Cn",Pirate:3,"3":"Pirate",Emoji:4,"4":"Emoji", });
+export const Experiment = Object.freeze({ TailCalls:0,"0":"TailCalls",RestArgs:1,"1":"RestArgs", });
 /**
 */
-export const Experiment = Object.freeze({ TailCalls:0,"0":"TailCalls",RestArgs:1,"1":"RestArgs", });
+export const Localization = Object.freeze({ En:0,"0":"En",Es:1,"1":"Es",Cn:2,"2":"Cn",Pirate:3,"3":"Pirate",Emoji:4,"4":"Emoji", });
 
 const CliFinalization = (typeof FinalizationRegistry === 'undefined')
     ? { register: () => {}, unregister: () => {} }
@@ -372,6 +385,67 @@ export class Cli {
     }
 }
 
+const ParseErrorFinalization = (typeof FinalizationRegistry === 'undefined')
+    ? { register: () => {}, unregister: () => {} }
+    : new FinalizationRegistry(ptr => wasm.__wbg_parseerror_free(ptr >>> 0));
+/**
+*/
+export class ParseError {
+
+    static __wrap(ptr) {
+        ptr = ptr >>> 0;
+        const obj = Object.create(ParseError.prototype);
+        obj.__wbg_ptr = ptr;
+        ParseErrorFinalization.register(obj, obj.__wbg_ptr, obj);
+        return obj;
+    }
+
+    __destroy_into_raw() {
+        const ptr = this.__wbg_ptr;
+        this.__wbg_ptr = 0;
+        ParseErrorFinalization.unregister(this);
+        return ptr;
+    }
+
+    free() {
+        const ptr = this.__destroy_into_raw();
+        wasm.__wbg_parseerror_free(ptr);
+    }
+    /**
+    * @returns {number}
+    */
+    start() {
+        const ret = wasm.parseerror_start(this.__wbg_ptr);
+        return ret >>> 0;
+    }
+    /**
+    * @returns {number}
+    */
+    end() {
+        const ret = wasm.parseerror_end(this.__wbg_ptr);
+        return ret >>> 0;
+    }
+    /**
+    * @returns {string}
+    */
+    message() {
+        let deferred1_0;
+        let deferred1_1;
+        try {
+            const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+            wasm.parseerror_message(retptr, this.__wbg_ptr);
+            var r0 = getInt32Memory0()[retptr / 4 + 0];
+            var r1 = getInt32Memory0()[retptr / 4 + 1];
+            deferred1_0 = r0;
+            deferred1_1 = r1;
+            return getStringFromWasm0(r0, r1);
+        } finally {
+            wasm.__wbindgen_add_to_stack_pointer(16);
+            wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+        }
+    }
+}
+
 async function __wbg_load(module, imports) {
     if (typeof Response === 'function' && module instanceof Response) {
         if (typeof WebAssembly.instantiateStreaming === 'function') {
@@ -414,8 +488,23 @@ function __wbg_get_imports() {
         const ret = arg0;
         return addHeapObject(ret);
     };
+    imports.wbg.__wbg_parseerror_new = function(arg0) {
+        const ret = ParseError.__wrap(arg0);
+        return addHeapObject(ret);
+    };
     imports.wbg.__wbindgen_object_drop_ref = function(arg0) {
         takeObject(arg0);
+    };
+    imports.wbg.__wbg_log_e00010cc01578b11 = function(arg0, arg1) {
+        console.log(getStringFromWasm0(arg0, arg1));
+    };
+    imports.wbg.__wbindgen_object_clone_ref = function(arg0) {
+        const ret = getObject(arg0);
+        return addHeapObject(ret);
+    };
+    imports.wbg.__wbindgen_is_undefined = function(arg0) {
+        const ret = getObject(arg0) === undefined;
+        return ret;
     };
     imports.wbg.__wbindgen_try_into_number = function(arg0) {
         let result;
@@ -428,17 +517,6 @@ imports.wbg.__wbindgen_number_get = function(arg0, arg1) {
     const ret = typeof(obj) === 'number' ? obj : undefined;
     getFloat64Memory0()[arg0 / 8 + 1] = isLikeNone(ret) ? 0 : ret;
     getInt32Memory0()[arg0 / 4 + 0] = !isLikeNone(ret);
-};
-imports.wbg.__wbg_log_e00010cc01578b11 = function(arg0, arg1) {
-    console.log(getStringFromWasm0(arg0, arg1));
-};
-imports.wbg.__wbindgen_object_clone_ref = function(arg0) {
-    const ret = getObject(arg0);
-    return addHeapObject(ret);
-};
-imports.wbg.__wbindgen_is_undefined = function(arg0) {
-    const ret = getObject(arg0) === undefined;
-    return ret;
 };
 imports.wbg.__wbg_crypto_c48a774b022d20ac = function(arg0) {
     const ret = getObject(arg0).crypto;
@@ -553,8 +631,8 @@ imports.wbg.__wbindgen_memory = function() {
     const ret = wasm.memory;
     return addHeapObject(ret);
 };
-imports.wbg.__wbindgen_closure_wrapper2148 = function(arg0, arg1, arg2) {
-    const ret = makeClosure(arg0, arg1, 849, __wbg_adapter_28);
+imports.wbg.__wbindgen_closure_wrapper1346 = function(arg0, arg1, arg2) {
+    const ret = makeClosure(arg0, arg1, 316, __wbg_adapter_28);
     return addHeapObject(ret);
 };
 

@@ -126,6 +126,9 @@
     }
 
     .output-cell {
+      font-family: monospace, mono;
+      white-space: pre;
+      line-height: 1.4em;
       color: var(--fg);
       padding: 0.25em 0.5em;
       margin: 0.25em 0;
@@ -297,9 +300,10 @@
       position: relative;  
     }
 
-    .prompt-input, .prompt-highlight {
+    .prompt-input, .prompt-highlight, .prompt-diagnostics {
       box-sizing: border-box;
       font-family: monospace, mono;
+      white-space: pre;
       line-height: 1.4em;
       width: 100%;
       resize: vertical;
@@ -318,12 +322,16 @@
       margin-top: auto;
     }
 
-    .prompt-highlight {
+    .prompt-highlight, .prompt-diagnostics {
       position: absolute;
       top: 0;
       height: 100%;
-      padding-top: 0.7em;
       z-index: -1000;
+    }
+
+    .prompt-diagnostics {
+      background: transparent;
+      border-color: transparent;
     }
 
     @media (hover: hover) {

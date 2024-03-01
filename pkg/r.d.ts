@@ -16,11 +16,15 @@ export function wasm_session_header(args: any): string;
 */
 export function wasm_runtime(args: any): any;
 /**
+* Check whether an input produces parse errors
+*
+* Returns Option::None if no errors are found, or
+* Option::Some((start, end, message)) when an error is produced.
 * @param {any} args
 * @param {string} input
-* @returns {boolean}
+* @returns {(ParseError)[]}
 */
-export function wasm_parses_successfully(args: any, input: string): boolean;
+export function wasm_parse_errors(args: any, input: string): (ParseError)[];
 /**
 * returns a stream of strings. Each pair represents a style and text
 * @param {any} args
@@ -30,18 +34,18 @@ export function wasm_parses_successfully(args: any, input: string): boolean;
 export function wasm_highlight(args: any, input: string): any[];
 /**
 */
+export enum Experiment {
+  TailCalls = 0,
+  RestArgs = 1,
+}
+/**
+*/
 export enum Localization {
   En = 0,
   Es = 1,
   Cn = 2,
   Pirate = 3,
   Emoji = 4,
-}
-/**
-*/
-export enum Experiment {
-  TailCalls = 0,
-  RestArgs = 1,
 }
 /**
 * Run the R REPL
@@ -61,15 +65,36 @@ export class Cli {
 */
   warranty: boolean;
 }
+/**
+*/
+export class ParseError {
+  free(): void;
+/**
+* @returns {number}
+*/
+  start(): number;
+/**
+* @returns {number}
+*/
+  end(): number;
+/**
+* @returns {string}
+*/
+  message(): string;
+}
 
 export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembly.Module;
 
 export interface InitOutput {
   readonly memory: WebAssembly.Memory;
+  readonly __wbg_parseerror_free: (a: number) => void;
+  readonly parseerror_start: (a: number) => number;
+  readonly parseerror_end: (a: number) => number;
+  readonly parseerror_message: (a: number, b: number) => void;
   readonly wasm_args: (a: number) => number;
   readonly wasm_session_header: (a: number, b: number) => void;
   readonly wasm_runtime: (a: number) => number;
-  readonly wasm_parses_successfully: (a: number, b: number, c: number) => number;
+  readonly wasm_parse_errors: (a: number, b: number, c: number, d: number) => void;
   readonly wasm_highlight: (a: number, b: number, c: number, d: number) => void;
   readonly __wbg_cli_free: (a: number) => void;
   readonly __wbg_get_cli_locale: (a: number) => number;

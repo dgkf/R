@@ -123,7 +123,7 @@ sum
         "eval": r.wasm_runtime(args),
         "highlight": (input) => r.wasm_highlight(args, input),
         "header": r.wasm_session_header(args),
-        "validate": (input) => r.wasm_parses_successfully(args, input),
+        "validate": (input) => r.wasm_parse_errors(args, input),
         "history": {
           "log": [],
           "selected": null
@@ -132,7 +132,7 @@ sum
 
       return r_env
     }).then((r) => {
-      (new Repl(document.querySelector(".prompt")))
+      window.repl = (new Repl(document.querySelector(".prompt")))
         .with_eval_callback(r.eval)
         .with_validate_callback(r.validate)
         .with_highlight_callback(r.highlight)
