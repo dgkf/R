@@ -169,7 +169,7 @@ class Repl {
     try { 
       let result = this.eval(code);
       if (this.output.mode === "single") this.#elem_output.innerHTML = "";
-      let node = this.#output_push("output", result, output);
+      let node = this.#output_push("output", result, output, false);
       node.scrollIntoView();
     } catch (error) {
       console.log(error);
@@ -457,17 +457,32 @@ class Repl {
       content = node;
     }
 
+    let text_content = content.textContent;
+
     content.classList.add("output-cell");
     content.classList.add(type);
 
-    let click_contents = content.textContent;
     if (click === undefined) click = () => {
-      this.set(click_contents);
+      this.set(text_content);
       this.focus();
       this.set_cursor_pos(Infinity);
     };
 
-    if (click instanceof Function) content.onclick = click;
+    if (click instanceof Function) {
+      content.onclick = click;
+
+      const share = document.createElement("div")
+      share.classList.add("output-share")
+      share.onclick = () => {
+        const loc = window.location;
+        var params = new URLSearchParams(loc.search);
+        params.set("expr", btoa(unescape(encodeURIComponent(text_content))).replace(/=*$/, ""));
+        const url = loc.origin + loc.pathname + "?" + params.toString();
+        navigator.clipboard.writeText(url);
+      }
+
+      content.appendChild(share);
+    }
     
     parent.appendChild(content);
     return content;  
