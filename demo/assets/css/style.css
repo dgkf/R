@@ -126,6 +126,7 @@
     }
 
     .output-cell {
+      position: relative;
       font-family: monospace, mono;
       white-space: pre;
       line-height: 1.4em;
@@ -335,20 +336,16 @@
     }
 
     @media (hover: hover) {
-      .prompt-run {
+      .prompt-run, .output-share {
         visibility: hidden;
         opacity: 0%;
       }
     }
 
-    .prompt-run {
+    .prompt-run, .output-share {
       position: absolute;
-      top: 1em;
-      right: 1em;
-
-      background: var(--gray7);
-      padding: 1em;
-
+      background: var(--fg);
+      opacity: 50%;
       vertical-align: middle;
       cursor: pointer;
       -webkit-mask-repeat: no-repeat;
@@ -357,17 +354,38 @@
       mask-size: contain;
       -webkit-mask-position: 50% 50%;
       mask-position: 50% 50%;
+    }
+
+    .prompt-run {
+      top: 1em;
+      right: 1em;  
+      padding: 1em;
+    }
+
+    .output-share {
+      top: 0.5em;
+      right: 0.5em;  
+      padding: 0.75em;  
+    }
+
+    .prompt-run {
       -webkit-mask-image: url("../img/play.svg");
       mask-image: url("../img/play.svg"); 
     }
 
-    .prompt-input:hover ~ .prompt-run, .prompt-run:hover {
-      visibility: visible;
-      opacity: 100%;
+    .output-share {
+      -webkit-mask-image: url("../img/share.svg");
+      mask-image: url("../img/share.svg"); 
     }
 
-    .prompt-run:hover {
-      background: var(--fg);
+    .prompt-input:hover ~ .prompt-run, .output-cell:hover .output-share {
+      visibility: visible;
+      opacity: 50%;
+    }
+
+    .prompt-run:hover, .output-share:hover {
+      visibility: visible;
+      opacity: 100%;
     }
 
     .prompt-input {
