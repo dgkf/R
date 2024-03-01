@@ -34,18 +34,18 @@ export function wasm_parse_errors(args: any, input: string): (ParseError)[];
 export function wasm_highlight(args: any, input: string): any[];
 /**
 */
-export enum Experiment {
-  TailCalls = 0,
-  RestArgs = 1,
-}
-/**
-*/
 export enum Localization {
   En = 0,
   Es = 1,
   Cn = 2,
   Pirate = 3,
   Emoji = 4,
+}
+/**
+*/
+export enum Experiment {
+  TailCalls = 0,
+  RestArgs = 1,
 }
 /**
 * Run the R REPL
