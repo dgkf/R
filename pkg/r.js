@@ -295,10 +295,10 @@ function handleError(f, args) {
 }
 /**
 */
-export const Localization = Object.freeze({ En:0,"0":"En",Es:1,"1":"Es",Cn:2,"2":"Cn",Pirate:3,"3":"Pirate",Emoji:4,"4":"Emoji", });
+export const Experiment = Object.freeze({ TailCalls:0,"0":"TailCalls",RestArgs:1,"1":"RestArgs", });
 /**
 */
-export const Experiment = Object.freeze({ TailCalls:0,"0":"TailCalls",RestArgs:1,"1":"RestArgs", });
+export const Localization = Object.freeze({ En:0,"0":"En",Es:1,"1":"Es",Cn:2,"2":"Cn",Pirate:3,"3":"Pirate",Emoji:4,"4":"Emoji", });
 
 const CliFinalization = (typeof FinalizationRegistry === 'undefined')
     ? { register: () => {}, unregister: () => {} }
