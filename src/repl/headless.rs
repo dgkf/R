@@ -124,7 +124,7 @@ pub fn wasm_highlight(args: JsValue, input: &str) -> Vec<JsValue> {
 }
 
 pub fn wasm_eval_in(args: &Session, env: &Rc<Environment>, input: &str) -> Option<String> {
-    match args.locale.parse_input(input) {
+    match args.locale.parse_input_with(input, args) {
         Ok(expr) => {
             let mut stack = CallStack::from(args.clone()).with_global_env(env.clone());
             match stack.eval_and_finalize(expr) {
