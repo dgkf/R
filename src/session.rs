@@ -9,17 +9,20 @@ pub struct Session {
     pub history: String,
 }
 
+impl Session {
+    pub fn with_history_file(mut self, file: String) -> Session {
+        self.history = file;
+        self
+    }
+}
+
 impl From<Cli> for Session {
     fn from(value: Cli) -> Self {
         Session {
             locale: value.locale,
             warranty: value.warranty,
             experiments: value.experiments,
-            history: std::env::temp_dir()
-                .join("history.txt")
-                .into_os_string()
-                .into_string()
-                .unwrap_or_default(),
+            history: "".to_string(),
         }
     }
 }
