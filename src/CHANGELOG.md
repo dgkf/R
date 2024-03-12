@@ -10,6 +10,9 @@
 
 * Adding new primitive functions, `eval()`, `quote()` and `print()`
 
+* Experiments moved from `rust` "features", which need to be compiled into
+  the language runtime, to instead be flags that are set for the session.
+
 # 0.3.2 "Eurydice"
 
 ## Changes

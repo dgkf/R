@@ -53,9 +53,6 @@ pub fn wasm_runtime(args: JsValue) -> JsValue {
     let args = wasm_args(args);
     log(&format!("Launching runtime with args: {args:?}"));
 
-    crate::experiments::use_tail_calls(Some(args.experiments.contains(&Experiment::TailCalls)));
-    crate::experiments::use_rest_args(Some(args.experiments.contains(&Experiment::RestArgs)));
-
     let global_env = Rc::new(Environment {
         parent: Some(Environment::from_builtins()),
         ..Default::default()
