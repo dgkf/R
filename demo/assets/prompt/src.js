@@ -477,7 +477,9 @@ class Repl {
         const loc = window.location;
         var params = new URLSearchParams(loc.search);
         params.set("expr", btoa(unescape(encodeURIComponent(text_content))).replace(/=*$/, ""));
-        const url = loc.origin + loc.pathname + "?" + params.toString();
+        const suffix = loc.pathname + "?" + params.toString();
+        const url = loc.origin + suffix;
+        window.history.replaceState("object or string", "", suffix);
         navigator.clipboard.writeText(url);
       }
 
