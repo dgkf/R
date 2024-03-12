@@ -1,9 +1,11 @@
 use crate::callable::core::{builtin, Callable};
+use crate::cli::Experiment;
 use crate::context::Context;
 use crate::error::*;
 use crate::internal_err;
 use crate::object::types::*;
 use crate::object::*;
+use crate::session::Session;
 
 use core::fmt;
 use std::fmt::Display;
@@ -550,10 +552,16 @@ impl Display for Frame {
 
 #[derive(Debug, Default, Clone, PartialEq)]
 pub struct CallStack {
+    pub session: Session,
     pub frames: Vec<Frame>,
 }
 
 impl CallStack {
+    pub fn with_global_env(mut self, env: Rc<Environment>) -> Self {
+        self.frames = vec![Frame::new(Expr::Null, env)];
+        self
+    }
+
     pub fn add_frame(&mut self, call: Expr, env: Rc<Environment>) -> usize {
         self.frames.push(Frame::new(call, env));
         self.frames.len()
@@ -600,10 +608,6 @@ impl CallStack {
             error => error,
         }
     }
-
-    pub fn new() -> CallStack {
-        CallStack::from(Frame::new(Expr::Null, Rc::new(Environment::default())))
-    }
 }
 
 impl Display for CallStack {
@@ -635,18 +639,11 @@ impl Display for CallStack {
     }
 }
 
-impl From<Frame> for CallStack {
-    fn from(frame: Frame) -> Self {
-        Self {
-            frames: vec![frame],
-        }
-    }
-}
-
-impl From<Rc<Environment>> for CallStack {
-    fn from(value: Rc<Environment>) -> Self {
+impl From<Session> for CallStack {
+    fn from(value: Session) -> Self {
         CallStack {
-            frames: vec![Frame::new(Expr::Null, value.clone())],
+            session: value,
+            frames: vec![],
         }
     }
 }
@@ -750,7 +747,7 @@ impl Context for CallStack {
                 let mut result = obj.call(args, self);
 
                 // intercept and rearrange call stack to handle tail calls
-                if crate::experiments::use_tail_calls(None) {
+                if self.session.experiments.contains(&Experiment::TailCalls) {
                     while let Err(Tail(Expr::Call(what, args), _vis)) = result {
                         let tail = Expr::Call(what.clone(), args.clone());
 

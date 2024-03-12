@@ -335,13 +335,6 @@
       border-color: transparent;
     }
 
-    @media (hover: hover) {
-      .prompt-run, .output-share {
-        visibility: hidden;
-        opacity: 0%;
-      }
-    }
-
     .prompt-run, .output-share {
       position: absolute;
       background: var(--fg);
@@ -354,6 +347,13 @@
       mask-size: contain;
       -webkit-mask-position: 50% 50%;
       mask-position: 50% 50%;
+    }
+
+    @media (hover: hover) {
+      .prompt-run, .output-share {
+        visibility: hidden;
+        opacity: 0%;
+      }
     }
 
     .prompt-run {
@@ -383,7 +383,7 @@
       opacity: 50%;
     }
 
-    .prompt-run:hover, .output-share:hover {
+    .prompt-input ~ .prompt-run:hover, .output-cell .output-share:hover {
       visibility: visible;
       opacity: 100%;
     }

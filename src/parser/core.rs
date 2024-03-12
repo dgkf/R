@@ -7,11 +7,13 @@
 /// `RExprList`s or tuples of parsed expressions.
 ///
 use crate::callable::{core::*, keywords::*, operators::*};
+use crate::cli::Experiment;
 use crate::error::Error;
 use crate::internal_err;
 use crate::lang::Signal;
 use crate::object::{Expr, ExprList};
 use crate::parser::*;
+use crate::session::Session;
 use pest::iterators::{Pair, Pairs};
 use pest::pratt_parser::PrattParser;
 use pest::{Parser, RuleType};
@@ -19,13 +21,18 @@ use pest::{Parser, RuleType};
 pub type ParseResult = Result<Expr, Signal>;
 pub type ParseListResult = Result<ExprList, Signal>;
 
-pub fn parse_expr<P, R>(parser: &P, pratt: &PrattParser<R>, pairs: Pairs<R>) -> ParseResult
+pub fn parse_expr<P, R>(
+    session: &Session,
+    parser: &P,
+    pratt: &PrattParser<R>,
+    pairs: Pairs<R>,
+) -> ParseResult
 where
     P: Parser<R> + LocalizedParser,
     R: RuleType + Into<en::Rule>,
 {
     pratt
-        .map_primary(|pair| parse_primary(parser, pratt, pair))
+        .map_primary(|pair| parse_primary(session, parser, pratt, pair))
         .map_infix(|lhs, op, rhs| {
             // infix operator with two unnamed arguments
             let args = vec![(None, lhs?), (None, rhs?)].into();
@@ -61,29 +68,34 @@ where
         .parse(pairs)
 }
 
-fn parse_primary<P, R>(parser: &P, pratt: &PrattParser<R>, pair: Pair<R>) -> ParseResult
+fn parse_primary<P, R>(
+    session: &Session,
+    parser: &P,
+    pratt: &PrattParser<R>,
+    pair: Pair<R>,
+) -> ParseResult
 where
     P: Parser<R> + LocalizedParser,
     R: RuleType + Into<en::Rule>,
 {
     match pair.as_rule().into() {
         // prefix and postfix notation
-        en::Rule::postfixed => parse_postfixed(parser, pratt, pair),
-        en::Rule::prefixed => parse_prefixed(parser, pratt, pair),
+        en::Rule::postfixed => parse_postfixed(session, parser, pratt, pair),
+        en::Rule::prefixed => parse_prefixed(session, parser, pratt, pair),
 
         // bracketed expression block
-        en::Rule::expr => parse_expr(parser, pratt, pair.into_inner()),
-        en::Rule::block_exprs => parse_block(parser, pratt, pair),
+        en::Rule::expr => parse_expr(session, parser, pratt, pair.into_inner()),
+        en::Rule::block_exprs => parse_block(session, parser, pratt, pair),
 
         // keyworded composite expressions
-        en::Rule::kw_function => parse_function(parser, pratt, pair),
-        en::Rule::kw_while => parse_while(parser, pratt, pair),
-        en::Rule::kw_for => parse_for(parser, pratt, pair),
-        en::Rule::kw_if_else => parse_if_else(parser, pratt, pair),
-        en::Rule::kw_repeat => parse_repeat(parser, pratt, pair),
+        en::Rule::kw_function => parse_function(session, parser, pratt, pair),
+        en::Rule::kw_while => parse_while(session, parser, pratt, pair),
+        en::Rule::kw_for => parse_for(session, parser, pratt, pair),
+        en::Rule::kw_if_else => parse_if_else(session, parser, pratt, pair),
+        en::Rule::kw_repeat => parse_repeat(session, parser, pratt, pair),
         en::Rule::kw_break => Ok(Expr::Break),
         en::Rule::kw_continue => Ok(Expr::Continue),
-        en::Rule::kw_return => parse_return(parser, pratt, pair),
+        en::Rule::kw_return => parse_return(session, parser, pratt, pair),
 
         // reserved values
         en::Rule::val_true => Ok(Expr::Bool(true)),
@@ -95,7 +107,7 @@ where
         // reserved symbols
         en::Rule::ellipsis => Ok(Expr::Ellipsis(None)),
         en::Rule::more => {
-            if crate::experiments::use_rest_args(None) {
+            if session.experiments.contains(&Experiment::RestArgs) {
                 Ok(Expr::More)
             } else {
                 Err(Error::FeatureDisabledRestArgs.into())
@@ -113,12 +125,12 @@ where
         en::Rule::double_quoted_string => Ok(Expr::String(String::from(pair.as_str()))),
 
         // structured values
-        en::Rule::vec => parse_vec(parser, pratt, pair),
-        en::Rule::list => parse_list(parser, pratt, pair),
+        en::Rule::vec => parse_vec(session, parser, pratt, pair),
+        en::Rule::list => parse_list(session, parser, pratt, pair),
 
         // calls and symbols
-        en::Rule::call => parse_call(parser, pratt, pair),
-        en::Rule::symbol_ident => parse_symbol(parser, pratt, pair),
+        en::Rule::call => parse_call(session, parser, pratt, pair),
+        en::Rule::symbol_ident => parse_symbol(session, parser, pratt, pair),
         en::Rule::symbol_backticked => Ok(Expr::Symbol(String::from(pair.as_str()))),
 
         // otherwise fail
@@ -129,7 +141,12 @@ where
     }
 }
 
-fn parse_block<P, R>(parser: &P, pratt: &PrattParser<R>, pair: Pair<R>) -> ParseResult
+fn parse_block<P, R>(
+    session: &Session,
+    parser: &P,
+    pratt: &PrattParser<R>,
+    pair: Pair<R>,
+) -> ParseResult
 where
     P: Parser<R> + LocalizedParser,
     R: RuleType + Into<en::Rule>,
@@ -137,7 +154,7 @@ where
     // extract each inline expression, and treat as unnamed list
     let exprs: ExprList = pair
         .into_inner()
-        .map(|i| parse_expr(parser, pratt, i.into_inner()))
+        .map(|i| parse_expr(session, parser, pratt, i.into_inner()))
         .collect::<Result<_, _>>()?;
 
     // build call from symbol and list
@@ -145,6 +162,7 @@ where
 }
 
 fn parse_named<P, R>(
+    session: &Session,
     parser: &P,
     pratt: &PrattParser<R>,
     pair: Pair<R>,
@@ -155,10 +173,15 @@ where
 {
     let mut inner = pair.into_inner();
     let name = String::from(inner.next().unwrap().as_str());
-    Ok((Some(name), parse_expr(parser, pratt, inner)?))
+    Ok((Some(name), parse_expr(session, parser, pratt, inner)?))
 }
 
-fn parse_pairlist<P, R>(parser: &P, pratt: &PrattParser<R>, pair: Pair<R>) -> ParseListResult
+fn parse_pairlist<P, R>(
+    session: &Session,
+    parser: &P,
+    pratt: &PrattParser<R>,
+    pair: Pair<R>,
+) -> ParseListResult
 where
     P: Parser<R> + LocalizedParser,
     R: RuleType + Into<en::Rule>,
@@ -166,23 +189,33 @@ where
     let exprs: ExprList = pair
         .into_inner()
         .map(|i| match i.as_rule().into() {
-            en::Rule::named => parse_named(parser, pratt, i),
+            en::Rule::named => parse_named(session, parser, pratt, i),
             en::Rule::ellipsis => Ok((None, Expr::Ellipsis(None))),
-            _ => Ok((None, parse_primary(parser, pratt, i)?)),
+            _ => Ok((None, parse_primary(session, parser, pratt, i)?)),
         })
         .collect::<Result<_, _>>()?;
 
     Ok(exprs)
 }
 
-fn parse_call<P, R>(parser: &P, pratt: &PrattParser<R>, pair: Pair<R>) -> ParseResult
+fn parse_call<P, R>(
+    session: &Session,
+    parser: &P,
+    pratt: &PrattParser<R>,
+    pair: Pair<R>,
+) -> ParseResult
 where
     P: Parser<R> + LocalizedParser,
     R: RuleType + Into<en::Rule>,
 {
     let mut inner = pair.into_inner();
     let name = inner.next().map_or(internal_err!(), |i| Ok(i.as_str()))?;
-    let pairs = parse_pairlist(parser, pratt, inner.next().map_or(internal_err!(), Ok)?)?;
+    let pairs = parse_pairlist(
+        session,
+        parser,
+        pratt,
+        inner.next().map_or(internal_err!(), Ok)?,
+    )?;
 
     match name {
         "list" => Ok(Expr::List(pairs)),
@@ -190,19 +223,34 @@ where
     }
 }
 
-fn parse_function<P, R>(parser: &P, pratt: &PrattParser<R>, pair: Pair<R>) -> ParseResult
+fn parse_function<P, R>(
+    session: &Session,
+    parser: &P,
+    pratt: &PrattParser<R>,
+    pair: Pair<R>,
+) -> ParseResult
 where
     P: Parser<R> + LocalizedParser,
     R: RuleType + Into<en::Rule>,
 {
     let mut inner = pair.into_inner();
-    let params =
-        parse_pairlist(parser, pratt, inner.next().map_or(internal_err!(), Ok)?)?.as_formals();
-    let body = parse_expr(parser, pratt, inner)?;
+    let params = parse_pairlist(
+        session,
+        parser,
+        pratt,
+        inner.next().map_or(internal_err!(), Ok)?,
+    )?
+    .as_formals();
+    let body = parse_expr(session, parser, pratt, inner)?;
     Ok(Expr::Function(params, Box::new(body)))
 }
 
-fn parse_if_else<P, R>(parser: &P, pratt: &PrattParser<R>, pair: Pair<R>) -> ParseResult
+fn parse_if_else<P, R>(
+    session: &Session,
+    parser: &P,
+    pratt: &PrattParser<R>,
+    pair: Pair<R>,
+) -> ParseResult
 where
     P: Parser<R> + LocalizedParser,
     R: RuleType + Into<en::Rule>,
@@ -210,13 +258,13 @@ where
     let mut inner = pair.into_inner();
 
     let inner_cond = inner.next().map_or(internal_err!(), Ok)?.into_inner();
-    let cond = parse_expr(parser, pratt, inner_cond)?;
+    let cond = parse_expr(session, parser, pratt, inner_cond)?;
 
     let inner_true = inner.next().map_or(internal_err!(), Ok)?.into_inner();
-    let true_expr = parse_expr(parser, pratt, inner_true)?;
+    let true_expr = parse_expr(session, parser, pratt, inner_true)?;
 
     let false_expr = if let Some(false_block) = inner.next() {
-        parse_expr(parser, pratt, false_block.into_inner())?
+        parse_expr(session, parser, pratt, false_block.into_inner())?
     } else {
         Expr::Null
     };
@@ -225,19 +273,29 @@ where
     Ok(Expr::new_primitive_call(KeywordIf, args))
 }
 
-fn parse_return<P, R>(parser: &P, pratt: &PrattParser<R>, pair: Pair<R>) -> ParseResult
+fn parse_return<P, R>(
+    session: &Session,
+    parser: &P,
+    pratt: &PrattParser<R>,
+    pair: Pair<R>,
+) -> ParseResult
 where
     P: Parser<R> + LocalizedParser,
     R: RuleType + Into<en::Rule>,
 {
     let mut inner = pair.into_inner();
     let inner_expr = inner.next().map_or(internal_err!(), Ok)?.into_inner();
-    let expr = parse_expr(parser, pratt, inner_expr)?;
+    let expr = parse_expr(session, parser, pratt, inner_expr)?;
     let args = ExprList::from(vec![expr]);
     Ok(Expr::new_primitive_call(KeywordReturn, args))
 }
 
-fn parse_symbol<P, R>(_parser: &P, _pratt: &PrattParser<R>, pair: Pair<R>) -> ParseResult
+fn parse_symbol<P, R>(
+    _session: &Session,
+    _parser: &P,
+    _pratt: &PrattParser<R>,
+    pair: Pair<R>,
+) -> ParseResult
 where
     P: Parser<R> + LocalizedParser,
     R: RuleType + Into<en::Rule>,
@@ -245,7 +303,12 @@ where
     Ok(Expr::Symbol(String::from(pair.as_str())))
 }
 
-fn parse_for<P, R>(parser: &P, pratt: &PrattParser<R>, pair: Pair<R>) -> ParseResult
+fn parse_for<P, R>(
+    session: &Session,
+    parser: &P,
+    pratt: &PrattParser<R>,
+    pair: Pair<R>,
+) -> ParseResult
 where
     P: Parser<R> + LocalizedParser,
     R: RuleType + Into<en::Rule>,
@@ -253,47 +316,58 @@ where
     let mut inner = pair.into_inner();
 
     let inner_sym = inner.next().map_or(internal_err!(), Ok)?;
-    let Expr::Symbol(var) = parse_symbol(parser, pratt, inner_sym)? else {
+    let Expr::Symbol(var) = parse_symbol(session, parser, pratt, inner_sym)? else {
         return internal_err!();
     };
 
     let inner_iter = inner.next().map_or(internal_err!(), Ok)?.into_inner();
-    let iter = parse_expr(parser, pratt, inner_iter)?;
+    let iter = parse_expr(session, parser, pratt, inner_iter)?;
 
     let inner_body = inner.next().map_or(internal_err!(), Ok)?.into_inner();
-    let body = parse_expr(parser, pratt, inner_body)?;
+    let body = parse_expr(session, parser, pratt, inner_body)?;
 
     let args = ExprList::from(vec![(Some(var), iter), (None, body)]);
     Ok(Expr::new_primitive_call(KeywordFor, args))
 }
 
-fn parse_while<P, R>(parser: &P, pratt: &PrattParser<R>, pair: Pair<R>) -> ParseResult
+fn parse_while<P, R>(
+    session: &Session,
+    parser: &P,
+    pratt: &PrattParser<R>,
+    pair: Pair<R>,
+) -> ParseResult
 where
     P: Parser<R> + LocalizedParser,
     R: RuleType + Into<en::Rule>,
 {
     let mut inner = pair.into_inner();
     let inner_cond = inner.next().map_or(internal_err!(), Ok)?.into_inner();
-    let cond = parse_expr(parser, pratt, inner_cond)?;
+    let cond = parse_expr(session, parser, pratt, inner_cond)?;
     let inner_body = inner.next().map_or(internal_err!(), Ok)?.into_inner();
-    let body = parse_expr(parser, pratt, inner_body)?;
+    let body = parse_expr(session, parser, pratt, inner_body)?;
     let args = ExprList::from(vec![cond, body]);
     Ok(Expr::new_primitive_call(KeywordWhile, args))
 }
 
-fn parse_repeat<P, R>(parser: &P, pratt: &PrattParser<R>, pair: Pair<R>) -> ParseResult
+fn parse_repeat<P, R>(
+    session: &Session,
+    parser: &P,
+    pratt: &PrattParser<R>,
+    pair: Pair<R>,
+) -> ParseResult
 where
     P: Parser<R> + LocalizedParser,
     R: RuleType + Into<en::Rule>,
 {
     let mut inner = pair.into_inner();
     let inner_body = inner.next().map_or(internal_err!(), Ok)?.into_inner();
-    let body = parse_expr(parser, pratt, inner_body)?;
+    let body = parse_expr(session, parser, pratt, inner_body)?;
     let args = ExprList::from(vec![body]);
     Ok(Expr::new_primitive_call(KeywordRepeat, args))
 }
 
 fn parse_postfix<P, R>(
+    session: &Session,
     parser: &P,
     pratt: &PrattParser<R>,
     pair: Pair<R>,
@@ -303,18 +377,18 @@ where
     R: RuleType + Into<en::Rule>,
 {
     match pair.as_rule().into() {
-        en::Rule::call => Ok((Expr::Null, parse_pairlist(parser, pratt, pair)?)),
+        en::Rule::call => Ok((Expr::Null, parse_pairlist(session, parser, pratt, pair)?)),
         en::Rule::index => {
-            let args = parse_pairlist(parser, pratt, pair)?;
+            let args = parse_pairlist(session, parser, pratt, pair)?;
             Ok((Expr::as_primitive(PostfixIndex), args))
         }
         en::Rule::vector_index => Ok((
             Expr::as_primitive(PostfixVecIndex),
-            parse_pairlist(parser, pratt, pair)?,
+            parse_pairlist(session, parser, pratt, pair)?,
         )),
 
         en::Rule::more => {
-            if crate::experiments::use_rest_args(None) {
+            if session.experiments.contains(&Experiment::RestArgs) {
                 let val = pair.as_str();
                 Ok((Expr::Ellipsis(Some(val.to_string())), ExprList::new()))
             } else {
@@ -329,17 +403,22 @@ where
     }
 }
 
-fn parse_postfixed<P, R>(parser: &P, pratt: &PrattParser<R>, pair: Pair<R>) -> ParseResult
+fn parse_postfixed<P, R>(
+    session: &Session,
+    parser: &P,
+    pratt: &PrattParser<R>,
+    pair: Pair<R>,
+) -> ParseResult
 where
     P: Parser<R> + LocalizedParser,
     R: RuleType + Into<en::Rule>,
 {
     let mut inner = pair.into_inner();
     let inner_next = inner.next().map_or(internal_err!(), Ok)?;
-    let mut result = parse_primary(parser, pratt, inner_next)?;
+    let mut result = parse_primary(session, parser, pratt, inner_next)?;
 
     for next in inner {
-        let (what, mut args) = parse_postfix(parser, pratt, next)?;
+        let (what, mut args) = parse_postfix(session, parser, pratt, next)?;
         result = match what {
             // Null used here has a magic value to dispatch on `x(...)` calls
             // if postfix is parenthesized pairlist, it's a call to result
@@ -356,14 +435,19 @@ where
     Ok(result)
 }
 
-fn parse_prefixed<P, R>(parser: &P, pratt: &PrattParser<R>, pair: Pair<R>) -> ParseResult
+fn parse_prefixed<P, R>(
+    session: &Session,
+    parser: &P,
+    pratt: &PrattParser<R>,
+    pair: Pair<R>,
+) -> ParseResult
 where
     P: Parser<R> + LocalizedParser,
     R: RuleType + Into<en::Rule>,
 {
     let mut inner = pair.into_inner().rev();
     let inner_next = inner.next().map_or(internal_err!(), Ok)?;
-    let mut result = parse_postfixed(parser, pratt, inner_next)?;
+    let mut result = parse_postfixed(session, parser, pratt, inner_next)?;
 
     // iterate backwards through prefixes, applying prefixes from inside-out
     for prev in inner {
@@ -374,7 +458,7 @@ where
             }
 
             en::Rule::more => {
-                if crate::experiments::use_rest_args(None) {
+                if session.experiments.contains(&Experiment::RestArgs) {
                     Expr::Ellipsis(Some(result.to_string()))
                 } else {
                     return Err(Error::FeatureDisabledRestArgs.into());
@@ -391,21 +475,31 @@ where
     Ok(result)
 }
 
-fn parse_vec<P, R>(parser: &P, pratt: &PrattParser<R>, pair: Pair<R>) -> ParseResult
+fn parse_vec<P, R>(
+    session: &Session,
+    parser: &P,
+    pratt: &PrattParser<R>,
+    pair: Pair<R>,
+) -> ParseResult
 where
     P: Parser<R> + LocalizedParser,
     R: RuleType + Into<en::Rule>,
 {
-    let args = parse_pairlist(parser, pratt, pair)?;
+    let args = parse_pairlist(session, parser, pratt, pair)?;
     Ok(Expr::new_primitive_call(PrimVec, args))
 }
 
-fn parse_list<P, R>(parser: &P, pratt: &PrattParser<R>, pair: Pair<R>) -> ParseResult
+fn parse_list<P, R>(
+    session: &Session,
+    parser: &P,
+    pratt: &PrattParser<R>,
+    pair: Pair<R>,
+) -> ParseResult
 where
     P: Parser<R> + LocalizedParser,
     R: RuleType + Into<en::Rule>,
 {
-    let args = parse_pairlist(parser, pratt, pair)?;
+    let args = parse_pairlist(session, parser, pratt, pair)?;
     Ok(Expr::List(args))
 }
 

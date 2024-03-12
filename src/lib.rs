@@ -10,4 +10,5 @@ pub mod lang;
 pub mod object;
 pub mod parser;
 pub mod repl;
+pub mod session;
 pub mod utils;
