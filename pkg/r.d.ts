@@ -1,11 +1,6 @@
 /* tslint:disable */
 /* eslint-disable */
 /**
-* @param {any} js
-* @returns {Cli}
-*/
-export function wasm_args(js: any): Cli;
-/**
 * @param {any} args
 * @returns {string}
 */
@@ -34,18 +29,18 @@ export function wasm_parse_errors(args: any, input: string): (ParseError)[];
 export function wasm_highlight(args: any, input: string): any[];
 /**
 */
-export enum Experiment {
-  TailCalls = 0,
-  RestArgs = 1,
-}
-/**
-*/
 export enum Localization {
   En = 0,
   Es = 1,
   Cn = 2,
   Pirate = 3,
   Emoji = 4,
+}
+/**
+*/
+export enum Experiment {
+  TailCalls = 0,
+  RestArgs = 1,
 }
 /**
 * Run the R REPL
@@ -91,7 +86,6 @@ export interface InitOutput {
   readonly parseerror_start: (a: number) => number;
   readonly parseerror_end: (a: number) => number;
   readonly parseerror_message: (a: number, b: number) => void;
-  readonly wasm_args: (a: number) => number;
   readonly wasm_session_header: (a: number, b: number) => void;
   readonly wasm_runtime: (a: number) => number;
   readonly wasm_parse_errors: (a: number, b: number, c: number, d: number) => void;

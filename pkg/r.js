@@ -172,15 +172,6 @@ function __wbg_adapter_28(arg0, arg1, arg2) {
 }
 
 /**
-* @param {any} js
-* @returns {Cli}
-*/
-export function wasm_args(js) {
-    const ret = wasm.wasm_args(addHeapObject(js));
-    return Cli.__wrap(ret);
-}
-
-/**
 * @param {any} args
 * @returns {string}
 */
@@ -295,10 +286,10 @@ function handleError(f, args) {
 }
 /**
 */
-export const Experiment = Object.freeze({ TailCalls:0,"0":"TailCalls",RestArgs:1,"1":"RestArgs", });
+export const Localization = Object.freeze({ En:0,"0":"En",Es:1,"1":"Es",Cn:2,"2":"Cn",Pirate:3,"3":"Pirate",Emoji:4,"4":"Emoji", });
 /**
 */
-export const Localization = Object.freeze({ En:0,"0":"En",Es:1,"1":"Es",Cn:2,"2":"Cn",Pirate:3,"3":"Pirate",Emoji:4,"4":"Emoji", });
+export const Experiment = Object.freeze({ TailCalls:0,"0":"TailCalls",RestArgs:1,"1":"RestArgs", });
 
 const CliFinalization = (typeof FinalizationRegistry === 'undefined')
     ? { register: () => {}, unregister: () => {} }
@@ -307,14 +298,6 @@ const CliFinalization = (typeof FinalizationRegistry === 'undefined')
 * Run the R REPL
 */
 export class Cli {
-
-    static __wrap(ptr) {
-        ptr = ptr >>> 0;
-        const obj = Object.create(Cli.prototype);
-        obj.__wbg_ptr = ptr;
-        CliFinalization.register(obj, obj.__wbg_ptr, obj);
-        return obj;
-    }
 
     __destroy_into_raw() {
         const ptr = this.__wbg_ptr;
@@ -502,10 +485,6 @@ function __wbg_get_imports() {
         const ret = getObject(arg0);
         return addHeapObject(ret);
     };
-    imports.wbg.__wbindgen_is_undefined = function(arg0) {
-        const ret = getObject(arg0) === undefined;
-        return ret;
-    };
     imports.wbg.__wbindgen_try_into_number = function(arg0) {
         let result;
     try { result = +getObject(arg0) } catch (e) { result = e }
@@ -517,6 +496,10 @@ imports.wbg.__wbindgen_number_get = function(arg0, arg1) {
     const ret = typeof(obj) === 'number' ? obj : undefined;
     getFloat64Memory0()[arg0 / 8 + 1] = isLikeNone(ret) ? 0 : ret;
     getInt32Memory0()[arg0 / 4 + 0] = !isLikeNone(ret);
+};
+imports.wbg.__wbindgen_is_undefined = function(arg0) {
+    const ret = getObject(arg0) === undefined;
+    return ret;
 };
 imports.wbg.__wbg_crypto_c48a774b022d20ac = function(arg0) {
     const ret = getObject(arg0).crypto;
@@ -631,8 +614,8 @@ imports.wbg.__wbindgen_memory = function() {
     const ret = wasm.memory;
     return addHeapObject(ret);
 };
-imports.wbg.__wbindgen_closure_wrapper1346 = function(arg0, arg1, arg2) {
-    const ret = makeClosure(arg0, arg1, 316, __wbg_adapter_28);
+imports.wbg.__wbindgen_closure_wrapper1821 = function(arg0, arg1, arg2) {
+    const ret = makeClosure(arg0, arg1, 767, __wbg_adapter_28);
     return addHeapObject(ret);
 };
 
