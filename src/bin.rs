@@ -1,6 +1,7 @@
 use r::cli::Cli;
 use r::lang::Signal;
 use r::repl::repl;
+use r::session::Session;
 
 #[cfg(feature = "wasm")]
 fn main() {}
@@ -8,8 +9,6 @@ fn main() {}
 #[cfg(not(feature = "wasm"))]
 fn main() -> Result<(), Signal> {
     use clap::Parser;
-    let cli = Cli::parse();
-
-    let history = "/tmp/history.txt".to_string();
-    repl(cli.locale, Some(&history), cli.warranty, cli.experiments)
+    let session: Session = Cli::parse().into();
+    repl(session)
 }

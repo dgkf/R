@@ -2,11 +2,12 @@ use std::rc::Rc;
 use wasm_bindgen::prelude::*;
 
 use super::release::session_header;
-use crate::cli::{Cli, Experiment};
+use crate::cli::Cli;
 use crate::context::Context;
 use crate::lang::{CallStack, Cond, Signal};
 use crate::object::Environment;
 use crate::parser::*;
+use crate::session::Session;
 
 #[wasm_bindgen]
 pub struct ParseError {
@@ -36,25 +37,22 @@ extern "C" {
     fn log(s: &str);
 }
 
-#[wasm_bindgen]
-pub fn wasm_args(js: JsValue) -> Cli {
+pub fn wasm_args(js: JsValue) -> Session {
     use gloo_utils::format::JsValueSerdeExt;
-    js.into_serde().unwrap_or_default()
+    let cli: Cli = js.into_serde().unwrap_or_default();
+    cli.into()
 }
 
 #[wasm_bindgen]
 pub fn wasm_session_header(args: JsValue) -> String {
-    let args = wasm_args(args);
-    session_header(args.warranty, &args.locale)
+    let session = wasm_args(args);
+    session_header(&session)
 }
 
 #[wasm_bindgen]
 pub fn wasm_runtime(args: JsValue) -> JsValue {
     let args = wasm_args(args);
     log(&format!("Launching runtime with args: {args:?}"));
-
-    crate::experiments::use_tail_calls(Some(args.experiments.contains(&Experiment::TailCalls)));
-    crate::experiments::use_rest_args(Some(args.experiments.contains(&Experiment::RestArgs)));
 
     let global_env = Rc::new(Environment {
         parent: Some(Environment::from_builtins()),
@@ -122,10 +120,10 @@ pub fn wasm_highlight(args: JsValue, input: &str) -> Vec<JsValue> {
         .collect()
 }
 
-pub fn wasm_eval_in(args: &Cli, env: &Rc<Environment>, input: &str) -> Option<String> {
+pub fn wasm_eval_in(args: &Session, env: &Rc<Environment>, input: &str) -> Option<String> {
     match args.locale.parse_input(input) {
         Ok(expr) => {
-            let mut stack = CallStack::from(env.clone());
+            let mut stack = CallStack::from(args.clone()).with_global_env(env.clone());
             match stack.eval_and_finalize(expr) {
                 Err(Signal::Condition(Cond::Terminate)) => None,
                 Ok(val) => Some(format!("{val}")),

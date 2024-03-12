@@ -35,9 +35,6 @@ pub struct Cli {
     pub warranty: bool,
 
     /// Enable experimental language features
-    #[cfg_attr(
-        not(feature = "wasm"),
-        arg(short = 'x', long, default_value = "", value_delimiter = ',')
-    )]
+    #[cfg_attr(not(feature = "wasm"), arg(short = 'x', long, value_delimiter = ','))]
     pub experiments: Vec<Experiment>,
 }

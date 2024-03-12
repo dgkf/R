@@ -1,44 +1,31 @@
 use reedline::{FileBackedHistory, Reedline};
-use std::path::Path;
 use std::rc::Rc;
 
 use super::prompt::RPrompt;
 use super::release::*;
-use crate::cli::Experiment;
 use crate::context::Context;
 use crate::lang::{CallStack, Cond, EvalResult, Signal};
 use crate::object::Environment;
 use crate::parser::{Localization, LocalizedParser};
+use crate::session::Session;
 
-pub fn repl<P>(
-    locale: Localization,
-    history: Option<&P>,
-    warranty: bool,
-    experiments: Vec<Experiment>,
-) -> Result<(), Signal>
-where
-    P: AsRef<Path>,
-{
-    crate::experiments::use_tail_calls(Some(experiments.contains(&Experiment::TailCalls)));
-    crate::experiments::use_rest_args(Some(experiments.contains(&Experiment::RestArgs)));
-
-    println!("{}", session_header(warranty, &locale));
+pub fn repl(session: Session) -> Result<(), Signal> {
+    println!("{}", session_header(&session));
     let global_env = Rc::new(Environment {
         parent: Some(Environment::from_builtins()),
         ..Default::default()
     });
 
-    let history = if let Some(_history_path) = history {
+    if std::path::PathBuf::from(&session.history).exists() {
         println!("Restoring session history...");
-        FileBackedHistory::with_file(1000, "/tmp/history.txt".into())
-            .expect("Error configuring history with file")
-    } else {
-        FileBackedHistory::new(1000)
-    };
+    }
+
+    let history = FileBackedHistory::with_file(1000, session.history.clone().into())
+        .expect("Error configuring history with file");
 
     let mut line_editor = Reedline::create()
-        .with_validator(Box::new(locale))
-        .with_highlighter(Box::new(locale))
+        .with_validator(Box::new(session.clone()))
+        .with_highlighter(Box::new(session.clone()))
         .with_history(Box::new(history));
 
     // initialize our repl prompt
@@ -55,10 +42,12 @@ where
                 }
 
                 // otherwise parse and evaluate entry
-                let parse_res = locale.parse_input(&line);
+                let parse_res = session.parse_input(&line);
                 match parse_res {
                     Ok(expr) => {
-                        let mut stack = CallStack::from(global_env.clone());
+                        let mut stack =
+                            CallStack::from(session.clone()).with_global_env(global_env.clone());
+
                         match stack.eval_and_finalize(expr) {
                             Err(Signal::Condition(Cond::Terminate)) => break,
                             Err(Signal::Return(value, true)) => {
@@ -94,7 +83,7 @@ pub fn eval(input: &str) -> EvalResult {
     });
 
     let locale = Localization::En;
-    let mut stack = CallStack::from(global_env.clone());
+    let mut stack = CallStack::from(Session::default()).with_global_env(global_env);
     match locale.parse_input(input) {
         Ok(expr) => stack.eval_and_finalize(expr),
         Err(e) => Err(e),
