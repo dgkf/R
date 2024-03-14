@@ -49,15 +49,15 @@ impl Callable for PrimitiveC {
             .map(|(_, r)| match r {
                 Obj::Vector(Vector::Logical(_)) => Vector::from(Vec::<Logical>::new()),
                 Obj::Vector(Vector::Integer(_)) => Vector::from(Vec::<Integer>::new()),
-                Obj::Vector(Vector::Numeric(_)) => Vector::from(Vec::<Numeric>::new()),
+                Obj::Vector(Vector::Double(_)) => Vector::from(Vec::<Double>::new()),
                 Obj::Vector(Vector::Character(_)) => Vector::from(Vec::<Character>::new()),
                 _ => unreachable!(),
             })
             .fold(Vector::from(Vec::<Logical>::new()), |l, r| match (l, r) {
                 (v @ Vector::Character(_), _) => v,
                 (_, v @ Vector::Character(_)) => v,
-                (v @ Vector::Numeric(_), _) => v,
-                (_, v @ Vector::Numeric(_)) => v,
+                (v @ Vector::Double(_), _) => v,
+                (_, v @ Vector::Double(_)) => v,
                 (v @ Vector::Integer(_), _) => v,
                 (_, v @ Vector::Integer(_)) => v,
                 (v @ Vector::Logical(_), _) => v,
@@ -85,7 +85,7 @@ impl Callable for PrimitiveC {
                     )
                     .collect::<Vec<Character>>(),
             ))),
-            Vector::Numeric(v) => Ok(Obj::Vector(Vector::from(
+            Vector::Double(v) => Ok(Obj::Vector(Vector::from(
                 v.inner()
                     .clone()
                     .borrow_mut()
@@ -96,14 +96,14 @@ impl Callable for PrimitiveC {
                             .borrow_mut()
                             .clone()
                             .into_iter()
-                            .flat_map(|(_, i)| match i.as_numeric() {
-                                Ok(Obj::Vector(Vector::Numeric(v))) => {
+                            .flat_map(|(_, i)| match i.as_double() {
+                                Ok(Obj::Vector(Vector::Double(v))) => {
                                     v.inner().clone().borrow().clone().into_iter()
                                 }
                                 _ => unreachable!(),
                             }),
                     )
-                    .collect::<Vec<Numeric>>(),
+                    .collect::<Vec<Double>>(),
             ))),
             Vector::Integer(v) => Ok(Obj::Vector(Vector::from(
                 v.inner()

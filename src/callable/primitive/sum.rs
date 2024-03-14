@@ -28,12 +28,12 @@ impl Callable for PrimitiveSum {
             .map(|(_, value)| value)
             .collect();
 
-        let mut any_numeric: bool = false;
+        let mut any_double: bool = false;
 
         for obj in &objects {
             match obj {
-                Obj::Vector(Vector::Numeric(..)) => {
-                    any_numeric = true;
+                Obj::Vector(Vector::Double(..)) => {
+                    any_double = true;
                     break;
                 }
                 Obj::Vector(Vector::Logical(..)) | Obj::Vector(Vector::Integer(..)) => {
@@ -47,7 +47,7 @@ impl Callable for PrimitiveSum {
             }
         }
 
-        if any_numeric {
+        if any_double {
             let mut sum: f64 = 0.0;
 
             for obj in objects {
@@ -78,7 +78,7 @@ impl Callable for PrimitiveSum {
                                     }
                                 }
                             }
-                            Vector::Numeric(repr) => {
+                            Vector::Double(repr) => {
                                 for x in repr.inner().borrow().iter() {
                                     match *x {
                                         OptionNA::NA => {
@@ -148,7 +148,7 @@ mod tests {
         assert_eq!(r! {sum()}, r! {0.0},)
     }
 
-    // FIXME: Overly aggressive conversion to Numeric, representations for NAs
+    // FIXME: Overly aggressive conversion to Double, representations for NAs
     // #[test]
     // fn sum_add() {
     //     assert_eq!(r! {sum(1L, 2L)}, r! {1L + 2L});
@@ -164,7 +164,7 @@ mod tests {
     // }
 
     #[test]
-    fn sum_na_numeric() {
+    fn sum_na_double() {
         assert_eq!(r! {sum(NA, 1)}, r! {NA * 1});
     }
 
@@ -174,7 +174,7 @@ mod tests {
     }
 
     #[test]
-    fn sum_numeric() {
+    fn sum_double() {
         assert_eq!(r! {{"sum(c(1, 2), c(3, 4))"}}, r! {{"10"}})
     }
 
@@ -189,7 +189,7 @@ mod tests {
     }
 
     #[test]
-    fn sum_integer_numeric() {
+    fn sum_integer_double() {
         assert_eq!(r! {{"sum(c(-1L, 0L), 1)"}}, r! {{"0"}},)
     }
 
@@ -202,12 +202,12 @@ mod tests {
     }
 
     #[test]
-    fn sum_numeric_logical() {
+    fn sum_double_logical() {
         assert_eq!(r! {{"sum(c(1, 4, 5), false, true)"}}, r! {{"11"}},)
     }
 
     #[test]
-    fn sum_integer_numeric_logical() {
+    fn sum_integer_double_logical() {
         assert_eq!(
             r! {{"sum(c(1L, -2L), c(5, -5, 1), c(true, false))"}},
             r! {{"1"}},

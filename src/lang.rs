@@ -107,11 +107,11 @@ impl Obj {
         }
     }
 
-    pub fn as_numeric(self) -> EvalResult {
+    pub fn as_double(self) -> EvalResult {
         match self {
-            Obj::Vector(v) => Ok(Obj::Vector(v.as_numeric())),
-            Obj::Null => Ok(Obj::Vector(Vector::from(Vec::<Numeric>::new()))),
-            _ => Error::CannotBeCoercedToNumeric.into(),
+            Obj::Vector(v) => Ok(Obj::Vector(v.as_double())),
+            Obj::Null => Ok(Obj::Vector(Vector::from(Vec::<Double>::new()))),
+            _ => Error::CannotBeCoercedToDouble.into(),
         }
     }
 
@@ -144,7 +144,7 @@ impl Obj {
         use Vector::*;
         match self {
             Obj::Vector(rvec) => match rvec {
-                Numeric(v) => match v.inner().clone().borrow()[..] {
+                Double(v) => match v.inner().clone().borrow()[..] {
                     [Some(x)] => Ok(x as usize),
                     _ => Err(Signal::Error(Error::CannotBeCoercedToInteger)),
                 },
@@ -364,7 +364,7 @@ impl std::ops::Add for Obj {
     type Output = EvalResult;
 
     fn add(self, rhs: Self) -> Self::Output {
-        match (self.as_numeric()?, rhs.as_numeric()?) {
+        match (self.as_double()?, rhs.as_double()?) {
             (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector(l + r)),
             _ => internal_err!(),
         }
@@ -375,7 +375,7 @@ impl std::ops::Sub for Obj {
     type Output = EvalResult;
 
     fn sub(self, rhs: Self) -> Self::Output {
-        match (self.as_numeric()?, rhs.as_numeric()?) {
+        match (self.as_double()?, rhs.as_double()?) {
             (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector(l - r)),
             _ => internal_err!(),
         }
@@ -386,7 +386,7 @@ impl std::ops::Neg for Obj {
     type Output = EvalResult;
 
     fn neg(self) -> Self::Output {
-        match self.as_numeric()? {
+        match self.as_double()? {
             Obj::Vector(x) => Ok(Obj::Vector(-x)),
             _ => internal_err!(),
         }
@@ -397,7 +397,7 @@ impl std::ops::Mul for Obj {
     type Output = EvalResult;
 
     fn mul(self, rhs: Self) -> Self::Output {
-        match (self.as_numeric()?, rhs.as_numeric()?) {
+        match (self.as_double()?, rhs.as_double()?) {
             (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector(l * r)),
             _ => internal_err!(),
         }
@@ -408,7 +408,7 @@ impl std::ops::Div for Obj {
     type Output = EvalResult;
 
     fn div(self, rhs: Self) -> Self::Output {
-        match (self.as_numeric()?, rhs.as_numeric()?) {
+        match (self.as_double()?, rhs.as_double()?) {
             (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector(l / r)),
             _ => internal_err!(),
         }
@@ -419,7 +419,7 @@ impl super::object::Pow<Obj> for Obj {
     type Output = EvalResult;
 
     fn power(self, rhs: Self) -> Self::Output {
-        match (self.as_numeric()?, rhs.as_numeric()?) {
+        match (self.as_double()?, rhs.as_double()?) {
             (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector(l.power(r))),
             _ => internal_err!(),
         }
@@ -430,7 +430,7 @@ impl std::ops::Rem for Obj {
     type Output = EvalResult;
 
     fn rem(self, rhs: Self) -> Self::Output {
-        match (self.as_numeric()?, rhs.as_numeric()?) {
+        match (self.as_double()?, rhs.as_double()?) {
             (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector(l % r)),
             _ => internal_err!(),
         }

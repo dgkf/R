@@ -1,5 +1,7 @@
 # dev
 
+* Rename `Numeric` variant of `Vector` enum to `Double`
+
 # 0.3.3 "Beautiful You"
 
 ## Changes
@@ -22,7 +24,7 @@
 ## Notable Bugs Addressed
 
 * Control flow `if-else`, `repeat`, `while` and `for` have been fixed following
-  some bugs introduced by the new `Tail` return type. 
+  some bugs introduced by the new `Tail` return type.
 
 ## Internals
 
@@ -31,8 +33,8 @@
 * `Closure`s of `Symbol`s (an approximation for `Promise`s) will now evaluate
   a bit more quickly by avoiding adding frames to the call stack.
 
-* `Closure`s that propegate to a nested call will no longer introduce a new 
-  wrapping `Closure`, instead propegating the existing `Closure` value and 
+* `Closure`s that propegate to a nested call will no longer introduce a new
+  wrapping `Closure`, instead propegating the existing `Closure` value and
   avoiding the extra layer of indirection.
 
 # 0.3.1 "Art Smock"
@@ -54,7 +56,7 @@
   # [1] 2
   ```
 
-* `return` keyword introduced (this is unlike R's `return()` primitive, and 
+* `return` keyword introduced (this is unlike R's `return()` primitive, and
   this might change back to using a `return()` primitive in the future)
 
 ## Experiments
@@ -62,8 +64,8 @@
 This release introduces "experiments", which are feature-gated behaviors. This
 release introduces two to start:
 
-* `tail-call-optimization`, when enabled, will handle tail calls without 
-  extending the call stack, but with the possibly unexpected behavior of 
+* `tail-call-optimization`, when enabled, will handle tail calls without
+  extending the call stack, but with the possibly unexpected behavior of
   eagerly evaluating arguments to the call.
 
 * `rest-args`, when enabled, introduces the ability to name ellipsis arguments
@@ -81,14 +83,14 @@ release introduces two to start:
 
 * Added `Tail` and `Return` `Signal` variants, which are used to raise returns
   back to the calling frame (the calling function). `Return` is used to return
-  values and `Tail` is used to return the tail expression for potential tail 
+  values and `Tail` is used to return the tail expression for potential tail
   call optimization.
 
 # 0.3.0 "Days of Abandon"
 
 ## Major Changes
 
-* Vector indexed assignment (`x[1:3] <- 10`) is now supported! What's more, 
+* Vector indexed assignment (`x[1:3] <- 10`) is now supported! What's more,
   it avoids intermediate replications of the vector by keeping track of the
   indexing operation as a "view" of the vector.
 
@@ -111,11 +113,11 @@ release introduces two to start:
 
 ## Internals
 
-* "altreps" are now supported internally, though currently only a "Subset" 
+* "altreps" are now supported internally, though currently only a "Subset"
   (used for indexed assignment) is implemented.
 
 * `List`s were reworked to use a `HashMap` of named values, allowing for
-  more immediate access to named values without repeated traversals of a 
+  more immediate access to named values without repeated traversals of a
   vector of pairs.
 
 
@@ -124,7 +126,7 @@ release introduces two to start:
 ## Major Changes
 
 * Primitives are now more consistently handled, allowing them to be reassigned
-  like any other function object. Prior to these enhancements, primitives 
+  like any other function object. Prior to these enhancements, primitives
   would only be used for calls to specificly named symbols.
 
   ```r
@@ -133,8 +135,8 @@ release introduces two to start:
   # [1] "a b" "a c"
   ```
 
-* A call stack with proper call frames is now added, paving the way for 
-  improved error messages and the implementation of R's metaprogramming tools. 
+* A call stack with proper call frames is now added, paving the way for
+  improved error messages and the implementation of R's metaprogramming tools.
 
   You can view the call stack by introducing a `callstack()` call:
 
@@ -143,27 +145,27 @@ release introduces two to start:
   f("Hello, World!")
   # [[1]]
   # [1] "Hello, World!"
-  # 
+  #
   # [[2]]
   # [[2]][[1]]
   # f("Hello, World!")
-  # 
+  #
   # [[2]][[2]]
   # list(..., callstack())
-  # 
+  #
   # [[2]][[3]]
   # callstack()
   ```
 
-* Even more primitives now implemented! This release brings `paste()` and 
+* Even more primitives now implemented! This release brings `paste()` and
   `callstack()` (akin to R's `sys.calls()`)
 
 ## Internals
 
 * Primitives are now _all_ implemented as `dyn Primitive` objects, implementing
-  a `Callable` trait. They still don't have a proper standard library namespace, 
-  and are discovered only if not found in the environment (or its parents), 
-  but this paves the way for treating primitives more like user-defined 
+  a `Callable` trait. They still don't have a proper standard library namespace,
+  and are discovered only if not found in the environment (or its parents),
+  but this paves the way for treating primitives more like user-defined
   functions.
 
 ## Thanks to our new contributors!

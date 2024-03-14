@@ -1,9 +1,9 @@
 use super::coercion::AtomicMode;
 use super::OptionNA;
 
-pub type Numeric = OptionNA<f64>;
-impl AtomicMode for Numeric {
-    fn is_numeric() -> bool {
+pub type Double = OptionNA<f64>;
+impl AtomicMode for Double {
+    fn is_double() -> bool {
         true
     }
 }

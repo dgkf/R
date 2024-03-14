@@ -170,21 +170,21 @@ impl<T: AtomicMode + Clone + Default> Rep<T> {
     /// Internally, this is defined by the [crate::object::coercion::AtomicMode]
     /// implementation of the vector's element type.
     ///
-    pub fn is_numeric(&self) -> bool {
-        T::is_numeric()
+    pub fn is_double(&self) -> bool {
+        T::is_double()
     }
 
-    /// See [Self::is_numeric] for more information
+    /// See [Self::is_double] for more information
     pub fn is_logical(&self) -> bool {
         T::is_logical()
     }
 
-    /// See [Self::is_numeric] for more information
+    /// See [Self::is_double] for more information
     pub fn is_integer(&self) -> bool {
         T::is_integer()
     }
 
-    /// See [Self::is_numeric] for more information
+    /// See [Self::is_double] for more information
     pub fn is_character(&self) -> bool {
         T::is_character()
     }
@@ -195,7 +195,7 @@ impl<T: AtomicMode + Clone + Default> Rep<T> {
     /// [crate::object::coercion::CoercibleInto] for the `Mode`, and for the `Mode`
     /// type to implement [crate::object::coercion::AtomicMode]. Generally,
     /// this is used more directly via [Self::as_logical], [Self::as_integer],
-    /// [Self::as_numeric] and [Self::as_character], which predefine the output
+    /// [Self::as_double] and [Self::as_character], which predefine the output
     /// type of the mode.
     ///
     /// ```
@@ -203,7 +203,7 @@ impl<T: AtomicMode + Clone + Default> Rep<T> {
     /// use r::object::OptionNA;
     ///
     /// let x = Vector::from(vec![false, true, true, false]);
-    /// let n = x.as_numeric();
+    /// let n = x.as_double();
     ///
     /// assert_eq!(n, Vector::from(vec![
     ///    OptionNA::Some(0_f64),
@@ -246,11 +246,11 @@ impl<T: AtomicMode + Clone + Default> Rep<T> {
     }
 
     /// See [Self::as_mode] for more information
-    pub fn as_numeric(&self) -> Rep<Numeric>
+    pub fn as_double(&self) -> Rep<Double>
     where
-        T: CoercibleInto<Numeric>,
+        T: CoercibleInto<Double>,
     {
-        self.as_mode::<Numeric>()
+        self.as_mode::<Double>()
     }
 
     /// See [Self::as_mode] for more information
@@ -322,14 +322,14 @@ where
     }
 }
 
-impl From<Vec<OptionNA<f64>>> for Rep<Numeric> {
+impl From<Vec<OptionNA<f64>>> for Rep<Double> {
     fn from(value: Vec<OptionNA<f64>>) -> Self {
         let value: Vec<_> = value.into_iter().map(|i| i.coerce_into()).collect();
         Rep::Subset(Rc::new(RefCell::new(value)), Subsets(Vec::new()))
     }
 }
 
-impl From<Vec<f64>> for Rep<Numeric> {
+impl From<Vec<f64>> for Rep<Double> {
     fn from(value: Vec<f64>) -> Self {
         let value: Vec<_> = value.into_iter().map(|i| i.coerce_into()).collect();
         Rep::Subset(Rc::new(RefCell::new(value)), Subsets(Vec::new()))
@@ -396,8 +396,8 @@ where
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let n = self.len();
         if n == 0 {
-            if self.is_numeric() {
-                return write!(f, "numeric(0)");
+            if self.is_double() {
+                return write!(f, "double(0)");
             }
             if self.is_integer() {
                 return write!(f, "integer(0)");
@@ -825,9 +825,9 @@ mod test {
         // assert_eq!(z, Vector::from(vec![0_f32, std::f32::NAN, 1_000_f32]));
         // comparing floats is error prone
 
-        let expected_type = Rep::<Numeric>::new();
+        let expected_type = Rep::<Double>::new();
         assert!(z.is_same_type_as(&expected_type));
-        assert!(z.is_numeric());
+        assert!(z.is_double());
     }
 
     #[test]
