@@ -30,7 +30,7 @@ pub enum Error {
     NotInterpretableAsLogical,
     ConditionIsNotScalar,
     CannotBeCoercedToCharacter,
-    CannotBeCoercedToNumeric,
+    CannotBeCoercedToDouble,
     CannotBeCoercedToInteger,
     CannotBeCoercedToLogical,
     CannotBeCoercedTo(&'static str),
@@ -82,8 +82,8 @@ impl Error {
             Error::CannotBeCoercedToInteger => {
                 "object cannot be coerced to type 'integer'".to_string()
             }
-            Error::CannotBeCoercedToNumeric => {
-                "object cannot be coerced to type 'numeric'".to_string()
+            Error::CannotBeCoercedToDouble => {
+                "object cannot be coerced to type 'double'".to_string()
             }
             Error::CannotBeCoercedTo(to) => {
                 format!("object cannot be coerced to type '{to}'")

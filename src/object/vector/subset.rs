@@ -213,7 +213,7 @@ impl TryFrom<Vector> for Subset {
     type Error = Signal;
     fn try_from(value: Vector) -> Result<Self, Self::Error> {
         match value {
-            value @ Vector::Numeric(_) => Subset::try_from(value.as_integer()),
+            value @ Vector::Double(_) => Subset::try_from(value.as_integer()),
             Vector::Integer(v) => {
                 let v = v.inner();
 

@@ -268,7 +268,7 @@ impl Callable for InfixColon {
 
         // tertiary case
         } else if let Some((_, arg3)) = argstream.next() {
-            // currently always returns numeric vector
+            // currently always returns double vector
             let start: f64 = stack.eval(arg1)?.try_into()?;
             let by: f64 = stack.eval(arg2)?.try_into()?;
             let end: f64 = stack.eval(arg3)?.try_into()?;
@@ -278,7 +278,7 @@ impl Callable for InfixColon {
             }
 
             if (end - start) / by < 0.0 {
-                return Ok(Obj::Vector(Vector::from(Vec::<Numeric>::new())));
+                return Ok(Obj::Vector(Vector::from(Vec::<Double>::new())));
             }
 
             let mut v = start;

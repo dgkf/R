@@ -3,7 +3,7 @@ use std::str::FromStr;
 use super::OptionNA;
 
 pub trait AtomicMode {
-    fn is_numeric() -> bool {
+    fn is_double() -> bool {
         false
     }
     fn is_integer() -> bool {

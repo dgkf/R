@@ -52,7 +52,7 @@ impl PartialEq for Obj {
                     })
             }
             (Obj::Vector(lv), Obj::Vector(rv)) => match (lv, rv) {
-                (Vector::Numeric(l), Vector::Numeric(r)) => l == r,
+                (Vector::Double(l), Vector::Double(r)) => l == r,
                 (Vector::Integer(l), Vector::Integer(r)) => l == r,
                 (Vector::Logical(l), Vector::Logical(r)) => l == r,
                 (Vector::Character(l), Vector::Character(r)) => l == r,
@@ -91,15 +91,15 @@ where
 impl TryInto<f64> for Obj {
     type Error = Signal;
     fn try_into(self) -> Result<f64, Self::Error> {
-        use Error::CannotBeCoercedToNumeric;
+        use Error::CannotBeCoercedToDouble;
 
-        let Obj::Vector(Vector::Numeric(v)) = self.as_numeric()? else {
+        let Obj::Vector(Vector::Double(v)) = self.as_double()? else {
             return internal_err!();
         };
 
         match v.inner().clone().borrow()[..] {
             [OptionNA::Some(i), ..] => Ok(i),
-            _ => Err(CannotBeCoercedToNumeric.into()),
+            _ => Err(CannotBeCoercedToDouble.into()),
         }
     }
 }
@@ -107,7 +107,7 @@ impl TryInto<f64> for Obj {
 impl TryInto<Vec<f64>> for Obj {
     type Error = Signal;
     fn try_into(self) -> Result<Vec<f64>, Self::Error> {
-        let Obj::Vector(Vector::Numeric(v)) = self.as_numeric()? else {
+        let Obj::Vector(Vector::Double(v)) = self.as_double()? else {
             return internal_err!();
         };
 
