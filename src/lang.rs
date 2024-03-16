@@ -6,6 +6,7 @@ use crate::internal_err;
 use crate::object::types::*;
 use crate::object::*;
 use crate::session::Session;
+use std::collections::HashSet;
 
 use core::fmt;
 use std::fmt::Display;
@@ -916,7 +917,7 @@ impl Context for Rc<Environment> {
             Expr::Integer(x) => Ok(Obj::Vector(Vector::from(vec![x]))),
             Expr::Bool(x) => Ok(Obj::Vector(Vector::from(vec![OptionNA::Some(x)]))),
             Expr::String(x) => Ok(Obj::Vector(Vector::from(vec![OptionNA::Some(x)]))),
-            Expr::Function(formals, body) => Ok(Obj::Function(formals, *body, self.env().clone())),
+            Expr::Function(formals, body) => Ok(Obj::Function(assert_formals(formals)?, *body, self.env().clone())),
             Expr::Symbol(name) => self.get(name),
             Expr::Break => Err(Signal::Condition(Cond::Break)),
             Expr::Continue => Err(Signal::Condition(Cond::Continue)),
@@ -934,5 +935,67 @@ impl Context for Rc<Environment> {
 
     fn get(&mut self, name: String) -> EvalResult {
         Environment::get(self, name)
+    }
+}
+
+pub fn assert_formals(formals: ExprList) -> Result<ExprList, Signal> {
+    let mut ellipsis: bool = false;
+
+    let mut set: HashSet<&str> = HashSet::new();
+
+    for (key, value) in formals.keys.iter().zip(formals.values.iter()) {
+        match *value {
+            Expr::Ellipsis(None) => {
+                if ellipsis {
+                    return Error::Other("multiple ellipsis parameters".to_string()).into()
+                } else {
+                    ellipsis = true;
+                }
+            }
+            Expr::Ellipsis(Some(_)) => return Error::IncorrectContext("..".to_string()).into(),
+            _ => ()
+        }
+
+        if let Some(key) = (*key).as_deref() {
+            if let Some(name) = set.get(key) {
+                return Error::Other(format!("duplicated parameter name: {}", name)).into();
+            } else {
+                set.insert(key);
+            }
+        }
+
+    }
+
+    Ok(formals)
+}
+
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use crate::r;
+
+    #[test]
+    fn fn_multiple_ellipsis() {
+        assert_eq!(
+            r! {{"
+               fn(..., ...) {}
+            "}},
+            EvalResult::Err(Signal::Error(Error::Other("multiple ellipsis parameters".to_string())))
+        );
+    }
+    #[test]
+    fn fn_duplicated_parameters() {
+        assert_eq!(
+            r! {{"
+               fn(x, x) {}
+               sum <- 0
+               for (i in 1:3) {
+                   sum <- sum + i
+               }
+            "}},
+            EvalResult::Err(Signal::Error(Error::Other("duplicated parameter name: x".to_string())))
+        );
+
     }
 }
