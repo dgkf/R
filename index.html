@@ -11,7 +11,7 @@
 
     <meta name="viewport" content="viewport-fit=cover width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0"/>
     <meta name="theme-color" content="#111">
-    <meta name="mobile-web-app-capable" content="yes"/> 
+    <meta name="mobile-web-app-capable" content="yes"/>
     <meta name="apply-mobile-web-app-title" content="R"/>
     <meta name="apple-mobile-web-app-capable" content="yes"/>
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
@@ -37,16 +37,16 @@
     var prompt_start = params.get("expr");
     if (prompt_start) prompt_start = decodeURIComponent(escape(atob(prompt_start)));
 
-    const args = { 
-      "warranty": false, 
-      "locale": locale, 
+    const args = {
+      "warranty": false,
+      "locale": locale,
       "experiments": experiments
     };
 
     console.log(args);
-    await init().then(() => { 
+    await init().then(() => {
         if (!prompt_start) switch (locale) {
-          case "emoji": 
+          case "emoji":
             prompt_start = `
 👛 <- 0
 🫡 (🪙 👈 1:10) {
@@ -60,7 +60,7 @@
 👛
 `;
           break;
-        case "pirate": 
+        case "pirate":
           prompt_start = `
 booty <- 0
 thar (i be 1:10) {
@@ -100,6 +100,20 @@ para (i en 1:10) {
   suma <- suma + i
 }
 suma
+`;
+          break;
+        case "ger":
+          prompt_start = `
+summe <- 1
+für (i in 1:10) {
+  falls (i %% 3 == 0) {
+    weiter
+  } sonst falls (i %% 5 == 0) {
+    abbruch
+  }
+  summe <- summe + 1
+}
+summe
 `;
           break;
         default:
@@ -157,7 +171,7 @@ sum
     <div class="btn-group dropdown">
       <div class="btn icon i-translate" alt="localization"
         onclick="
-          s = this.nextElementSibling.style; 
+          s = this.nextElementSibling.style;
           s.display = !s.display || s.display == 'none' ? 'initial' : 'none';
         "
       ></div>
@@ -170,8 +184,8 @@ sum
   </div>
 
   <div class="prompt container"
-    data-output-mode="history" 
-    data-output-location="above" 
+    data-output-mode="history"
+    data-output-location="above"
   ></div>
 
 </body>
