@@ -43,6 +43,15 @@ pub mod cn {
     pub struct Parser;
 }
 
+pub mod ger {
+    use r_derive::{LocalizedParser, Translate};
+
+    #[derive(Parser, Clone, Copy, Translate, LocalizedParser)]
+    #[grammar = "grammar/localizations/ger.pest"]
+    #[grammar = "grammar/grammar.pest"]
+    pub struct Parser;
+}
+
 pub mod pirate {
     use r_derive::{LocalizedParser, Translate};
     #[derive(Parser, Clone, Copy, Translate, LocalizedParser)]

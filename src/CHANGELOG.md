@@ -1,6 +1,7 @@
 # dev
 
 * Rename `Numeric` variant of `Vector` enum to `Double`
+* Added German (`ger`) localization.
 
 # 0.3.3 "Beautiful You"
 

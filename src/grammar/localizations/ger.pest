@@ -1,0 +1,16 @@
+loc_if = _{ "falls" }
+loc_else = _{ "sonst" }
+loc_for = _{ "für" }
+loc_in = _{ "in" }
+loc_while = _{ "solange" }
+loc_repeat = _{ "wiederhole" }
+loc_return = _{ "zurück" }
+loc_break = _{ "abbruch" }
+loc_continue = _{ "weiter" }
+loc_function = _{ "funktion" }
+loc_fn = _{ "fn" }
+loc_na = _{ "NA" | "na" }
+loc_null = _{ "NULL" | "null" }
+loc_inf = _{ "UNENDL" | "unendl" }
+loc_true = _{ "WAHR" | "wahr" }
+loc_false = _{ "FALSCH" | "falsch" }
