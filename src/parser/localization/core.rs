@@ -28,6 +28,7 @@ pub enum Localization {
     En,
     Es,
     Cn,
+    Ger,
     #[value(skip)]
     Pirate,
     #[value(skip)]
@@ -40,6 +41,7 @@ impl LocalizedParser for Localization {
         match self {
             En => LocalizedParser::parse_input_with(&en::Parser, input, session),
             Es => LocalizedParser::parse_input_with(&es::Parser, input, session),
+            Ger => LocalizedParser::parse_input_with(&ger::Parser, input, session),
             Cn => LocalizedParser::parse_input_with(&cn::Parser, input, session),
             Pirate => LocalizedParser::parse_input_with(&pirate::Parser, input, session),
             Emoji => LocalizedParser::parse_input_with(&emoji::Parser, input, session),
@@ -54,6 +56,7 @@ impl LocalizedParser for Localization {
             Cn => LocalizedParser::parse_highlight_with(&cn::Parser, input, session),
             Pirate => LocalizedParser::parse_highlight_with(&pirate::Parser, input, session),
             Emoji => LocalizedParser::parse_highlight_with(&emoji::Parser, input, session),
+            Ger => LocalizedParser::parse_highlight_with(&ger::Parser, input, session),
         }
     }
 }
