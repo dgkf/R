@@ -917,7 +917,11 @@ impl Context for Rc<Environment> {
             Expr::Integer(x) => Ok(Obj::Vector(Vector::from(vec![x]))),
             Expr::Bool(x) => Ok(Obj::Vector(Vector::from(vec![OptionNA::Some(x)]))),
             Expr::String(x) => Ok(Obj::Vector(Vector::from(vec![OptionNA::Some(x)]))),
-            Expr::Function(formals, body) => Ok(Obj::Function(assert_formals(formals)?, *body, self.env().clone())),
+            Expr::Function(formals, body) => Ok(Obj::Function(
+                assert_formals(formals)?,
+                *body,
+                self.env().clone(),
+            )),
             Expr::Symbol(name) => self.get(name),
             Expr::Break => Err(Signal::Condition(Cond::Break)),
             Expr::Continue => Err(Signal::Condition(Cond::Continue)),
@@ -947,13 +951,13 @@ pub fn assert_formals(formals: ExprList) -> Result<ExprList, Signal> {
         match *value {
             Expr::Ellipsis(None) => {
                 if ellipsis {
-                    return Error::Other("multiple ellipsis parameters".to_string()).into()
+                    return Error::Other("multiple ellipsis parameters".to_string()).into();
                 } else {
                     ellipsis = true;
                 }
             }
             Expr::Ellipsis(Some(_)) => return Error::IncorrectContext("..".to_string()).into(),
-            _ => ()
+            _ => (),
         }
 
         if let Some(key) = (*key).as_deref() {
@@ -963,12 +967,10 @@ pub fn assert_formals(formals: ExprList) -> Result<ExprList, Signal> {
                 set.insert(key);
             }
         }
-
     }
 
     Ok(formals)
 }
-
 
 #[cfg(test)]
 mod test {
@@ -981,7 +983,9 @@ mod test {
             r! {{"
                fn(..., ...) {}
             "}},
-            EvalResult::Err(Signal::Error(Error::Other("multiple ellipsis parameters".to_string())))
+            EvalResult::Err(Signal::Error(Error::Other(
+                "multiple ellipsis parameters".to_string()
+            )))
         );
     }
     #[test]
@@ -994,8 +998,9 @@ mod test {
                    sum <- sum + i
                }
             "}},
-            EvalResult::Err(Signal::Error(Error::Other("duplicated parameter name: x".to_string())))
+            EvalResult::Err(Signal::Error(Error::Other(
+                "duplicated parameter name: x".to_string()
+            )))
         );
-
     }
 }
