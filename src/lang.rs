@@ -957,9 +957,12 @@ pub fn assert_formals(formals: ExprList) -> Result<ExprList, Signal> {
                 }
             }
             Expr::Ellipsis(Some(_)) => return Error::IncorrectContext("..".to_string()).into(),
+            _ if key.is_none() => {
+                return Error::Other(format!("invalid function parameter: {}", value).to_string())
+                    .into()
+            }
             _ => (),
         }
-
         if let Some(key) = (*key).as_deref() {
             if let Some(name) = set.get(key) {
                 return Error::Other(format!("duplicated parameter name: {}", name)).into();
@@ -989,17 +992,32 @@ mod test {
         );
     }
     #[test]
+    fn fn_rest_args() {
+        let formals = ExprList::from(vec![(None, Expr::Ellipsis(Some("a".to_string())))]);
+        assert_eq!(
+            assert_formals(formals),
+            Result::Err(Signal::Error(Error::IncorrectContext("..".to_string())))
+        )
+    }
+    #[test]
     fn fn_duplicated_parameters() {
         assert_eq!(
             r! {{"
                fn(x, x) {}
-               sum <- 0
-               for (i in 1:3) {
-                   sum <- sum + i
-               }
             "}},
             EvalResult::Err(Signal::Error(Error::Other(
                 "duplicated parameter name: x".to_string()
+            )))
+        );
+    }
+    #[test]
+    fn fn_exprs_as_names() {
+        assert_eq!(
+            r! {{"
+               fn(1) {}
+            "}},
+            EvalResult::Err(Signal::Error(Error::Other(
+                "invalid function parameter: 1".to_string()
             )))
         );
     }
