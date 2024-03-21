@@ -794,6 +794,11 @@ impl Context for CallStack {
             List(x) => self.eval_list_lazy(x),
             Symbol(s) => self.get(s),
             Call(..) => self.eval_call(expr),
+            Function(formals, body) => Ok(Obj::Function(
+                assert_formals(&self.session, formals)?,
+                *body,
+                self.env().clone(),
+            )),
             _ => self.last_frame().eval(expr),
         }
     }
@@ -918,7 +923,7 @@ impl Context for Rc<Environment> {
             Expr::Bool(x) => Ok(Obj::Vector(Vector::from(vec![OptionNA::Some(x)]))),
             Expr::String(x) => Ok(Obj::Vector(Vector::from(vec![OptionNA::Some(x)]))),
             Expr::Function(formals, body) => Ok(Obj::Function(
-                assert_formals(formals)?,
+                assert_formals(&Session::default(), formals)?,
                 *body,
                 self.env().clone(),
             )),
@@ -942,34 +947,28 @@ impl Context for Rc<Environment> {
     }
 }
 
-pub fn assert_formals(formals: ExprList) -> Result<ExprList, Signal> {
-    let mut ellipsis: bool = false;
-
+pub fn assert_formals(session: &Session, formals: ExprList) -> Result<ExprList, Signal> {
+    let allow_rest_args = session.experiments.contains(&Experiment::RestArgs);
+    let mut ellipsis: u8 = 0;
     let mut set: HashSet<&str> = HashSet::new();
 
     for (key, value) in formals.keys.iter().zip(formals.values.iter()) {
         match *value {
-            Expr::Ellipsis(None) => {
-                if ellipsis {
-                    return Error::Other("multiple ellipsis parameters".to_string()).into();
-                } else {
-                    ellipsis = true;
-                }
-            }
-            Expr::Ellipsis(Some(_)) => return Error::IncorrectContext("..".to_string()).into(),
-            _ if key.is_none() => {
-                return Error::Other(format!("invalid function parameter: {}", value).to_string())
-                    .into()
-            }
+            Expr::Ellipsis(None) => ellipsis += 1,
+            Expr::Ellipsis(Some(_)) if allow_rest_args => ellipsis += 1,
+            Expr::Ellipsis(Some(_)) => return Error::FeatureDisabledRestArgs.into(),
+            _ if key.is_none() => return Error::InvalidFunctionParameter(value.clone()).into(),
             _ => (),
         }
-        if let Some(key) = (*key).as_deref() {
-            if let Some(name) = set.get(key) {
-                return Error::Other(format!("duplicated parameter name: {}", name)).into();
-            } else {
-                set.insert(key);
+        if let Some(key) = key {
+            if !set.insert(key.as_str()) {
+                return Error::DuplicatedParameter(key.to_string()).into();
             }
         }
+    }
+
+    if ellipsis > 1 {
+        return Error::DuplicatedParameter("...".to_string()).into();
     }
 
     Ok(formals)
@@ -983,41 +982,34 @@ mod test {
     #[test]
     fn fn_multiple_ellipsis() {
         assert_eq!(
-            r! {{"
-               fn(..., ...) {}
-            "}},
-            EvalResult::Err(Signal::Error(Error::Other(
-                "multiple ellipsis parameters".to_string()
-            )))
+            r! { fn(..., ...) {} },
+            EvalResult::Err(Signal::Error(Error::DuplicatedParameter("...".to_string())))
         );
     }
+
     #[test]
     fn fn_rest_args() {
         let formals = ExprList::from(vec![(None, Expr::Ellipsis(Some("a".to_string())))]);
         assert_eq!(
-            assert_formals(formals),
-            Result::Err(Signal::Error(Error::IncorrectContext("..".to_string())))
+            assert_formals(&Session::default(), formals),
+            Result::Err(Signal::Error(Error::FeatureDisabledRestArgs))
         )
     }
+
     #[test]
     fn fn_duplicated_parameters() {
         assert_eq!(
-            r! {{"
-               fn(x, x) {}
-            "}},
-            EvalResult::Err(Signal::Error(Error::Other(
-                "duplicated parameter name: x".to_string()
-            )))
+            r! { fn(x, x) {} },
+            EvalResult::Err(Signal::Error(Error::DuplicatedParameter("x".to_string())))
         );
     }
+
     #[test]
     fn fn_exprs_as_names() {
         assert_eq!(
-            r! {{"
-               fn(1) {}
-            "}},
-            EvalResult::Err(Signal::Error(Error::Other(
-                "invalid function parameter: 1".to_string()
+            r! { fn(1) {} },
+            EvalResult::Err(Signal::Error(Error::InvalidFunctionParameter(
+                Expr::Number(1.0)
             )))
         );
     }
