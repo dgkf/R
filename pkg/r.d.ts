@@ -29,19 +29,19 @@ export function wasm_parse_errors(args: any, input: string): (ParseError)[];
 export function wasm_highlight(args: any, input: string): any[];
 /**
 */
-export enum Localization {
-  En = 0,
-  Es = 1,
-  Cn = 2,
-  Ger = 3,
-  Pirate = 4,
-  Emoji = 5,
-}
-/**
-*/
 export enum Experiment {
   TailCalls = 0,
   RestArgs = 1,
+}
+/**
+*/
+export enum Localization {
+  En = 0,
+  Es = 1,
+  Zh = 2,
+  De = 3,
+  Pirate = 4,
+  Emoji = 5,
 }
 /**
 * Run the R REPL

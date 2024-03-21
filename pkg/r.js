@@ -286,10 +286,10 @@ function handleError(f, args) {
 }
 /**
 */
-export const Localization = Object.freeze({ En:0,"0":"En",Es:1,"1":"Es",Cn:2,"2":"Cn",Ger:3,"3":"Ger",Pirate:4,"4":"Pirate",Emoji:5,"5":"Emoji", });
+export const Experiment = Object.freeze({ TailCalls:0,"0":"TailCalls",RestArgs:1,"1":"RestArgs", });
 /**
 */
-export const Experiment = Object.freeze({ TailCalls:0,"0":"TailCalls",RestArgs:1,"1":"RestArgs", });
+export const Localization = Object.freeze({ En:0,"0":"En",Es:1,"1":"Es",Zh:2,"2":"Zh",De:3,"3":"De",Pirate:4,"4":"Pirate",Emoji:5,"5":"Emoji", });
 
 const CliFinalization = (typeof FinalizationRegistry === 'undefined')
     ? { register: () => {}, unregister: () => {} }
@@ -614,8 +614,8 @@ imports.wbg.__wbindgen_memory = function() {
     const ret = wasm.memory;
     return addHeapObject(ret);
 };
-imports.wbg.__wbindgen_closure_wrapper1553 = function(arg0, arg1, arg2) {
-    const ret = makeClosure(arg0, arg1, 389, __wbg_adapter_28);
+imports.wbg.__wbindgen_closure_wrapper1996 = function(arg0, arg1, arg2) {
+    const ret = makeClosure(arg0, arg1, 788, __wbg_adapter_28);
     return addHeapObject(ret);
 };
 
