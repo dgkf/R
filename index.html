@@ -74,7 +74,7 @@ thar (i be 1:10) {
 booty
 `;
           break;
-        case "cn":
+        case "zh":
           prompt_start = `
 和 <- 0
 取 (i 自 1:10) {
@@ -102,16 +102,16 @@ para (i en 1:10) {
 suma
 `;
           break;
-        case "ger":
+        case "de":
           prompt_start = `
-summe <- 1
+summe <- 0
 für (i in 1:10) {
   falls (i %% 3 == 0) {
     weiter
   } sonst falls (i %% 5 == 0) {
     abbruch
   }
-  summe <- summe + 1
+  summe <- summe + i
 }
 summe
 `;
