@@ -1,5 +1,6 @@
 use crate::{
     lang::{CallStack, Signal},
+    object::Expr,
     parser::*,
 };
 
@@ -34,6 +35,10 @@ pub enum Error {
     CannotBeCoercedToInteger,
     CannotBeCoercedToLogical,
     CannotBeCoercedTo(&'static str),
+
+    // function parsing
+    InvalidFunctionParameter(Expr),
+    DuplicatedParameter(String),
 
     Missing,
     ArgumentMissing(String),
@@ -106,6 +111,8 @@ impl Error {
                 "..rest syntax currently disabled. To enable, re-build with\n\n    cargo build --features rest-args\n".to_string()
             }
             Error::Missing => "object is missing".to_string(),
+            Error::InvalidFunctionParameter(expr) => format!("invalid function parameter: {}", expr),
+            Error::DuplicatedParameter(name) => format!("duplicated parameter name: {}", name),
         }
     }
 

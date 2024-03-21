@@ -6,6 +6,7 @@ use crate::internal_err;
 use crate::object::types::*;
 use crate::object::*;
 use crate::session::Session;
+use std::collections::HashSet;
 
 use core::fmt;
 use std::fmt::Display;
@@ -793,6 +794,11 @@ impl Context for CallStack {
             List(x) => self.eval_list_lazy(x),
             Symbol(s) => self.get(s),
             Call(..) => self.eval_call(expr),
+            Function(formals, body) => Ok(Obj::Function(
+                assert_formals(&self.session, formals)?,
+                *body,
+                self.env().clone(),
+            )),
             _ => self.last_frame().eval(expr),
         }
     }
@@ -916,7 +922,11 @@ impl Context for Rc<Environment> {
             Expr::Integer(x) => Ok(Obj::Vector(Vector::from(vec![x]))),
             Expr::Bool(x) => Ok(Obj::Vector(Vector::from(vec![OptionNA::Some(x)]))),
             Expr::String(x) => Ok(Obj::Vector(Vector::from(vec![OptionNA::Some(x)]))),
-            Expr::Function(formals, body) => Ok(Obj::Function(formals, *body, self.env().clone())),
+            Expr::Function(formals, body) => Ok(Obj::Function(
+                assert_formals(&Session::default(), formals)?,
+                *body,
+                self.env().clone(),
+            )),
             Expr::Symbol(name) => self.get(name),
             Expr::Break => Err(Signal::Condition(Cond::Break)),
             Expr::Continue => Err(Signal::Condition(Cond::Continue)),
@@ -934,5 +944,73 @@ impl Context for Rc<Environment> {
 
     fn get(&mut self, name: String) -> EvalResult {
         Environment::get(self, name)
+    }
+}
+
+pub fn assert_formals(session: &Session, formals: ExprList) -> Result<ExprList, Signal> {
+    let allow_rest_args = session.experiments.contains(&Experiment::RestArgs);
+    let mut ellipsis: u8 = 0;
+    let mut set: HashSet<&str> = HashSet::new();
+
+    for (key, value) in formals.keys.iter().zip(formals.values.iter()) {
+        match *value {
+            Expr::Ellipsis(None) => ellipsis += 1,
+            Expr::Ellipsis(Some(_)) if allow_rest_args => ellipsis += 1,
+            Expr::Ellipsis(Some(_)) => return Error::FeatureDisabledRestArgs.into(),
+            _ if key.is_none() => return Error::InvalidFunctionParameter(value.clone()).into(),
+            _ => (),
+        }
+        if let Some(key) = key {
+            if !set.insert(key.as_str()) {
+                return Error::DuplicatedParameter(key.to_string()).into();
+            }
+        }
+    }
+
+    if ellipsis > 1 {
+        return Error::DuplicatedParameter("...".to_string()).into();
+    }
+
+    Ok(formals)
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use crate::r;
+
+    #[test]
+    fn fn_multiple_ellipsis() {
+        assert_eq!(
+            r! { fn(..., ...) {} },
+            EvalResult::Err(Signal::Error(Error::DuplicatedParameter("...".to_string())))
+        );
+    }
+
+    #[test]
+    fn fn_rest_args() {
+        let formals = ExprList::from(vec![(None, Expr::Ellipsis(Some("a".to_string())))]);
+        assert_eq!(
+            assert_formals(&Session::default(), formals),
+            Result::Err(Signal::Error(Error::FeatureDisabledRestArgs))
+        )
+    }
+
+    #[test]
+    fn fn_duplicated_parameters() {
+        assert_eq!(
+            r! { fn(x, x) {} },
+            EvalResult::Err(Signal::Error(Error::DuplicatedParameter("x".to_string())))
+        );
+    }
+
+    #[test]
+    fn fn_exprs_as_names() {
+        assert_eq!(
+            r! { fn(1) {} },
+            EvalResult::Err(Signal::Error(Error::InvalidFunctionParameter(
+                Expr::Number(1.0)
+            )))
+        );
     }
 }

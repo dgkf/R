@@ -35,19 +35,18 @@ pub mod es {
     pub struct Parser;
 }
 
-pub mod cn {
+pub mod zh {
     use r_derive::{LocalizedParser, Translate};
     #[derive(Parser, Clone, Copy, Translate, LocalizedParser)]
-    #[grammar = "grammar/localizations/cn.pest"]
+    #[grammar = "grammar/localizations/zh.pest"]
     #[grammar = "grammar/grammar.pest"]
     pub struct Parser;
 }
 
-pub mod ger {
+pub mod de {
     use r_derive::{LocalizedParser, Translate};
-
     #[derive(Parser, Clone, Copy, Translate, LocalizedParser)]
-    #[grammar = "grammar/localizations/ger.pest"]
+    #[grammar = "grammar/localizations/de.pest"]
     #[grammar = "grammar/grammar.pest"]
     pub struct Parser;
 }
