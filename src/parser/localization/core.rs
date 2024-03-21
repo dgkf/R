@@ -24,11 +24,12 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Copy, Clone, Default, PartialEq, clap::ValueEnum, strum::EnumString)]
 #[strum(serialize_all = "kebab-case")]
 pub enum Localization {
+    // ISO-639 codes
     #[default]
-    En,
-    Es,
-    Cn,
-    Ger,
+    En, // english
+    Es, // spanish
+    Zh, // chinese
+    De, // german
     #[value(skip)]
     Pirate,
     #[value(skip)]
@@ -41,8 +42,8 @@ impl LocalizedParser for Localization {
         match self {
             En => LocalizedParser::parse_input_with(&en::Parser, input, session),
             Es => LocalizedParser::parse_input_with(&es::Parser, input, session),
-            Ger => LocalizedParser::parse_input_with(&ger::Parser, input, session),
-            Cn => LocalizedParser::parse_input_with(&cn::Parser, input, session),
+            De => LocalizedParser::parse_input_with(&de::Parser, input, session),
+            Zh => LocalizedParser::parse_input_with(&zh::Parser, input, session),
             Pirate => LocalizedParser::parse_input_with(&pirate::Parser, input, session),
             Emoji => LocalizedParser::parse_input_with(&emoji::Parser, input, session),
         }
@@ -53,10 +54,10 @@ impl LocalizedParser for Localization {
         match self {
             En => LocalizedParser::parse_highlight_with(&en::Parser, input, session),
             Es => LocalizedParser::parse_highlight_with(&es::Parser, input, session),
-            Cn => LocalizedParser::parse_highlight_with(&cn::Parser, input, session),
+            De => LocalizedParser::parse_highlight_with(&de::Parser, input, session),
+            Zh => LocalizedParser::parse_highlight_with(&zh::Parser, input, session),
             Pirate => LocalizedParser::parse_highlight_with(&pirate::Parser, input, session),
             Emoji => LocalizedParser::parse_highlight_with(&emoji::Parser, input, session),
-            Ger => LocalizedParser::parse_highlight_with(&ger::Parser, input, session),
         }
     }
 }
