@@ -171,10 +171,10 @@
 
     number = @{ number_leading | number_trailing }
         number_leading = { ("0" | ASCII_NONZERO_DIGIT ~ ("_"? ~ ASCII_DIGIT)*) ~ ("." ~ (ASCII_DIGIT ~ ("_"? ~ ASCII_DIGIT)*))? }
-        number_trailing = { "." ~ (ASCII_DIGIT+ ~ ("_"? ~ ASCII_DIGIT)*) }
+        number_trailing = { "." ~ (ASCII_DIGIT ~ ("_"? ~ ASCII_DIGIT)*) }
 
     integer_expr = _{ integer ~ "L" }
-        integer = @{( ASCII_NONZERO_DIGIT ~ (("_")? ~ ASCII_DIGIT)* | "0" ) }
+        integer = @{( ASCII_NONZERO_DIGIT ~ ("_"? ~ ASCII_DIGIT)* | "0" ) }
 
     string_expr = _{ "\"" ~ double_quoted_string ~ "\"" | "'" ~ single_quoted_string ~ "'" }
         single_quoted_string = @{ single_quoted_string_char* }
