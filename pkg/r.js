@@ -614,8 +614,8 @@ imports.wbg.__wbindgen_memory = function() {
     const ret = wasm.memory;
     return addHeapObject(ret);
 };
-imports.wbg.__wbindgen_closure_wrapper1996 = function(arg0, arg1, arg2) {
-    const ret = makeClosure(arg0, arg1, 788, __wbg_adapter_28);
+imports.wbg.__wbindgen_closure_wrapper2124 = function(arg0, arg1, arg2) {
+    const ret = makeClosure(arg0, arg1, 808, __wbg_adapter_28);
     return addHeapObject(ret);
 };
 
