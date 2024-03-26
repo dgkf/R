@@ -116,10 +116,16 @@ where
 
         // atomic values
         en::Rule::number => Ok(Expr::Number(
-            pair.as_str().parse::<f64>().map_or(internal_err!(), Ok)?,
+            pair.as_str()
+                .replace('_', "")
+                .parse::<f64>()
+                .map_or(internal_err!(), Ok)?,
         )),
         en::Rule::integer => Ok(Expr::Integer(
-            pair.as_str().parse::<i32>().map_or(internal_err!(), Ok)?,
+            pair.as_str()
+                .replace('_', "")
+                .parse::<i32>()
+                .map_or(internal_err!(), Ok)?,
         )),
         en::Rule::single_quoted_string => Ok(Expr::String(String::from(pair.as_str()))),
         en::Rule::double_quoted_string => Ok(Expr::String(String::from(pair.as_str()))),
@@ -520,6 +526,36 @@ mod test {
         assert_eq! {
             r! {{"c (1)"}},
             r! {{"c(1)"}}
+        }
+    }
+
+    #[test]
+    fn separation_integer() {
+        assert_eq! {
+            r! {{"1_200_000L"}},
+            r! {{"1200000L"}}
+        }
+    }
+
+    #[test]
+    fn separation_double_trailing() {
+        assert_eq! {
+            r! {{".000_123"}},
+            r! {{".000123"}}
+        }
+    }
+    #[test]
+    fn separation_double_leading() {
+        assert_eq! {
+            r! {{"1_2.0_1"}},
+            r! {{"1_2.01"}}
+        }
+    }
+    #[test]
+    fn separation_double_leading_zero() {
+        assert_eq! {
+            r! {{"0.000_123"}},
+            r! {{"0.000123"}}
         }
     }
 }

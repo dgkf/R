@@ -117,9 +117,6 @@ impl fmt::Display for ExprList {
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct RExprListItem(Option<String>, Expr);
-
 impl IntoIterator for ExprList {
     type Item = (Option<String>, Expr);
     type IntoIter = <Zip<IntoIter<Option<String>>, IntoIter<Expr>> as IntoIterator>::IntoIter;

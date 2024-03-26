@@ -1,5 +1,6 @@
 # dev
 
+* Digits can now be separated by an underscore to improve readability.
 * Rename `Numeric` variant of `Vector` enum to `Double`
 * Added German (`ger`) localization.
 * Added assertions on function parameters (#74)

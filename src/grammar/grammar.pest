@@ -41,7 +41,7 @@
         hl_sym = { hl_symbol_backticked | symbol_ident }
         hl_symbol_backticked = ${ "`" ~ (!"`" ~ ANY)* ~ ( "`" | eoi ) }
         hl_str = ${ "\"" ~ double_quoted_string ~ ( "\"" | eoi ) | "'" ~ single_quoted_string ~ ( "'" | eoi ) }
-        hl_num = { number ~ "L"? }
+        hl_num = { number ~ ("L" | "_")? }
         hl_infix = { infix }
         hl_open = { "(" }
         hl_brackets = { hl_open | ")" | "[" | "]" | "{" | "}" }
@@ -170,11 +170,11 @@
 // atomic value types
 
     number = @{ number_leading | number_trailing }
-        number_leading = { ("0" | ASCII_NONZERO_DIGIT ~ ASCII_DIGIT*) ~ ("." ~ ASCII_DIGIT*)? }
-        number_trailing = { "." ~ ASCII_DIGIT+ }
+        number_leading = { ("0" | ASCII_NONZERO_DIGIT ~ ("_"? ~ ASCII_DIGIT)*) ~ ("." ~ (ASCII_DIGIT ~ ("_"? ~ ASCII_DIGIT)*))? }
+        number_trailing = { "." ~ (ASCII_DIGIT ~ ("_"? ~ ASCII_DIGIT)*) }
 
     integer_expr = _{ integer ~ "L" }
-        integer = @{( ASCII_NONZERO_DIGIT ~ ASCII_DIGIT* | "0" ) }
+        integer = @{( ASCII_NONZERO_DIGIT ~ ("_"? ~ ASCII_DIGIT)* | "0" ) }
 
     string_expr = _{ "\"" ~ double_quoted_string ~ "\"" | "'" ~ single_quoted_string ~ "'" }
         single_quoted_string = @{ single_quoted_string_char* }
