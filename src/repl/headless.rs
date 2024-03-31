@@ -40,9 +40,7 @@ extern "C" {
 pub fn wasm_args(js: JsValue) -> Session {
     use gloo_utils::format::JsValueSerdeExt;
     let cli: Cli = js.into_serde().unwrap_or_default();
-    log(&format!("Launching runtime with args: {cli:?}"));
     let session = cli.into();
-    log(&format!("Launching runtime with args: {session:?}"));
     session
 }
 

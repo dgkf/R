@@ -462,7 +462,9 @@ class Repl {
     content.classList.add("output-cell");
     content.classList.add(type);
 
-    if (click === undefined) click = () => {
+    if (click === undefined) click = (event) => {
+      // ignore in case where a text selection was made
+      if (document.getSelection().type == "Range") { return };
       this.set(text_content);
       this.focus();
       this.set_cursor_pos(Infinity);
