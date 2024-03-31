@@ -658,7 +658,7 @@ impl Context for CallStack {
             match *what {
                 // special case for list() calls
                 Expr::String(s) | Expr::Symbol(s) if s == LIST => {
-                    let result = self.eval(from)?;
+                    let result = self.eval_and_finalize(from)?;
                     return self.assign(Expr::List(args), result);
                 }
                 Expr::String(s) | Expr::Symbol(s) => {
@@ -978,6 +978,11 @@ pub fn assert_formals(session: &Session, formals: ExprList) -> Result<ExprList, 
 mod test {
     use super::*;
     use crate::r;
+
+    #[test]
+    fn assign_from_tail_call() {
+        assert_eq!(r! { x <- if (TRUE) 1 else 2; x }, r! { 1 });
+    }
 
     #[test]
     fn fn_multiple_ellipsis() {
