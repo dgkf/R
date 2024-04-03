@@ -34,6 +34,12 @@ impl From<Cond> for EvalResult {
         Into::<Signal>::into(val).into()
     }
 }
+impl From<Obj> for EvalResult {
+    #[inline]
+    fn from(val: Obj) -> Self {
+        Ok(val)
+    }
+}
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Signal {

@@ -4,6 +4,7 @@
 * Rename `Numeric` variant of `Vector` enum to `Double`
 * Added German (`ger`) localization.
 * Added assertions on function parameters (#74)
+*
 
 # 0.3.3 "Beautiful You"
 

@@ -5,7 +5,7 @@ use super::prompt::RPrompt;
 use super::release::*;
 use crate::context::Context;
 use crate::lang::{CallStack, Cond, EvalResult, Signal};
-use crate::object::Environment;
+use crate::object::{Environment, Obj};
 use crate::parser::{Localization, LocalizedParser};
 use crate::session::Session;
 
@@ -51,15 +51,19 @@ pub fn repl(session: Session) -> Result<(), Signal> {
 
                         match stack.eval_and_finalize(expr) {
                             Err(Signal::Condition(Cond::Terminate)) => break,
-                            Err(Signal::Return(value, true)) => {
-                                print!("{value}")
-                            }
+                            Err(Signal::Return(value, true)) => match value {
+                                Obj::Null => (),
+                                _ => print!("{value}"),
+                            },
                             Err(Signal::Return(_value, false)) => (),
                             Err(e) => {
                                 print!("{e}");
                                 print!("backtrace:\n{stack}");
                             }
-                            Ok(val) => println!("{val}"),
+                            Ok(val) => match val {
+                                Obj::Null => (),
+                                _ => println!("{val}"),
+                            },
                         }
                     }
                     Err(e) => eprint!("{e}"),
