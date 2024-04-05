@@ -43,6 +43,7 @@ lazy_static! {
             ("callstack", Box::new(PrimitiveCallstack) as Box<dyn Builtin>),
             ("environment", Box::new(PrimitiveEnvironment) as Box<dyn Builtin>),
             ("eval", Box::new(PrimitiveEval) as Box<dyn Builtin>),
+            ("length", Box::new(PrimitiveLength) as Box<dyn Builtin>),
             ("list", Box::new(PrimitiveList) as Box<dyn Builtin>),
             ("names", Box::new(PrimitiveNames) as Box<dyn Builtin>),
             ("parent", Box::new(PrimitiveParent) as Box<dyn Builtin>),

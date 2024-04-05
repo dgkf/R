@@ -32,6 +32,15 @@ impl Environment {
         env
     }
 
+    pub fn len(&self) -> usize {
+        self.values.borrow().len()
+    }
+
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
     pub fn insert(&self, name: String, value: Obj) {
         self.values.borrow_mut().insert(name, value);
     }

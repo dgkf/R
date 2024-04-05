@@ -9,6 +9,7 @@ use super::coercion::CoercibleInto;
 use super::rep::Rep;
 use super::subset::Subset;
 use super::types::*;
+use super::vrep::VarRep;
 
 #[derive(Default, Clone, PartialEq, Eq)]
 pub enum OptionNA<T> {
@@ -43,10 +44,10 @@ impl<T> OptionNA<T> {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Vector {
-    Double(Rep<Double>),
-    Integer(Rep<Integer>),
-    Logical(Rep<Logical>),
-    Character(Rep<Character>),
+    Double(VarRep<Double>),
+    Integer(VarRep<Integer>),
+    Logical(VarRep<Logical>),
+    Character(VarRep<Character>),
     // Complex(Complex),
     // Raw(Raw),
 }
@@ -227,24 +228,48 @@ impl TryInto<bool> for Vector {
 
 impl From<Rep<Double>> for Vector {
     fn from(x: Rep<Double>) -> Self {
-        Vector::Double(x)
+        Vector::Double(x.into())
     }
 }
 
 impl From<Rep<Integer>> for Vector {
     fn from(x: Rep<Integer>) -> Self {
-        Vector::Integer(x)
+        Vector::Integer(x.into())
     }
 }
 
 impl From<Rep<Logical>> for Vector {
     fn from(x: Rep<Logical>) -> Self {
-        Vector::Logical(x)
+        Vector::Logical(x.into())
     }
 }
 
 impl From<Rep<Character>> for Vector {
     fn from(x: Rep<Character>) -> Self {
+        Vector::Character(x.into())
+    }
+}
+
+impl From<VarRep<Double>> for Vector {
+    fn from(x: VarRep<Double>) -> Self {
+        Vector::Double(x)
+    }
+}
+
+impl From<VarRep<Integer>> for Vector {
+    fn from(x: VarRep<Integer>) -> Self {
+        Vector::Integer(x)
+    }
+}
+
+impl From<VarRep<Logical>> for Vector {
+    fn from(x: VarRep<Logical>) -> Self {
+        Vector::Logical(x)
+    }
+}
+
+impl From<VarRep<Character>> for Vector {
+    fn from(x: VarRep<Character>) -> Self {
         Vector::Character(x)
     }
 }

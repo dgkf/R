@@ -8,6 +8,7 @@ pub mod coercion;
 pub mod iterators;
 pub mod rep;
 pub mod types;
+pub mod vrep;
 
 mod subsets;
 pub use subsets::*;

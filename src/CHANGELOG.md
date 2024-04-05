@@ -7,6 +7,10 @@
 * Digits can now be separated by an underscore to improve readability.
 
 * Added assertions on function parameters (#74)
+* Added the `length()` primitive (#105)
+* The internal vector representation has been changed to allow for
+  in-place modification of vector, e.g. when they materialize themselves
+  from their lazy representation.
 
 * Assignment is now also possible using the `=` operator (#144 @sebffischer)
 
