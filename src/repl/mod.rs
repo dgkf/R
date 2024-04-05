@@ -13,5 +13,5 @@ pub mod prompt;
 #[cfg(feature = "repl")]
 pub mod validator;
 
-#[cfg(feature = "wasm")]
+#[cfg(target_family = "wasm")]
 pub mod headless;

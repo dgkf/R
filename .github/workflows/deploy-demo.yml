@@ -21,9 +21,9 @@ jobs:
 
       - name: Build
         run: |
-          wasm-pack build --target web --out-dir demo/pkg --no-default-features --features wasm
+          wasm-pack build --target web --out-dir demo/pkg --no-default-features
           rm demo/pkg/.gitignore
-      
+
       - name: Deploy to GitHub pages 🚀
         if: github.event_name != 'pull_request'
         uses: JamesIves/github-pages-deploy-action@v4.4.3
