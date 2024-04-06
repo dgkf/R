@@ -45,16 +45,13 @@ impl From<Obj> for EvalResult {
 pub enum Signal {
     Condition(Cond),
     Error(Error),
-    Return(Obj, bool), // (value, visibility)
-    Tail(Expr, bool),  // (value expr, visibility)
-    Thunk,             // used when evaluating null opts like comments
+    Tail(Expr, bool), // (value expr, visibility)
+    Thunk,            // used when evaluating null opts like comments
 }
 
 impl Display for Signal {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Signal::Return(obj, true) => writeln!(f, "{obj}"),
-            Signal::Return(_, false) => Ok(()),
             Signal::Tail(..) => writeln!(f, "Whoops, a tail is loose!"),
             Signal::Condition(_) => writeln!(f, "Signal used at top level"),
             Signal::Error(e) => writeln!(f, "{e}"),
@@ -64,10 +61,6 @@ impl Display for Signal {
 }
 
 impl Obj {
-    pub fn with_visibility(self, visibility: bool) -> EvalResult {
-        Signal::Return(self, visibility).into()
-    }
-
     pub fn force(self, stack: &mut CallStack) -> EvalResult {
         match self {
             // special case for symbols, which are treated as argument promises

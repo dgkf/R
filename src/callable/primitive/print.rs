@@ -23,10 +23,7 @@ impl Callable for PrimitivePrint {
     fn call_matched(&self, args: List, _ellipsis: List, stack: &mut CallStack) -> EvalResult {
         let mut args = Obj::List(args);
         let x = args.try_get_named("x")?.force(stack)?;
-        match x {
-            Obj::Null => (),
-            _ => println!("{x}"),
-        };
+        println!("{x}");
         Obj::Null.into()
     }
 }

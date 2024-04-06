@@ -25,7 +25,7 @@ impl Callable for KeywordReturn {
     fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
         let mut args = args.values.into_iter();
         let value = stack.eval(args.next().unwrap())?;
-        Return(value, true).into()
+        value.into()
     }
 }
 
@@ -110,7 +110,6 @@ impl Callable for KeywordFor {
             match eval_result {
                 Err(Condition(Break)) => break,
                 Err(Condition(Continue)) => continue,
-                Err(Return(..)) => return eval_result,
                 Err(Error(_)) => return eval_result,
                 _ => (),
             }
@@ -158,7 +157,6 @@ impl Callable for KeywordWhile {
             match eval_result {
                 Err(Condition(Break)) => break,
                 Err(Condition(Continue)) => continue,
-                Err(Return(..)) => return eval_result,
                 Err(Error(_)) => return eval_result,
                 _ => (),
             }
@@ -196,7 +194,6 @@ impl Callable for KeywordRepeat {
             match eval_result {
                 Err(Signal::Condition(Cond::Break)) => break,
                 Err(Signal::Condition(Cond::Continue)) => continue,
-                Err(Signal::Return(..)) => return eval_result,
                 Err(Signal::Error(_)) => return eval_result,
                 _ => (),
             }

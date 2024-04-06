@@ -4,7 +4,10 @@
 * Rename `Numeric` variant of `Vector` enum to `Double`
 * Added German (`ger`) localization.
 * Added assertions on function parameters (#74)
-*
+* Removed the `Return` variant of `Signal` that allowed to disable visibility
+  of objects.
+* Improved the behavior of `print()` when used in the repl and it now returns
+  `NULL`
 
 # 0.3.3 "Beautiful You"
 
