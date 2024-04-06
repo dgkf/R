@@ -6,12 +6,12 @@ pub struct Session {
     pub locale: Localization,
     pub warranty: bool,
     pub experiments: Vec<Experiment>,
-    pub history: String,
+    pub history: Option<String>,
 }
 
 impl Session {
     pub fn with_history_file(mut self, file: String) -> Session {
-        self.history = file;
+        self.history = Some(file);
         self
     }
 }
@@ -22,7 +22,7 @@ impl From<Cli> for Session {
             locale: value.locale,
             warranty: value.warranty,
             experiments: value.experiments,
-            history: "".to_string(),
+            history: None,
         }
     }
 }

@@ -16,13 +16,14 @@ pub fn repl(session: Session) -> Result<(), Signal> {
         ..Default::default()
     });
 
-    let history = if std::path::PathBuf::from(&session.history).exists() {
-        println!("Restoring session history...");
-        FileBackedHistory::with_file(1000, session.history.clone().into())
-            .expect("Error configuring history with file")
-    } else {
-        FileBackedHistory::new(1000)
-    };
+    let history = session
+        .history
+        .clone()
+        .map_or(FileBackedHistory::new(1000), |file| {
+            println!("Restoring session history...");
+            FileBackedHistory::with_file(1000, file.into())
+                .expect("Error configuring history with file")
+        });
 
     let mut line_editor = Reedline::create()
         .with_validator(Box::new(session.clone()))
