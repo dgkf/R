@@ -1,9 +1,22 @@
 # dev
 
-* Digits can now be separated by an underscore to improve readability.
-* Rename `Numeric` variant of `Vector` enum to `Double`
+## Changes
+
 * Added German (`ger`) localization.
+
+* Digits can now be separated by an underscore to improve readability.
+
 * Added assertions on function parameters (#74)
+
+## Internals
+
+* Rename `Numeric` variant of `Vector` enum to `Double`
+
+## Notable Bugs Addressed
+
+* Fix accidental tail calls escaping binary operator evaluation (#115 @dgkf)
+
+* Fix history file not being created if one doesn't already exist (@dgkf)
 
 # 0.3.3 "Beautiful You"
 
