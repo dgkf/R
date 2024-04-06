@@ -3,10 +3,10 @@ use r::lang::Signal;
 use r::repl::repl;
 use r::session::Session;
 
-#[cfg(feature = "wasm")]
+#[cfg(target_family = "wasm")]
 fn main() {}
 
-#[cfg(not(feature = "wasm"))]
+#[cfg(not(target_family = "wasm"))]
 fn main() -> Result<(), Signal> {
     use clap::Parser;
     let session: Session = Session::from(Cli::parse()).with_history_file(

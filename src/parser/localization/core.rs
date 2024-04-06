@@ -12,11 +12,11 @@ pub trait LocalizedParser: std::marker::Sync {
     }
 }
 
-#[cfg(feature = "wasm")]
+#[cfg(target_family = "wasm")]
 use serde::{Deserialize, Serialize};
 
 #[cfg_attr(
-    feature = "wasm",
+    target_family = "wasm",
     wasm_bindgen::prelude::wasm_bindgen,
     derive(Serialize, Deserialize),
     serde(rename_all(serialize = "kebab-case", deserialize = "kebab-case"))
