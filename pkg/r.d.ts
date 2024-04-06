@@ -29,6 +29,12 @@ export function wasm_parse_errors(args: any, input: string): (ParseError)[];
 export function wasm_highlight(args: any, input: string): any[];
 /**
 */
+export enum Experiment {
+  TailCalls = 0,
+  RestArgs = 1,
+}
+/**
+*/
 export enum Localization {
   En = 0,
   Es = 1,
@@ -36,12 +42,6 @@ export enum Localization {
   De = 3,
   Pirate = 4,
   Emoji = 5,
-}
-/**
-*/
-export enum Experiment {
-  TailCalls = 0,
-  RestArgs = 1,
 }
 /**
 * Run the R REPL
@@ -102,7 +102,7 @@ export interface InitOutput {
   readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
   readonly __wbindgen_export_2: WebAssembly.Table;
   readonly __wbindgen_add_to_stack_pointer: (a: number) => number;
-  readonly _dyn_core__ops__function__Fn__A____Output___R_as_wasm_bindgen__closure__WasmClosure___describe__invoke__h0cdb4cdfb88f76e8: (a: number, b: number, c: number, d: number, e: number) => void;
+  readonly _dyn_core__ops__function__Fn__A____Output___R_as_wasm_bindgen__closure__WasmClosure___describe__invoke__h5f795ea032bd4d3b: (a: number, b: number, c: number, d: number, e: number) => void;
   readonly __wbindgen_free: (a: number, b: number, c: number) => void;
   readonly __wbindgen_exn_store: (a: number) => void;
 }
