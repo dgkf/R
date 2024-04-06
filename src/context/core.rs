@@ -50,7 +50,10 @@ pub trait Context: std::fmt::Debug + std::fmt::Display {
 
     #[inline]
     fn eval_binary(&mut self, exprs: (Expr, Expr)) -> Result<(Obj, Obj), Signal> {
-        Ok((self.eval(exprs.0)?, self.eval(exprs.1)?))
+        Ok((
+            self.eval_and_finalize(exprs.0)?,
+            self.eval_and_finalize(exprs.1)?,
+        ))
     }
 
     fn eval_list_lazy(&mut self, l: ExprList) -> EvalResult {
