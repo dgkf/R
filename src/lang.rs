@@ -809,7 +809,7 @@ impl Context for CallStack {
         // evaluate any lingering tail calls in the current frame
         use Signal::Tail;
         while let Err(Tail(expr, _vis)) = result {
-            result = self.eval(expr)
+            result = self.eval(expr);
         }
 
         result
@@ -977,7 +977,7 @@ pub fn assert_formals(session: &Session, formals: ExprList) -> Result<ExprList, 
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::r;
+    use crate::{r, r_expect};
 
     #[test]
     fn assign_from_tail_call() {
@@ -1017,5 +1017,30 @@ mod test {
                 Expr::Number(1.0)
             )))
         );
+    }
+
+    #[test]
+    fn fn_assign_dont_causes_binding() {
+        r_expect! {{"
+            f <- fn(x) {x; null}
+            x <- 1
+            f(x = 2)
+            x == 1
+        "}}
+    }
+    #[test]
+    fn fn_assig_curly_causes_binding() {
+        // need to touch x in function body to force evaluation
+        // FIXME: Forcing x twice should not be necessary here.
+        // If we don't do it, I believe some tail calls are executed that intefere
+        // with the return of the { ... }
+        r_expect! {{"
+            f <- fn(x) {x; null}
+            x <- 1
+            x
+            f(x = {x = 2})
+            x
+            x == 2
+        "}}
     }
 }
