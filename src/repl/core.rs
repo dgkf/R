@@ -1,7 +1,7 @@
 use reedline::{FileBackedHistory, Reedline};
 use std::rc::Rc;
 
-use super::prompt::RPrompt;
+use super::prompt::Prompt;
 use super::release::*;
 use crate::context::Context;
 use crate::lang::{CallStack, Cond, EvalResult, Signal};
@@ -31,7 +31,7 @@ pub fn repl(session: Session) -> Result<(), Signal> {
         .with_history(Box::new(history));
 
     // initialize our repl prompt
-    let prompt = RPrompt;
+    let prompt = Prompt;
 
     // REPL
     loop {

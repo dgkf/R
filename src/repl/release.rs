@@ -5,13 +5,12 @@ pub const RELEASE_NAME: &str = "Beautiful You";
 pub const GIT_HASH: &str = env!("GIT_HASH");
 pub const RELEASE_VERSION: &str = env!("CARGO_PKG_VERSION");
 
-pub const AUTHORS: &str = env!("CARGO_PKG_AUTHORS");
 pub const YEAR: &str = "2024";
 
 pub const COPYRIGHT_LONG_INST: &str = "--warranty";
 lazy_static::lazy_static! {
     static ref COPYRIGHT: String = format!(
-"Copyright (C) {YEAR} {AUTHORS}  
+"Copyright (C) {YEAR} R Authors
   
 This program comes with ABSOLUTELY NO WARRANTY. This is free software, 
 and you are welcome to redistribute it under certain conditions. For more
@@ -20,7 +19,7 @@ information, restart with `{COPYRIGHT_LONG_INST}`.");
 
 lazy_static::lazy_static! {
     static ref COPYRIGHT_LONG: String = format!(
-"Copyright (C) {YEAR} {AUTHORS}  
+"Copyright (C) {YEAR} R Authors
   
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by

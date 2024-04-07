@@ -1,13 +1,13 @@
 use std::borrow::Cow;
 
 use reedline::{
-    Color, Prompt, PromptEditMode, PromptHistorySearch, PromptHistorySearchStatus, PromptViMode,
+    Color, PromptEditMode, PromptHistorySearch, PromptHistorySearchStatus, PromptViMode,
 };
 
 #[derive(Default, Clone)]
-pub struct RPrompt;
+pub struct Prompt;
 
-impl Prompt for RPrompt {
+impl reedline::Prompt for Prompt {
     fn render_prompt_left(&self) -> Cow<str> {
         Cow::Owned("".to_string())
     }
@@ -60,5 +60,10 @@ impl Prompt for RPrompt {
     /// Get the default right prompt color
     fn get_prompt_right_color(&self) -> Color {
         Color::White
+    }
+
+    /// Get the default multiline prompt color
+    fn get_prompt_multiline_color(&self) -> nu_ansi_term::Color {
+        nu_ansi_term::Color::LightGray
     }
 }

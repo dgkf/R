@@ -227,7 +227,12 @@ where
             Infix => format!("{} {sym} {}", args.values[0], args.values[1]),
             Prefix => format!("{sym}{}", args.values[0]),
             Postfix => format!("{}{sym}", args.values[0]),
-            PostfixCall(l, r) => format!("{sym}{l}{}{r}", args),
+            PostfixCall(l, r) => {
+                let mut args = args.clone().into_iter();
+                let first = args.next().unwrap_or((None, Expr::Null));
+                let rest = args.collect::<ExprList>();
+                format!("{}{l}{}{r}", first.1, rest)
+            }
         }
     }
 
