@@ -157,7 +157,7 @@ function __wbg_adapter_28(arg0, arg1, arg2) {
         const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
         const ptr0 = passStringToWasm0(arg2, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
         const len0 = WASM_VECTOR_LEN;
-        wasm._dyn_core__ops__function__Fn__A____Output___R_as_wasm_bindgen__closure__WasmClosure___describe__invoke__h5f795ea032bd4d3b(retptr, arg0, arg1, ptr0, len0);
+        wasm._dyn_core__ops__function__Fn__A____Output___R_as_wasm_bindgen__closure__WasmClosure___describe__invoke__h3597e4fbcf8fb245(retptr, arg0, arg1, ptr0, len0);
         var r0 = getInt32Memory0()[retptr / 4 + 0];
         var r1 = getInt32Memory0()[retptr / 4 + 1];
         let v2;
@@ -286,10 +286,10 @@ function handleError(f, args) {
 }
 /**
 */
-export const Localization = Object.freeze({ En:0,"0":"En",Es:1,"1":"Es",Zh:2,"2":"Zh",De:3,"3":"De",Pirate:4,"4":"Pirate",Emoji:5,"5":"Emoji", });
+export const Experiment = Object.freeze({ TailCalls:0,"0":"TailCalls",RestArgs:1,"1":"RestArgs", });
 /**
 */
-export const Experiment = Object.freeze({ TailCalls:0,"0":"TailCalls",RestArgs:1,"1":"RestArgs", });
+export const Localization = Object.freeze({ En:0,"0":"En",Es:1,"1":"Es",Zh:2,"2":"Zh",De:3,"3":"De",Pirate:4,"4":"Pirate",Emoji:5,"5":"Emoji", });
 
 const CliFinalization = (typeof FinalizationRegistry === 'undefined')
     ? { register: () => {}, unregister: () => {} }
@@ -467,12 +467,12 @@ function __wbg_get_imports() {
         const ret = getStringFromWasm0(arg0, arg1);
         return addHeapObject(ret);
     };
-    imports.wbg.__wbg_parseerror_new = function(arg0) {
-        const ret = ParseError.__wrap(arg0);
-        return addHeapObject(ret);
-    };
     imports.wbg.__wbindgen_number_new = function(arg0) {
         const ret = arg0;
+        return addHeapObject(ret);
+    };
+    imports.wbg.__wbg_parseerror_new = function(arg0) {
+        const ret = ParseError.__wrap(arg0);
         return addHeapObject(ret);
     };
     imports.wbg.__wbindgen_object_drop_ref = function(arg0) {
@@ -614,8 +614,8 @@ imports.wbg.__wbindgen_memory = function() {
     const ret = wasm.memory;
     return addHeapObject(ret);
 };
-imports.wbg.__wbindgen_closure_wrapper2089 = function(arg0, arg1, arg2) {
-    const ret = makeClosure(arg0, arg1, 666, __wbg_adapter_28);
+imports.wbg.__wbindgen_closure_wrapper2435 = function(arg0, arg1, arg2) {
+    const ret = makeClosure(arg0, arg1, 893, __wbg_adapter_28);
     return addHeapObject(ret);
 };
 
