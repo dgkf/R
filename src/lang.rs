@@ -1022,24 +1022,19 @@ mod test {
     #[test]
     fn fn_assign_dont_causes_binding() {
         r_expect! {{"
-            f <- fn(x) {x; null}
             x <- 1
+            f <- fn(x) {x; null}
             f(x = 2)
             x == 1
         "}}
     }
+
     #[test]
-    fn fn_assig_curly_causes_binding() {
-        // need to touch x in function body to force evaluation
-        // FIXME: Forcing x twice should not be necessary here.
-        // If we don't do it, I believe some tail calls are executed that intefere
-        // with the return of the { ... }
+    fn fn_assign_curly_causes_binding() {
         r_expect! {{"
-            f <- fn(x) {x; null}
             x <- 1
-            x
+            f <- fn(x) {x; null}
             f(x = {x = 2})
-            x
             x == 2
         "}}
     }
