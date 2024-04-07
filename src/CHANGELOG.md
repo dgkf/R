@@ -7,6 +7,7 @@
 * Digits can now be separated by an underscore to improve readability.
 
 * Added assertions on function parameters (#74)
+* Assignment is now also possible using the `=` operator (#144 @sebffischer)
 
 ## Internals
 
