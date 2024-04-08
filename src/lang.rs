@@ -64,12 +64,6 @@ impl Obj {
 
     pub fn force(self, stack: &mut CallStack) -> EvalResult {
         match self {
-            // special case for symbols, which are treated as argument promises
-            Obj::Closure(Expr::Symbol(s), mut env) => match env.get(s.clone()) {
-                Err(Signal::Error(Error::Missing)) => Err(Error::ArgumentMissing(s).into()),
-                Ok(result) => result.force(stack),
-                other => other,
-            },
             // TODO(feat):
             // this is quosure behavior, but do we also want closures that
             // don't evaluate in a new frame, but rather just in originating
@@ -97,6 +91,38 @@ impl Obj {
                 Ok(value)
             }
             _ => Err(err.into()),
+        }
+    }
+
+    pub fn as_list(&self) -> EvalResult {
+        match self {
+            Obj::Null => Ok(Obj::List(List::from(vec![]))),
+            Obj::Vector(_v) => internal_err!(),
+            Obj::List(l) => Ok(Obj::List(l.clone())),
+            Obj::Expr(e) => match e {
+                Expr::List(exprlist) => Ok(Obj::List(List::from(
+                    exprlist
+                        .clone()
+                        .into_iter()
+                        .map(|(k, v)| (k, Obj::Expr(v)))
+                        .collect::<Vec<_>>(),
+                ))),
+                Expr::Function(_, _) => internal_err!(),
+                Expr::Call(what, args) => Ok(Obj::List(List::from(
+                    vec![(None, (**what).clone())]
+                        .into_iter()
+                        .chain((*args).clone())
+                        .map(|(k, v)| (k, Obj::Expr(v)))
+                        .collect::<Vec<_>>(),
+                ))),
+                other => Ok(Obj::List(List::from(vec![(
+                    None,
+                    Obj::Expr(other.clone()),
+                )]))),
+            },
+            Obj::Closure(_, _) => internal_err!(),
+            Obj::Function(_, _, _) => internal_err!(),
+            Obj::Environment(_) => internal_err!(),
         }
     }
 
@@ -238,7 +264,7 @@ impl Obj {
         match self {
             Obj::Vector(v) => v.try_get(index),
             Obj::List(l) => l.try_get(index),
-            _ => internal_err!(),
+            obj => obj.as_list()?.try_get(index),
         }
     }
 
@@ -247,7 +273,7 @@ impl Obj {
         match self {
             Obj::Vector(v) => v.try_get(index),
             Obj::List(l) => l.try_get_inner(index),
-            _ => internal_err!(),
+            obj => obj.as_list()?.try_get_inner(index),
         }
     }
 
@@ -1037,5 +1063,12 @@ mod test {
             f(x = {x = 2})
             x == 2
         "}}
+    }
+
+    #[test]
+    fn expr_indexing() {
+        r_expect! { quote(x(1, 2, 3))[[1]] == quote(x) }
+        r_expect! { quote(x(1, 2, 3))[[3]] == quote(2) }
+        assert_eq! { r! { quote(x(1, 2, 3))[1] }, r! { list(quote(x)) } }
     }
 }

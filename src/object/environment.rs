@@ -49,7 +49,7 @@ impl Environment {
         if let Some(value) = self.values.borrow().get(&name) {
             let result = value.clone();
             match result {
-                Obj::Closure(expr, env) => Obj::Environment(env).eval(expr),
+                Obj::Closure(expr, env) => env.clone().eval(expr),
                 _ => Ok(result),
             }
 
@@ -77,12 +77,18 @@ impl Display for Environment {
         write!(f, "<environment {:?}", self.values.as_ptr())?;
 
         // // print defined variable names
-        // if self.values.borrow().len() > 0 { write!(f, " [")?; }
+        // if self.values.borrow().len() > 0 {
+        //     write!(f, " [")?;
+        // }
         // for (i, k) in self.values.borrow().keys().enumerate() {
-        //     if i > 0 { write!(f, ", ")?; }
+        //     if i > 0 {
+        //         write!(f, ", ")?;
+        //     }
         //     write!(f, "{}", k)?;
         // }
-        // if self.values.borrow().len() > 0 { write!(f, "]")?; }
+        // if self.values.borrow().len() > 0 {
+        //     write!(f, "]")?;
+        // }
 
         write!(f, ">")?;
         Ok(())
