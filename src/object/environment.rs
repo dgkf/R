@@ -40,8 +40,6 @@ impl Environment {
         for (key, value) in l.values.borrow().iter() {
             if let Some(name) = key {
                 self.values.borrow_mut().insert(name.clone(), value.clone());
-            } else {
-                println!("Dont' know what to do with value...")
             }
         }
     }
