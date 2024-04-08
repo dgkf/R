@@ -159,18 +159,19 @@ class Repl {
 
     this.output.log.push(code);
 
-    var output = this.#elem_output;
+    var history_elem = this.#elem_output;
     if (this.output.mode === "history") {
-      output = this.#output_push("input", this.#markup_highlight(code));
+      history_elem = this.#output_push("input", this.#markup_highlight(code));
       this.clear();
     }
   
     // get result and print to output
     try { 
-      let result = this.eval(code);
+      let output_elem = this.#output_push("output", "", history_elem, false);
+      let result = this.eval(code, (x) => output_elem.innerText += x);
       if (this.output.mode === "single") this.#elem_output.innerHTML = "";
-      let node = this.#output_push("output", result, output, false);
-      node.scrollIntoView();
+      output_elem.innerText += result;
+      output_elem.scrollIntoView();
     } catch (error) {
       console.log(error);
       let node = this.#markup_unexpected_error();
