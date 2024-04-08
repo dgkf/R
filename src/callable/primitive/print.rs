@@ -1,5 +1,6 @@
 use lazy_static::lazy_static;
 use r_derive::*;
+use std::io::Write;
 
 use crate::callable::core::*;
 use crate::lang::*;
@@ -23,7 +24,7 @@ impl Callable for PrimitivePrint {
     fn call_matched(&self, args: List, _ellipsis: List, stack: &mut CallStack) -> EvalResult {
         let mut args = Obj::List(args);
         let x = args.try_get_named("x")?.force(stack)?;
-        println!("{x}");
+        writeln!(stack.session.output, "{x}").ok();
         Ok(x)
     }
 }

@@ -7,7 +7,7 @@ use crate::context::Context;
 use crate::lang::{CallStack, Cond, Signal};
 use crate::object::Environment;
 use crate::parser::*;
-use crate::session::Session;
+use crate::session::{Session, SessionOutput};
 
 #[wasm_bindgen]
 pub struct ParseError {
@@ -52,17 +52,30 @@ pub fn wasm_session_header(args: JsValue) -> String {
 
 #[wasm_bindgen]
 pub fn wasm_runtime(args: JsValue) -> JsValue {
+    // build session, apply callback
     let args = wasm_args(args);
     log(&format!("Launching runtime with args: {args:?}"));
 
+    // build our global environment
     let global_env = Rc::new(Environment {
         parent: Some(Environment::from_builtins()),
         ..Default::default()
     });
 
-    let cb = Closure::<dyn Fn(String) -> Option<String>>::new(move |line: String| {
-        wasm_eval_in(&args, &global_env, line.as_str())
-    });
+    // build a callback to evaluate with a enclosed environment, allows
+    // for a callback to be provided to handle stdout
+    let cb = Closure::<dyn Fn(_, _) -> Option<String>>::new(
+        move |line: String, callback: js_sys::Function| {
+            let local_args =
+                &args
+                    .clone()
+                    .with_output(SessionOutput::Callback(Rc::new(move |s| {
+                        callback.call1(&JsValue::null(), &JsValue::from(s)).ok();
+                    })));
+
+            wasm_eval_in(&local_args, &global_env, line.as_str())
+        },
+    );
 
     let ret = cb.as_ref().clone();
     cb.forget();
