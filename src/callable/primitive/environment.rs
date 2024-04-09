@@ -20,7 +20,7 @@ impl Callable for PrimitiveEnvironment {
 
         // default when `fun` is missing or not found
         let fun = vals.try_get_named("fun");
-        if let Ok(Obj::Closure(Expr::Missing, _)) | Err(Signal::Error(Error::ArgumentMissing(_))) =
+        if let Ok(Obj::Promise(Expr::Missing, _)) | Err(Signal::Error(Error::ArgumentMissing(_))) =
             fun
         {
             return Ok(Obj::Environment(stack.env().clone()));
@@ -28,7 +28,7 @@ impl Callable for PrimitiveEnvironment {
 
         // otherwise we can evaluate value and return result's environment
         match fun?.force(stack)? {
-            Obj::Closure(_, e) => Ok(Obj::Environment(e.clone())),
+            Obj::Promise(_, e) => Ok(Obj::Environment(e.clone())),
             Obj::Function(_, _, e) => Ok(Obj::Environment(e.clone())),
             Obj::Environment(e) => Ok(Obj::Environment(e.clone())),
             _ => Error::ArgumentInvalid(String::from("fun")).into(),

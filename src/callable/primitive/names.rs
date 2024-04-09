@@ -18,7 +18,7 @@ impl Callable for PrimitiveNames {
         use Obj::*;
         match x {
             Null => Ok(Null),
-            Closure(_, _) => Ok(Null),
+            Promise(_, _) => Ok(Null),
             Vector(_) => Ok(Null), // named vectors currently not supported...
             Expr(_) => Ok(Null),   // handle arg lists?
             Function(_, _, _) => Ok(Null), // return formals?

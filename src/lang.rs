@@ -68,7 +68,7 @@ impl Obj {
             // this is quosure behavior, but do we also want closures that
             // don't evaluate in a new frame, but rather just in originating
             // environment?
-            Obj::Closure(expr, env) => {
+            Obj::Promise(expr, env) => {
                 stack.add_frame(expr.clone(), env.clone());
                 let result = stack.eval(expr);
                 stack.pop_frame_and_return(result)
@@ -120,7 +120,7 @@ impl Obj {
                     Obj::Expr(other.clone()),
                 )]))),
             },
-            Obj::Closure(_, _) => internal_err!(),
+            Obj::Promise(_, _) => internal_err!(),
             Obj::Function(_, _, _) => internal_err!(),
             Obj::Environment(_) => internal_err!(),
         }
@@ -195,7 +195,7 @@ impl Obj {
             Obj::Null => None,
             Obj::List(_) => None,
             Obj::Expr(_) => None,
-            Obj::Closure(_, _) => None,
+            Obj::Promise(_, _) => None,
             Obj::Function(_, _, _) => None,
             Obj::Environment(_) => None,
         }
@@ -245,7 +245,7 @@ impl Obj {
 
     pub fn environment(&self) -> Option<Rc<Environment>> {
         match self {
-            Obj::Closure(_, e) | Obj::Function(_, _, e) | Obj::Environment(e) => Some(e.clone()),
+            Obj::Promise(_, e) | Obj::Function(_, _, e) | Obj::Environment(e) => Some(e.clone()),
             _ => None,
         }
     }
@@ -253,7 +253,7 @@ impl Obj {
     pub fn try_get_named(&mut self, name: &str) -> EvalResult {
         use Error::{ArgumentMissing, VariableNotFound};
         match self.get_named(name) {
-            Some(Obj::Closure(Expr::Missing, _)) => Err(ArgumentMissing(name.into()).into()),
+            Some(Obj::Promise(Expr::Missing, _)) => Err(ArgumentMissing(name.into()).into()),
             Some(x) => Ok(x),
             None => Err(VariableNotFound(name.into()).into()),
         }
@@ -335,7 +335,7 @@ impl Display for Obj {
                 write!(f, "function({}) {}\n{}", formals, body, parent_env)
             }
             Obj::List(vals) => display_list(vals, f, None),
-            Obj::Closure(expr, env) => write!(f, "{expr} @ {env}"),
+            Obj::Promise(expr, env) => write!(f, "{expr} @ {env}"),
             Obj::Expr(expr) => write!(f, "{}", expr),
         }
     }
@@ -519,7 +519,7 @@ impl VecPartialCmp<Obj> for Obj {
     fn vec_eq(self, rhs: Self) -> Self::Output {
         match (self, rhs) {
             (lhs @ Obj::Expr(_), rhs @ Obj::Expr(_)) => Ok((lhs == rhs).into()),
-            (lhs @ Obj::Closure(..), rhs @ Obj::Closure(..)) => Ok((lhs == rhs).into()),
+            (lhs @ Obj::Promise(..), rhs @ Obj::Promise(..)) => Ok((lhs == rhs).into()),
             (lhs @ Obj::Function(..), rhs @ Obj::Function(..)) => Ok((lhs == rhs).into()),
             (lhs @ Obj::Environment(_), rhs @ Obj::Environment(_)) => Ok((lhs == rhs).into()),
             (lhs, rhs) => match (lhs.as_vector()?, rhs.as_vector()?) {
@@ -532,7 +532,7 @@ impl VecPartialCmp<Obj> for Obj {
     fn vec_neq(self, rhs: Self) -> Self::Output {
         match (self, rhs) {
             (lhs @ Obj::Expr(_), rhs @ Obj::Expr(_)) => Ok((lhs != rhs).into()),
-            (lhs @ Obj::Closure(..), rhs @ Obj::Closure(..)) => Ok((lhs != rhs).into()),
+            (lhs @ Obj::Promise(..), rhs @ Obj::Promise(..)) => Ok((lhs != rhs).into()),
             (lhs @ Obj::Function(..), rhs @ Obj::Function(..)) => Ok((lhs != rhs).into()),
             (lhs @ Obj::Environment(_), rhs @ Obj::Environment(_)) => Ok((lhs != rhs).into()),
             (lhs, rhs) => match (lhs.as_vector()?, rhs.as_vector()?) {
@@ -845,20 +845,25 @@ impl Context for CallStack {
         let mut env = self.env();
         loop {
             // search in this environment for value by name
-            if let Some(value) = env.values.borrow().get(&name) {
-                let result = value.clone();
-                return match result {
-                    c @ Obj::Closure(..) => c.force(self),
-                    _ => Ok(result),
-                };
-            }
+            let Some(value) = env.values.borrow_mut().get(&name).cloned() else {
+                // if not found, search through parent if available
+                if let Some(parent) = &env.parent {
+                    env = parent.clone();
+                    continue;
+                } else {
+                    break;
+                }
+            };
 
-            // if not found, search through parent if available
-            if let Some(parent) = &env.parent {
-                env = parent.clone();
-            } else {
-                break;
-            }
+            return match value {
+                // evaluate promises and write result back into environment
+                c @ Obj::Promise(..) => {
+                    let result = c.force(self)?;
+                    env.insert(name, result.clone());
+                    Ok(result)
+                }
+                _ => Ok(value),
+            };
         }
 
         if let Ok(prim) = builtin(name.as_str()) {
