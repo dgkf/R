@@ -49,7 +49,7 @@ impl Environment {
         if let Some(value) = self.values.borrow().get(&name) {
             let result = value.clone();
             match result {
-                Obj::Closure(expr, env) => env.clone().eval(expr),
+                Obj::Promise(expr, env) => env.clone().eval(expr),
                 _ => Ok(result),
             }
 

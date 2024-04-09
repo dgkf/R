@@ -16,7 +16,7 @@ pub enum Obj {
 
     // Metaprogramming structures
     Expr(Expr),
-    Closure(Expr, Rc<Environment>),
+    Promise(Expr, Rc<Environment>),
     Function(ExprList, Expr, Rc<Environment>),
     Environment(Rc<Environment>),
 }
@@ -35,7 +35,7 @@ impl PartialEq for Obj {
                     .all(|((lk, lv), (rk, rv))| lk == rk && lv == rv)
             }
             (Obj::Expr(l), Obj::Expr(r)) => l == r,
-            (Obj::Closure(lc, lenv), Obj::Closure(rc, renv)) => lc == rc && lenv == renv,
+            (Obj::Promise(lc, lenv), Obj::Promise(rc, renv)) => lc == rc && lenv == renv,
             (Obj::Function(largs, lbody, lenv), Obj::Function(rargs, rbody, renv)) => {
                 largs == rargs
                     && lbody == rbody

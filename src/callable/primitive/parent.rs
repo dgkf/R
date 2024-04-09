@@ -19,7 +19,7 @@ impl Callable for PrimitiveParent {
 
         // default when `x` is missing or not found
         let x = vals.try_get_named("x");
-        if let Ok(Obj::Closure(Expr::Missing, _)) | Err(_) = x {
+        if let Ok(Obj::Promise(Expr::Missing, _)) | Err(_) = x {
             return Ok(stack
                 .env()
                 .parent
