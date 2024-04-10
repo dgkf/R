@@ -18,10 +18,10 @@ impl Callable for PrimitiveNames {
         use Obj::*;
         match x {
             Null => Ok(Null),
-            Promise(_, _) => Ok(Null),
-            Vector(_) => Ok(Null), // named vectors currently not supported...
-            Expr(_) => Ok(Null),   // handle arg lists?
-            Function(_, _, _) => Ok(Null), // return formals?
+            Promise(..) => Ok(Null),
+            Vector(..) => Ok(Null), // named vectors currently not supported...
+            Expr(..) => Ok(Null),   // handle arg lists?
+            Function(..) => Ok(Null), // return formals?
             List(x) => {
                 Ok(x.values
                     .borrow()

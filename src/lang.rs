@@ -64,15 +64,12 @@ impl Obj {
 
     pub fn force(self, stack: &mut CallStack) -> EvalResult {
         match self {
-            // TODO(feat):
-            // this is quosure behavior, but do we also want closures that
-            // don't evaluate in a new frame, but rather just in originating
-            // environment?
-            Obj::Promise(expr, env) => {
+            Obj::Promise(None, expr, env) => {
                 stack.add_frame(expr.clone(), env.clone());
                 let result = stack.eval(expr);
                 stack.pop_frame_and_return(result)
             }
+            Obj::Promise(Some(value), ..) => Ok(*value),
             _ => Ok(self),
         }
     }
@@ -120,9 +117,9 @@ impl Obj {
                     Obj::Expr(other.clone()),
                 )]))),
             },
-            Obj::Promise(_, _) => internal_err!(),
-            Obj::Function(_, _, _) => internal_err!(),
-            Obj::Environment(_) => internal_err!(),
+            Obj::Promise(..) => internal_err!(),
+            Obj::Function(..) => internal_err!(),
+            Obj::Environment(..) => internal_err!(),
         }
     }
 
@@ -193,11 +190,11 @@ impl Obj {
         match self {
             Obj::Vector(v) => v.get(index).map(Obj::Vector),
             Obj::Null => None,
-            Obj::List(_) => None,
-            Obj::Expr(_) => None,
-            Obj::Promise(_, _) => None,
-            Obj::Function(_, _, _) => None,
-            Obj::Environment(_) => None,
+            Obj::List(..) => None,
+            Obj::Expr(..) => None,
+            Obj::Promise(..) => None,
+            Obj::Function(..) => None,
+            Obj::Environment(..) => None,
         }
     }
 
@@ -245,7 +242,7 @@ impl Obj {
 
     pub fn environment(&self) -> Option<Rc<Environment>> {
         match self {
-            Obj::Promise(_, e) | Obj::Function(_, _, e) | Obj::Environment(e) => Some(e.clone()),
+            Obj::Promise(.., e) | Obj::Function(.., e) | Obj::Environment(e) => Some(e.clone()),
             _ => None,
         }
     }
@@ -253,7 +250,7 @@ impl Obj {
     pub fn try_get_named(&mut self, name: &str) -> EvalResult {
         use Error::{ArgumentMissing, VariableNotFound};
         match self.get_named(name) {
-            Some(Obj::Promise(Expr::Missing, _)) => Err(ArgumentMissing(name.into()).into()),
+            Some(Obj::Promise(_, Expr::Missing, _)) => Err(ArgumentMissing(name.into()).into()),
             Some(x) => Ok(x),
             None => Err(VariableNotFound(name.into()).into()),
         }
@@ -335,7 +332,8 @@ impl Display for Obj {
                 write!(f, "function({}) {}\n{}", formals, body, parent_env)
             }
             Obj::List(vals) => display_list(vals, f, None),
-            Obj::Promise(expr, env) => write!(f, "{expr} @ {env}"),
+            Obj::Promise(None, expr, env) => write!(f, "{expr} @ {env}"),
+            Obj::Promise(Some(obj), ..) => write!(f, "{obj}"),
             Obj::Expr(expr) => write!(f, "{}", expr),
         }
     }
@@ -676,6 +674,14 @@ impl From<Session> for CallStack {
 }
 
 impl Context for CallStack {
+    #[inline]
+    fn eval_binary(&mut self, exprs: (Expr, Expr)) -> Result<(Obj, Obj), Signal> {
+        Ok((
+            self.eval_and_finalize(exprs.0)?.force(self)?,
+            self.eval_and_finalize(exprs.1)?.force(self)?,
+        ))
+    }
+
     fn assign_lazy(&mut self, to: Expr, from: Expr) -> EvalResult {
         const LIST: &str = "list";
         let err = Err(Signal::Error(Error::IncorrectContext("<-".to_string())));
@@ -856,10 +862,11 @@ impl Context for CallStack {
             };
 
             return match value {
-                // evaluate promises and write result back into environment
-                c @ Obj::Promise(..) => {
-                    let result = c.force(self)?;
-                    env.insert(name, result.clone());
+                // evaluate promises
+                Obj::Promise(None, expr, p_env) => {
+                    let result = Obj::Promise(None, expr.clone(), p_env.clone()).force(self)?;
+                    let value = Some(Box::new(result.clone()));
+                    env.insert(name, Obj::Promise(value, expr, p_env.clone()));
                     Ok(result)
                 }
                 _ => Ok(value),

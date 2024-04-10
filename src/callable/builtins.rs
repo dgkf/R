@@ -52,6 +52,7 @@ lazy_static! {
             ("quote", Box::new(PrimitiveQuote) as Box<dyn Builtin>),
             ("rnorm", Box::new(PrimitiveRnorm) as Box<dyn Builtin>),
             ("runif", Box::new(PrimitiveRunif) as Box<dyn Builtin>),
+            ("substitute", Box::new(PrimitiveSubstitute) as Box<dyn Builtin>),
             ("sum", Box::new(PrimitiveSum) as Box<dyn Builtin>),
             // builtins end
         ])

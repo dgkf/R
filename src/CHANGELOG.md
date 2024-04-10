@@ -7,11 +7,16 @@
 * Digits can now be separated by an underscore to improve readability.
 
 * Added assertions on function parameters (#74)
+
 * Assignment is now also possible using the `=` operator (#144 @sebffischer)
+
+* Added new primtiive function, `substitute()` (#125 @dgkf)
 
 ## Internals
 
 * Rename `Numeric` variant of `Vector` enum to `Double`
+
+* Promises now retain their expression even after being evaluated (#125 @dgkf)
 
 ## Notable Bugs Addressed
 
