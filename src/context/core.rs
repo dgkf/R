@@ -75,12 +75,15 @@ pub trait Context: std::fmt::Debug + std::fmt::Display {
                         }
                     }
                     // Avoid creating a new closure just to point to another, just reuse it
-                    (k, Expr::Symbol(s)) => match self.env().get(s.clone()) {
-                        Ok(c @ Obj::Promise(..)) => Ok(vec![(k, c)].into_iter()),
-                        _ => Ok(vec![(k, Obj::Promise(Expr::Symbol(s), self.env()))].into_iter()),
-                    },
+                    (k, Expr::Symbol(s)) => {
+                        match self.env().get(s.clone()) {
+                            Ok(c @ Obj::Promise(..)) => Ok(vec![(k, c)].into_iter()),
+                            _ => Ok(vec![(k, Obj::Promise(None, Expr::Symbol(s), self.env()))]
+                                .into_iter()),
+                        }
+                    }
                     (k, c @ Expr::Call(..)) => {
-                        let elem = vec![(k, Obj::Promise(c, self.env()))];
+                        let elem = vec![(k, Obj::Promise(None, c, self.env()))];
                         Ok(elem.into_iter())
                     }
                     (k, v) => {

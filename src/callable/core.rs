@@ -93,7 +93,7 @@ pub trait Callable {
         for (param, default) in formals.into_iter() {
             matched_args.values.borrow_mut().push((
                 param,
-                Obj::Promise(default, stack.last_frame().env().clone()),
+                Obj::Promise(None, default, stack.last_frame().env().clone()),
             ));
         }
 

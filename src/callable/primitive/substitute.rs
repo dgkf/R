@@ -1,11 +1,8 @@
-use std::rc::Rc;
-
 use lazy_static::lazy_static;
 use r_derive::*;
 
 use crate::callable::core::*;
 use crate::context::Context;
-use crate::err;
 use crate::internal_err;
 use crate::lang::*;
 use crate::object::*;
@@ -40,7 +37,7 @@ impl Callable for PrimitiveSubstitute {
             return internal_err!();
         };
 
-        let Obj::Promise(expr, _) = args.try_get_named("expr")? else {
+        let Obj::Promise(_, expr, _) = args.try_get_named("expr")? else {
             return internal_err!();
         };
 
@@ -56,8 +53,9 @@ impl Callable for PrimitiveSubstitute {
                 Symbol(s) => {
                     // promises are replaced
                     match env.values.borrow().get(&s) {
-                        Some(Obj::Promise(expr, ..)) => expr.clone(),
-                        None => todo!(),
+                        Some(Obj::Promise(_, expr, _)) => expr.clone(),
+                        Some(Obj::Expr(e)) => e.clone(),
+                        _ => Symbol(s),
                     }
                 }
                 List(exprs) => List(recurse(exprs, env)),
@@ -75,5 +73,50 @@ impl Callable for PrimitiveSubstitute {
             }
             other => stack.eval(other),
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use crate::r;
+
+    #[test]
+    fn function_param_promises() {
+        assert_eq!(
+            r! { f <- function(x) { x; substitute(x) }; f(1 + 2) },
+            r! { quote(1 + 2) }
+        );
+    }
+
+    #[test]
+    fn quoted_expressions() {
+        assert_eq!(
+            r! { x <- quote(1 + 2); substitute(0 + x) },
+            r! { quote(0 + (1 + 2)) } // note non-default associativity
+        );
+    }
+
+    #[test]
+    fn default_local_substitute() {
+        assert_eq!(
+            r! { f <- function(x) { g <- function(y) substitute(x); g() }; f(1 + 2) },
+            r! { quote(x) }
+        );
+    }
+
+    #[test]
+    fn envir_substitute() {
+        assert_eq!(
+            r! {{"
+                f <- function(x) {
+                  g <- function(x) {
+                    substitute(x, envir = parent(environment()))
+                  }
+                  g(1 + 2)
+                }
+                f(3 + 4)
+            "}},
+            r! { quote(3 + 4) }
+        );
     }
 }

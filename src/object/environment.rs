@@ -49,7 +49,8 @@ impl Environment {
         if let Some(value) = self.values.borrow().get(&name) {
             let result = value.clone();
             match result {
-                Obj::Promise(expr, env) => env.clone().eval(expr),
+                Obj::Promise(None, expr, env) => env.clone().eval(expr),
+                Obj::Promise(Some(result), ..) => Ok(*result),
                 _ => Ok(result),
             }
 
