@@ -1,80 +1,65 @@
-use std::cell::RefCell;
-use std::fmt::Debug;
+use std::cell::{Ref, RefCell};
+use std::fmt::{Debug, Display};
 use std::rc::Rc;
 
 use super::coercion::{AtomicMode, CoercibleInto, CommonCmp, CommonNum, MinimallyNumeric};
 use super::iterators::{map_common_numeric, zip_recycle};
+use super::reptype::RepType;
 use super::subset::Subset;
-use super::subsets::Subsets;
 use super::types::*;
 use super::{OptionNA, Pow, VecPartialCmp};
 
-/// Vector
+/// Variable Representation
+///
+/// This is a variable representation of a vector.
+/// It is variable, because the internal vector representation might be transformed when necessary, thereby exchanging
+/// one internal representation for another, usually a computational graph into a materialized
+/// vector.
 #[derive(Debug, Clone, PartialEq)]
-pub enum Rep<T> {
-    // Vector::Subset encompasses a "raw" vector (no subsetting)
-    Subset(Rc<RefCell<Vec<T>>>, Subsets),
-    // Iterator includes things like ranges 1:Inf, and lazily computed values
-    // Iter(Box<dyn Iterator<Item = &T>>)
-}
+pub struct VarRep<T>(RefCell<RepType<T>>);
 
-impl<T: AtomicMode + Clone + Default> Default for Rep<T> {
-    fn default() -> Self {
-        Self::new()
+impl<T> VarRep<T>
+where
+    T: AtomicMode + Clone + Default,
+{
+    // the underlying Rep<T> should not be exposed through the public API
+    fn borrow(&self) -> Ref<RepType<T>> {
+        self.0.borrow()
     }
-}
+    // this is the central
+    fn materialize_inplace(&self) -> &Self {
+        // FIXME: Rewrite this to avoid copying unnecessarily
+        let new_repr = { self.borrow().materialize() };
+        self.0.replace(new_repr);
 
-impl<T: AtomicMode + Clone + Default> Rep<T> {
-    /// Create an empty vector
-    ///
-    /// The primary use case for this function is to support testing, and there
-    /// are few expected use cases outside. It is used for creating a vector
-    /// of an explicit atomic type, likely to be tested with
-    /// `SameType::is_same_type_as`.
-    ///
-    /// ```
-    /// use r::utils::*;
-    /// use r::object::Vector;
-    /// use r::object::OptionNA;
-    ///
-    /// let result = Vector::from(vec![1, 2, 3]);
-    /// let expect = Vector::from(Vec::<OptionNA<i32>>::new());
-    ///
-    /// assert!(result.is_same_type_as(&expect))
-    /// ```
-    ///
+        self
+    }
+
+    // FIXME: Not public
+    pub fn materialize(&self) -> Self {
+        self.borrow().materialize().into()
+    }
+
     pub fn new() -> Self {
-        Rep::Subset(Rc::new(RefCell::new(Vec::new())), Subsets(Vec::new()))
+        RepType::new().into()
     }
 
-    /// Access the internal vector
+    // FIXME: This should be refactored
     pub fn inner(&self) -> Rc<RefCell<Vec<T>>> {
-        match self.materialize() {
-            Rep::Subset(v, _) => v.clone(),
-        }
-    }
-
-    /// Subsetting a Vector
-    ///
-    /// Introduce a new subset into the aggregate list of subset indices.
-    ///
-    pub fn subset(&self, subset: Subset) -> Self {
-        match self {
-            Rep::Subset(v, Subsets(subsets)) => {
-                let mut subsets = subsets.clone();
-                subsets.push(subset);
-                Rep::Subset(v.clone(), Subsets(subsets))
-            }
-        }
+        // does this make sense here?
+        // sef
+        // FIXME: Does this make sense here?
+        self.borrow().inner()
     }
 
     pub fn len(&self) -> usize {
-        match self {
-            Rep::Subset(v, Subsets(s)) => match s.as_slice() {
-                [] => v.clone().borrow().len(),
-                [.., last] => std::cmp::min(v.clone().borrow().len(), last.len()),
-            },
-        }
+        // FIXME: Only materialize when necessary
+        self.materialize_inplace();
+        self.borrow().len()
+    }
+
+    pub fn subset(&self, subset: Subset) -> Self {
+        (*self.borrow()).subset(subset).into()
     }
 
     #[must_use]
@@ -82,155 +67,39 @@ impl<T: AtomicMode + Clone + Default> Rep<T> {
         self.len() == 0
     }
 
-    /// Get a single element from a vector
-    ///
-    /// Access a single element without materializing a new vector
-    ///
-    pub fn get(&self, index: usize) -> Option<Rep<T>>
-    where
-        T: Clone,
-    {
-        match self {
-            Rep::Subset(v, subsets) => {
-                let vc = v.clone();
-                let vb = vc.borrow();
-                let index = subsets.get_index_at(index)?;
-                let elem = vb.get(index)?;
-                Some(Rep::Subset(
-                    Rc::new(RefCell::new(vec![elem.clone()])),
-                    Subsets::new(),
-                ))
-            }
+    pub fn get(&self, index: usize) -> Option<Self> {
+        let x = self.borrow().get(index);
+        match x {
+            Some(x) => Some(x.into()),
+            None => None,
         }
     }
 
-    /// Assignment to Subset Indices
-    ///
-    /// Assignment to a vector from another. The aggregate subsetted indices
-    /// are iterated over while performing the assignment.
-    ///
-    pub fn assign(&mut self, value: Self) -> Self
-    where
-        T: Clone + Default,
-    {
-        match (self, value) {
-            (Rep::Subset(lv, ls), Rep::Subset(rv, rs)) => {
-                let lvc = lv.clone();
-                let mut lvb = lvc.borrow_mut();
-                let rvc = rv.clone();
-                let rvb = rvc.borrow();
-
-                let lv_len = lvb.len();
-                let l_indices = ls.clone().into_iter().take_while(|(i, _)| i < &lv_len);
-                let r_indices = rs.clone().into_iter().take_while(|(i, _)| i < &lv_len);
-
-                for ((_, li), (_, ri)) in l_indices.zip(r_indices) {
-                    match (li, ri) {
-                        (Some(li), None) => lvb[li] = T::default(),
-                        (Some(li), Some(ri)) => lvb[li] = rvb[ri % rvb.len()].clone(),
-                        _ => (),
-                    }
-                }
-
-                Rep::Subset(lvc.clone(), ls.clone())
-            }
-        }
+    pub fn assign(&mut self, value: Self) -> Self {
+        self.0.borrow_mut().assign(value.0.into_inner()).into()
     }
-
-    /// Materialize a Vector
-    ///
-    /// Apply subsets and clone values into a new vector.
-    ///
-    pub fn materialize(&self) -> Self
-    where
-        T: Clone,
-    {
-        match self {
-            Rep::Subset(v, subsets) => {
-                let vc = v.clone();
-                let vb = vc.borrow();
-                let mut res: Vec<T> = vec![];
-                let vb_len = vb.len();
-
-                let iter = subsets.clone().into_iter().take_while(|(i, _)| i < &vb_len);
-                for (_, i) in iter {
-                    match i {
-                        Some(i) => res.push(vb[i].clone()),
-                        None => res.push(T::default()),
-                    }
-                }
-
-                Rep::Subset(Rc::new(RefCell::new(res)), Subsets(vec![]))
-            }
-        }
-    }
-
-    /// Test the mode of the internal vector type
-    ///
-    /// Internally, this is defined by the [crate::object::coercion::AtomicMode]
-    /// implementation of the vector's element type.
-    ///
     pub fn is_double(&self) -> bool {
         T::is_double()
     }
-
-    /// See [Self::is_double] for more information
     pub fn is_logical(&self) -> bool {
         T::is_logical()
     }
-
-    /// See [Self::is_double] for more information
     pub fn is_integer(&self) -> bool {
         T::is_integer()
     }
-
-    /// See [Self::is_double] for more information
     pub fn is_character(&self) -> bool {
         T::is_character()
     }
 
-    /// Convert a Vector into a vector of a specific class of internal type
-    ///
-    /// The internal type only needs to satisfy
-    /// [crate::object::coercion::CoercibleInto] for the `Mode`, and for the `Mode`
-    /// type to implement [crate::object::coercion::AtomicMode]. Generally,
-    /// this is used more directly via [Self::as_logical], [Self::as_integer],
-    /// [Self::as_double] and [Self::as_character], which predefine the output
-    /// type of the mode.
-    ///
-    /// ```
-    /// use r::object::Vector;
-    /// use r::object::OptionNA;
-    ///
-    /// let x = Vector::from(vec![false, true, true, false]);
-    /// let n = x.as_double();
-    ///
-    /// assert_eq!(n, Vector::from(vec![
-    ///    OptionNA::Some(0_f64),
-    ///    OptionNA::Some(1_f64),
-    ///    OptionNA::Some(1_f64),
-    ///    OptionNA::Some(0_f64)
-    /// ]))
-    /// ```
-    ///
-    pub fn as_mode<Mode>(&self) -> Rep<Mode>
+    pub fn as_mode<Mode>(&self) -> VarRep<Mode>
     where
         T: CoercibleInto<Mode>,
     {
-        match self {
-            Rep::Subset(v, subsets) => {
-                let vc = v.clone();
-                let vb = vc.borrow();
-
-                let num_vec: Vec<Mode> = vb.iter().map(|i| (*i).clone().coerce_into()).collect();
-
-                Rep::Subset(Rc::new(RefCell::new(num_vec)), subsets.clone())
-            }
-        }
+        VarRep(RefCell::new(self.borrow().as_mode()))
     }
 
     /// See [Self::as_mode] for more information
-    pub fn as_logical(&self) -> Rep<Logical>
+    pub fn as_logical(&self) -> VarRep<Logical>
     where
         T: CoercibleInto<Logical>,
     {
@@ -238,7 +107,7 @@ impl<T: AtomicMode + Clone + Default> Rep<T> {
     }
 
     /// See [Self::as_mode] for more information
-    pub fn as_integer(&self) -> Rep<Integer>
+    pub fn as_integer(&self) -> VarRep<Integer>
     where
         T: CoercibleInto<Integer>,
     {
@@ -246,7 +115,7 @@ impl<T: AtomicMode + Clone + Default> Rep<T> {
     }
 
     /// See [Self::as_mode] for more information
-    pub fn as_double(&self) -> Rep<Double>
+    pub fn as_double(&self) -> VarRep<Double>
     where
         T: CoercibleInto<Double>,
     {
@@ -254,60 +123,49 @@ impl<T: AtomicMode + Clone + Default> Rep<T> {
     }
 
     /// See [Self::as_mode] for more information
-    pub fn as_character(&self) -> Rep<Character>
+    pub fn as_character(&self) -> VarRep<Character>
     where
         T: CoercibleInto<Character>,
     {
         self.as_mode::<Character>()
     }
 
-    /// Apply over the vector contents to produce a vector of [std::cmp::Ordering]
-    ///
-    /// This function is used primarily in support of the implementation of
-    /// vectorized comparison operators and likely does not need to be used
-    /// outside of that context.
-    ///
-    /// See [crate::object::vector::VecPartialCmp] for vectorized comparison
-    /// operator implementations.
-    ///
-    pub fn vectorized_partial_cmp<R, C>(self, other: Rep<R>) -> Vec<Option<std::cmp::Ordering>>
+    pub fn vectorized_partial_cmp<R, C>(self, other: VarRep<R>) -> Vec<Option<std::cmp::Ordering>>
     where
         T: AtomicMode + Default + Clone + CoercibleInto<C>,
         R: AtomicMode + Default + Clone + CoercibleInto<C>,
         (T, R): CommonCmp<Common = C>,
         C: PartialOrd,
     {
-        let lc = self.inner().clone();
-        let lb = lc.borrow();
-        let lhs = lb.iter();
-
-        let rc = other.inner().clone();
-        let rb = rc.borrow();
-        let rhs = rb.iter();
-
-        zip_recycle(lhs, rhs)
-            .map(|(l, r)| {
-                let lc = CoercibleInto::<C>::coerce_into(l.clone());
-                let rc = CoercibleInto::<C>::coerce_into(r.clone());
-                lc.partial_cmp(&rc)
-            })
-            .collect()
+        self.0
+            .into_inner()
+            .vectorized_partial_cmp(other.0.into_inner())
     }
 
-    // FIXME: private
-    pub fn get_inner(&self, index: usize) -> Option<T> {
-        match self {
-            Rep::Subset(v, subsets) => {
-                let vc = v.clone();
-                let vb = vc.borrow();
-                let index = subsets.get_index_at(index)?;
-                vb.get(index).cloned()
-            }
-        }
+    fn get_inner(&self, index: usize) -> Option<T> {
+        self.borrow().get_inner(index)
     }
 }
 
-impl<T> TryInto<bool> for Rep<OptionNA<T>>
+impl<T> Default for VarRep<T>
+where
+    T: AtomicMode + Clone + Default,
+{
+    fn default() -> Self {
+        VarRep(RefCell::new(RepType::default()))
+    }
+}
+
+impl<T> From<RepType<T>> for VarRep<T>
+where
+    T: AtomicMode + Clone + Default,
+{
+    fn from(rep: RepType<T>) -> Self {
+        VarRep(RefCell::new(rep))
+    }
+}
+
+impl<T> TryInto<bool> for VarRep<OptionNA<T>>
 where
     OptionNA<T>: AtomicMode + Clone + CoercibleInto<OptionNA<bool>>,
 {
@@ -323,102 +181,142 @@ where
     }
 }
 
-impl From<Vec<OptionNA<f64>>> for Rep<Double> {
+impl From<Vec<OptionNA<f64>>> for VarRep<Double> {
     fn from(value: Vec<OptionNA<f64>>) -> Self {
-        let value: Vec<_> = value.into_iter().map(|i| i.coerce_into()).collect();
-        Rep::Subset(Rc::new(RefCell::new(value)), Subsets(Vec::new()))
+        VarRep(RefCell::new(value.into()))
     }
 }
 
-impl From<Vec<f64>> for Rep<Double> {
+impl From<Vec<f64>> for VarRep<Double> {
     fn from(value: Vec<f64>) -> Self {
-        let value: Vec<_> = value.into_iter().map(|i| i.coerce_into()).collect();
-        Rep::Subset(Rc::new(RefCell::new(value)), Subsets(Vec::new()))
+        VarRep(RefCell::new(value.into()))
     }
 }
 
-impl From<Vec<OptionNA<i32>>> for Rep<Integer> {
+impl From<Vec<OptionNA<i32>>> for VarRep<Integer> {
     fn from(value: Vec<OptionNA<i32>>) -> Self {
-        let value: Vec<_> = value.into_iter().map(|i| i.coerce_into()).collect();
-        Rep::Subset(Rc::new(RefCell::new(value)), Subsets(Vec::new()))
+        VarRep(RefCell::new(value.into()))
     }
 }
 
-impl From<Vec<i32>> for Rep<Integer> {
+impl From<Vec<i32>> for VarRep<Integer> {
     fn from(value: Vec<i32>) -> Self {
-        let value: Vec<_> = value.into_iter().map(|i| i.coerce_into()).collect();
-        Rep::Subset(Rc::new(RefCell::new(value)), Subsets(Vec::new()))
+        VarRep(RefCell::new(value.into()))
     }
 }
 
-impl From<Vec<OptionNA<bool>>> for Rep<Logical> {
+impl From<Vec<OptionNA<bool>>> for VarRep<Logical> {
     fn from(value: Vec<OptionNA<bool>>) -> Self {
-        let value: Vec<_> = value.into_iter().map(|i| i.coerce_into()).collect();
-        Rep::Subset(Rc::new(RefCell::new(value)), Subsets(Vec::new()))
+        VarRep(RefCell::new(value.into()))
     }
 }
 
-impl From<Vec<bool>> for Rep<Logical> {
+impl From<Vec<bool>> for VarRep<Logical> {
     fn from(value: Vec<bool>) -> Self {
-        let value: Vec<_> = value.into_iter().map(|i| i.coerce_into()).collect();
-        Rep::Subset(Rc::new(RefCell::new(value)), Subsets(Vec::new()))
+        VarRep(RefCell::new(value.into()))
     }
 }
 
-impl From<Vec<OptionNA<String>>> for Rep<Character> {
+impl From<Vec<OptionNA<String>>> for VarRep<Character> {
     fn from(value: Vec<OptionNA<String>>) -> Self {
-        let value: Vec<_> = value.into_iter().map(|i| i.coerce_into()).collect();
-        Rep::Subset(Rc::new(RefCell::new(value)), Subsets(Vec::new()))
+        VarRep(RefCell::new(value.into()))
     }
 }
 
-impl From<Vec<String>> for Rep<Character> {
+impl From<Vec<String>> for VarRep<Character> {
     fn from(value: Vec<String>) -> Self {
-        let value: Vec<_> = value.into_iter().map(|i| i.coerce_into()).collect();
-        Rep::Subset(Rc::new(RefCell::new(value)), Subsets(Vec::new()))
+        VarRep(RefCell::new(value.into()))
     }
 }
 
-impl<F, T> From<(Vec<F>, Subsets)> for Rep<T>
+impl<T> Display for VarRep<T>
 where
-    Rep<T>: From<Vec<F>>,
+    T: AtomicMode + Debug + Default + Clone,
 {
-    fn from(value: (Vec<F>, Subsets)) -> Self {
-        match Self::from(value.0) {
-            Rep::Subset(v, _) => Rep::Subset(v, value.1),
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let n = self.len();
+        if n == 0 {
+            if self.is_double() {
+                return write!(f, "double(0)");
+            }
+            if self.is_integer() {
+                return write!(f, "integer(0)");
+            }
+            if self.is_logical() {
+                return write!(f, "logical(0)");
+            }
+            if self.is_character() {
+                return write!(f, "character(0)");
+            }
         }
+
+        let nlen = format!("{}", n).len();
+        // TODO: iteratively calculate when we hit max print so our
+        // max_len isn't inflated by a value that is omitted
+
+        let xc = self.inner().clone();
+        let xb = xc.borrow();
+
+        let x_strs = xb.iter().map(|xi| format!("{:?}", xi));
+        let max_len = x_strs
+            .clone()
+            .fold(0, |max_len, xi| std::cmp::max(max_len, xi.len()));
+
+        let mut col = 0;
+        let gutterlen = 2 + nlen + 1;
+
+        // hard coded max print & console width
+        let maxprint = 20 * ((80 - gutterlen) / max_len);
+
+        x_strs
+            .take(maxprint)
+            .enumerate()
+            .try_for_each(|(i, x_str)| {
+                if i == 0 {
+                    col = gutterlen + max_len;
+                    write!(f, "{:>3$}[{}] {:>4$}", "", i + 1, x_str, nlen - 1, max_len)
+                } else if col + 1 + max_len > 80 {
+                    col = gutterlen + max_len;
+                    let i_str = format!("{}", i + 1);
+                    let gutter = nlen - i_str.len();
+                    write!(f, "\n{:>3$}[{}] {:>4$}", "", i_str, x_str, gutter, max_len)
+                } else {
+                    col += 1 + max_len;
+                    write!(f, " {:>1$}", x_str, max_len)
+                }
+            })?;
+
+        if n > maxprint {
+            write!(f, "\n[ omitting {} entries ]", n - maxprint)?;
+        }
+
+        Ok(())
     }
 }
 
-impl<L, LNum, O> std::ops::Neg for Rep<L>
+impl<L, LNum, O> std::ops::Neg for VarRep<L>
 where
     L: AtomicMode + Default + Clone + MinimallyNumeric<As = LNum> + CoercibleInto<LNum>,
     LNum: std::ops::Neg<Output = O>,
-    Rep<O>: From<Vec<O>>,
+    RepType<O>: From<Vec<O>>,
 {
-    type Output = Rep<O>;
+    type Output = VarRep<O>;
     fn neg(self) -> Self::Output {
-        Rep::from(
-            self.inner()
-                .clone()
-                .borrow()
-                .iter()
-                .map(|l| CoercibleInto::<LNum>::coerce_into(l.clone()).neg())
-                .collect::<Vec<O>>(),
-        )
+        let result = -(self.0.into_inner());
+        VarRep(RefCell::new(result))
     }
 }
 
-impl<L, R, C, O, LNum, RNum> std::ops::Add<Rep<R>> for Rep<L>
+impl<L, R, C, O, LNum, RNum> std::ops::Add<VarRep<R>> for VarRep<L>
 where
     L: AtomicMode + Default + Clone + MinimallyNumeric<As = LNum> + CoercibleInto<LNum>,
     R: AtomicMode + Default + Clone + MinimallyNumeric<As = RNum> + CoercibleInto<RNum>,
     (LNum, RNum): CommonNum<Common = C>,
     C: Clone + std::ops::Add<Output = O>,
-    Rep<C>: From<Vec<O>>,
+    RepType<C>: From<Vec<O>>,
 {
-    type Output = Rep<C>;
-    fn add(self, rhs: Rep<R>) -> Self::Output {
+    type Output = VarRep<C>;
+    fn add(self, rhs: VarRep<R>) -> Self::Output {
         let lc = self.inner().clone();
         let lb = lc.borrow();
         let lhs = lb.iter();
@@ -427,203 +325,131 @@ where
         let rb = rc.borrow();
         let rhs = rb.iter();
 
-        Rep::from(
+        let result = RepType::from(
             map_common_numeric(zip_recycle(lhs, rhs))
                 .map(|(l, r)| l + r)
                 .collect::<Vec<O>>(),
-        )
+        );
+
+        VarRep(RefCell::new(result))
     }
 }
 
-impl<L, R, C, O, LNum, RNum> std::ops::Sub<Rep<R>> for Rep<L>
+impl<L, R, C, O, LNum, RNum> std::ops::Sub<VarRep<R>> for VarRep<L>
 where
     L: AtomicMode + Default + Clone + MinimallyNumeric<As = LNum> + CoercibleInto<LNum>,
     R: AtomicMode + Default + Clone + MinimallyNumeric<As = RNum> + CoercibleInto<RNum>,
     (LNum, RNum): CommonNum<Common = C>,
     C: std::ops::Sub<Output = O>,
-    Rep<C>: From<Vec<O>>,
+    RepType<C>: From<Vec<O>>,
 {
-    type Output = Rep<C>;
-    fn sub(self, rhs: Rep<R>) -> Self::Output {
-        let lc = self.inner().clone();
-        let lb = lc.borrow();
-        let lhs = lb.iter();
-
-        let rc = rhs.inner().clone();
-        let rb = rc.borrow();
-        let rhs = rb.iter();
-
-        Rep::from(
-            map_common_numeric(zip_recycle(lhs, rhs))
-                .map(|(l, r)| l - r)
-                .collect::<Vec<O>>(),
-        )
+    type Output = VarRep<C>;
+    fn sub(self, rhs: VarRep<R>) -> Self::Output {
+        let result = (self.0.into_inner()) - (rhs.0.into_inner()).into();
+        VarRep(RefCell::new(result))
     }
 }
 
-impl<L, R, C, O, LNum, RNum> std::ops::Mul<Rep<R>> for Rep<L>
+impl<L, R, C, O, LNum, RNum> std::ops::Mul<VarRep<R>> for VarRep<L>
 where
     L: AtomicMode + Default + Clone + MinimallyNumeric<As = LNum> + CoercibleInto<LNum>,
     R: AtomicMode + Default + Clone + MinimallyNumeric<As = RNum> + CoercibleInto<RNum>,
     (LNum, RNum): CommonNum<Common = C>,
     C: std::ops::Mul<Output = O>,
-    Rep<C>: From<Vec<O>>,
+    RepType<C>: From<Vec<O>>,
 {
-    type Output = Rep<C>;
-    fn mul(self, rhs: Rep<R>) -> Self::Output {
-        let lc = self.inner().clone();
-        let lb = lc.borrow();
-        let lhs = lb.iter();
+    type Output = VarRep<C>;
+    fn mul(self, rhs: VarRep<R>) -> Self::Output {
+        use std::ops::Mul;
+        let result = Mul::mul(self.0.into_inner(), rhs.0.into_inner());
 
-        let rc = rhs.inner().clone();
-        let rb = rc.borrow();
-        let rhs = rb.iter();
-
-        Rep::from(
-            map_common_numeric(zip_recycle(lhs, rhs))
-                .map(|(l, r)| l * r)
-                .collect::<Vec<O>>(),
-        )
+        VarRep(RefCell::new(result))
     }
 }
 
-impl<L, R, C, O, LNum, RNum> std::ops::Div<Rep<R>> for Rep<L>
+impl<L, R, C, O, LNum, RNum> std::ops::Div<VarRep<R>> for VarRep<L>
 where
     L: AtomicMode + Default + Clone + MinimallyNumeric<As = LNum> + CoercibleInto<LNum>,
     R: AtomicMode + Default + Clone + MinimallyNumeric<As = RNum> + CoercibleInto<RNum>,
     (LNum, RNum): CommonNum<Common = C>,
     C: std::ops::Div<Output = O>,
-    Rep<C>: From<Vec<O>>,
+    RepType<C>: From<Vec<O>>,
 {
-    type Output = Rep<C>;
-    fn div(self, rhs: Rep<R>) -> Self::Output {
-        let lc = self.inner().clone();
-        let lb = lc.borrow();
-        let lhs = lb.iter();
-
-        let rc = rhs.inner().clone();
-        let rb = rc.borrow();
-        let rhs = rb.iter();
-
-        Rep::from(
-            map_common_numeric(zip_recycle(lhs, rhs))
-                .map(|(l, r)| l / r)
-                .collect::<Vec<O>>(),
-        )
+    type Output = VarRep<C>;
+    fn div(self, rhs: VarRep<R>) -> Self::Output {
+        let result = (self.0.into_inner()) / (rhs.0.into_inner());
+        VarRep(RefCell::new(result))
     }
 }
 
-impl<L, R, C, O, LNum, RNum> std::ops::Rem<Rep<R>> for Rep<L>
+impl<L, R, C, O, LNum, RNum> std::ops::Rem<VarRep<R>> for VarRep<L>
 where
     L: AtomicMode + Default + Clone + MinimallyNumeric<As = LNum> + CoercibleInto<LNum>,
     R: AtomicMode + Default + Clone + MinimallyNumeric<As = RNum> + CoercibleInto<RNum>,
     (LNum, RNum): CommonNum<Common = C>,
     C: std::ops::Rem<Output = O>,
-    Rep<C>: From<Vec<O>>,
+    RepType<C>: From<Vec<O>>,
 {
-    type Output = Rep<C>;
-    fn rem(self, rhs: Rep<R>) -> Self::Output {
-        let lc = self.inner().clone();
-        let lb = lc.borrow();
-        let lhs = lb.iter();
-
-        let rc = rhs.inner().clone();
-        let rb = rc.borrow();
-        let rhs = rb.iter();
-
-        Rep::from(
-            map_common_numeric(zip_recycle(lhs.into_iter(), rhs.into_iter()))
-                .map(|(l, r)| l.rem(r))
-                .collect::<Vec<O>>(),
-        )
+    type Output = VarRep<C>;
+    fn rem(self, rhs: VarRep<R>) -> Self::Output {
+        pub use std::ops::Rem;
+        let result = Rem::rem(self.0.into_inner(), rhs.0.into_inner());
+        VarRep(RefCell::new(result))
     }
 }
 
-impl<L, R, O, LNum, RNum> Pow<Rep<R>> for Rep<L>
+impl<L, R, O, LNum, RNum> Pow<VarRep<R>> for VarRep<L>
 where
     L: AtomicMode + Default + Clone + MinimallyNumeric<As = LNum> + CoercibleInto<LNum>,
     R: AtomicMode + Default + Clone + MinimallyNumeric<As = RNum> + CoercibleInto<RNum>,
     LNum: Pow<RNum, Output = O>,
-    Rep<O>: From<Vec<O>>,
+    RepType<O>: From<Vec<O>>,
 {
-    type Output = Rep<O>;
-    fn power(self, rhs: Rep<R>) -> Self::Output {
-        let lc = self.inner().clone();
-        let lb = lc.borrow();
-        let lhs = lb.iter();
-
-        let rc = rhs.inner().clone();
-        let rb = rc.borrow();
-        let rhs = rb.iter();
-
-        Rep::from(
-            zip_recycle(lhs, rhs)
-                .map(|(l, r)| l.clone().coerce_into().power(r.clone().coerce_into()))
-                .collect::<Vec<O>>(),
-        )
+    type Output = VarRep<O>;
+    fn power(self, rhs: VarRep<R>) -> Self::Output {
+        let result = Pow::power(self.0.into_inner(), rhs.0.into_inner());
+        VarRep(RefCell::new(result))
     }
 }
 
-impl<L, R, O> std::ops::BitOr<Rep<R>> for Rep<L>
+impl<L, R, O> std::ops::BitOr<VarRep<R>> for VarRep<L>
 where
     L: AtomicMode + Default + Clone + CoercibleInto<Logical>,
     R: AtomicMode + Default + Clone + CoercibleInto<Logical>,
     Logical: std::ops::BitOr<Logical, Output = O>,
-    Rep<O>: From<Vec<O>>,
+    RepType<O>: From<Vec<O>>,
 {
-    type Output = Rep<O>;
-    fn bitor(self, rhs: Rep<R>) -> Self::Output {
-        let lc = self.inner().clone();
-        let lb = lc.borrow();
-        let lhs = lb.iter();
-
-        let rc = rhs.inner().clone();
-        let rb = rc.borrow();
-        let rhs = rb.iter();
-
-        Rep::from(
-            zip_recycle(lhs, rhs)
-                .map(|(l, r)| l.clone().coerce_into().bitor(r.clone().coerce_into()))
-                .collect::<Vec<O>>(),
-        )
+    type Output = VarRep<O>;
+    fn bitor(self, rhs: VarRep<R>) -> Self::Output {
+        let result: RepType<O> = (self.0.into_inner()) | (rhs.0.into_inner());
+        VarRep(RefCell::new(result))
     }
 }
 
-impl<L, R, O> std::ops::BitAnd<Rep<R>> for Rep<L>
+impl<L, R, O> std::ops::BitAnd<VarRep<R>> for VarRep<L>
 where
     L: AtomicMode + Default + Clone + CoercibleInto<Logical>,
     R: AtomicMode + Default + Clone + CoercibleInto<Logical>,
     Logical: std::ops::BitAnd<Logical, Output = O>,
-    Rep<O>: From<Vec<O>>,
+    RepType<O>: From<Vec<O>>,
 {
-    type Output = Rep<O>;
-    fn bitand(self, rhs: Rep<R>) -> Self::Output {
-        let lc = self.inner().clone();
-        let lb = lc.borrow();
-        let lhs = lb.iter();
-
-        let rc = rhs.inner().clone();
-        let rb = rc.borrow();
-        let rhs = rb.iter();
-
-        Rep::from(
-            zip_recycle(lhs, rhs)
-                .map(|(l, r)| l.clone().coerce_into().bitand(r.clone().coerce_into()))
-                .collect::<Vec<O>>(),
-        )
+    type Output = VarRep<O>;
+    fn bitand(self, rhs: VarRep<R>) -> Self::Output {
+        let result: RepType<O> = (self.0.into_inner()) & (rhs.0.into_inner());
+        VarRep(RefCell::new(result))
     }
 }
 
-impl<L, R, C> VecPartialCmp<Rep<R>> for Rep<L>
+impl<L, R, C> VecPartialCmp<VarRep<R>> for VarRep<L>
 where
     L: AtomicMode + Default + Clone + CoercibleInto<C>,
     R: AtomicMode + Default + Clone + CoercibleInto<C>,
     (L, R): CommonCmp<Common = C>,
     C: PartialOrd,
 {
-    type Output = Rep<Logical>;
+    type Output = VarRep<Logical>;
 
-    fn vec_gt(self, rhs: Rep<R>) -> Self::Output {
+    fn vec_gt(self, rhs: VarRep<R>) -> Self::Output {
         use std::cmp::Ordering::*;
         self.vectorized_partial_cmp(rhs)
             .into_iter()
@@ -636,7 +462,7 @@ where
             .into()
     }
 
-    fn vec_gte(self, rhs: Rep<R>) -> Self::Output {
+    fn vec_gte(self, rhs: VarRep<R>) -> Self::Output {
         use std::cmp::Ordering::*;
         self.vectorized_partial_cmp(rhs)
             .into_iter()
@@ -649,7 +475,7 @@ where
             .into()
     }
 
-    fn vec_lt(self, rhs: Rep<R>) -> Self::Output {
+    fn vec_lt(self, rhs: VarRep<R>) -> Self::Output {
         use std::cmp::Ordering::*;
         self.vectorized_partial_cmp(rhs)
             .into_iter()
@@ -662,7 +488,7 @@ where
             .into()
     }
 
-    fn vec_lte(self, rhs: Rep<R>) -> Self::Output {
+    fn vec_lte(self, rhs: VarRep<R>) -> Self::Output {
         use std::cmp::Ordering::*;
         self.vectorized_partial_cmp(rhs)
             .into_iter()
@@ -675,7 +501,7 @@ where
             .into()
     }
 
-    fn vec_eq(self, rhs: Rep<R>) -> Self::Output {
+    fn vec_eq(self, rhs: VarRep<R>) -> Self::Output {
         use std::cmp::Ordering::*;
         self.vectorized_partial_cmp(rhs)
             .into_iter()
@@ -688,7 +514,7 @@ where
             .into()
     }
 
-    fn vec_neq(self, rhs: Rep<R>) -> Self::Output {
+    fn vec_neq(self, rhs: VarRep<R>) -> Self::Output {
         use std::cmp::Ordering::*;
         self.vectorized_partial_cmp(rhs)
             .into_iter()
@@ -699,102 +525,5 @@ where
             })
             .collect::<Vec<Logical>>()
             .into()
-    }
-}
-
-#[cfg(test)]
-mod test {
-    use super::OptionNA::*;
-    use crate::object::rep::Rep;
-    use crate::object::{types::*, VecPartialCmp};
-    use crate::utils::SameType;
-
-    #[test]
-    fn vector_add() {
-        let x = Rep::from((1..=10).collect::<Vec<_>>());
-        let y = Rep::from(vec![2, 5, 6, 2, 3]);
-
-        let z = x + y;
-        assert_eq!(z, Rep::from(vec![3, 7, 9, 6, 8, 8, 12, 14, 11, 13]));
-
-        let expected_type = Rep::<Integer>::new();
-        assert!(z.is_same_type_as(&expected_type));
-        assert!(z.is_integer());
-    }
-
-    #[test]
-    fn vector_mul() {
-        let x = Rep::from((1..=10).collect::<Vec<_>>());
-        let y = Rep::from(vec![Some(2), NA, Some(6), NA, Some(3)]);
-
-        let z = x * y;
-        assert_eq!(
-            z,
-            Rep::from(vec![
-                Some(2),
-                NA,
-                Some(18),
-                NA,
-                Some(15),
-                Some(12),
-                NA,
-                Some(48),
-                NA,
-                Some(30)
-            ])
-        );
-
-        let expected_type = Rep::<Integer>::new();
-        assert!(z.is_same_type_as(&expected_type));
-        assert!(z.is_integer());
-    }
-
-    #[test]
-    fn vector_common_mul_f32_na() {
-        // expect that f32's do not get coerced into an OptionNA:: instead
-        // using std::f32::NAN as NA representation.
-
-        let x = Rep::from(vec![Some(0_f64), NA, Some(10_f64)]);
-        let y = Rep::from(vec![100, 10]);
-
-        let z = x * y;
-        // assert_eq!(z, Vector::from(vec![0_f32, std::f32::NAN, 1_000_f32]));
-        // comparing floats is error prone
-
-        let expected_type = Rep::<Double>::new();
-        assert!(z.is_same_type_as(&expected_type));
-        assert!(z.is_double());
-    }
-
-    #[test]
-    fn vector_and() {
-        // expect that f32's do not get coerced into an OptionNA:: instead
-        // using std::f32::NAN as NA representation.
-
-        let x = Rep::from(vec![Some(0_f64), NA, Some(10_f64)]);
-        let y = Rep::from(vec![100, 10]);
-
-        let z = x & y;
-        assert_eq!(z, Rep::from(vec![Some(false), NA, Some(true)]));
-
-        let expected_type = Rep::<Logical>::new();
-        assert!(z.is_same_type_as(&expected_type));
-        assert!(z.is_logical());
-    }
-
-    #[test]
-    fn vector_gt() {
-        // expect that f32's do not get coerced into an  instead
-        // using std::f32::NAN as NA representation.
-
-        let x = Rep::from(vec![Some(0_f64), NA, Some(10000_f64)]);
-        let y = Rep::from(vec![100, 10]);
-
-        let z = x.vec_gt(y);
-        assert_eq!(z, Rep::from(vec![Some(false), NA, Some(true)]));
-
-        let expected_type = Rep::<Logical>::new();
-        assert!(z.is_same_type_as(&expected_type));
-        assert!(z.is_logical());
     }
 }

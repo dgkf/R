@@ -6,10 +6,10 @@ use crate::lang::EvalResult;
 use crate::object::Obj;
 
 use super::coercion::CoercibleInto;
-use super::rep::Rep;
+use super::rep::VarRep;
+use super::reptype::RepType;
 use super::subset::Subset;
 use super::types::*;
-use super::vrep::VarRep;
 
 #[derive(Default, Clone, PartialEq, Eq)]
 pub enum OptionNA<T> {
@@ -226,26 +226,26 @@ impl TryInto<bool> for Vector {
     }
 }
 
-impl From<Rep<Double>> for Vector {
-    fn from(x: Rep<Double>) -> Self {
+impl From<RepType<Double>> for Vector {
+    fn from(x: RepType<Double>) -> Self {
         Vector::Double(x.into())
     }
 }
 
-impl From<Rep<Integer>> for Vector {
-    fn from(x: Rep<Integer>) -> Self {
+impl From<RepType<Integer>> for Vector {
+    fn from(x: RepType<Integer>) -> Self {
         Vector::Integer(x.into())
     }
 }
 
-impl From<Rep<Logical>> for Vector {
-    fn from(x: Rep<Logical>) -> Self {
+impl From<RepType<Logical>> for Vector {
+    fn from(x: RepType<Logical>) -> Self {
         Vector::Logical(x.into())
     }
 }
 
-impl From<Rep<Character>> for Vector {
-    fn from(x: Rep<Character>) -> Self {
+impl From<RepType<Character>> for Vector {
+    fn from(x: RepType<Character>) -> Self {
         Vector::Character(x.into())
     }
 }
