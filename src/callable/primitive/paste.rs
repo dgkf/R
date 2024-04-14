@@ -20,8 +20,8 @@ impl Callable for PrimitivePaste {
     fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
         let (args, ellipsis) = self.match_arg_exprs(args, stack)?;
 
-        let ellipsis = force_closures(ellipsis, stack)?;
-        let args = force_closures(args, stack)?;
+        let ellipsis = force_promises(ellipsis, stack)?;
+        let args = force_promises(args, stack)?;
 
         let mut sep = String::from(" ");
         let mut should_collapse = false;
