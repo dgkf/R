@@ -885,7 +885,7 @@ impl Context for CallStack {
     }
 
     // NOTE:
-    // eval_list_lazy and force_closures are often used together to greedily
+    // eval_list_lazy and force_promises are often used together to greedily
     // evaluated arguments. This pattern can be specialized in the case of a
     // CallStack to cut out the creation of intermediate closures. Need to
     // lift EvalResult over Context::eval_list_lazy's flat_map by implementing

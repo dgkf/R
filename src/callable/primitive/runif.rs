@@ -23,7 +23,7 @@ impl Callable for PrimitiveRunif {
         use Error::ArgumentInvalid;
 
         let (vals, _) = self.match_arg_exprs(args, stack)?;
-        let vals = force_closures(vals, stack)?;
+        let vals = force_promises(vals, stack)?;
         let mut vals = Obj::List(List::from(vals));
 
         let n: i32 = vals.try_get_named("n")?.try_into()?;
