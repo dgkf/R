@@ -1,6 +1,5 @@
 use std::cell::{Ref, RefCell};
 use std::fmt::{Debug, Display};
-use std::rc::Rc;
 
 use super::coercion::{AtomicMode, CoercibleInto, CommonCmp, CommonNum, MinimallyNumeric};
 use super::iterators::{map_common_numeric, zip_recycle};
@@ -8,6 +7,7 @@ use super::reptype::RepType;
 use super::subset::Subset;
 use super::types::*;
 use super::{OptionNA, Pow, VecPartialCmp};
+use crate::object::VecData;
 
 /// Variable Representation
 ///
@@ -45,7 +45,7 @@ where
     }
 
     // FIXME: This should be refactored
-    pub fn inner(&self) -> Rc<RefCell<Vec<T>>> {
+    pub fn inner(&self) -> VecData<T> {
         // does this make sense here?
         // sef
         // FIXME: Does this make sense here?
