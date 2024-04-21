@@ -16,9 +16,9 @@ use super::{OptionNA, Pow, VecPartialCmp};
 /// one internal representation for another, usually a computational graph into a materialized
 /// vector.
 #[derive(Debug, Clone, PartialEq)]
-pub struct VarRep<T>(RefCell<RepType<T>>);
+pub struct Rep<T>(RefCell<RepType<T>>);
 
-impl<T> VarRep<T>
+impl<T> Rep<T>
 where
     T: AtomicMode + Clone + Default,
 {
@@ -91,15 +91,15 @@ where
         T::is_character()
     }
 
-    pub fn as_mode<Mode>(&self) -> VarRep<Mode>
+    pub fn as_mode<Mode>(&self) -> Rep<Mode>
     where
         T: CoercibleInto<Mode>,
     {
-        VarRep(RefCell::new(self.borrow().as_mode()))
+        Rep(RefCell::new(self.borrow().as_mode()))
     }
 
     /// See [Self::as_mode] for more information
-    pub fn as_logical(&self) -> VarRep<Logical>
+    pub fn as_logical(&self) -> Rep<Logical>
     where
         T: CoercibleInto<Logical>,
     {
@@ -107,7 +107,7 @@ where
     }
 
     /// See [Self::as_mode] for more information
-    pub fn as_integer(&self) -> VarRep<Integer>
+    pub fn as_integer(&self) -> Rep<Integer>
     where
         T: CoercibleInto<Integer>,
     {
@@ -115,7 +115,7 @@ where
     }
 
     /// See [Self::as_mode] for more information
-    pub fn as_double(&self) -> VarRep<Double>
+    pub fn as_double(&self) -> Rep<Double>
     where
         T: CoercibleInto<Double>,
     {
@@ -123,14 +123,14 @@ where
     }
 
     /// See [Self::as_mode] for more information
-    pub fn as_character(&self) -> VarRep<Character>
+    pub fn as_character(&self) -> Rep<Character>
     where
         T: CoercibleInto<Character>,
     {
         self.as_mode::<Character>()
     }
 
-    pub fn vectorized_partial_cmp<R, C>(self, other: VarRep<R>) -> Vec<Option<std::cmp::Ordering>>
+    pub fn vectorized_partial_cmp<R, C>(self, other: Rep<R>) -> Vec<Option<std::cmp::Ordering>>
     where
         T: AtomicMode + Default + Clone + CoercibleInto<C>,
         R: AtomicMode + Default + Clone + CoercibleInto<C>,
@@ -147,25 +147,25 @@ where
     }
 }
 
-impl<T> Default for VarRep<T>
+impl<T> Default for Rep<T>
 where
     T: AtomicMode + Clone + Default,
 {
     fn default() -> Self {
-        VarRep(RefCell::new(RepType::default()))
+        Rep(RefCell::new(RepType::default()))
     }
 }
 
-impl<T> From<RepType<T>> for VarRep<T>
+impl<T> From<RepType<T>> for Rep<T>
 where
     T: AtomicMode + Clone + Default,
 {
     fn from(rep: RepType<T>) -> Self {
-        VarRep(RefCell::new(rep))
+        Rep(RefCell::new(rep))
     }
 }
 
-impl<T> TryInto<bool> for VarRep<OptionNA<T>>
+impl<T> TryInto<bool> for Rep<OptionNA<T>>
 where
     OptionNA<T>: AtomicMode + Clone + CoercibleInto<OptionNA<bool>>,
 {
@@ -181,55 +181,55 @@ where
     }
 }
 
-impl From<Vec<OptionNA<f64>>> for VarRep<Double> {
+impl From<Vec<OptionNA<f64>>> for Rep<Double> {
     fn from(value: Vec<OptionNA<f64>>) -> Self {
-        VarRep(RefCell::new(value.into()))
+        Rep(RefCell::new(value.into()))
     }
 }
 
-impl From<Vec<f64>> for VarRep<Double> {
+impl From<Vec<f64>> for Rep<Double> {
     fn from(value: Vec<f64>) -> Self {
-        VarRep(RefCell::new(value.into()))
+        Rep(RefCell::new(value.into()))
     }
 }
 
-impl From<Vec<OptionNA<i32>>> for VarRep<Integer> {
+impl From<Vec<OptionNA<i32>>> for Rep<Integer> {
     fn from(value: Vec<OptionNA<i32>>) -> Self {
-        VarRep(RefCell::new(value.into()))
+        Rep(RefCell::new(value.into()))
     }
 }
 
-impl From<Vec<i32>> for VarRep<Integer> {
+impl From<Vec<i32>> for Rep<Integer> {
     fn from(value: Vec<i32>) -> Self {
-        VarRep(RefCell::new(value.into()))
+        Rep(RefCell::new(value.into()))
     }
 }
 
-impl From<Vec<OptionNA<bool>>> for VarRep<Logical> {
+impl From<Vec<OptionNA<bool>>> for Rep<Logical> {
     fn from(value: Vec<OptionNA<bool>>) -> Self {
-        VarRep(RefCell::new(value.into()))
+        Rep(RefCell::new(value.into()))
     }
 }
 
-impl From<Vec<bool>> for VarRep<Logical> {
+impl From<Vec<bool>> for Rep<Logical> {
     fn from(value: Vec<bool>) -> Self {
-        VarRep(RefCell::new(value.into()))
+        Rep(RefCell::new(value.into()))
     }
 }
 
-impl From<Vec<OptionNA<String>>> for VarRep<Character> {
+impl From<Vec<OptionNA<String>>> for Rep<Character> {
     fn from(value: Vec<OptionNA<String>>) -> Self {
-        VarRep(RefCell::new(value.into()))
+        Rep(RefCell::new(value.into()))
     }
 }
 
-impl From<Vec<String>> for VarRep<Character> {
+impl From<Vec<String>> for Rep<Character> {
     fn from(value: Vec<String>) -> Self {
-        VarRep(RefCell::new(value.into()))
+        Rep(RefCell::new(value.into()))
     }
 }
 
-impl<T> Display for VarRep<T>
+impl<T> Display for Rep<T>
 where
     T: AtomicMode + Debug + Default + Clone,
 {
@@ -294,20 +294,20 @@ where
     }
 }
 
-impl<L, LNum, O> std::ops::Neg for VarRep<L>
+impl<L, LNum, O> std::ops::Neg for Rep<L>
 where
     L: AtomicMode + Default + Clone + MinimallyNumeric<As = LNum> + CoercibleInto<LNum>,
     LNum: std::ops::Neg<Output = O>,
     RepType<O>: From<Vec<O>>,
 {
-    type Output = VarRep<O>;
+    type Output = Rep<O>;
     fn neg(self) -> Self::Output {
         let result = -(self.0.into_inner());
-        VarRep(RefCell::new(result))
+        Rep(RefCell::new(result))
     }
 }
 
-impl<L, R, C, O, LNum, RNum> std::ops::Add<VarRep<R>> for VarRep<L>
+impl<L, R, C, O, LNum, RNum> std::ops::Add<Rep<R>> for Rep<L>
 where
     L: AtomicMode + Default + Clone + MinimallyNumeric<As = LNum> + CoercibleInto<LNum>,
     R: AtomicMode + Default + Clone + MinimallyNumeric<As = RNum> + CoercibleInto<RNum>,
@@ -315,8 +315,8 @@ where
     C: Clone + std::ops::Add<Output = O>,
     RepType<C>: From<Vec<O>>,
 {
-    type Output = VarRep<C>;
-    fn add(self, rhs: VarRep<R>) -> Self::Output {
+    type Output = Rep<C>;
+    fn add(self, rhs: Rep<R>) -> Self::Output {
         let lc = self.inner().clone();
         let lb = lc.borrow();
         let lhs = lb.iter();
@@ -331,11 +331,11 @@ where
                 .collect::<Vec<O>>(),
         );
 
-        VarRep(RefCell::new(result))
+        Rep(RefCell::new(result))
     }
 }
 
-impl<L, R, C, O, LNum, RNum> std::ops::Sub<VarRep<R>> for VarRep<L>
+impl<L, R, C, O, LNum, RNum> std::ops::Sub<Rep<R>> for Rep<L>
 where
     L: AtomicMode + Default + Clone + MinimallyNumeric<As = LNum> + CoercibleInto<LNum>,
     R: AtomicMode + Default + Clone + MinimallyNumeric<As = RNum> + CoercibleInto<RNum>,
@@ -343,14 +343,14 @@ where
     C: std::ops::Sub<Output = O>,
     RepType<C>: From<Vec<O>>,
 {
-    type Output = VarRep<C>;
-    fn sub(self, rhs: VarRep<R>) -> Self::Output {
+    type Output = Rep<C>;
+    fn sub(self, rhs: Rep<R>) -> Self::Output {
         let result = (self.0.into_inner()) - (rhs.0.into_inner()).into();
-        VarRep(RefCell::new(result))
+        Rep(RefCell::new(result))
     }
 }
 
-impl<L, R, C, O, LNum, RNum> std::ops::Mul<VarRep<R>> for VarRep<L>
+impl<L, R, C, O, LNum, RNum> std::ops::Mul<Rep<R>> for Rep<L>
 where
     L: AtomicMode + Default + Clone + MinimallyNumeric<As = LNum> + CoercibleInto<LNum>,
     R: AtomicMode + Default + Clone + MinimallyNumeric<As = RNum> + CoercibleInto<RNum>,
@@ -358,16 +358,16 @@ where
     C: std::ops::Mul<Output = O>,
     RepType<C>: From<Vec<O>>,
 {
-    type Output = VarRep<C>;
-    fn mul(self, rhs: VarRep<R>) -> Self::Output {
+    type Output = Rep<C>;
+    fn mul(self, rhs: Rep<R>) -> Self::Output {
         use std::ops::Mul;
         let result = Mul::mul(self.0.into_inner(), rhs.0.into_inner());
 
-        VarRep(RefCell::new(result))
+        Rep(RefCell::new(result))
     }
 }
 
-impl<L, R, C, O, LNum, RNum> std::ops::Div<VarRep<R>> for VarRep<L>
+impl<L, R, C, O, LNum, RNum> std::ops::Div<Rep<R>> for Rep<L>
 where
     L: AtomicMode + Default + Clone + MinimallyNumeric<As = LNum> + CoercibleInto<LNum>,
     R: AtomicMode + Default + Clone + MinimallyNumeric<As = RNum> + CoercibleInto<RNum>,
@@ -375,14 +375,14 @@ where
     C: std::ops::Div<Output = O>,
     RepType<C>: From<Vec<O>>,
 {
-    type Output = VarRep<C>;
-    fn div(self, rhs: VarRep<R>) -> Self::Output {
+    type Output = Rep<C>;
+    fn div(self, rhs: Rep<R>) -> Self::Output {
         let result = (self.0.into_inner()) / (rhs.0.into_inner());
-        VarRep(RefCell::new(result))
+        Rep(RefCell::new(result))
     }
 }
 
-impl<L, R, C, O, LNum, RNum> std::ops::Rem<VarRep<R>> for VarRep<L>
+impl<L, R, C, O, LNum, RNum> std::ops::Rem<Rep<R>> for Rep<L>
 where
     L: AtomicMode + Default + Clone + MinimallyNumeric<As = LNum> + CoercibleInto<LNum>,
     R: AtomicMode + Default + Clone + MinimallyNumeric<As = RNum> + CoercibleInto<RNum>,
@@ -390,66 +390,66 @@ where
     C: std::ops::Rem<Output = O>,
     RepType<C>: From<Vec<O>>,
 {
-    type Output = VarRep<C>;
-    fn rem(self, rhs: VarRep<R>) -> Self::Output {
+    type Output = Rep<C>;
+    fn rem(self, rhs: Rep<R>) -> Self::Output {
         pub use std::ops::Rem;
         let result = Rem::rem(self.0.into_inner(), rhs.0.into_inner());
-        VarRep(RefCell::new(result))
+        Rep(RefCell::new(result))
     }
 }
 
-impl<L, R, O, LNum, RNum> Pow<VarRep<R>> for VarRep<L>
+impl<L, R, O, LNum, RNum> Pow<Rep<R>> for Rep<L>
 where
     L: AtomicMode + Default + Clone + MinimallyNumeric<As = LNum> + CoercibleInto<LNum>,
     R: AtomicMode + Default + Clone + MinimallyNumeric<As = RNum> + CoercibleInto<RNum>,
     LNum: Pow<RNum, Output = O>,
     RepType<O>: From<Vec<O>>,
 {
-    type Output = VarRep<O>;
-    fn power(self, rhs: VarRep<R>) -> Self::Output {
+    type Output = Rep<O>;
+    fn power(self, rhs: Rep<R>) -> Self::Output {
         let result = Pow::power(self.0.into_inner(), rhs.0.into_inner());
-        VarRep(RefCell::new(result))
+        Rep(RefCell::new(result))
     }
 }
 
-impl<L, R, O> std::ops::BitOr<VarRep<R>> for VarRep<L>
+impl<L, R, O> std::ops::BitOr<Rep<R>> for Rep<L>
 where
     L: AtomicMode + Default + Clone + CoercibleInto<Logical>,
     R: AtomicMode + Default + Clone + CoercibleInto<Logical>,
     Logical: std::ops::BitOr<Logical, Output = O>,
     RepType<O>: From<Vec<O>>,
 {
-    type Output = VarRep<O>;
-    fn bitor(self, rhs: VarRep<R>) -> Self::Output {
+    type Output = Rep<O>;
+    fn bitor(self, rhs: Rep<R>) -> Self::Output {
         let result: RepType<O> = (self.0.into_inner()) | (rhs.0.into_inner());
-        VarRep(RefCell::new(result))
+        Rep(RefCell::new(result))
     }
 }
 
-impl<L, R, O> std::ops::BitAnd<VarRep<R>> for VarRep<L>
+impl<L, R, O> std::ops::BitAnd<Rep<R>> for Rep<L>
 where
     L: AtomicMode + Default + Clone + CoercibleInto<Logical>,
     R: AtomicMode + Default + Clone + CoercibleInto<Logical>,
     Logical: std::ops::BitAnd<Logical, Output = O>,
     RepType<O>: From<Vec<O>>,
 {
-    type Output = VarRep<O>;
-    fn bitand(self, rhs: VarRep<R>) -> Self::Output {
+    type Output = Rep<O>;
+    fn bitand(self, rhs: Rep<R>) -> Self::Output {
         let result: RepType<O> = (self.0.into_inner()) & (rhs.0.into_inner());
-        VarRep(RefCell::new(result))
+        Rep(RefCell::new(result))
     }
 }
 
-impl<L, R, C> VecPartialCmp<VarRep<R>> for VarRep<L>
+impl<L, R, C> VecPartialCmp<Rep<R>> for Rep<L>
 where
     L: AtomicMode + Default + Clone + CoercibleInto<C>,
     R: AtomicMode + Default + Clone + CoercibleInto<C>,
     (L, R): CommonCmp<Common = C>,
     C: PartialOrd,
 {
-    type Output = VarRep<Logical>;
+    type Output = Rep<Logical>;
 
-    fn vec_gt(self, rhs: VarRep<R>) -> Self::Output {
+    fn vec_gt(self, rhs: Rep<R>) -> Self::Output {
         use std::cmp::Ordering::*;
         self.vectorized_partial_cmp(rhs)
             .into_iter()
@@ -462,7 +462,7 @@ where
             .into()
     }
 
-    fn vec_gte(self, rhs: VarRep<R>) -> Self::Output {
+    fn vec_gte(self, rhs: Rep<R>) -> Self::Output {
         use std::cmp::Ordering::*;
         self.vectorized_partial_cmp(rhs)
             .into_iter()
@@ -475,7 +475,7 @@ where
             .into()
     }
 
-    fn vec_lt(self, rhs: VarRep<R>) -> Self::Output {
+    fn vec_lt(self, rhs: Rep<R>) -> Self::Output {
         use std::cmp::Ordering::*;
         self.vectorized_partial_cmp(rhs)
             .into_iter()
@@ -488,7 +488,7 @@ where
             .into()
     }
 
-    fn vec_lte(self, rhs: VarRep<R>) -> Self::Output {
+    fn vec_lte(self, rhs: Rep<R>) -> Self::Output {
         use std::cmp::Ordering::*;
         self.vectorized_partial_cmp(rhs)
             .into_iter()
@@ -501,7 +501,7 @@ where
             .into()
     }
 
-    fn vec_eq(self, rhs: VarRep<R>) -> Self::Output {
+    fn vec_eq(self, rhs: Rep<R>) -> Self::Output {
         use std::cmp::Ordering::*;
         self.vectorized_partial_cmp(rhs)
             .into_iter()
@@ -514,7 +514,7 @@ where
             .into()
     }
 
-    fn vec_neq(self, rhs: VarRep<R>) -> Self::Output {
+    fn vec_neq(self, rhs: Rep<R>) -> Self::Output {
         use std::cmp::Ordering::*;
         self.vectorized_partial_cmp(rhs)
             .into_iter()
