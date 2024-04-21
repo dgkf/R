@@ -6,7 +6,7 @@ use crate::lang::EvalResult;
 use crate::object::Obj;
 
 use super::coercion::CoercibleInto;
-use super::rep::VarRep;
+use super::rep::Rep;
 use super::reptype::RepType;
 use super::subset::Subset;
 use super::types::*;
@@ -44,10 +44,10 @@ impl<T> OptionNA<T> {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Vector {
-    Double(VarRep<Double>),
-    Integer(VarRep<Integer>),
-    Logical(VarRep<Logical>),
-    Character(VarRep<Character>),
+    Double(Rep<Double>),
+    Integer(Rep<Integer>),
+    Logical(Rep<Logical>),
+    Character(Rep<Character>),
     // Complex(Complex),
     // Raw(Raw),
 }
@@ -250,26 +250,26 @@ impl From<RepType<Character>> for Vector {
     }
 }
 
-impl From<VarRep<Double>> for Vector {
-    fn from(x: VarRep<Double>) -> Self {
+impl From<Rep<Double>> for Vector {
+    fn from(x: Rep<Double>) -> Self {
         Vector::Double(x)
     }
 }
 
-impl From<VarRep<Integer>> for Vector {
-    fn from(x: VarRep<Integer>) -> Self {
+impl From<Rep<Integer>> for Vector {
+    fn from(x: Rep<Integer>) -> Self {
         Vector::Integer(x)
     }
 }
 
-impl From<VarRep<Logical>> for Vector {
-    fn from(x: VarRep<Logical>) -> Self {
+impl From<Rep<Logical>> for Vector {
+    fn from(x: Rep<Logical>) -> Self {
         Vector::Logical(x)
     }
 }
 
-impl From<VarRep<Character>> for Vector {
-    fn from(x: VarRep<Character>) -> Self {
+impl From<Rep<Character>> for Vector {
+    fn from(x: Rep<Character>) -> Self {
         Vector::Character(x)
     }
 }
