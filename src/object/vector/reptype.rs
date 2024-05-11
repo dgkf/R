@@ -7,13 +7,13 @@ use super::subsets::Subsets;
 use super::types::*;
 use super::{OptionNA, Pow, VecPartialCmp};
 
-use crate::object::Data;
+use crate::object::VecData;
 
 /// Vector
 #[derive(Debug, Clone, PartialEq)]
 pub enum RepType<T> {
     // Vector::Subset encompasses a "raw" vector (no subsetting)
-    Subset(Data<T>, Subsets),
+    Subset(VecData<T>, Subsets),
     // Iterator includes things like ranges 1:Inf, and lazily computed values
     // Iter(Box<dyn Iterator<Item = &T>>)
 }
@@ -47,8 +47,8 @@ impl<T: AtomicMode + Clone + Default> RepType<T> {
         RepType::Subset(Vec::new().into(), Subsets(Vec::new()))
     }
 
-    /// Access (a lazy copy of) the internal Data<T>
-    pub fn inner(&self) -> Data<T> {
+    /// Access (a lazy copy of) the internal VecData<T>
+    pub fn inner(&self) -> VecData<T> {
         match self.materialize() {
             RepType::Subset(v, _) => v.lazy_copy(),
         }

@@ -3,6 +3,7 @@ use std::ops::Range;
 use std::rc::Rc;
 
 use crate::lang::Signal;
+use crate::object::VecData;
 
 use super::{types::*, OptionNA, Vector};
 
@@ -13,9 +14,9 @@ use super::{types::*, OptionNA, Vector};
 ///
 #[derive(Debug, Clone, PartialEq)]
 pub enum Subset {
-    Indices(Rc<RefCell<Vec<Integer>>>),
-    Mask(Rc<RefCell<Vec<Logical>>>),
-    Names(Rc<RefCell<Vec<Character>>>),
+    Indices(VecData<Integer>),
+    Mask(VecData<Logical>),
+    Names(VecData<Character>),
     Range(Range<usize>),
 }
 
@@ -165,7 +166,7 @@ impl Subset {
                 Box::new(
                     mask.borrow()
                         .clone()
-                        .into_iter()
+                        .iter()
                         .cycle()
                         .zip(iter)
                         .filter_map(|(mask, i @ (i_orig, _))| match mask {
@@ -188,7 +189,7 @@ impl Subset {
 
 impl From<usize> for Subset {
     fn from(value: usize) -> Self {
-        Subset::Indices(Rc::new(RefCell::new(vec![OptionNA::Some(value as i32)])))
+        Subset::Indices(vec![OptionNA::Some(value as i32)].into())
     }
 }
 
@@ -200,12 +201,12 @@ impl From<Range<usize>> for Subset {
 
 impl From<Vec<usize>> for Subset {
     fn from(value: Vec<usize>) -> Self {
-        Subset::Indices(Rc::new(RefCell::new(
+        Subset::Indices(VecData::new(Rc::new(RefCell::new(Rc::new(
             value
                 .iter()
                 .map(|i| OptionNA::Some(*i as i32))
                 .collect::<Vec<_>>(),
-        )))
+        )))))
     }
 }
 
@@ -218,7 +219,7 @@ impl TryFrom<Vector> for Subset {
                 let v = v.inner();
 
                 // convert indices into 0-indexed values
-                for i in v.borrow_mut().iter_mut() {
+                for i in v.clone().borrow_mut().iter_mut() {
                     match i {
                         OptionNA::NA => (),
                         OptionNA::Some(x) => *x -= 1,
@@ -237,7 +238,7 @@ impl TryFrom<Vector> for Subset {
 
                 // special case when all are false, treat it as no indices
                 if all_false {
-                    Ok(Subset::Indices(Rc::new(RefCell::new(Vec::new()))))
+                    Ok(Subset::Indices(Vec::new().into()))
                 } else {
                     Ok(Subset::Mask(v.inner()))
                 }
