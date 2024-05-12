@@ -4,10 +4,46 @@ use std::rc::Rc;
 #[derive(Clone, Debug, PartialEq)]
 pub struct VecData<T>(Rc<RefCell<Rc<Vec<T>>>>);
 
+pub struct VecDataIter<'a, T> {
+    data: Ref<'a, Rc<Vec<T>>>,
+    index: usize,
+}
+
+impl<'a, T> Iterator for VecDataIter<'a, T> {
+    type Item = Ref<'a, T>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.index >= self.data.len() {
+            return None;
+        }
+
+        let item = Ref::map(Ref::clone(&self.data), |data| &data[self.index]);
+        self.index += 1;
+        Some(item)
+    }
+}
+
+/// Vector Data
+///
+/// This data structure allows to both get mutable views of the vector and to create lazy copies of
+/// the vector.
+/// The former is used to modify vectors in-place, while the latter is used to create new vectors
+/// with an internal copy-on-write mechanism for performance.
+/// Due to the complexity of this data structure, it is hard to directly operator on the internal
+/// `Vec<T>`. This is, because the data always has to be accessed via `RefCell::borrow()` or
+/// `RefCell::borrow_mut()`, but anything that is returnd from these methods cannot outlive the
+/// returned `Ref` or `RefMut`. For this reason, it is recommended to encapsulate iterating
+/// (mutably) over the elements by passing closures to the methods.
 impl<T> VecData<T> {
     /// Create a new instance of Data
     pub fn new(x: Rc<RefCell<Rc<Vec<T>>>>) -> Self {
         VecData(x)
+    }
+    pub fn iter(&self) -> VecDataIter<'_, T> {
+        VecDataIter {
+            data: self.0.borrow(),
+            index: 0,
+        }
     }
 
     // pub fn clone(&self) -> Self {
@@ -36,6 +72,37 @@ impl<T> VecData<T> {
     }
 }
 
+impl<'a, T> IntoIterator for &'a VecData<T> {
+    type Item = Ref<'a, T>;
+    type IntoIter = VecDataIter<'a, T>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter()
+    }
+}
+
+
+
+impl<T: Clone> VecData<T> {
+    pub fn with_iter<F, U>(&self, f: F) -> U
+    where
+        F: FnOnce(&Vec<T>) -> U,
+    {
+        let vec_rc = self.0.borrow();
+        let vec_ref = Rc::clone(&*vec_rc);
+        let vec_borrow = Rc::as_ref(&vec_ref);
+        f(vec_borrow)
+    }
+    pub fn with_iter_mut<F, U>(&self, f: F) -> U
+    where
+        F: FnOnce(&mut Vec<T>) -> U,
+    {
+        let mut vec_rc = self.0.borrow_mut();
+        let mut vec_ref = Rc::make_mut(&mut *vec_rc);
+        f(vec_ref)
+    }
+}
+
 impl<T> From<Vec<T>> for VecData<T> {
     fn from(x: Vec<T>) -> Self {
         VecData::new(Rc::new(RefCell::new(Rc::new(x))))
@@ -54,7 +121,7 @@ mod tests {
 
         let x2: VecData<i32> = x1.lazy_copy();
         let x3: VecData<i32> = x1.lazy_copy();
-        let mut x4 = x1.mutable_view();
+        let x4 = x1.mutable_view();
 
         // all point to the same data
         assert!(ptr::eq(x1.borrow().as_ref(), x2.borrow().as_ref()));

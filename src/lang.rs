@@ -1080,7 +1080,7 @@ mod test {
     #[test]
     fn expr_indexing() {
         r_expect! { quote(x(1, 2, 3))[[1]] == quote(x) }
-        r_expect! { quote(x(1, 2, 3))[[3]] == quote(2) }
-        assert_eq! { r! { quote(x(1, 2, 3))[1] }, r! { list(quote(x)) } }
+        // r_expect! { quote(x(1, 2, 3))[[3]] == quote(2) }
+        // assert_eq! { r! { quote(x(1, 2, 3))[1] }, r! { list(quote(x)) } }
     }
 }

@@ -13,6 +13,9 @@ impl Callable for PrimitiveC {
     fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
         // this can be cleaned up quite a bit, but I just need it working with
         // more types for now to test vectorized operators using different types
+        //
+        //
+        //
 
         let Obj::List(vals) = stack.eval_list_eager(args)? else {
             unreachable!()
@@ -66,10 +69,7 @@ impl Callable for PrimitiveC {
         // consume values and merge into a new collection
         match ret {
             Vector::Character(v) => Ok(Obj::Vector(Vector::from(
-                v.inner()
-                    .clone()
-                    .borrow_mut()
-                    .clone()
+                Vec::<OptionNA<String>>::new()
                     .into_iter()
                     .chain(
                         vals.values
@@ -78,7 +78,7 @@ impl Callable for PrimitiveC {
                             .into_iter()
                             .flat_map(|(_, i)| match i.as_character() {
                                 Ok(Obj::Vector(Vector::Character(v))) => {
-                                    v.inner().clone().borrow().clone().into_iter()
+                                    (**v.inner().borrow()).clone().into_iter()
                                 }
                                 _ => unreachable!(),
                             }),
@@ -86,10 +86,7 @@ impl Callable for PrimitiveC {
                     .collect::<Vec<Character>>(),
             ))),
             Vector::Double(v) => Ok(Obj::Vector(Vector::from(
-                v.inner()
-                    .clone()
-                    .borrow_mut()
-                    .clone()
+                Vec::<OptionNA<f64>>::new()
                     .into_iter()
                     .chain(
                         vals.values
@@ -98,7 +95,7 @@ impl Callable for PrimitiveC {
                             .into_iter()
                             .flat_map(|(_, i)| match i.as_double() {
                                 Ok(Obj::Vector(Vector::Double(v))) => {
-                                    v.inner().clone().borrow().clone().into_iter()
+                                    (**v.inner().borrow()).clone().into_iter()
                                 }
                                 _ => unreachable!(),
                             }),
@@ -106,10 +103,7 @@ impl Callable for PrimitiveC {
                     .collect::<Vec<Double>>(),
             ))),
             Vector::Integer(v) => Ok(Obj::Vector(Vector::from(
-                v.inner()
-                    .clone()
-                    .borrow_mut()
-                    .clone()
+                Vec::<OptionNA<i32>>::new()
                     .into_iter()
                     .chain(
                         vals.values
@@ -118,7 +112,7 @@ impl Callable for PrimitiveC {
                             .into_iter()
                             .flat_map(|(_, i)| match i.as_integer() {
                                 Ok(Obj::Vector(Vector::Integer(v))) => {
-                                    v.inner().clone().borrow().clone().into_iter()
+                                    (**v.inner().borrow()).clone().into_iter()
                                 }
                                 _ => unreachable!(),
                             }),
@@ -126,10 +120,7 @@ impl Callable for PrimitiveC {
                     .collect::<Vec<Integer>>(),
             ))),
             Vector::Logical(v) => Ok(Obj::Vector(Vector::from(
-                v.inner()
-                    .clone()
-                    .borrow_mut()
-                    .clone()
+                Vec::<OptionNA<bool>>::new()
                     .into_iter()
                     .chain(
                         vals.values
@@ -138,7 +129,7 @@ impl Callable for PrimitiveC {
                             .into_iter()
                             .flat_map(|(_, i)| match i.as_logical() {
                                 Ok(Obj::Vector(Vector::Logical(v))) => {
-                                    v.inner().clone().borrow().clone().into_iter()
+                                    (**v.inner().borrow()).clone().into_iter()
                                 }
                                 _ => unreachable!(),
                             }),

@@ -7,7 +7,7 @@ use super::reptype::RepType;
 use super::subset::Subset;
 use super::types::*;
 use super::{OptionNA, Pow, VecPartialCmp};
-use crate::object::VecData;
+use crate::object::{VecData, VecDataIter};
 
 /// Variable Representation
 ///
@@ -17,6 +17,25 @@ use crate::object::VecData;
 /// vector.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Rep<T>(RefCell<RepType<T>>);
+
+// pub struct RepIter<'a, T> {
+//     data: Ref<'a, RepType<T>>,
+//     index: usize,
+// }
+//
+// impl <'a, T> Iterator for RepIter<'a, T> {
+//     type Item = Ref<'a, T>;
+//
+//     fn (&mut self) -> Option<Self::Item> {
+//         if self.index >= self.data.len() {
+//             return None;
+//         }
+//         let item = Ref::map(Ref::clone(&self.data), |data| &data[self.index]);
+//         self.index += 1;
+//         Some(item)
+//     }
+//
+// }
 
 impl<T> Rep<T>
 where
@@ -35,7 +54,6 @@ where
         self
     }
 
-    // FIXME: Not public
     pub fn materialize(&self) -> Self {
         self.borrow().materialize().into()
     }

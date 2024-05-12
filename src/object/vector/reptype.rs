@@ -1,4 +1,5 @@
 use std::fmt::Debug;
+use std::rc::Rc;
 
 use super::coercion::{AtomicMode, CoercibleInto, CommonCmp, CommonNum, MinimallyNumeric};
 use super::iterators::{map_common_numeric, zip_recycle};
@@ -112,7 +113,8 @@ impl<T: AtomicMode + Clone + Default> RepType<T> {
         match (self, value) {
             (RepType::Subset(lv, ls), RepType::Subset(rv, rs)) => {
                 let lvc = lv.clone();
-                let mut lvb = lvc.borrow_mut();
+                let lvb_rm = &mut *lvc.borrow_mut();
+                let lvb = Rc::make_mut(lvb_rm);
                 let rvc = rv.clone();
                 let rvb = rvc.borrow();
 

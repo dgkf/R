@@ -1,6 +1,6 @@
-use std::cell::RefCell;
 use std::ops::Range;
 use std::rc::Rc;
+use std::cell::RefCell;
 
 use crate::lang::Signal;
 use crate::object::VecData;
@@ -164,16 +164,15 @@ impl Subset {
             }
             Subset::Mask(mask) => {
                 Box::new(
-                    mask.borrow()
-                        .clone()
-                        .iter()
+                    (**mask.borrow()).clone()
+                        .into_iter()
                         .cycle()
                         .zip(iter)
                         .filter_map(|(mask, i @ (i_orig, _))| match mask {
                             OptionNA::Some(true) => Some(i),      // accept index
                             OptionNA::NA => Some((i_orig, None)), // accept, but NA
                             _ => None,                            // filter falses
-                        }),
+                        })
                 )
             }
             Subset::Range(range) => Box::new(
@@ -216,17 +215,20 @@ impl TryFrom<Vector> for Subset {
         match value {
             value @ Vector::Double(_) => Subset::try_from(value.as_integer()),
             Vector::Integer(v) => {
-                let v = v.inner();
+                let y = v
+                    .inner()
+                    .lazy_copy()
+                    .borrow()
+                    .iter()
+                    .filter_map(|i| match i {
+                        OptionNA::Some(x) => Option::Some(OptionNA::Some(x - 1)),
+                        _ => unreachable!(),
+                    })
+                    .collect();
 
-                // convert indices into 0-indexed values
-                for i in v.clone().borrow_mut().iter_mut() {
-                    match i {
-                        OptionNA::NA => (),
-                        OptionNA::Some(x) => *x -= 1,
-                    }
-                }
-
-                Ok(Subset::Indices(v))
+                Ok(Subset::Indices(VecData::new(Rc::new(RefCell::new(
+                    Rc::new(y),
+                )))))
             }
             Vector::Logical(v) => {
                 let all_false = v
