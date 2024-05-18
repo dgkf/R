@@ -16,26 +16,7 @@ use crate::object::{VecData, VecDataIter};
 /// one internal representation for another, usually a computational graph into a materialized
 /// vector.
 #[derive(Debug, Clone, PartialEq)]
-pub struct Rep<T>(RefCell<RepType<T>>);
-
-// pub struct RepIter<'a, T> {
-//     data: Ref<'a, RepType<T>>,
-//     index: usize,
-// }
-//
-// impl <'a, T> Iterator for RepIter<'a, T> {
-//     type Item = Ref<'a, T>;
-//
-//     fn (&mut self) -> Option<Self::Item> {
-//         if self.index >= self.data.len() {
-//             return None;
-//         }
-//         let item = Ref::map(Ref::clone(&self.data), |data| &data[self.index]);
-//         self.index += 1;
-//         Some(item)
-//     }
-//
-// }
+pub struct Rep<T>(pub RefCell<RepType<T>>);
 
 impl<T> Rep<T>
 where
@@ -53,6 +34,46 @@ where
 
         self
     }
+
+    pub fn mutable_view(&self) -> Self {
+        match self.borrow().clone() {
+            RepType::Subset(v, s) => {
+                // FIXME(don't clone all the subsets, they are read only anyway?)
+                Rep(RefCell::new(RepType::Subset(v.mutable_view(), s.clone())))
+            }
+            _ => unreachable!(),
+        }
+    }
+
+    pub fn lazy_copy(&self) -> Self {
+        match self.borrow().clone() {
+            RepType::Subset(v, s) => {
+                // FIXME(don't clone all the subsets, they are read only anyway?)
+                Rep(RefCell::new(RepType::Subset(v.lazy_copy(), s.clone())))
+            }
+            _ => unreachable!(),
+        }
+    }
+
+    // pub fn mutable_view(&self) -> Self {
+    //     match self.clone().borrow() {
+    //         RepType::Subset(v, s) => {
+    //             // FIXME(don't clone all the subsets, they are read only anyway?)
+    //             Rep(RefCell::new(RepType::Subset(v.mutable_view(), s.clone())))
+    //         }
+    //         _ => unreachable!()
+    //     }
+    // }
+    //
+    // pub fn lazy_copy(&self) -> Self {
+    //     match *self.borrow() {
+    //         RepType::Subset(v, s) => {
+    //             // FIXME(don't clone all the subsets, they are read only anyway?)
+    //             Rep(RefCell::new(RepType::Subset(v.lazy_copy(), s.clone())))
+    //         }
+    //         _ => unreachable!()
+    //     }
+    // }
 
     pub fn materialize(&self) -> Self {
         self.borrow().materialize().into()

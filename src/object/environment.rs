@@ -80,6 +80,10 @@ impl Environment {
             Err(Error::VariableNotFound(name).into())
         }
     }
+    pub fn get_mutable(&self, name: String) -> EvalResult {
+        // FIXME: bind a lazy copy in the environment if it was recieved from somewhere else,
+        self.get(name).map(|x| x.mutable_view())
+    }
 }
 
 impl Display for Environment {
@@ -102,5 +106,52 @@ impl Display for Environment {
 
         write!(f, ">")?;
         Ok(())
+    }
+}
+
+#[cfg(test)]
+
+mod tests {
+    use super::*;
+    use crate::object::vector::rep::*;
+    use crate::object::vector::reptype::*;
+    use crate::object::vector::*;
+    use crate::object::*;
+    use crate::r;
+    use std::borrow::BorrowMut;
+    use std::cell::RefCell;
+    use std::collections::HashMap;
+    #[test]
+    fn get_mutable() {
+        let e = Environment {
+            values: RefCell::new(HashMap::<String, Obj>::new()),
+            parent: None,
+        };
+
+        let v = r! {[true, false]}.unwrap();
+
+        e.insert("x".to_string(), v);
+
+        {
+            let em = e.get_mutable("x".to_string()).unwrap();
+
+            if let Obj::Vector(Vector::Logical(Rep(v))) = em {
+                let vc = v.clone().into_inner();
+                match vc {
+                    RepType::Subset(v, _) => {
+                        let x = &mut *v.borrow_mut();
+                        // let x = &mut *v.borrow_mut();
+                        assert_eq!(Rc::strong_count(x), 1);
+                        let mut xm = Rc::make_mut(x);
+                        xm.push(OptionNA::Some(true))
+
+                    }
+                }
+            }
+        }
+
+        assert_eq!(r! {[true, false, true]}.unwrap(), e.get("x".to_string()).unwrap())
+
+        // let e = Environment { RefCell::new(HashMap::new()), None};
     }
 }

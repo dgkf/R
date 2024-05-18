@@ -62,6 +62,14 @@ impl Obj {
         Signal::Return(self, visibility).into()
     }
 
+    pub fn mutable_view(&self) -> Self {
+        match self {
+            Obj::Vector(v) => Obj::Vector(v.mutable_view()).into(),
+            // FIXME: this needs to be implemented for all objects that can be mutated
+            x => x.clone(),
+        }
+    }
+
     pub fn force(self, stack: &mut CallStack) -> EvalResult {
         match self {
             Obj::Promise(None, expr, env) => {
@@ -949,6 +957,18 @@ impl Context for Rc<Environment> {
         self.clone()
     }
 
+    /// Evaluates an expression mutably.
+    /// This is used for things like `x[1:10] <- 2:11`
+    fn eval_mutable(&mut self, expr: Expr) -> EvalResult {
+        match expr {
+            Expr::Symbol(name) => {
+                println!("getting symboll {} mutably", name);
+                self.get_mutable(name)
+            }
+            expr => self.eval(expr),
+        }
+    }
+
     fn eval(&mut self, expr: Expr) -> EvalResult {
         match expr {
             Expr::Null => Ok(Obj::Null),
@@ -982,6 +1002,10 @@ impl Context for Rc<Environment> {
 
     fn get(&mut self, name: String) -> EvalResult {
         Environment::get(self, name)
+    }
+
+    fn get_mutable(&mut self, name: String) -> EvalResult {
+        Environment::get_mutable(self, name)
     }
 }
 
@@ -1080,7 +1104,7 @@ mod test {
     #[test]
     fn expr_indexing() {
         r_expect! { quote(x(1, 2, 3))[[1]] == quote(x) }
-        // r_expect! { quote(x(1, 2, 3))[[3]] == quote(2) }
-        // assert_eq! { r! { quote(x(1, 2, 3))[1] }, r! { list(quote(x)) } }
+        r_expect! { quote(x(1, 2, 3))[[3]] == quote(2) }
+        assert_eq! { r! { quote(x(1, 2, 3))[1] }, r! { list(quote(x)) } }
     }
 }

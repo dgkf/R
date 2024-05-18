@@ -63,6 +63,24 @@ impl Vector {
         }
     }
 
+    pub fn lazy_copy(&self) -> Self {
+        match self {
+            Vector::Double(v) => Vector::Double(v.lazy_copy()),
+            Vector::Character(v) => Vector::Character(v.lazy_copy()),
+            Vector::Integer(v) => Vector::Integer(v.lazy_copy()),
+            Vector::Logical(v) => Vector::Logical(v.lazy_copy()),
+        }
+    }
+
+    pub fn mutable_view(&self) -> Self {
+        match self {
+            Vector::Double(v) => Vector::Double(v.mutable_view()),
+            Vector::Character(v) => Vector::Character(v.mutable_view()),
+            Vector::Integer(v) => Vector::Integer(v.mutable_view()),
+            Vector::Logical(v) => Vector::Logical(v.mutable_view()),
+        }
+    }
+
     pub fn try_get(&self, index: Obj) -> EvalResult {
         let err =
             Error::Other("Vector index cannot be coerced into a valid indexing type.".to_string());

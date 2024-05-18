@@ -8,6 +8,7 @@ use super::subsets::Subsets;
 use super::types::*;
 use super::{OptionNA, Pow, VecPartialCmp};
 
+use crate::object::vector;
 use crate::object::VecData;
 
 /// Vector
@@ -22,6 +23,44 @@ pub enum RepType<T> {
 impl<T: AtomicMode + Clone + Default> Default for RepType<T> {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+impl<T> IntoIterator for RepType<T>
+where
+    T: AtomicMode + Clone + Default
+{
+    type Item = T;
+    type IntoIter = RepTypeIter<T>;
+    fn into_iter(self) -> Self::IntoIter {
+        // FIXME: this might materialize
+        let n = self.len();
+        match self {
+            RepType::Subset(..) => RepTypeIter::SubsetIter(self, 0, n)
+        }
+    }
+}
+
+pub enum RepTypeIter<T> {
+    SubsetIter(RepType<T>, usize, usize),
+}
+
+impl<T: AtomicMode + Clone + Default> Iterator for RepTypeIter<T> {
+    type Item = T;
+    fn next(&mut self) -> Option<Self::Item> {
+        match self {
+            RepTypeIter::SubsetIter(rep, i, len) => {
+                dbg!(&i);
+                dbg!(&len);
+                if i < len {
+                    let x = Some(rep.get_atom(*i));
+                    *i += 1;
+                    x
+                } else {
+                    None
+                }
+            }
+        }
     }
 }
 
@@ -55,6 +94,13 @@ impl<T: AtomicMode + Clone + Default> RepType<T> {
         }
     }
 
+    /// Get an iterator over all elements of this vector without recycling.
+    pub fn iter(&self) -> VecData<T> {
+        match self.materialize() {
+            RepType::Subset(v, _) => v.lazy_copy(),
+        }
+    }
+
     /// Subsetting a Vector
     ///
     /// Introduce a new subset into the aggregate list of subset indices.
@@ -64,7 +110,7 @@ impl<T: AtomicMode + Clone + Default> RepType<T> {
             RepType::Subset(v, Subsets(subsets)) => {
                 let mut subsets = subsets.clone();
                 subsets.push(subset);
-                RepType::Subset(v.lazy_copy(), Subsets(subsets))
+                RepType::Subset(v.mutable_view(), Subsets(subsets))
             }
         }
     }
@@ -101,6 +147,16 @@ impl<T: AtomicMode + Clone + Default> RepType<T> {
         }
     }
 
+    pub fn get_atom(&self, index: usize) -> T {
+        match self {
+            RepType::Subset(v, subsets) => {
+                let vb = v.borrow();
+                let index = subsets.get_index_at(index).unwrap();
+                vb[index].clone()
+            }
+        }
+    }
+
     /// Assignment to Subset Indices
     ///
     /// Assignment to a vector from another. The aggregate subsetted indices
@@ -114,6 +170,7 @@ impl<T: AtomicMode + Clone + Default> RepType<T> {
             (RepType::Subset(lv, ls), RepType::Subset(rv, rs)) => {
                 let lvc = lv.clone();
                 let lvb_rm = &mut *lvc.borrow_mut();
+                dbg!("count is {}", Rc::strong_count(lvb_rm));
                 let lvb = Rc::make_mut(lvb_rm);
                 let rvc = rv.clone();
                 let rvb = rvc.borrow();
@@ -704,7 +761,7 @@ where
 mod test {
     use super::OptionNA::*;
     use crate::object::reptype::RepType;
-    use crate::object::{types::*, VecPartialCmp};
+    use crate::object::{types::*, OptionNA, VecPartialCmp};
     use crate::utils::SameType;
 
     #[test]
@@ -794,5 +851,18 @@ mod test {
         let expected_type = RepType::<Logical>::new();
         assert!(z.is_same_type_as(&expected_type));
         assert!(z.is_logical());
+    }
+
+    #[test]
+    fn iter() {
+        let x = RepType::from(vec![Some(1), Some(2)]);
+        let mut xi = x.into_iter();
+        assert_eq!(xi.next(), Option::Some(OptionNA::Some(1 as i32)));
+        assert_eq!(xi.next(), Option::Some(OptionNA::Some(2 as i32)));
+        assert_eq!(xi.next(), Option::None);
+        let xs = RepType::from(vec![Some("a".to_string())]);
+        let mut xsi = xs.into_iter();
+        assert_eq!(xsi.next(), Option::Some(OptionNA::Some("a".to_string())));
+        assert_eq!(xsi.next(), Option::None);
     }
 }

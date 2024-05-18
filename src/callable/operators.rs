@@ -377,7 +377,15 @@ impl Callable for PostfixIndex {
 pub struct PostfixVecIndex;
 impl Callable for PostfixVecIndex {
     fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
+        println!("call :(");
         let (what, index) = stack.eval_binary(args.unnamed_binary_args())?;
+        what.try_get(index)
+    }
+    fn call_mutable(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
+        println!("call mutable :)");
+        let x = args.unnamed_binary_args();
+        let what = stack.eval_mutable(x.0)?;
+        let index = stack.eval(x.1)?;
         what.try_get(index)
     }
 }

@@ -4,22 +4,29 @@ use std::rc::Rc;
 #[derive(Clone, Debug, PartialEq)]
 pub struct VecData<T>(Rc<RefCell<Rc<Vec<T>>>>);
 
-pub struct VecDataIter<'a, T> {
-    data: Ref<'a, Rc<Vec<T>>>,
+pub struct VecDataIter<T> {
+    data: VecData<T>,
     index: usize,
 }
 
-impl<'a, T> Iterator for VecDataIter<'a, T> {
-    type Item = Ref<'a, T>;
+impl <T> VecDataIter<T> {
+    pub fn new(data: VecData<T>) -> Self {
+        VecDataIter { data, index: 0 }
+    }
+}
+
+impl<T: Clone> Iterator for VecDataIter<T> {
+    type Item = T;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.index >= self.data.len() {
-            return None;
+        let vec = self.data.0.borrow();
+        if self.index < vec.len() {
+            let item = vec[self.index].clone();
+            self.index += 1;
+            Some(item)
+        } else {
+            None
         }
-
-        let item = Ref::map(Ref::clone(&self.data), |data| &data[self.index]);
-        self.index += 1;
-        Some(item)
     }
 }
 
@@ -39,11 +46,8 @@ impl<T> VecData<T> {
     pub fn new(x: Rc<RefCell<Rc<Vec<T>>>>) -> Self {
         VecData(x)
     }
-    pub fn iter(&self) -> VecDataIter<'_, T> {
-        VecDataIter {
-            data: self.0.borrow(),
-            index: 0,
-        }
+    pub fn iter(&self) -> VecDataIter<T> {
+        VecDataIter::new(self.lazy_copy())
     }
 
     // pub fn clone(&self) -> Self {
@@ -71,17 +75,6 @@ impl<T> VecData<T> {
         self.0.borrow()
     }
 }
-
-impl<'a, T> IntoIterator for &'a VecData<T> {
-    type Item = Ref<'a, T>;
-    type IntoIter = VecDataIter<'a, T>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        self.iter()
-    }
-}
-
-
 
 impl<T: Clone> VecData<T> {
     pub fn with_iter<F, U>(&self, f: F) -> U

@@ -14,6 +14,7 @@ use super::{types::*, OptionNA, Vector};
 ///
 #[derive(Debug, Clone, PartialEq)]
 pub enum Subset {
+    // FIXME: probably we don't need VecData here, as the subsets are read-only?
     Indices(VecData<Integer>),
     Mask(VecData<Logical>),
     Names(VecData<Character>),
