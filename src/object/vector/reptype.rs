@@ -28,7 +28,7 @@ impl<T: AtomicMode + Clone + Default> Default for RepType<T> {
 
 impl<T> IntoIterator for RepType<T>
 where
-    T: AtomicMode + Clone + Default
+    T: AtomicMode + Clone + Default,
 {
     type Item = T;
     type IntoIter = RepTypeIter<T>;
@@ -36,7 +36,7 @@ where
         // FIXME: this might materialize
         let n = self.len();
         match self {
-            RepType::Subset(..) => RepTypeIter::SubsetIter(self, 0, n)
+            RepType::Subset(..) => RepTypeIter::SubsetIter(self, 0, n),
         }
     }
 }

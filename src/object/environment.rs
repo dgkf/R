@@ -144,13 +144,15 @@ mod tests {
                         assert_eq!(Rc::strong_count(x), 1);
                         let mut xm = Rc::make_mut(x);
                         xm.push(OptionNA::Some(true))
-
                     }
                 }
             }
         }
 
-        assert_eq!(r! {[true, false, true]}.unwrap(), e.get("x".to_string()).unwrap())
+        assert_eq!(
+            r! {[true, false, true]}.unwrap(),
+            e.get("x".to_string()).unwrap()
+        )
 
         // let e = Environment { RefCell::new(HashMap::new()), None};
     }

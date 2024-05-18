@@ -1,6 +1,6 @@
+use std::cell::RefCell;
 use std::ops::Range;
 use std::rc::Rc;
-use std::cell::RefCell;
 
 use crate::lang::Signal;
 use crate::object::VecData;
@@ -165,7 +165,8 @@ impl Subset {
             }
             Subset::Mask(mask) => {
                 Box::new(
-                    (**mask.borrow()).clone()
+                    (**mask.borrow())
+                        .clone()
                         .into_iter()
                         .cycle()
                         .zip(iter)
@@ -173,7 +174,7 @@ impl Subset {
                             OptionNA::Some(true) => Some(i),      // accept index
                             OptionNA::NA => Some((i_orig, None)), // accept, but NA
                             _ => None,                            // filter falses
-                        })
+                        }),
                 )
             }
             Subset::Range(range) => Box::new(

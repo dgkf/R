@@ -9,7 +9,7 @@ pub struct VecDataIter<T> {
     index: usize,
 }
 
-impl <T> VecDataIter<T> {
+impl<T> VecDataIter<T> {
     pub fn new(data: VecData<T>) -> Self {
         VecDataIter { data, index: 0 }
     }
