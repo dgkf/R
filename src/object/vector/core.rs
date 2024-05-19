@@ -5,8 +5,9 @@ use crate::error::Error;
 use crate::lang::EvalResult;
 use crate::object::Obj;
 
-use super::coercion::CoercibleInto;
+use super::coercion::{AtomicMode, CoercibleInto};
 use super::rep::Rep;
+use super::rep::RepIter;
 use super::reptype::RepType;
 use super::subset::Subset;
 use super::types::*;
@@ -51,6 +52,35 @@ pub enum Vector {
     // Complex(Complex),
     // Raw(Raw),
 }
+
+// pub struct VectorIter<T>(RepIter<T>);
+
+// impl<T> Iterator for VectorIter<T>
+// where
+//     T: AtomicMode + Clone + Default,
+// {
+//     type Item = T;
+//     fn next(&mut self) -> Option<Self::Item> {
+//         self.0.next()
+//     }
+// }
+
+// impl<T> IntoIterator for Vector<T>
+// where
+//     T: AtomicMode + Clone + Default,
+// {
+//     type Item = T;
+//     type IntoIter = VectorIter<T>;
+//     fn into_iter(self) {
+//         use super::Vector::*;
+//         match self {
+//             Double(x) => VectorIter(x.into_iter()),
+//             Integer(x) => VectorIter(x.into_iter()),
+//             Logical(x) => VectorIter(x.into_iter()),
+//             Character(x) => VectorIter(x.into_iter()),
+//         }
+//     }
+// }
 
 impl Vector {
     pub fn get(&self, index: usize) -> Option<Vector> {

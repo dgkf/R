@@ -4,6 +4,7 @@ use std::fmt::{Debug, Display};
 use super::coercion::{AtomicMode, CoercibleInto, CommonCmp, CommonNum, MinimallyNumeric};
 use super::iterators::{map_common_numeric, zip_recycle};
 use super::reptype::RepType;
+use super::reptype::RepTypeIter;
 use super::subset::Subset;
 use super::types::*;
 use super::{OptionNA, Pow, VecPartialCmp};
@@ -190,6 +191,30 @@ where
 {
     fn default() -> Self {
         Rep(RefCell::new(RepType::default()))
+    }
+}
+
+pub struct RepIter<T>(RepTypeIter<T>);
+
+impl<T> IntoIterator for Rep<T>
+where
+    T: AtomicMode + Clone + Default,
+{
+    type Item = T;
+    type IntoIter = RepIter<T>;
+    fn into_iter(self) -> Self::IntoIter {
+        let x = self.0.into_inner();
+        RepIter(x.into_iter())
+    }
+}
+
+impl<T> Iterator for RepIter<T>
+where
+    T: AtomicMode + Clone + Default,
+{
+    type Item = T;
+    fn next(&mut self) -> Option<Self::Item> {
+        self.0.next()
     }
 }
 

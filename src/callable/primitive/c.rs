@@ -77,9 +77,7 @@ impl Callable for PrimitiveC {
                             .clone()
                             .into_iter()
                             .flat_map(|(_, i)| match i.as_character() {
-                                Ok(Obj::Vector(Vector::Character(v))) => {
-                                    (**v.inner().borrow()).clone().into_iter()
-                                }
+                                Ok(Obj::Vector(Vector::Character(v))) => v.into_iter(),
                                 _ => unreachable!(),
                             }),
                     )
@@ -94,9 +92,7 @@ impl Callable for PrimitiveC {
                             .clone()
                             .into_iter()
                             .flat_map(|(_, i)| match i.as_double() {
-                                Ok(Obj::Vector(Vector::Double(v))) => {
-                                    (**v.inner().borrow()).clone().into_iter()
-                                }
+                                Ok(Obj::Vector(Vector::Double(v))) => v.into_iter(),
                                 _ => unreachable!(),
                             }),
                     )
@@ -111,9 +107,7 @@ impl Callable for PrimitiveC {
                             .clone()
                             .into_iter()
                             .flat_map(|(_, i)| match i.as_integer() {
-                                Ok(Obj::Vector(Vector::Integer(v))) => {
-                                    (**v.inner().borrow()).clone().into_iter()
-                                }
+                                Ok(Obj::Vector(Vector::Integer(v))) => v.into_iter(),
                                 _ => unreachable!(),
                             }),
                     )
@@ -128,9 +122,7 @@ impl Callable for PrimitiveC {
                             .clone()
                             .into_iter()
                             .flat_map(|(_, i)| match i.as_logical() {
-                                Ok(Obj::Vector(Vector::Logical(v))) => {
-                                    (**v.inner().borrow()).clone().into_iter()
-                                }
+                                Ok(Obj::Vector(Vector::Logical(v))) => v.into_iter(),
                                 _ => unreachable!(),
                             }),
                     )
