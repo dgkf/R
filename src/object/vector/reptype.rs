@@ -8,7 +8,6 @@ use super::subsets::Subsets;
 use super::types::*;
 use super::{OptionNA, Pow, VecPartialCmp};
 
-use crate::object::vector;
 use crate::object::VecData;
 
 /// Vector
@@ -50,8 +49,6 @@ impl<T: AtomicMode + Clone + Default> Iterator for RepTypeIter<T> {
     fn next(&mut self) -> Option<Self::Item> {
         match self {
             RepTypeIter::SubsetIter(rep, i, len) => {
-                dbg!(&i);
-                dbg!(&len);
                 if i < len {
                     let x = Some(rep.get_atom(*i));
                     *i += 1;

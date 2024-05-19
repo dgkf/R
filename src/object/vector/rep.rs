@@ -7,7 +7,7 @@ use super::reptype::RepType;
 use super::subset::Subset;
 use super::types::*;
 use super::{OptionNA, Pow, VecPartialCmp};
-use crate::object::{VecData, VecDataIter};
+use crate::object::VecData;
 
 /// Variable Representation
 ///
@@ -41,7 +41,6 @@ where
                 // FIXME(don't clone all the subsets, they are read only anyway?)
                 Rep(RefCell::new(RepType::Subset(v.mutable_view(), s.clone())))
             }
-            _ => unreachable!(),
         }
     }
 
@@ -51,7 +50,6 @@ where
                 // FIXME(don't clone all the subsets, they are read only anyway?)
                 Rep(RefCell::new(RepType::Subset(v.lazy_copy(), s.clone())))
             }
-            _ => unreachable!(),
         }
     }
 

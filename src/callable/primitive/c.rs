@@ -68,7 +68,7 @@ impl Callable for PrimitiveC {
 
         // consume values and merge into a new collection
         match ret {
-            Vector::Character(v) => Ok(Obj::Vector(Vector::from(
+            Vector::Character(_) => Ok(Obj::Vector(Vector::from(
                 Vec::<OptionNA<String>>::new()
                     .into_iter()
                     .chain(
@@ -85,7 +85,7 @@ impl Callable for PrimitiveC {
                     )
                     .collect::<Vec<Character>>(),
             ))),
-            Vector::Double(v) => Ok(Obj::Vector(Vector::from(
+            Vector::Double(_) => Ok(Obj::Vector(Vector::from(
                 Vec::<OptionNA<f64>>::new()
                     .into_iter()
                     .chain(
@@ -102,7 +102,7 @@ impl Callable for PrimitiveC {
                     )
                     .collect::<Vec<Double>>(),
             ))),
-            Vector::Integer(v) => Ok(Obj::Vector(Vector::from(
+            Vector::Integer(_) => Ok(Obj::Vector(Vector::from(
                 Vec::<OptionNA<i32>>::new()
                     .into_iter()
                     .chain(
@@ -119,7 +119,7 @@ impl Callable for PrimitiveC {
                     )
                     .collect::<Vec<Integer>>(),
             ))),
-            Vector::Logical(v) => Ok(Obj::Vector(Vector::from(
+            Vector::Logical(_) => Ok(Obj::Vector(Vector::from(
                 Vec::<OptionNA<bool>>::new()
                     .into_iter()
                     .chain(

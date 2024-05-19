@@ -91,7 +91,7 @@ impl<T: Clone> VecData<T> {
         F: FnOnce(&mut Vec<T>) -> U,
     {
         let mut vec_rc = self.0.borrow_mut();
-        let mut vec_ref = Rc::make_mut(&mut *vec_rc);
+        let vec_ref = Rc::make_mut(&mut *vec_rc);
         f(vec_ref)
     }
 }

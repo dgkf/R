@@ -54,35 +54,66 @@ impl Environment {
     }
 
     pub fn get(&self, name: String) -> EvalResult {
-        // search in this environment for value by name
+        self.get_internal(name, 0).0
+    }
+
+    fn get_internal(&self, name: String, i: u32) -> (EvalResult, i32) {
         if let Some(value) = self.values.borrow().get(&name) {
             let result = value.clone();
-            match result {
-                Obj::Promise(None, expr, env) => env.clone().eval(expr),
-                Obj::Promise(Some(result), ..) => Ok(*result),
-                _ => Ok(result),
-            }
 
+            let mut is_promise = false;
+            let x = match result {
+                Obj::Promise(None, expr, env) => {
+                    is_promise = true;
+                    env.clone().eval(expr)
+                }
+                Obj::Promise(Some(result), ..) => {
+                    is_promise = true;
+                    Ok(*result)
+                }
+                _ => Ok(result),
+            };
+
+            if is_promise {
+                (x, -3)
+            } else {
+                (x, i as i32)
+            }
         // if not found, search through parent if available
         } else if let Some(parent) = &self.parent {
-            parent.clone().get(name)
+            parent.clone().get_internal(name, i + 1)
 
         // if we're at the top level, fall back to primitives if available
         } else if let Ok(prim) = name.as_str().try_into() {
-            Ok(Obj::Function(
+            let x = Ok(Obj::Function(
                 ExprList::new(),
                 Expr::Primitive(prim),
                 Rc::new(self.clone()), // TODO(bug): will this retain shared ref?
-            ))
+            ));
+
+            (x, -1)
 
         // otherwise, throw error
         } else {
-            Err(Error::VariableNotFound(name).into())
+            (Err(Error::VariableNotFound(name).into()), -2)
         }
     }
+
     pub fn get_mutable(&self, name: String) -> EvalResult {
-        // FIXME: bind a lazy copy in the environment if it was recieved from somewhere else,
-        self.get(name).map(|x| x.mutable_view())
+        let (x, i) = self.get_internal(name.clone(), 0);
+        let x = x?;
+
+        // It was found in the current environment we are in
+        if i == 0 {
+            return EvalResult::Ok(x.mutable_view());
+        }
+        // If it was found in a parent environment, we first bind it in the current environment
+        // so we don't accidentally change variables in the parent environment
+        let xc = x.lazy_copy();
+        let xm = xc.mutable_view();
+        self.insert(name, xc);
+
+        EvalResult::Ok(xm)
     }
 }
 
@@ -112,48 +143,35 @@ impl Display for Environment {
 #[cfg(test)]
 
 mod tests {
-    use super::*;
-    use crate::object::vector::rep::*;
-    use crate::object::vector::reptype::*;
-    use crate::object::vector::*;
-    use crate::object::*;
-    use crate::r;
-    use std::borrow::BorrowMut;
-    use std::cell::RefCell;
-    use std::collections::HashMap;
+    use crate::{r, r_expect};
     #[test]
-    fn get_mutable() {
-        let e = Environment {
-            values: RefCell::new(HashMap::<String, Obj>::new()),
-            parent: None,
-        };
+    fn vectors_are_mutable() {
+        r_expect! {{"
+            x = 1
+            x[1] = 2
+            x == 2
+        "}}
+    }
 
-        let v = r! {[true, false]}.unwrap();
-
-        e.insert("x".to_string(), v);
-
-        {
-            let em = e.get_mutable("x".to_string()).unwrap();
-
-            if let Obj::Vector(Vector::Logical(Rep(v))) = em {
-                let vc = v.clone().into_inner();
-                match vc {
-                    RepType::Subset(v, _) => {
-                        let x = &mut *v.borrow_mut();
-                        // let x = &mut *v.borrow_mut();
-                        assert_eq!(Rc::strong_count(x), 1);
-                        let mut xm = Rc::make_mut(x);
-                        xm.push(OptionNA::Some(true))
-                    }
-                }
-            }
-        }
-
-        assert_eq!(
-            r! {[true, false, true]}.unwrap(),
-            e.get("x".to_string()).unwrap()
-        )
-
-        // let e = Environment { RefCell::new(HashMap::new()), None};
+    #[test]
+    fn dont_mutate_value_from_parent() {
+        r_expect! {{"
+            f = fn() x[1] <- -99
+            x = 10
+            f()
+            x == 10
+        "}}
+    }
+    #[test]
+    fn promises_can_be_mutated() {
+        r_expect! {{"
+             f = fn(x) {
+               x[1] <- -99
+               x
+             }
+             x1 = 10
+             x2 = f(x1)
+             (x1 == 10) && x2 == -99
+         "}}
     }
 }

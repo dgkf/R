@@ -64,7 +64,15 @@ impl Obj {
 
     pub fn mutable_view(&self) -> Self {
         match self {
-            Obj::Vector(v) => Obj::Vector(v.mutable_view()).into(),
+            Obj::Vector(v) => Obj::Vector(v.mutable_view()),
+            // FIXME: this needs to be implemented for all objects that can be mutated
+            x => x.clone(),
+        }
+    }
+
+    pub fn lazy_copy(&self) -> Self {
+        match self {
+            Obj::Vector(v) => Obj::Vector(v.lazy_copy()),
             // FIXME: this needs to be implemented for all objects that can be mutated
             x => x.clone(),
         }
@@ -961,10 +969,7 @@ impl Context for Rc<Environment> {
     /// This is used for things like `x[1:10] <- 2:11`
     fn eval_mutable(&mut self, expr: Expr) -> EvalResult {
         match expr {
-            Expr::Symbol(name) => {
-                println!("getting symboll {} mutably", name);
-                self.get_mutable(name)
-            }
+            Expr::Symbol(name) => self.get_mutable(name),
             expr => self.eval(expr),
         }
     }
