@@ -19,11 +19,11 @@
 * Rename `Numeric` variant of `Vector` enum to `Double`
 
 * Promises now retain their expression even after being evaluated (#125 @dgkf)
- 
+
 * The internal vector representation has been changed to allow for
   in-place modification of vector, e.g. when they materialize themselves
   from their lazy representation (part of #127):
-  What was previously `Rep` is now `RepType` and `Rep` can switch out 
+  What was previously `Rep` is now `RepType` and `Rep` can switch out
   one `RepType` for another.
 
 * The internal vector representation has been extended to allow for mutable
@@ -34,7 +34,10 @@
   which drives the for call-assignment (things like `x[1] <- 2`).
 
 * Implemented `IntoIterator` for the Vector `Rep`presentation.
-  
+
+* Increased the version of `pest` for new clippy warnings:
+  https://github.com/pest-parser/pest/issues/1000
+
 ## Notable Bugs Addressed
 
 * Fix accidental tail calls escaping binary operator evaluation (#115 @dgkf)
