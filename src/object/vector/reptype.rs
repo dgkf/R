@@ -808,8 +808,8 @@ mod test {
     fn iter() {
         let x = RepType::from(vec![Some(1), Some(2)]);
         let mut xi = x.into_iter();
-        assert_eq!(xi.next(), Option::Some(OptionNA::Some(1 as i32)));
-        assert_eq!(xi.next(), Option::Some(OptionNA::Some(2 as i32)));
+        assert_eq!(xi.next(), Option::Some(OptionNA::Some(1)));
+        assert_eq!(xi.next(), Option::Some(OptionNA::Some(2)));
         assert_eq!(xi.next(), Option::None);
         let xs = RepType::from(vec![Some("a".to_string())]);
         let mut xsi = xs.into_iter();

@@ -101,10 +101,7 @@ where
 
     pub fn get(&self, index: usize) -> Option<Self> {
         let x = self.borrow().get(index);
-        match x {
-            Some(x) => Some(x.into()),
-            None => None,
-        }
+        x.map(|x| x.into())
     }
 
     pub fn assign(&mut self, value: Self) -> Self {
@@ -442,7 +439,7 @@ where
 {
     type Output = Rep<C>;
     fn sub(self, rhs: Rep<R>) -> Self::Output {
-        let result = (self.0.into_inner()) - (rhs.0.into_inner()).into();
+        let result = (self.0.into_inner()) - (rhs.0.into_inner());
         Rep(RefCell::new(result))
     }
 }

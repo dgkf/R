@@ -218,13 +218,10 @@ impl TryFrom<Vector> for Subset {
             value @ Vector::Double(_) => Subset::try_from(value.as_integer()),
             Vector::Integer(v) => {
                 let y = v
-                    .inner()
-                    .lazy_copy()
-                    .borrow()
-                    .iter()
-                    .filter_map(|i| match i {
-                        OptionNA::Some(x) => Option::Some(OptionNA::Some(x - 1)),
-                        _ => unreachable!(),
+                    .into_iter()
+                    .map(|i| match i {
+                        OptionNA::Some(x) => OptionNA::Some(x - 1),
+                        OptionNA::NA => OptionNA::NA,
                     })
                     .collect();
 

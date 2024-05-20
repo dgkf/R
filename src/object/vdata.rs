@@ -1,7 +1,7 @@
 use std::cell::{Ref, RefCell, RefMut};
 use std::rc::Rc;
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct VecData<T>(Rc<RefCell<Rc<Vec<T>>>>);
 
 pub struct VecDataIter<T> {
@@ -41,7 +41,7 @@ impl<T> VecData<T> {
     pub fn new(x: Rc<RefCell<Rc<Vec<T>>>>) -> Self {
         VecData(x)
     }
-    /// Create a (lazy) copy of the data.
+    /// Create a (lazy) copy of the vector data by cloning the *inner* Rc.
     pub fn lazy_copy(&self) -> Self {
         Self::new(Rc::new(RefCell::new(self.0.borrow().clone())))
     }
@@ -54,7 +54,7 @@ impl<T> VecData<T> {
         self.0.borrow_mut()
     }
     // Borrow the internal data immutably.
-    pub fn borrow<'a>(&'a self) -> Ref<'a, Rc<Vec<T>>> {
+    pub fn borrow(&self) -> Ref<'_, Rc<Vec<T>>> {
         self.0.borrow()
     }
 }

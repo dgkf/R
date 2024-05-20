@@ -5,9 +5,8 @@ use crate::error::Error;
 use crate::lang::EvalResult;
 use crate::object::Obj;
 
-use super::coercion::{AtomicMode, CoercibleInto};
+use super::coercion::CoercibleInto;
 use super::rep::Rep;
-use super::rep::RepIter;
 use super::reptype::RepType;
 use super::subset::Subset;
 use super::types::*;
