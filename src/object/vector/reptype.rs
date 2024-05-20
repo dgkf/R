@@ -84,7 +84,7 @@ impl<T: AtomicMode + Clone + Default> RepType<T> {
         RepType::Subset(Vec::new().into(), Subsets(Vec::new()))
     }
 
-    /// Access (a lazy copy of) the internal VecData<T>
+    /// Access a lazy copy of the internal vector data
     pub fn inner(&self) -> VecData<T> {
         match self.materialize() {
             RepType::Subset(v, _) => v.lazy_copy(),
