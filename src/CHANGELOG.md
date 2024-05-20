@@ -7,10 +7,8 @@
 * Digits can now be separated by an underscore to improve readability.
 
 * Added assertions on function parameters (#74)
+
 * Added the `length()` primitive (#105)
-* The internal vector representation has been changed to allow for
-  in-place modification of vector, e.g. when they materialize themselves
-  from their lazy representation.
 
 * Assignment is now also possible using the `=` operator (#144 @sebffischer)
 
@@ -21,7 +19,22 @@
 * Rename `Numeric` variant of `Vector` enum to `Double`
 
 * Promises now retain their expression even after being evaluated (#125 @dgkf)
+ 
+* The internal vector representation has been changed to allow for
+  in-place modification of vector, e.g. when they materialize themselves
+  from their lazy representation (part of #127):
+  What was previously `Rep` is now `RepType` and `Rep` can switch out 
+  one `RepType` for another.
 
+* The internal vector representation has been extended to allow for mutable
+  views and lazy copies via the `VecData` type (part of @127)
+
+* Added the internal `call_mutable()` method to `Callable`, which for now
+  is only implemented to retrieve vectors mutably from environments,
+  which drives the for call-assignment (things like `x[1] <- 2`).
+
+* Implemented `IntoIterator` for the Vector `Rep`presentation.
+  
 ## Notable Bugs Addressed
 
 * Fix accidental tail calls escaping binary operator evaluation (#115 @dgkf)

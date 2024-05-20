@@ -103,12 +103,16 @@ impl Environment {
         let (x, i) = self.get_internal(name.clone(), 0);
         let x = x?;
 
-        // It was found in the current environment we are in
+        // It was found in the current environment we don't have to bind it, as we are
+        // allowed to mutate it directly
+
         if i == 0 {
             return EvalResult::Ok(x.mutable_view());
         }
-        // If it was found in a parent environment, we first bind it in the current environment
+        // If it was found in a parent environment or is a promise,
+        // we first bind it in the current environment
         // so we don't accidentally change variables in the parent environment
+
         let xc = x.lazy_copy();
         let xm = xc.mutable_view();
         self.insert(name, xc);

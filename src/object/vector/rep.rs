@@ -10,12 +10,10 @@ use super::types::*;
 use super::{OptionNA, Pow, VecPartialCmp};
 use crate::object::VecData;
 
-/// Variable Representation
+/// Vector Representation
 ///
-/// This is a variable representation of a vector.
-/// It is variable, because the internal vector representation might be transformed when necessary, thereby exchanging
-/// one internal representation for another, usually a computational graph into a materialized
-/// vector.
+/// The ref-cell is used so vectors can change there internal reprsentation,
+/// e.g. by materializaing.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Rep<T>(pub RefCell<RepType<T>>);
 
@@ -23,13 +21,11 @@ impl<T> Rep<T>
 where
     T: AtomicMode + Clone + Default,
 {
-    // the underlying Rep<T> should not be exposed through the public API
     fn borrow(&self) -> Ref<RepType<T>> {
         self.0.borrow()
     }
-    // this is the central
     fn materialize_inplace(&self) -> &Self {
-        // FIXME: Rewrite this to avoid copying unnecessarily
+        // TODO: Rewrite this to avoid copying unnecessarily
         let new_repr = { self.borrow().materialize() };
         self.0.replace(new_repr);
 
@@ -54,48 +50,46 @@ where
         }
     }
 
-    // pub fn mutable_view(&self) -> Self {
-    //     match self.clone().borrow() {
-    //         RepType::Subset(v, s) => {
-    //             // FIXME(don't clone all the subsets, they are read only anyway?)
-    //             Rep(RefCell::new(RepType::Subset(v.mutable_view(), s.clone())))
-    //         }
-    //         _ => unreachable!()
-    //     }
-    // }
-    //
-    // pub fn lazy_copy(&self) -> Self {
-    //     match *self.borrow() {
-    //         RepType::Subset(v, s) => {
-    //             // FIXME(don't clone all the subsets, they are read only anyway?)
-    //             Rep(RefCell::new(RepType::Subset(v.lazy_copy(), s.clone())))
-    //         }
-    //         _ => unreachable!()
-    //     }
-    // }
-
     pub fn materialize(&self) -> Self {
         self.borrow().materialize().into()
     }
 
+    /// Create an empty vector
+    ///
+    /// The primary use case for this function is to support testing, and there
+    /// are few expected use cases outside. It is used for creating a vector
+    /// of an explicit atomic type, likely to be tested with
+    /// `SameType::is_same_type_as`.
+    ///
+    /// ```
+    /// use r::utils::*;
+    /// use r::object::Vector;
+    /// use r::object::OptionNA;
+    ///
+    /// let result = Vector::from(vec![1, 2, 3]);
+    /// let expect = Vector::from(Vec::<OptionNA<i32>>::new());
+    ///
+    /// assert!(result.is_same_type_as(&expect))
+    /// ```
+    ///
     pub fn new() -> Self {
         RepType::new().into()
     }
 
-    // FIXME: This should be refactored
     pub fn inner(&self) -> VecData<T> {
-        // does this make sense here?
-        // sef
-        // FIXME: Does this make sense here?
         self.borrow().inner()
     }
 
     pub fn len(&self) -> usize {
-        // FIXME: Only materialize when necessary
+        // TODO: Only materialize when necessary
         self.materialize_inplace();
         self.borrow().len()
     }
 
+    /// Subsetting a Vector
+    ///
+    /// Introduce a new subset into the aggregate list of subset indices.
+    ///
     pub fn subset(&self, subset: Subset) -> Self {
         (*self.borrow()).subset(subset).into()
     }
@@ -116,19 +110,51 @@ where
     pub fn assign(&mut self, value: Self) -> Self {
         self.0.borrow_mut().assign(value.0.into_inner()).into()
     }
+    /// Test the mode of the internal vector type
+    ///
+    /// Internally, this is defined by the [crate::object::coercion::AtomicMode]
+    /// implementation of the vector's element type.
+    ///
     pub fn is_double(&self) -> bool {
         T::is_double()
     }
+    /// See [Self::is_double] for more information
     pub fn is_logical(&self) -> bool {
         T::is_logical()
     }
+    /// See [Self::is_double] for more information
     pub fn is_integer(&self) -> bool {
         T::is_integer()
     }
+    /// See [Self::is_double] for more information
     pub fn is_character(&self) -> bool {
         T::is_character()
     }
 
+    /// Convert a Vector into a vector of a specific class of internal type
+    ///
+    /// The internal type only needs to satisfy
+    /// [crate::object::coercion::CoercibleInto] for the `Mode`, and for the `Mode`
+    /// type to implement [crate::object::coercion::AtomicMode]. Generally,
+    /// this is used more directly via [Self::as_logical], [Self::as_integer],
+    /// [Self::as_double] and [Self::as_character], which predefine the output
+    /// type of the mode.
+    ///
+    /// ```
+    /// use r::object::Vector;
+    /// use r::object::OptionNA;
+    ///
+    /// let x = Vector::from(vec![false, true, true, false]);
+    /// let n = x.as_double();
+    ///
+    /// assert_eq!(n, Vector::from(vec![
+    ///    OptionNA::Some(0_f64),
+    ///    OptionNA::Some(1_f64),
+    ///    OptionNA::Some(1_f64),
+    ///    OptionNA::Some(0_f64)
+    /// ]))
+    /// ```
+    ///
     pub fn as_mode<Mode>(&self) -> Rep<Mode>
     where
         T: CoercibleInto<Mode>,
@@ -168,6 +194,15 @@ where
         self.as_mode::<Character>()
     }
 
+    /// Apply over the vector contents to produce a vector of [std::cmp::Ordering]
+    ///
+    /// This function is used primarily in support of the implementation of
+    /// vectorized comparison operators and likely does not need to be used
+    /// outside of that context.
+    ///
+    /// See [crate::object::vector::VecPartialCmp] for vectorized comparison
+    /// operator implementations.
+    ///
     pub fn vectorized_partial_cmp<R, C>(self, other: Rep<R>) -> Vec<Option<std::cmp::Ordering>>
     where
         T: AtomicMode + Default + Clone + CoercibleInto<C>,

@@ -217,54 +217,22 @@ impl<T: AtomicMode + Clone + Default> RepType<T> {
         }
     }
 
-    /// Test the mode of the internal vector type
-    ///
-    /// Internally, this is defined by the [crate::object::coercion::AtomicMode]
-    /// implementation of the vector's element type.
-    ///
     pub fn is_double(&self) -> bool {
         T::is_double()
     }
 
-    /// See [Self::is_double] for more information
     pub fn is_logical(&self) -> bool {
         T::is_logical()
     }
 
-    /// See [Self::is_double] for more information
     pub fn is_integer(&self) -> bool {
         T::is_integer()
     }
 
-    /// See [Self::is_double] for more information
     pub fn is_character(&self) -> bool {
         T::is_character()
     }
 
-    /// Convert a Vector into a vector of a specific class of internal type
-    ///
-    /// The internal type only needs to satisfy
-    /// [crate::object::coercion::CoercibleInto] for the `Mode`, and for the `Mode`
-    /// type to implement [crate::object::coercion::AtomicMode]. Generally,
-    /// this is used more directly via [Self::as_logical], [Self::as_integer],
-    /// [Self::as_double] and [Self::as_character], which predefine the output
-    /// type of the mode.
-    ///
-    /// ```
-    /// use r::object::Vector;
-    /// use r::object::OptionNA;
-    ///
-    /// let x = Vector::from(vec![false, true, true, false]);
-    /// let n = x.as_double();
-    ///
-    /// assert_eq!(n, Vector::from(vec![
-    ///    OptionNA::Some(0_f64),
-    ///    OptionNA::Some(1_f64),
-    ///    OptionNA::Some(1_f64),
-    ///    OptionNA::Some(0_f64)
-    /// ]))
-    /// ```
-    ///
     pub fn as_mode<Mode>(&self) -> RepType<Mode>
     where
         T: CoercibleInto<Mode>,
@@ -281,7 +249,6 @@ impl<T: AtomicMode + Clone + Default> RepType<T> {
         }
     }
 
-    /// See [Self::as_mode] for more information
     pub fn as_logical(&self) -> RepType<Logical>
     where
         T: CoercibleInto<Logical>,
@@ -289,7 +256,6 @@ impl<T: AtomicMode + Clone + Default> RepType<T> {
         self.as_mode::<Logical>()
     }
 
-    /// See [Self::as_mode] for more information
     pub fn as_integer(&self) -> RepType<Integer>
     where
         T: CoercibleInto<Integer>,
@@ -297,7 +263,6 @@ impl<T: AtomicMode + Clone + Default> RepType<T> {
         self.as_mode::<Integer>()
     }
 
-    /// See [Self::as_mode] for more information
     pub fn as_double(&self) -> RepType<Double>
     where
         T: CoercibleInto<Double>,
@@ -305,7 +270,6 @@ impl<T: AtomicMode + Clone + Default> RepType<T> {
         self.as_mode::<Double>()
     }
 
-    /// See [Self::as_mode] for more information
     pub fn as_character(&self) -> RepType<Character>
     where
         T: CoercibleInto<Character>,
@@ -313,15 +277,6 @@ impl<T: AtomicMode + Clone + Default> RepType<T> {
         self.as_mode::<Character>()
     }
 
-    /// Apply over the vector contents to produce a vector of [std::cmp::Ordering]
-    ///
-    /// This function is used primarily in support of the implementation of
-    /// vectorized comparison operators and likely does not need to be used
-    /// outside of that context.
-    ///
-    /// See [crate::object::vector::VecPartialCmp] for vectorized comparison
-    /// operator implementations.
-    ///
     pub fn vectorized_partial_cmp<R, C>(self, other: RepType<R>) -> Vec<Option<std::cmp::Ordering>>
     where
         T: AtomicMode + Default + Clone + CoercibleInto<C>,
@@ -346,7 +301,6 @@ impl<T: AtomicMode + Clone + Default> RepType<T> {
             .collect()
     }
 
-    // FIXME: private
     pub fn get_inner(&self, index: usize) -> Option<T> {
         match self {
             RepType::Subset(v, subsets) => {

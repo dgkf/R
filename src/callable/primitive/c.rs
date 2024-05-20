@@ -13,9 +13,6 @@ impl Callable for PrimitiveC {
     fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
         // this can be cleaned up quite a bit, but I just need it working with
         // more types for now to test vectorized operators using different types
-        //
-        //
-        //
 
         let Obj::List(vals) = stack.eval_list_eager(args)? else {
             unreachable!()

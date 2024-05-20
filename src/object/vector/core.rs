@@ -53,35 +53,6 @@ pub enum Vector {
     // Raw(Raw),
 }
 
-// pub struct VectorIter<T>(RepIter<T>);
-
-// impl<T> Iterator for VectorIter<T>
-// where
-//     T: AtomicMode + Clone + Default,
-// {
-//     type Item = T;
-//     fn next(&mut self) -> Option<Self::Item> {
-//         self.0.next()
-//     }
-// }
-
-// impl<T> IntoIterator for Vector<T>
-// where
-//     T: AtomicMode + Clone + Default,
-// {
-//     type Item = T;
-//     type IntoIter = VectorIter<T>;
-//     fn into_iter(self) {
-//         use super::Vector::*;
-//         match self {
-//             Double(x) => VectorIter(x.into_iter()),
-//             Integer(x) => VectorIter(x.into_iter()),
-//             Logical(x) => VectorIter(x.into_iter()),
-//             Character(x) => VectorIter(x.into_iter()),
-//         }
-//     }
-// }
-
 impl Vector {
     pub fn get(&self, index: usize) -> Option<Vector> {
         use Vector::*;
@@ -93,6 +64,9 @@ impl Vector {
         }
     }
 
+    /// Create a lazy copy of the vector.
+    /// Vectors only need to be copied when there is more than
+    /// One lazy copy and the vector is being modified.
     pub fn lazy_copy(&self) -> Self {
         match self {
             Vector::Double(v) => Vector::Double(v.lazy_copy()),
@@ -102,6 +76,10 @@ impl Vector {
         }
     }
 
+    /// Get a mutable view into the vector.
+    /// This can be used to retrieve a mutable view into a vector
+    /// from an environment, so it can be mutated.
+    /// This is used to allow for things like `x[1] = 2`.
     pub fn mutable_view(&self) -> Self {
         match self {
             Vector::Double(v) => Vector::Double(v.mutable_view()),
