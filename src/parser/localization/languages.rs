@@ -5,7 +5,6 @@ pub mod en {
     #[grammar = "grammar/grammar.pest"]
     pub struct Parser;
 
-    use crate::parser::Style;
     impl From<Rule> for Style {
         fn from(rule: Rule) -> Self {
             match rule {

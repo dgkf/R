@@ -2,7 +2,7 @@ use std::str::FromStr;
 
 use super::OptionNA;
 
-pub trait AtomicMode {
+pub trait Atomic: std::fmt::Debug + Default + Clone {
     fn is_double() -> bool {
         false
     }

@@ -4,6 +4,8 @@ use std::fmt::Display;
 use crate::error::Error;
 use crate::lang::EvalResult;
 use crate::object::Obj;
+use crate::object::Scalar;
+use crate::object::ScalarType;
 
 use super::coercion::CoercibleInto;
 use super::rep::Rep;
@@ -16,6 +18,8 @@ pub enum OptionNA<T> {
     NA,
     Some(T),
 }
+
+impl<T> Copy for OptionNA<T> where T: Copy {}
 
 impl<T> PartialOrd for OptionNA<T>
 where
@@ -37,6 +41,13 @@ impl<T> OptionNA<T> {
         match self {
             OptionNA::Some(x) => OptionNA::Some(f(x)),
             OptionNA::NA => OptionNA::NA,
+        }
+    }
+
+    pub fn unwrap_or(self, default: T) -> T {
+        match self {
+            OptionNA::Some(x) => x,
+            OptionNA::NA => default,
         }
     }
 }
@@ -65,20 +76,70 @@ impl Vector {
     pub fn try_get(&self, index: Obj) -> EvalResult {
         let err =
             Error::Other("Vector index cannot be coerced into a valid indexing type.".to_string());
-        match (self, index.as_vector()?) {
-            (Vector::Double(v), Obj::Vector(i)) => {
-                Ok(Obj::Vector(Vector::from(v.subset(i.try_into()?))))
+
+        if let Obj::Scalar(s) = index {
+            match self {
+                Vector::Double(x) => Ok(Obj::Scalar(
+                    x.subset(s.try_into()?)
+                        .inner()
+                        .clone()
+                        .borrow()
+                        .first()
+                        .map_or(Scalar::NA, |x| match *x {
+                            OptionNA::Some(value) => Scalar::F64(ScalarType(value)),
+                            OptionNA::NA => Scalar::NA,
+                        }),
+                )),
+                Vector::Integer(x) => Ok(Obj::Scalar(
+                    x.subset(s.try_into()?)
+                        .inner()
+                        .clone()
+                        .borrow()
+                        .first()
+                        .map_or(Scalar::NA, |x| match *x {
+                            OptionNA::Some(value) => Scalar::I32(ScalarType(value)),
+                            OptionNA::NA => Scalar::NA,
+                        }),
+                )),
+                Vector::Logical(x) => Ok(Obj::Scalar(
+                    x.subset(s.try_into()?)
+                        .inner()
+                        .clone()
+                        .borrow()
+                        .first()
+                        .map_or(Scalar::NA, |x| match *x {
+                            OptionNA::Some(value) => Scalar::Bool(ScalarType(value)),
+                            OptionNA::NA => Scalar::NA,
+                        }),
+                )),
+                Vector::Character(x) => Ok(Obj::Scalar(
+                    x.subset(s.try_into()?)
+                        .inner()
+                        .clone()
+                        .borrow()
+                        .first()
+                        .map_or(Scalar::NA, |x| match x.clone() {
+                            OptionNA::Some(value) => Scalar::String(ScalarType(value)),
+                            OptionNA::NA => Scalar::NA,
+                        }),
+                )),
             }
-            (Vector::Integer(v), Obj::Vector(i)) => {
-                Ok(Obj::Vector(Vector::from(v.subset(i.try_into()?))))
+        } else {
+            match (self, index.as_vector()?) {
+                (Vector::Double(v), Obj::Vector(i)) => {
+                    Ok(Obj::Vector(Vector::from(v.subset(i.try_into()?))))
+                }
+                (Vector::Integer(v), Obj::Vector(i)) => {
+                    Ok(Obj::Vector(Vector::from(v.subset(i.try_into()?))))
+                }
+                (Vector::Logical(v), Obj::Vector(i)) => {
+                    Ok(Obj::Vector(Vector::from(v.subset(i.try_into()?))))
+                }
+                (Vector::Character(v), Obj::Vector(i)) => {
+                    Ok(Obj::Vector(Vector::from(v.subset(i.try_into()?))))
+                }
+                _ => Err(err.into()),
             }
-            (Vector::Logical(v), Obj::Vector(i)) => {
-                Ok(Obj::Vector(Vector::from(v.subset(i.try_into()?))))
-            }
-            (Vector::Character(v), Obj::Vector(i)) => {
-                Ok(Obj::Vector(Vector::from(v.subset(i.try_into()?))))
-            }
-            _ => Err(err.into()),
         }
     }
 

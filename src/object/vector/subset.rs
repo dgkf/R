@@ -2,7 +2,10 @@ use std::cell::RefCell;
 use std::ops::Range;
 use std::rc::Rc;
 
-use crate::lang::Signal;
+use crate::{
+    lang::Signal,
+    object::{coercion::CoercibleInto, Scalar, ScalarType},
+};
 
 use super::{types::*, OptionNA, Vector};
 
@@ -13,6 +16,7 @@ use super::{types::*, OptionNA, Vector};
 ///
 #[derive(Debug, Clone, PartialEq)]
 pub enum Subset {
+    Index(i32),
     Indices(Rc<RefCell<Vec<Integer>>>),
     Mask(Rc<RefCell<Vec<Logical>>>),
     Names(Rc<RefCell<Vec<Character>>>),
@@ -22,6 +26,13 @@ pub enum Subset {
 impl Subset {
     pub fn get_index_at(&self, index: usize) -> Option<usize> {
         match self {
+            Subset::Index(ind) => {
+                if index == 1 {
+                    Some(*ind as usize)
+                } else {
+                    None
+                }
+            }
             Subset::Indices(indices) => indices.clone().borrow().get(index).and_then(|i| match i {
                 OptionNA::Some(i) => Some((*i as usize).saturating_sub(1)),
                 OptionNA::NA => None,
@@ -51,6 +62,7 @@ impl Subset {
 
     pub fn len(&self) -> usize {
         match self {
+            Subset::Index(_) => 1,
             Subset::Indices(i) => i.clone().borrow().len(),
             Subset::Range(r) => r.end - r.start,
             Subset::Mask(_) => usize::MAX,
@@ -71,6 +83,7 @@ impl Subset {
         I: Iterator<Item = (usize, Option<usize>)> + 'a,
     {
         match self.clone() {
+            Subset::Index(i) => Box::new(iter.nth(i as usize).into_iter()),
             Subset::Indices(i) => {
                 let l = self.len();
 
@@ -206,6 +219,26 @@ impl From<Vec<usize>> for Subset {
                 .map(|i| OptionNA::Some(*i as i32))
                 .collect::<Vec<_>>(),
         )))
+    }
+}
+
+impl TryFrom<i32> for Subset {
+    type Error = Signal;
+    fn try_from(value: i32) -> Result<Self, Self::Error> {
+        Ok(Subset::Index(value - 1))
+    }
+}
+
+impl TryFrom<Scalar> for Subset {
+    type Error = Signal;
+    fn try_from(value: Scalar) -> Result<Self, Self::Error> {
+        use crate::error::Error::*;
+        match value {
+            Scalar::I32(ScalarType(x)) => Ok(Subset::Index(x - 1)),
+            Scalar::Bool(ScalarType(x)) => Subset::try_from(CoercibleInto::<i32>::coerce_into(x)),
+            Scalar::F64(ScalarType(x)) => Subset::try_from(CoercibleInto::<i32>::coerce_into(x)),
+            _ => Err(Signal::Error(CannotBeCoercedToInteger)),
+        }
     }
 }
 

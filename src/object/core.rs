@@ -11,6 +11,7 @@ pub enum Obj {
     // Data structures
     #[default]
     Null,
+    Scalar(Scalar),
     Vector(Vector),
     List(List),
 

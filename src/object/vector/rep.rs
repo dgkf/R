@@ -2,7 +2,7 @@ use std::cell::RefCell;
 use std::fmt::{Debug, Display};
 use std::rc::Rc;
 
-use super::coercion::{AtomicMode, CoercibleInto, CommonCmp, CommonNum, MinimallyNumeric};
+use super::coercion::{Atomic, CoercibleInto, CommonCmp, CommonNum, MinimallyNumeric};
 use super::iterators::{map_common_numeric, zip_recycle};
 use super::subset::Subset;
 use super::subsets::Subsets;
@@ -18,13 +18,13 @@ pub enum Rep<T> {
     // Iter(Box<dyn Iterator<Item = &T>>)
 }
 
-impl<T: AtomicMode + Clone + Default> Default for Rep<T> {
+impl<T: Atomic> Default for Rep<T> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<T: AtomicMode + Clone + Default> Rep<T> {
+impl<T: Atomic> Rep<T> {
     /// Create an empty vector
     ///
     /// The primary use case for this function is to support testing, and there
@@ -272,8 +272,8 @@ impl<T: AtomicMode + Clone + Default> Rep<T> {
     ///
     pub fn vectorized_partial_cmp<R, C>(self, other: Rep<R>) -> Vec<Option<std::cmp::Ordering>>
     where
-        T: AtomicMode + Default + Clone + CoercibleInto<C>,
-        R: AtomicMode + Default + Clone + CoercibleInto<C>,
+        T: Atomic + Default + Clone + CoercibleInto<C>,
+        R: Atomic + Default + Clone + CoercibleInto<C>,
         (T, R): CommonCmp<Common = C>,
         C: PartialOrd,
     {
@@ -308,7 +308,7 @@ impl<T: AtomicMode + Clone + Default> Rep<T> {
 
 impl<T> TryInto<bool> for Rep<OptionNA<T>>
 where
-    OptionNA<T>: AtomicMode + Clone + CoercibleInto<OptionNA<bool>>,
+    OptionNA<T>: Atomic + Clone + CoercibleInto<OptionNA<bool>>,
 {
     type Error = ();
     fn try_into(self) -> Result<bool, Self::Error> {
@@ -391,7 +391,7 @@ where
 
 impl<T> Display for Rep<T>
 where
-    T: AtomicMode + Debug + Default + Clone,
+    T: Atomic + Debug + Default + Clone,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let n = self.len();
@@ -456,7 +456,7 @@ where
 
 impl<L, LNum, O> std::ops::Neg for Rep<L>
 where
-    L: AtomicMode + Default + Clone + MinimallyNumeric<As = LNum> + CoercibleInto<LNum>,
+    L: Atomic + Default + Clone + MinimallyNumeric<As = LNum> + CoercibleInto<LNum>,
     LNum: std::ops::Neg<Output = O>,
     Rep<O>: From<Vec<O>>,
 {
@@ -475,8 +475,8 @@ where
 
 impl<L, R, C, O, LNum, RNum> std::ops::Add<Rep<R>> for Rep<L>
 where
-    L: AtomicMode + Default + Clone + MinimallyNumeric<As = LNum> + CoercibleInto<LNum>,
-    R: AtomicMode + Default + Clone + MinimallyNumeric<As = RNum> + CoercibleInto<RNum>,
+    L: Atomic + Default + Clone + MinimallyNumeric<As = LNum> + CoercibleInto<LNum>,
+    R: Atomic + Default + Clone + MinimallyNumeric<As = RNum> + CoercibleInto<RNum>,
     (LNum, RNum): CommonNum<Common = C>,
     C: Clone + std::ops::Add<Output = O>,
     Rep<C>: From<Vec<O>>,
@@ -501,8 +501,8 @@ where
 
 impl<L, R, C, O, LNum, RNum> std::ops::Sub<Rep<R>> for Rep<L>
 where
-    L: AtomicMode + Default + Clone + MinimallyNumeric<As = LNum> + CoercibleInto<LNum>,
-    R: AtomicMode + Default + Clone + MinimallyNumeric<As = RNum> + CoercibleInto<RNum>,
+    L: Atomic + Default + Clone + MinimallyNumeric<As = LNum> + CoercibleInto<LNum>,
+    R: Atomic + Default + Clone + MinimallyNumeric<As = RNum> + CoercibleInto<RNum>,
     (LNum, RNum): CommonNum<Common = C>,
     C: std::ops::Sub<Output = O>,
     Rep<C>: From<Vec<O>>,
@@ -527,8 +527,8 @@ where
 
 impl<L, R, C, O, LNum, RNum> std::ops::Mul<Rep<R>> for Rep<L>
 where
-    L: AtomicMode + Default + Clone + MinimallyNumeric<As = LNum> + CoercibleInto<LNum>,
-    R: AtomicMode + Default + Clone + MinimallyNumeric<As = RNum> + CoercibleInto<RNum>,
+    L: Atomic + Default + Clone + MinimallyNumeric<As = LNum> + CoercibleInto<LNum>,
+    R: Atomic + Default + Clone + MinimallyNumeric<As = RNum> + CoercibleInto<RNum>,
     (LNum, RNum): CommonNum<Common = C>,
     C: std::ops::Mul<Output = O>,
     Rep<C>: From<Vec<O>>,
@@ -553,8 +553,8 @@ where
 
 impl<L, R, C, O, LNum, RNum> std::ops::Div<Rep<R>> for Rep<L>
 where
-    L: AtomicMode + Default + Clone + MinimallyNumeric<As = LNum> + CoercibleInto<LNum>,
-    R: AtomicMode + Default + Clone + MinimallyNumeric<As = RNum> + CoercibleInto<RNum>,
+    L: Atomic + Default + Clone + MinimallyNumeric<As = LNum> + CoercibleInto<LNum>,
+    R: Atomic + Default + Clone + MinimallyNumeric<As = RNum> + CoercibleInto<RNum>,
     (LNum, RNum): CommonNum<Common = C>,
     C: std::ops::Div<Output = O>,
     Rep<C>: From<Vec<O>>,
@@ -579,8 +579,8 @@ where
 
 impl<L, R, C, O, LNum, RNum> std::ops::Rem<Rep<R>> for Rep<L>
 where
-    L: AtomicMode + Default + Clone + MinimallyNumeric<As = LNum> + CoercibleInto<LNum>,
-    R: AtomicMode + Default + Clone + MinimallyNumeric<As = RNum> + CoercibleInto<RNum>,
+    L: Atomic + Default + Clone + MinimallyNumeric<As = LNum> + CoercibleInto<LNum>,
+    R: Atomic + Default + Clone + MinimallyNumeric<As = RNum> + CoercibleInto<RNum>,
     (LNum, RNum): CommonNum<Common = C>,
     C: std::ops::Rem<Output = O>,
     Rep<C>: From<Vec<O>>,
@@ -605,8 +605,8 @@ where
 
 impl<L, R, O, LNum, RNum> Pow<Rep<R>> for Rep<L>
 where
-    L: AtomicMode + Default + Clone + MinimallyNumeric<As = LNum> + CoercibleInto<LNum>,
-    R: AtomicMode + Default + Clone + MinimallyNumeric<As = RNum> + CoercibleInto<RNum>,
+    L: Atomic + Default + Clone + MinimallyNumeric<As = LNum> + CoercibleInto<LNum>,
+    R: Atomic + Default + Clone + MinimallyNumeric<As = RNum> + CoercibleInto<RNum>,
     LNum: Pow<RNum, Output = O>,
     Rep<O>: From<Vec<O>>,
 {
@@ -630,8 +630,8 @@ where
 
 impl<L, R, O> std::ops::BitOr<Rep<R>> for Rep<L>
 where
-    L: AtomicMode + Default + Clone + CoercibleInto<Logical>,
-    R: AtomicMode + Default + Clone + CoercibleInto<Logical>,
+    L: Atomic + Default + Clone + CoercibleInto<Logical>,
+    R: Atomic + Default + Clone + CoercibleInto<Logical>,
     Logical: std::ops::BitOr<Logical, Output = O>,
     Rep<O>: From<Vec<O>>,
 {
@@ -655,8 +655,8 @@ where
 
 impl<L, R, O> std::ops::BitAnd<Rep<R>> for Rep<L>
 where
-    L: AtomicMode + Default + Clone + CoercibleInto<Logical>,
-    R: AtomicMode + Default + Clone + CoercibleInto<Logical>,
+    L: Atomic + Default + Clone + CoercibleInto<Logical>,
+    R: Atomic + Default + Clone + CoercibleInto<Logical>,
     Logical: std::ops::BitAnd<Logical, Output = O>,
     Rep<O>: From<Vec<O>>,
 {
@@ -680,8 +680,8 @@ where
 
 impl<L, R, C> VecPartialCmp<Rep<R>> for Rep<L>
 where
-    L: AtomicMode + Default + Clone + CoercibleInto<C>,
-    R: AtomicMode + Default + Clone + CoercibleInto<C>,
+    L: Atomic + Default + Clone + CoercibleInto<C>,
+    R: Atomic + Default + Clone + CoercibleInto<C>,
     (L, R): CommonCmp<Common = C>,
     C: PartialOrd,
 {

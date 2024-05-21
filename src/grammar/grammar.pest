@@ -110,10 +110,10 @@
         prefix = _{ subtract | negate | more }
             negate = { "!" }
 
-        postfix = _{ call | index | vector_index | more }
+        postfix = _{ call | vector_index | more } // | index }
             call         = { "("  ~ pairs ~  ")" }
-            index        = { "[[" ~ pairs ~ "]]" }
             vector_index = { "["  ~ pairs ~  "]" }
+            // index        = { "[[" ~ pairs ~ "]]" }
 
         standalone = _{ more }
 

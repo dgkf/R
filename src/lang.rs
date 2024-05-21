@@ -94,6 +94,7 @@ impl Obj {
     pub fn as_list(&self) -> EvalResult {
         match self {
             Obj::Null => Ok(Obj::List(List::from(vec![]))),
+            Obj::Scalar(_s) => internal_err!(),
             Obj::Vector(_v) => internal_err!(),
             Obj::List(l) => Ok(Obj::List(l.clone())),
             Obj::Expr(e) => match e {
@@ -125,6 +126,7 @@ impl Obj {
 
     pub fn as_integer(self) -> EvalResult {
         match self {
+            Obj::Scalar(s) => s.as_integer(),
             Obj::Vector(v) => Ok(Obj::Vector(v.as_integer())),
             Obj::Null => Ok(Obj::Vector(Vector::from(Vec::<Integer>::new()))),
             _ => Err(Signal::Error(Error::CannotBeCoercedToInteger)),
@@ -133,6 +135,7 @@ impl Obj {
 
     pub fn as_double(self) -> EvalResult {
         match self {
+            Obj::Scalar(s) => s.as_double(),
             Obj::Vector(v) => Ok(Obj::Vector(v.as_double())),
             Obj::Null => Ok(Obj::Vector(Vector::from(Vec::<Double>::new()))),
             _ => Error::CannotBeCoercedToDouble.into(),
@@ -141,6 +144,7 @@ impl Obj {
 
     pub fn as_logical(self) -> EvalResult {
         match self {
+            Obj::Scalar(s) => s.as_logical(),
             Obj::Vector(v) => Ok(Obj::Vector(v.as_logical())),
             Obj::Null => Ok(Obj::Vector(Vector::from(Vec::<Logical>::new()))),
             _ => Error::CannotBeCoercedToLogical.into(),
@@ -149,6 +153,7 @@ impl Obj {
 
     pub fn as_character(self) -> EvalResult {
         match self {
+            Obj::Scalar(s) => s.as_character(),
             Obj::Vector(v) => Ok(Obj::Vector(v.as_character())),
             Obj::Null => Ok(Obj::Vector(Vector::from(Vec::<Character>::new()))),
             _ => Error::CannotBeCoercedToCharacter.into(),
@@ -158,6 +163,7 @@ impl Obj {
     pub fn as_vector(self) -> EvalResult {
         match self {
             Obj::Null => Ok(Obj::Vector(Vector::from(Vec::<Logical>::new()))),
+            Obj::Scalar(s) => s.as_vector(),
             Obj::Vector(_) => Ok(self),
             _ => Error::CannotBeCoercedTo("vector").into(),
         }
@@ -188,6 +194,10 @@ impl Obj {
 
     pub fn get(&self, index: usize) -> Option<Obj> {
         match self {
+            Obj::Scalar(s) => Obj::Scalar(s.clone())
+                .as_vector()
+                .map(|v| v.get(index))
+                .unwrap_or(None),
             Obj::Vector(v) => v.get(index).map(Obj::Vector),
             Obj::Null => None,
             Obj::List(..) => None,
@@ -316,7 +326,8 @@ impl TryInto<bool> for Obj {
 impl Display for Obj {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Obj::Vector(v) => write!(f, "{}", v),
+            Obj::Scalar(s) => write!(f, "{s}"),
+            Obj::Vector(v) => write!(f, "{v}"),
             Obj::Null => write!(f, "NULL"),
             Obj::Environment(x) => write!(f, "<environment {:?}>", x.values.as_ptr()),
             Obj::Function(formals, Expr::Primitive(primitive), _) => {
@@ -387,10 +398,12 @@ fn display_list(x: &List, f: &mut fmt::Formatter<'_>, bc: Option<String>) -> fmt
 
 impl std::ops::Add for Obj {
     type Output = EvalResult;
-
     fn add(self, rhs: Self) -> Self::Output {
         match (self.as_double()?, rhs.as_double()?) {
+            (Obj::Scalar(l), Obj::Scalar(r)) => Ok(Obj::Scalar(l + r)),
             (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector(l + r)),
+            (l @ Obj::Scalar(_), r @ Obj::Vector(_)) => l.as_vector()? + r,
+            (l @ Obj::Vector(_), r @ Obj::Scalar(_)) => l + r.as_vector()?,
             _ => internal_err!(),
         }
     }
@@ -398,10 +411,12 @@ impl std::ops::Add for Obj {
 
 impl std::ops::Sub for Obj {
     type Output = EvalResult;
-
     fn sub(self, rhs: Self) -> Self::Output {
         match (self.as_double()?, rhs.as_double()?) {
+            (Obj::Scalar(l), Obj::Scalar(r)) => Ok(Obj::Scalar(l - r)),
             (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector(l - r)),
+            (l @ Obj::Scalar(_), r @ Obj::Vector(_)) => l.as_vector()? - r,
+            (l @ Obj::Vector(_), r @ Obj::Scalar(_)) => l - r.as_vector()?,
             _ => internal_err!(),
         }
     }
@@ -409,9 +424,9 @@ impl std::ops::Sub for Obj {
 
 impl std::ops::Neg for Obj {
     type Output = EvalResult;
-
     fn neg(self) -> Self::Output {
         match self.as_double()? {
+            Obj::Scalar(x) => Ok(Obj::Scalar(-x)),
             Obj::Vector(x) => Ok(Obj::Vector(-x)),
             _ => internal_err!(),
         }
@@ -420,10 +435,12 @@ impl std::ops::Neg for Obj {
 
 impl std::ops::Mul for Obj {
     type Output = EvalResult;
-
     fn mul(self, rhs: Self) -> Self::Output {
         match (self.as_double()?, rhs.as_double()?) {
+            (Obj::Scalar(l), Obj::Scalar(r)) => Ok(Obj::Scalar(l * r)),
             (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector(l * r)),
+            (l @ Obj::Scalar(_), r @ Obj::Vector(_)) => l.as_vector()? * r,
+            (l @ Obj::Vector(_), r @ Obj::Scalar(_)) => l * r.as_vector()?,
             _ => internal_err!(),
         }
     }
@@ -431,10 +448,12 @@ impl std::ops::Mul for Obj {
 
 impl std::ops::Div for Obj {
     type Output = EvalResult;
-
     fn div(self, rhs: Self) -> Self::Output {
         match (self.as_double()?, rhs.as_double()?) {
+            (Obj::Scalar(l), Obj::Scalar(r)) => Ok(Obj::Scalar(l / r)),
             (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector(l / r)),
+            (l @ Obj::Scalar(_), r @ Obj::Vector(_)) => l.as_vector()? / r,
+            (l @ Obj::Vector(_), r @ Obj::Scalar(_)) => l / r.as_vector()?,
             _ => internal_err!(),
         }
     }
@@ -442,10 +461,12 @@ impl std::ops::Div for Obj {
 
 impl super::object::Pow<Obj> for Obj {
     type Output = EvalResult;
-
     fn power(self, rhs: Self) -> Self::Output {
         match (self.as_double()?, rhs.as_double()?) {
+            (Obj::Scalar(l), Obj::Scalar(r)) => Ok(Obj::Scalar(l.power(r))),
             (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector(l.power(r))),
+            (l @ Obj::Scalar(_), r @ Obj::Vector(_)) => l.as_vector()?.power(r),
+            (l @ Obj::Vector(_), r @ Obj::Scalar(_)) => l.power(r.as_vector()?),
             _ => internal_err!(),
         }
     }
@@ -453,10 +474,12 @@ impl super::object::Pow<Obj> for Obj {
 
 impl std::ops::Rem for Obj {
     type Output = EvalResult;
-
     fn rem(self, rhs: Self) -> Self::Output {
         match (self.as_double()?, rhs.as_double()?) {
+            (Obj::Scalar(l), Obj::Scalar(r)) => Ok(Obj::Scalar(l % r)),
             (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector(l % r)),
+            (l @ Obj::Scalar(_), r @ Obj::Vector(_)) => l.as_vector()? % r,
+            (l @ Obj::Vector(_), r @ Obj::Scalar(_)) => l % r.as_vector()?,
             _ => internal_err!(),
         }
     }
@@ -464,10 +487,16 @@ impl std::ops::Rem for Obj {
 
 impl std::ops::BitOr for Obj {
     type Output = EvalResult;
-
     fn bitor(self, rhs: Self) -> Self::Output {
-        match (self.as_logical()?, rhs.as_logical()?) {
+        match (self, rhs) {
+            (Obj::Scalar(l), Obj::Scalar(r)) => Ok(Obj::Scalar(l | r)),
             (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector(l | r)),
+            (l @ Obj::Scalar(_), r @ Obj::Vector(_)) => {
+                l.as_vector()?.as_logical()? | r.as_logical()?
+            }
+            (l @ Obj::Vector(_), r @ Obj::Scalar(_)) => {
+                l.as_logical()? | r.as_vector()?.as_logical()?
+            }
             _ => internal_err!(),
         }
     }
@@ -475,10 +504,16 @@ impl std::ops::BitOr for Obj {
 
 impl std::ops::BitAnd for Obj {
     type Output = EvalResult;
-
     fn bitand(self, rhs: Self) -> Self::Output {
-        match (self.as_logical()?, rhs.as_logical()?) {
+        match (self, rhs) {
+            (Obj::Scalar(l), Obj::Scalar(r)) => Ok(Obj::Scalar(l & r)),
             (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector(l & r)),
+            (l @ Obj::Scalar(_), r @ Obj::Vector(_)) => {
+                l.as_vector()?.as_logical()? & r.as_logical()?
+            }
+            (l @ Obj::Vector(_), r @ Obj::Scalar(_)) => {
+                l.as_logical()? & r.as_vector()?.as_logical()?
+            }
             _ => internal_err!(),
         }
     }
@@ -487,29 +522,41 @@ impl std::ops::BitAnd for Obj {
 impl VecPartialCmp<Obj> for Obj {
     type Output = EvalResult;
     fn vec_gt(self, rhs: Self) -> Self::Output {
-        match (self.as_vector()?, rhs.as_vector()?) {
+        match (self, rhs) {
+            (Obj::Scalar(l), Obj::Scalar(r)) => Ok(Obj::Scalar(l.vec_gt(r))),
             (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector(l.vec_gt(r))),
+            (l @ Obj::Scalar(_), r @ Obj::Vector(_)) => l.as_vector()?.vec_gt(r),
+            (l @ Obj::Vector(_), r @ Obj::Scalar(_)) => l.vec_gt(r.as_vector()?),
             _ => internal_err!(),
         }
     }
 
     fn vec_gte(self, rhs: Self) -> Self::Output {
-        match (self.as_vector()?, rhs.as_vector()?) {
+        match (self, rhs) {
+            (Obj::Scalar(l), Obj::Scalar(r)) => Ok(Obj::Scalar(l.vec_gte(r))),
             (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector(l.vec_gte(r))),
+            (l @ Obj::Scalar(_), r @ Obj::Vector(_)) => l.as_vector()?.vec_gte(r),
+            (l @ Obj::Vector(_), r @ Obj::Scalar(_)) => l.vec_gte(r.as_vector()?),
             _ => internal_err!(),
         }
     }
 
     fn vec_lt(self, rhs: Self) -> Self::Output {
-        match (self.as_vector()?, rhs.as_vector()?) {
+        match (self, rhs) {
+            (Obj::Scalar(l), Obj::Scalar(r)) => Ok(Obj::Scalar(l.vec_lt(r))),
             (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector(l.vec_lt(r))),
+            (l @ Obj::Scalar(_), r @ Obj::Vector(_)) => l.as_vector()?.vec_lt(r),
+            (l @ Obj::Vector(_), r @ Obj::Scalar(_)) => l.vec_lt(r.as_vector()?),
             _ => internal_err!(),
         }
     }
 
     fn vec_lte(self, rhs: Self) -> Self::Output {
-        match (self.as_vector()?, rhs.as_vector()?) {
+        match (self, rhs) {
+            (Obj::Scalar(l), Obj::Scalar(r)) => Ok(Obj::Scalar(l.vec_lte(r))),
             (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector(l.vec_lte(r))),
+            (l @ Obj::Scalar(_), r @ Obj::Vector(_)) => l.as_vector()?.vec_lte(r),
+            (l @ Obj::Vector(_), r @ Obj::Scalar(_)) => l.vec_lte(r.as_vector()?),
             _ => internal_err!(),
         }
     }
@@ -521,7 +568,10 @@ impl VecPartialCmp<Obj> for Obj {
             (lhs @ Obj::Function(..), rhs @ Obj::Function(..)) => Ok((lhs == rhs).into()),
             (lhs @ Obj::Environment(_), rhs @ Obj::Environment(_)) => Ok((lhs == rhs).into()),
             (lhs, rhs) => match (lhs.as_vector()?, rhs.as_vector()?) {
+                (Obj::Scalar(l), Obj::Scalar(r)) => Ok(Obj::Scalar(l.vec_eq(r))),
                 (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector(l.vec_eq(r))),
+                (l @ Obj::Scalar(_), r @ Obj::Vector(_)) => l.as_vector()?.vec_eq(r),
+                (l @ Obj::Vector(_), r @ Obj::Scalar(_)) => l.vec_eq(r.as_vector()?),
                 _ => internal_err!(),
             },
         }
@@ -534,7 +584,10 @@ impl VecPartialCmp<Obj> for Obj {
             (lhs @ Obj::Function(..), rhs @ Obj::Function(..)) => Ok((lhs != rhs).into()),
             (lhs @ Obj::Environment(_), rhs @ Obj::Environment(_)) => Ok((lhs != rhs).into()),
             (lhs, rhs) => match (lhs.as_vector()?, rhs.as_vector()?) {
+                (Obj::Scalar(l), Obj::Scalar(r)) => Ok(Obj::Scalar(l.vec_neq(r))),
                 (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector(l.vec_neq(r))),
+                (l @ Obj::Scalar(_), r @ Obj::Vector(_)) => l.as_vector()?.vec_neq(r),
+                (l @ Obj::Vector(_), r @ Obj::Scalar(_)) => l.vec_neq(r.as_vector()?),
                 _ => internal_err!(),
             },
         }
@@ -913,10 +966,10 @@ impl Context for Obj {
             Expr::Inf => Ok(Obj::Vector(Vector::from(vec![OptionNA::Some(
                 f64::INFINITY,
             )]))),
-            Expr::Number(x) => Ok(Obj::Vector(Vector::from(vec![x]))),
-            Expr::Integer(x) => Ok(Obj::Vector(Vector::from(vec![x]))),
-            Expr::Bool(x) => Ok(Obj::Vector(Vector::from(vec![OptionNA::Some(x)]))),
-            Expr::String(x) => Ok(Obj::Vector(Vector::from(vec![OptionNA::Some(x)]))),
+            Expr::Number(x) => Ok(Obj::Scalar(Scalar::F64(ScalarType(x)))),
+            Expr::Integer(x) => Ok(Obj::Scalar(Scalar::I32(ScalarType(x)))),
+            Expr::Bool(x) => Ok(Obj::Scalar(Scalar::Bool(ScalarType(x)))),
+            Expr::String(x) => Ok(Obj::Scalar(Scalar::String(ScalarType(x)))),
             Expr::Function(formals, body) => Ok(Obj::Function(formals, *body, self.env().clone())),
             Expr::Symbol(name) => self.get(name),
             Expr::Break => Err(Signal::Condition(Cond::Break)),
@@ -953,13 +1006,11 @@ impl Context for Rc<Environment> {
         match expr {
             Expr::Null => Ok(Obj::Null),
             Expr::NA => Ok(Obj::Vector(Vector::from(vec![OptionNA::NA as Logical]))),
-            Expr::Inf => Ok(Obj::Vector(Vector::from(vec![OptionNA::Some(
-                f64::INFINITY,
-            )]))),
-            Expr::Number(x) => Ok(Obj::Vector(Vector::from(vec![x]))),
-            Expr::Integer(x) => Ok(Obj::Vector(Vector::from(vec![x]))),
-            Expr::Bool(x) => Ok(Obj::Vector(Vector::from(vec![OptionNA::Some(x)]))),
-            Expr::String(x) => Ok(Obj::Vector(Vector::from(vec![OptionNA::Some(x)]))),
+            Expr::Inf => Ok(Obj::Scalar(Scalar::F64(ScalarType(f64::INFINITY)))),
+            Expr::Number(x) => Ok(Obj::Scalar(Scalar::F64(ScalarType(x)))),
+            Expr::Integer(x) => Ok(Obj::Scalar(Scalar::I32(ScalarType(x)))),
+            Expr::Bool(x) => Ok(Obj::Scalar(Scalar::Bool(ScalarType(x)))),
+            Expr::String(x) => Ok(Obj::Scalar(Scalar::String(ScalarType(x)))),
             Expr::Function(formals, body) => Ok(Obj::Function(
                 assert_formals(&Session::default(), formals)?,
                 *body,

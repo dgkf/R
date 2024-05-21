@@ -190,7 +190,7 @@ pub fn derive_translate(_input: TokenStream) -> TokenStream {
                     Rule::negate => en::Rule::negate,
                     Rule::postfix => en::Rule::postfix,
                     Rule::call => en::Rule::call,
-                    Rule::index => en::Rule::index,
+                    // Rule::index => en::Rule::index,
                     Rule::vector_index => en::Rule::vector_index,
                     Rule::block => en::Rule::block,
                     Rule::block_exprs => en::Rule::block_exprs,
