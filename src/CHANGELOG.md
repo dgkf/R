@@ -31,7 +31,7 @@
 
 * Added the internal `call_mutable()` method to `Callable`, which for now
   is only implemented to retrieve vectors mutably from environments,
-  which drives the for call-assignment (things like `x[1] <- 2`).
+  which drives call-assignment (things like `x[1] <- 2`).
 
 * Implemented `IntoIterator` for the Vector `Rep`presentation.
 
