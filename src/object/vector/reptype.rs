@@ -160,7 +160,6 @@ impl<T: AtomicMode + Clone + Default> RepType<T> {
             (RepType::Subset(lv, ls), RepType::Subset(rv, rs)) => {
                 let lvc = lv.clone();
                 let lvb_rm = &mut *lvc.borrow_mut();
-                dbg!("count is {}", Rc::strong_count(lvb_rm));
                 let lvb = Rc::make_mut(lvb_rm);
                 let rvc = rv.clone();
                 let rvb = rvc.borrow();
