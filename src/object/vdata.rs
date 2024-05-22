@@ -53,7 +53,7 @@ impl<T> VecData<T> {
     pub fn borrow_mut(&self) -> RefMut<Rc<Vec<T>>> {
         self.0.borrow_mut()
     }
-    // Borrow the internal data immutably.
+    /// Borrow the internal data immutably.
     pub fn borrow(&self) -> Ref<'_, Rc<Vec<T>>> {
         self.0.borrow()
     }

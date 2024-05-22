@@ -91,13 +91,6 @@ impl<T: AtomicMode + Clone + Default> RepType<T> {
         }
     }
 
-    /// Get an iterator over all elements of this vector without recycling.
-    pub fn iter(&self) -> VecData<T> {
-        match self.materialize() {
-            RepType::Subset(v, _) => v.lazy_copy(),
-        }
-    }
-
     /// Subsetting a Vector
     ///
     /// Introduce a new subset into the aggregate list of subset indices.

@@ -64,8 +64,8 @@ impl Vector {
     }
 
     /// Create a lazy copy of the vector.
-    /// Vectors only need to be copied when there is more than
-    /// One lazy copy and the vector is being modified.
+    /// When mutating vectors, the internal data only needs to be copied when there is more than
+    /// one such lazy copy.
     pub fn lazy_copy(&self) -> Self {
         match self {
             Vector::Double(v) => Vector::Double(v.lazy_copy()),
@@ -75,10 +75,8 @@ impl Vector {
         }
     }
 
-    /// Get a mutable view into the vector.
-    /// This can be used to retrieve a mutable view into a vector
-    /// from an environment, so it can be mutated.
-    /// This is used to allow for things like `x[1] = 2`.
+    /// Get a mutable view of the vector.
+    /// This is used for things like `x[1] = 2`.
     pub fn mutable_view(&self) -> Self {
         match self {
             Vector::Double(v) => Vector::Double(v.mutable_view()),

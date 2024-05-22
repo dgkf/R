@@ -12,8 +12,8 @@ use crate::object::VecData;
 
 /// Vector Representation
 ///
-/// The ref-cell is used so vectors can change there internal reprsentation,
-/// e.g. by materializaing.
+/// The ref-cell is used so vectors can change there internal representation,
+/// e.g. by materializing.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Rep<T>(pub RefCell<RepType<T>>);
 
