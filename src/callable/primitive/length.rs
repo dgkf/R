@@ -65,8 +65,9 @@ mod tests {
     #[test]
     fn environment() {
         r_expect! {{"
-            x <- 1
-            length(x) == 1
+            e = environment()
+            e$x <- 1
+            length(e) == 1
         "}}
     }
     #[test]
