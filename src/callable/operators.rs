@@ -1,3 +1,5 @@
+use std::ops::BitAnd;
+
 use r_derive::*;
 
 use super::core::*;
@@ -5,7 +7,7 @@ use crate::context::Context;
 use crate::error::Error;
 use crate::lang::{CallStack, EvalResult};
 use crate::object::types::*;
-use crate::object::*;
+use crate::{internal_err, object::*};
 
 #[derive(Debug, Clone, PartialEq)]
 #[builtin(sym = "<-", kind = Infix)]
@@ -103,9 +105,14 @@ impl Callable for InfixOr {
     fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
         let (lhs, rhs) = stack.eval_binary(args.unnamed_binary_args())?;
         let res = match (lhs, rhs) {
+            (Obj::Scalar(l), Obj::Scalar(r)) => (l.try_into()? && r.try_into()?).into(),
             (Obj::Vector(l), Obj::Vector(r)) => {
-                let Ok(lhs) = l.try_into() else { todo!() };
-                let Ok(rhs) = r.try_into() else { todo!() };
+                let Ok(lhs) = l.try_into() else {
+                    return internal_err!();
+                };
+                let Ok(rhs) = r.try_into() else {
+                    return internal_err!();
+                };
                 Obj::Vector(Vector::from(vec![OptionNA::Some(lhs || rhs)]))
             }
             _ => Obj::Null,
@@ -123,8 +130,12 @@ impl Callable for InfixAnd {
         let (lhs, rhs) = stack.eval_binary(args.unnamed_binary_args())?;
         let res = match (lhs, rhs) {
             (Obj::Vector(l), Obj::Vector(r)) => {
-                let Ok(lhs) = l.try_into() else { todo!() };
-                let Ok(rhs) = r.try_into() else { todo!() };
+                let Ok(lhs) = l.try_into() else {
+                    return internal_err!();
+                };
+                let Ok(rhs) = r.try_into() else {
+                    return internal_err!();
+                };
                 Obj::Vector(Vector::from(vec![OptionNA::Some(lhs && rhs)]))
             }
             _ => Obj::Null,

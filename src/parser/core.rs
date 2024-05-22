@@ -384,10 +384,10 @@ where
 {
     match pair.as_rule().into() {
         en::Rule::call => Ok((Expr::Null, parse_pairlist(session, parser, pratt, pair)?)),
-        en::Rule::index => {
-            let args = parse_pairlist(session, parser, pratt, pair)?;
-            Ok((Expr::as_primitive(PostfixIndex), args))
-        }
+        // en::Rule::index => {
+        //     let args = parse_pairlist(session, parser, pratt, pair)?;
+        //     Ok((Expr::as_primitive(PostfixIndex), args))
+        // }
         en::Rule::vector_index => Ok((
             Expr::as_primitive(PostfixVecIndex),
             parse_pairlist(session, parser, pratt, pair)?,
