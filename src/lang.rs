@@ -1219,4 +1219,58 @@ mod test {
             (y == 2 & x == 1)
         "}}
     }
+    #[test]
+    fn vectors_are_mutable() {
+        r_expect! {{"
+            x = 1
+            x[1] = 2
+            x == 2
+        "}}
+    }
+
+    #[test]
+    fn dont_mutate_value_from_parent() {
+        r_expect! {{"
+            f = fn() x[1] <- -99
+            x = 10
+            f()
+            x == 10
+        "}}
+        r_expect! {{"
+             f = fn(x) {
+               x[1] <- -99
+               x
+             }
+             x1 = 10
+             x2 = f(x1)
+             (x1 == 10) && x2 == -99
+         "}}
+    }
+
+    #[test]
+    fn promises_can_be_mutated() {
+        r_expect! {{"
+            f = fn(x) {
+              x[1] = -99
+              x
+            }
+            x2 = f(c(1, 2))
+            (x2[1] == -99) && (x2[2] == 2)
+         "}}
+    }
+
+    // TODO: https://github.com/dgkf/R/issues/136
+    // #[test]
+    // fn nested_promises_can_be_mutated() {
+    //     r_expect! {{"
+    //         inc = fn(x) {
+    //           x[1] = x[1] + 1
+    //           x
+    //         }
+    //         add_two = fn(x) {
+    //           inc(inc(x))
+    //         }
+    //         add_two(1) == 3
+    //      "}}
+    // }
 }
