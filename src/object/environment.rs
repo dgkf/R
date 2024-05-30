@@ -165,9 +165,6 @@ mod tests {
             f()
             x == 10
         "}}
-    }
-    #[test]
-    fn promises_can_be_mutated() {
         r_expect! {{"
              f = fn(x) {
                x[1] <- -99
@@ -177,6 +174,10 @@ mod tests {
              x2 = f(x1)
              (x1 == 10) && x2 == -99
          "}}
+    }
+
+    #[test]
+    fn promises_can_be_mutated() {
         r_expect! {{"
              f = fn(x) {
                x[1] <- -99

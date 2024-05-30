@@ -25,7 +25,7 @@ impl Callable for KeywordReturn {
     fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
         let mut args = args.values.into_iter();
         let value = stack.eval(args.next().unwrap())?;
-        Return(value, true).into()
+        Ok(value)
     }
 }
 

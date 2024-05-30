@@ -863,11 +863,26 @@ impl Context for CallStack {
         result
     }
 
+    #[inline]
+    fn eval_mutable(&mut self, expr: Expr) -> EvalResult {
+        match expr {
+            Expr::Symbol(x) => self.get_mutable(x),
+            // can happen when user does f() = 3, maybe this should throw?
+            _ => self.eval(expr),
+        }
+    }
+
     fn get(&mut self, name: String) -> EvalResult {
         let mut env = self.env();
         loop {
             // search in this environment for value by name
-            let Some(value) = env.values.borrow_mut().get(&name).cloned() else {
+            let Some(value) = env
+                .values
+                .borrow_mut()
+                .get(&name)
+                .cloned()
+                .and_then(|x| Some(x.lazy_copy()))
+            else {
                 // if not found, search through parent if available
                 if let Some(parent) = &env.parent {
                     env = parent.clone();
@@ -900,6 +915,81 @@ impl Context for CallStack {
         }
     }
 
+    fn get_mutable(&mut self, name: String) -> EvalResult {
+        let mut env = self.env();
+        let mut caller_env = true;
+        loop {
+            let value = if caller_env {
+                // search in this environment for value by name
+                let Some(value) = env
+                    .values
+                    .borrow_mut()
+                    .get(&name)
+                    .map(|o| (*o).mutable_view())
+                else {
+                    caller_env = false;
+                    dbg!(&caller_env);
+                    // if not found, search through parent if available
+                    if let Some(parent) = &env.parent {
+                        env = parent.clone();
+                        continue;
+                    } else {
+                        break;
+                    }
+                };
+                value
+            } else {
+                let Some(value) = env.values.borrow_mut().get(&name).map(|o| (*o).lazy_copy())
+                else {
+                    // if not found, search through parent if available
+                    if let Some(parent) = &env.parent {
+                        env = parent.clone();
+                        continue;
+                    } else {
+                        break;
+                    }
+                };
+                value
+            };
+
+            return match value {
+                // evaluate promises
+                Obj::Promise(None, expr, p_env) => {
+                    let result = Obj::Promise(None, expr.clone(), p_env.clone()).force(self)?;
+                    if caller_env {
+                        let value = Some(Box::new(result.mutable_view()));
+                        self.env()
+                            .insert(name, Obj::Promise(value, expr, p_env.clone()));
+                        return Ok(result);
+                    };
+                    // here we need to create two bindings for the promise, one where it was evaluated and a lazy copy in the environment
+                    // where it is accessed
+                    let value = Some(Box::new(result.lazy_copy()));
+                    env.insert(name.clone(), Obj::Promise(value, expr, p_env.clone()));
+                    self.env().insert(name, result.mutable_view());
+                    dbg!(&result);
+                    return Ok(result);
+                }
+                _ => {
+                    if !caller_env {
+                        self.env().insert(name, value.mutable_view());
+                    };
+                    Ok(value)
+                }
+            };
+        }
+
+        if let Ok(prim) = builtin(name.as_str()) {
+            Ok(Obj::Function(
+                ExprList::new(),
+                Expr::Primitive(prim),
+                self.env(),
+            ))
+        } else {
+            Err(Signal::Error(Error::VariableNotFound(name)))
+        }
+    }
+
     // NOTE:
     // eval_list_lazy and force_promises are often used together to greedily
     // evaluated arguments. This pattern can be specialized in the case of a
@@ -912,6 +1002,9 @@ impl Context for Frame {
     fn env(&self) -> Rc<Environment> {
         self.env.clone()
     }
+    fn eval_mutable(&mut self, expr: Expr) -> EvalResult {
+        self.env().eval_mutable(expr)
+    }
 }
 
 impl Context for Obj {
@@ -920,6 +1013,10 @@ impl Context for Obj {
             Obj::Environment(e) => e.clone(),
             _ => unimplemented!(),
         }
+    }
+
+    fn eval_mutable(&mut self, expr: Expr) -> EvalResult {
+        self.env().eval_mutable(expr)
     }
 
     fn eval(&mut self, expr: Expr) -> EvalResult {
