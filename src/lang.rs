@@ -881,7 +881,7 @@ impl Context for CallStack {
                 .borrow_mut()
                 .get(&name)
                 .cloned()
-                .and_then(|x| Some(x.lazy_copy()))
+                .map(|x| x.lazy_copy())
             else {
                 // if not found, search through parent if available
                 if let Some(parent) = &env.parent {
