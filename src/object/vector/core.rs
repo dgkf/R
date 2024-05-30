@@ -42,7 +42,7 @@ impl<T> OptionNA<T> {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub enum Vector {
     Double(Rep<Double>),
     Integer(Rep<Integer>),
@@ -50,6 +50,12 @@ pub enum Vector {
     Character(Rep<Character>),
     // Complex(Complex),
     // Raw(Raw),
+}
+
+impl Clone for Vector {
+    fn clone(&self) -> Self {
+        self.lazy_copy()
+    }
 }
 
 impl Vector {

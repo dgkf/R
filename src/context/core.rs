@@ -42,7 +42,6 @@ pub trait Context: std::fmt::Debug + std::fmt::Display {
         self.env().eval(expr)
     }
 
-    #[inline]
     fn eval_mutable(&mut self, expr: Expr) -> EvalResult;
 
     #[inline]

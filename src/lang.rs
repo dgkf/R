@@ -1209,4 +1209,14 @@ mod test {
         r_expect! { quote(x(1, 2, 3))[[3]] == quote(2) }
         assert_eq! { r! { quote(x(1, 2, 3))[1] }, r! { list(quote(x)) } }
     }
+
+    #[test]
+    fn dont_mutate_vec_inplace_after_assignment() {
+        r_expect! {{"
+            x = 1
+            y = x
+            y[1] = 2
+            (y == 2 & x == 1)
+        "}}
+    }
 }
