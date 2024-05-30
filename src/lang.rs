@@ -876,13 +876,7 @@ impl Context for CallStack {
         let mut env = self.env();
         loop {
             // search in this environment for value by name
-            let Some(value) = env
-                .values
-                .borrow_mut()
-                .get(&name)
-                .cloned()
-                .map(|x| x.lazy_copy())
-            else {
+            let Some(value) = env.values.borrow_mut().get(&name).cloned() else {
                 // if not found, search through parent if available
                 if let Some(parent) = &env.parent {
                     env = parent.clone();
