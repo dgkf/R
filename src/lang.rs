@@ -922,7 +922,6 @@ impl Context for CallStack {
                     .map(|o| (*o).mutable_view())
                 else {
                     caller_env = false;
-                    dbg!(&caller_env);
                     // if not found, search through parent if available
                     if let Some(parent) = &env.parent {
                         env = parent.clone();
