@@ -65,84 +65,48 @@ impl Callable for PrimitiveC {
 
         // consume values and merge into a new collection
         match ret {
-            Vector::Character(v) => Ok(Obj::Vector(Vector::from(
-                v.inner()
-                    .clone()
-                    .borrow_mut()
-                    .clone()
+            Vector::Character(_) => Ok(Obj::Vector(Vector::from(
+                Vec::<OptionNA<String>>::new()
                     .into_iter()
-                    .chain(
-                        vals.values
-                            .borrow_mut()
-                            .clone()
-                            .into_iter()
-                            .flat_map(|(_, i)| match i.as_character() {
-                                Ok(Obj::Vector(Vector::Character(v))) => {
-                                    v.inner().clone().borrow().clone().into_iter()
-                                }
-                                _ => unreachable!(),
-                            }),
-                    )
+                    .chain(vals.values.borrow().clone().into_iter().flat_map(|(_, i)| {
+                        match i.as_character() {
+                            Ok(Obj::Vector(Vector::Character(v))) => v.into_iter(),
+                            _ => unreachable!(),
+                        }
+                    }))
                     .collect::<Vec<Character>>(),
             ))),
-            Vector::Double(v) => Ok(Obj::Vector(Vector::from(
-                v.inner()
-                    .clone()
-                    .borrow_mut()
-                    .clone()
+            Vector::Double(_) => Ok(Obj::Vector(Vector::from(
+                Vec::<OptionNA<f64>>::new()
                     .into_iter()
-                    .chain(
-                        vals.values
-                            .borrow_mut()
-                            .clone()
-                            .into_iter()
-                            .flat_map(|(_, i)| match i.as_double() {
-                                Ok(Obj::Vector(Vector::Double(v))) => {
-                                    v.inner().clone().borrow().clone().into_iter()
-                                }
-                                _ => unreachable!(),
-                            }),
-                    )
+                    .chain(vals.values.borrow().clone().into_iter().flat_map(|(_, i)| {
+                        match i.as_double() {
+                            Ok(Obj::Vector(Vector::Double(v))) => v.into_iter(),
+                            _ => unreachable!(),
+                        }
+                    }))
                     .collect::<Vec<Double>>(),
             ))),
-            Vector::Integer(v) => Ok(Obj::Vector(Vector::from(
-                v.inner()
-                    .clone()
-                    .borrow_mut()
-                    .clone()
+            Vector::Integer(_) => Ok(Obj::Vector(Vector::from(
+                Vec::<OptionNA<i32>>::new()
                     .into_iter()
-                    .chain(
-                        vals.values
-                            .borrow_mut()
-                            .clone()
-                            .into_iter()
-                            .flat_map(|(_, i)| match i.as_integer() {
-                                Ok(Obj::Vector(Vector::Integer(v))) => {
-                                    v.inner().clone().borrow().clone().into_iter()
-                                }
-                                _ => unreachable!(),
-                            }),
-                    )
+                    .chain(vals.values.borrow().clone().into_iter().flat_map(|(_, i)| {
+                        match i.as_integer() {
+                            Ok(Obj::Vector(Vector::Integer(v))) => v.into_iter(),
+                            _ => unreachable!(),
+                        }
+                    }))
                     .collect::<Vec<Integer>>(),
             ))),
-            Vector::Logical(v) => Ok(Obj::Vector(Vector::from(
-                v.inner()
-                    .clone()
-                    .borrow_mut()
-                    .clone()
+            Vector::Logical(_) => Ok(Obj::Vector(Vector::from(
+                Vec::<OptionNA<bool>>::new()
                     .into_iter()
-                    .chain(
-                        vals.values
-                            .borrow_mut()
-                            .clone()
-                            .into_iter()
-                            .flat_map(|(_, i)| match i.as_logical() {
-                                Ok(Obj::Vector(Vector::Logical(v))) => {
-                                    v.inner().clone().borrow().clone().into_iter()
-                                }
-                                _ => unreachable!(),
-                            }),
-                    )
+                    .chain(vals.values.borrow().clone().into_iter().flat_map(|(_, i)| {
+                        match i.as_logical() {
+                            Ok(Obj::Vector(Vector::Logical(v))) => v.into_iter(),
+                            _ => unreachable!(),
+                        }
+                    }))
                     .collect::<Vec<Logical>>(),
             ))),
         }

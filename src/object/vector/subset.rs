@@ -3,6 +3,7 @@ use std::ops::Range;
 use std::rc::Rc;
 
 use crate::lang::Signal;
+use crate::object::VecData;
 
 use super::{types::*, OptionNA, Vector};
 
@@ -13,9 +14,9 @@ use super::{types::*, OptionNA, Vector};
 ///
 #[derive(Debug, Clone, PartialEq)]
 pub enum Subset {
-    Indices(Rc<RefCell<Vec<Integer>>>),
-    Mask(Rc<RefCell<Vec<Logical>>>),
-    Names(Rc<RefCell<Vec<Character>>>),
+    Indices(VecData<Integer>),
+    Mask(VecData<Logical>),
+    Names(VecData<Character>),
     Range(Range<usize>),
 }
 
@@ -163,7 +164,7 @@ impl Subset {
             }
             Subset::Mask(mask) => {
                 Box::new(
-                    mask.borrow()
+                    (**mask.borrow())
                         .clone()
                         .into_iter()
                         .cycle()
@@ -188,7 +189,7 @@ impl Subset {
 
 impl From<usize> for Subset {
     fn from(value: usize) -> Self {
-        Subset::Indices(Rc::new(RefCell::new(vec![OptionNA::Some(value as i32)])))
+        Subset::Indices(vec![OptionNA::Some(value as i32)].into())
     }
 }
 
@@ -200,12 +201,12 @@ impl From<Range<usize>> for Subset {
 
 impl From<Vec<usize>> for Subset {
     fn from(value: Vec<usize>) -> Self {
-        Subset::Indices(Rc::new(RefCell::new(
+        Subset::Indices(VecData::new(Rc::new(RefCell::new(Rc::new(
             value
                 .iter()
                 .map(|i| OptionNA::Some(*i as i32))
                 .collect::<Vec<_>>(),
-        )))
+        )))))
     }
 }
 
@@ -215,17 +216,17 @@ impl TryFrom<Vector> for Subset {
         match value {
             value @ Vector::Double(_) => Subset::try_from(value.as_integer()),
             Vector::Integer(v) => {
-                let v = v.inner();
+                let y = v
+                    .into_iter()
+                    .map(|i| match i {
+                        OptionNA::Some(x) => OptionNA::Some(x - 1),
+                        OptionNA::NA => OptionNA::NA,
+                    })
+                    .collect();
 
-                // convert indices into 0-indexed values
-                for i in v.borrow_mut().iter_mut() {
-                    match i {
-                        OptionNA::NA => (),
-                        OptionNA::Some(x) => *x -= 1,
-                    }
-                }
-
-                Ok(Subset::Indices(v))
+                Ok(Subset::Indices(VecData::new(Rc::new(RefCell::new(
+                    Rc::new(y),
+                )))))
             }
             Vector::Logical(v) => {
                 let all_false = v
@@ -237,7 +238,7 @@ impl TryFrom<Vector> for Subset {
 
                 // special case when all are false, treat it as no indices
                 if all_false {
-                    Ok(Subset::Indices(Rc::new(RefCell::new(Vec::new()))))
+                    Ok(Subset::Indices(Vec::new().into()))
                 } else {
                     Ok(Subset::Mask(v.inner()))
                 }

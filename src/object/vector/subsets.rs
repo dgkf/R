@@ -123,7 +123,7 @@ impl IntoIterator for Subsets {
     type Item = (usize, Option<usize>);
     type IntoIter = Box<dyn Iterator<Item = Self::Item>>;
 
-    /// Convert Subsets into an iterator if indices
+    /// Convert Subsets into an iterator of indices
     ///
     /// Builds an iterator of indices from a collection of subsets. Iterators
     /// will provide the maximum number of indices, meaning that ranges

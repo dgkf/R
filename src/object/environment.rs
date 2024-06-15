@@ -32,6 +32,15 @@ impl Environment {
         env
     }
 
+    pub fn len(&self) -> usize {
+        self.values.borrow().len()
+    }
+
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
     pub fn insert(&self, name: String, value: Obj) {
         self.values.borrow_mut().insert(name, value);
     }
@@ -45,31 +54,67 @@ impl Environment {
     }
 
     pub fn get(&self, name: String) -> EvalResult {
-        // search in this environment for value by name
-        if let Some(value) = self.values.borrow().get(&name) {
-            let result = value.clone();
-            match result {
-                Obj::Promise(None, expr, env) => env.clone().eval(expr),
-                Obj::Promise(Some(result), ..) => Ok(*result),
-                _ => Ok(result),
+        self.get_internal(name).0
+    }
+
+    fn get_internal(&self, name: String) -> (EvalResult, bool) {
+        let mut caller_env = true;
+
+        let mut env = self;
+
+        loop {
+            if let Some(value) = env.values.borrow().get(&name) {
+                let result = value.clone();
+
+                let x = match result {
+                    Obj::Promise(None, expr, env) => env.clone().eval(expr),
+                    Obj::Promise(Some(result), ..) => Ok(*result),
+                    _ => Ok(result),
+                };
+
+                return (x, caller_env);
+
+            // if not found, search through parent if available
+            } else if let Some(parent) = &env.parent {
+                caller_env = false;
+                env = parent;
+                continue;
+
+            // if we're at the top level, fall back to primitives if available
+            } else if let Ok(prim) = name.as_str().try_into() {
+                let x = Ok(Obj::Function(
+                    ExprList::new(),
+                    Expr::Primitive(prim),
+                    Rc::new(self.clone()), // TODO(bug): will this retain shared ref?
+                ));
+
+                return (x, caller_env);
+
+            // otherwise, throw error
+            } else {
+                return (Err(Error::VariableNotFound(name).into()), caller_env);
             }
-
-        // if not found, search through parent if available
-        } else if let Some(parent) = &self.parent {
-            parent.clone().get(name)
-
-        // if we're at the top level, fall back to primitives if available
-        } else if let Ok(prim) = name.as_str().try_into() {
-            Ok(Obj::Function(
-                ExprList::new(),
-                Expr::Primitive(prim),
-                Rc::new(self.clone()), // TODO(bug): will this retain shared ref?
-            ))
-
-        // otherwise, throw error
-        } else {
-            Err(Error::VariableNotFound(name).into())
         }
+    }
+
+    pub fn get_mutable(&self, name: String) -> EvalResult {
+        let (x, caller_env) = self.get_internal(name.clone());
+        let x = x?;
+
+        // It was found in the current environment we don't have to bind it, as we are
+        // allowed to mutate it directly
+        if caller_env {
+            return EvalResult::Ok(x.mutable_view());
+        }
+        // If it was found in a parent environment or is a promise,
+        // we first bind it in the current environment
+        // so we don't accidentally change variables in the parent environment
+
+        let xc = x.lazy_copy();
+        let xm = xc.mutable_view();
+        self.insert(name, xc);
+
+        EvalResult::Ok(xm)
     }
 }
 

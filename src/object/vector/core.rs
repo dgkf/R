@@ -7,6 +7,7 @@ use crate::object::Obj;
 
 use super::coercion::CoercibleInto;
 use super::rep::Rep;
+use super::reptype::RepType;
 use super::subset::Subset;
 use super::types::*;
 
@@ -41,7 +42,7 @@ impl<T> OptionNA<T> {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub enum Vector {
     Double(Rep<Double>),
     Integer(Rep<Integer>),
@@ -49,6 +50,12 @@ pub enum Vector {
     Character(Rep<Character>),
     // Complex(Complex),
     // Raw(Raw),
+}
+
+impl Clone for Vector {
+    fn clone(&self) -> Self {
+        self.lazy_copy()
+    }
 }
 
 impl Vector {
@@ -59,6 +66,29 @@ impl Vector {
             Integer(x) => x.get(index).map(Integer),
             Logical(x) => x.get(index).map(Logical),
             Character(x) => x.get(index).map(Character),
+        }
+    }
+
+    /// Create a lazy copy of the vector.
+    /// When mutating vectors, the internal data only needs to be copied when there is more than
+    /// one such lazy copy.
+    pub fn lazy_copy(&self) -> Self {
+        match self {
+            Vector::Double(v) => Vector::Double(v.lazy_copy()),
+            Vector::Character(v) => Vector::Character(v.lazy_copy()),
+            Vector::Integer(v) => Vector::Integer(v.lazy_copy()),
+            Vector::Logical(v) => Vector::Logical(v.lazy_copy()),
+        }
+    }
+
+    /// Get a mutable view of the vector.
+    /// This is used for things like `x[1] = 2`.
+    pub fn mutable_view(&self) -> Self {
+        match self {
+            Vector::Double(v) => Vector::Double(v.mutable_view()),
+            Vector::Character(v) => Vector::Character(v.mutable_view()),
+            Vector::Integer(v) => Vector::Integer(v.mutable_view()),
+            Vector::Logical(v) => Vector::Logical(v.mutable_view()),
         }
     }
 
@@ -222,6 +252,30 @@ impl TryInto<bool> for Vector {
             Logical(i) => i.try_into(),
             Character(i) => i.try_into(),
         }
+    }
+}
+
+impl From<RepType<Double>> for Vector {
+    fn from(x: RepType<Double>) -> Self {
+        Vector::Double(x.into())
+    }
+}
+
+impl From<RepType<Integer>> for Vector {
+    fn from(x: RepType<Integer>) -> Self {
+        Vector::Integer(x.into())
+    }
+}
+
+impl From<RepType<Logical>> for Vector {
+    fn from(x: RepType<Logical>) -> Self {
+        Vector::Logical(x.into())
+    }
+}
+
+impl From<RepType<Character>> for Vector {
+    fn from(x: RepType<Character>) -> Self {
+        Vector::Character(x.into())
     }
 }
 

@@ -28,3 +28,5 @@ mod substitute;
 pub use substitute::PrimitiveSubstitute;
 mod sum;
 pub use sum::PrimitiveSum;
+mod length;
+pub use length::PrimitiveLength;
