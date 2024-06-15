@@ -867,8 +867,7 @@ impl Context for CallStack {
     fn eval_mutable(&mut self, expr: Expr) -> EvalResult {
         match expr {
             Expr::Symbol(x) => self.get_mutable(x),
-            // can happen when user does f() = 3, maybe this should throw?
-            _ => self.eval(expr),
+            e => Error::CannotEvaluateAsMutable(e).into(),
         }
     }
 
@@ -911,6 +910,7 @@ impl Context for CallStack {
 
     fn get_mutable(&mut self, name: String) -> EvalResult {
         let mut env = self.env();
+        // whether the object was found immediately
         let mut caller_env = true;
         loop {
             let value = if caller_env {
@@ -960,7 +960,6 @@ impl Context for CallStack {
                     let value = Some(Box::new(result.lazy_copy()));
                     env.insert(name.clone(), Obj::Promise(value, expr, p_env.clone()));
                     self.env().insert(name, result.mutable_view());
-                    dbg!(&result);
                     return Ok(result);
                 }
                 _ => {

@@ -42,7 +42,10 @@ pub trait Context: std::fmt::Debug + std::fmt::Display {
         self.env().eval(expr)
     }
 
-    fn eval_mutable(&mut self, expr: Expr) -> EvalResult;
+    #[inline]
+    fn eval_mutable(&mut self, expr: Expr) -> EvalResult {
+        Error::CannotEvaluateAsMutable(expr.clone()).into()
+    }
 
     #[inline]
     fn eval_in(&mut self, expr: Expr, mut env: Rc<Environment>) -> EvalResult {
