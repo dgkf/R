@@ -18,7 +18,7 @@
 
 * Promises now retain their expression even after being evaluated (#125 @dgkf)
 
-* Use a faster hash function for environments (#138, @sebffischer)
+* Use a faster hash function (#138, @sebffischer)
 
 ## Notable Bugs Addressed
 
