@@ -18,6 +18,8 @@
 
 * Promises now retain their expression even after being evaluated (#125 @dgkf)
 
+* Use a faster hash function (#138, @sebffischer)
+
 ## Notable Bugs Addressed
 
 * Fix accidental tail calls escaping binary operator evaluation (#115 @dgkf)
