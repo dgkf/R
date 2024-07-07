@@ -1,5 +1,6 @@
 {
   "name": "r",
+  "type": "module",
   "collaborators": [
     "Doug Kelkhoff"
   ],
@@ -15,7 +16,7 @@
     "r.js",
     "r.d.ts"
   ],
-  "module": "r.js",
+  "main": "r.js",
   "types": "r.d.ts",
   "sideEffects": [
     "./snippets/*"
