@@ -121,7 +121,7 @@
             block_exprs = { WS* ~ expr? ~ ( block_sep+ ~ expr? )* ~ WS* }
             block_sep = _{ WS_NO_NL* ~ ( ";" | comment? ~ NEWLINE ) ~ WS* }
 
-        paren_expr = _{ "(" ~ WS* ~ expr ~ WS* ~ ")" }
+        paren_expr = { "(" ~ WS* ~ expr ~ WS* ~ ")" }
 
         atom = _{
               block

@@ -194,6 +194,14 @@ pub trait Builtin: Callable + CallableClone + Format + DynCompare + Sync {
     fn is_transparent(&self) -> bool {
         false
     }
+
+    fn is_infix(&self) -> bool {
+        self.kind() == SymKind::Infix
+    }
+
+    fn kind(&self) -> SymKind {
+        SymKind::Function
+    }
 }
 
 pub trait Sym {
@@ -201,7 +209,9 @@ pub trait Sym {
     const KIND: &'static SymKind;
 }
 
+#[derive(PartialEq)]
 pub enum SymKind {
+    Keyword,
     Function,
     Infix,
     Prefix,
@@ -233,6 +243,7 @@ where
                 let rest = args.collect::<ExprList>();
                 format!("{}{l}{}{r}", first.1, rest)
             }
+            Keyword => sym.to_string(), // keywords generally implement their own formatter
         }
     }
 

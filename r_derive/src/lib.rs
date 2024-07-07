@@ -77,7 +77,11 @@ pub fn builtin(attr: TokenStream, item: TokenStream) -> TokenStream {
             }
 
             #[automatically_derived]
-            impl Builtin for #what {}
+            impl Builtin for #what {
+                fn kind(&self) -> SymKind {
+                    SymKind::#kind
+                }
+            }
         },
         Builtin::Keyword => quote! {
             #item
@@ -96,6 +100,10 @@ pub fn builtin(attr: TokenStream, item: TokenStream) -> TokenStream {
             impl Builtin for #what {
                 fn is_transparent(&self) -> bool {
                     true
+                }
+
+                fn kind(&self) -> SymKind {
+                    SymKind::Keyword
                 }
             }
         },
