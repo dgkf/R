@@ -7,7 +7,7 @@ use crate::context::Context;
 use crate::lang::{CallStack, Cond, Signal};
 use crate::object::Environment;
 use crate::parser::*;
-use crate::session::{Session, SessionOutput};
+use crate::session::{Session, SessionOutput, SessionParserConfig};
 
 #[wasm_bindgen]
 pub struct ParseError {
@@ -135,7 +135,8 @@ pub fn wasm_highlight(args: JsValue, input: &str) -> Vec<JsValue> {
 }
 
 pub fn wasm_eval_in(args: &Session, env: &Rc<Environment>, input: &str) -> Option<String> {
-    match args.locale.parse_input_with(input, args) {
+    let parser_config: SessionParserConfig = args.clone().into();
+    match parser_config.locale.parse_input_with(input, &parser_config) {
         Ok(expr) => {
             let mut stack = CallStack::from(args.clone()).with_global_env(env.clone());
             match stack.eval_and_finalize(expr) {
