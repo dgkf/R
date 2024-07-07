@@ -67,7 +67,7 @@ impl Callable for PrimitiveSubstitute {
         fn substitute(expr: Expr, env: &Environment, paren: bool) -> Expr {
             match expr {
                 Symbol(s) => {
-                    // promises are replaced, not sure if correct behavior
+                    // promise expressions (ie arguments) are replaced with their unevaluated expressions
                     match env.values.borrow().get(&s) {
                         Some(Obj::Expr(expr)) | Some(Obj::Promise(_, expr, _)) => {
                             if paren {
