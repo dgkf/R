@@ -85,6 +85,7 @@ where
 
         // bracketed expression block
         en::Rule::expr => parse_expr(config, parser, pratt, pair.into_inner()),
+        en::Rule::paren_expr => parse_paren(config, parser, pratt, pair),
         en::Rule::block_exprs => parse_block(config, parser, pratt, pair),
 
         // keyworded composite expressions
@@ -145,6 +146,26 @@ where
             Err(Error::ParseUnexpected(rule, span).into())
         }
     }
+}
+
+fn parse_paren<P, R>(
+    config: &SessionParserConfig,
+    parser: &P,
+    pratt: &PrattParser<R>,
+    pair: Pair<R>,
+) -> ParseResult
+where
+    P: Parser<R> + LocalizedParser,
+    R: RuleType + Into<en::Rule>,
+{
+    // extract each inline expression, and treat as unnamed list
+    let exprs: ExprList = pair
+        .into_inner()
+        .map(|i| parse_expr(config, parser, pratt, i.into_inner()))
+        .collect::<Result<_, _>>()?;
+
+    // build call from symbol and list
+    Ok(Expr::new_primitive_call(KeywordParen, exprs))
 }
 
 fn parse_block<P, R>(
