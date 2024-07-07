@@ -606,7 +606,6 @@ impl CallStack {
     /// Find an object in the current environment or one of its parents and return a mutable view
     /// of the object, as well as the environment in which it was found.
     /// None is returned if the value was not found.
-    #[must_use]
     fn find(&mut self, name: String) -> Result<(Obj, Rc<Environment>), Signal> {
         let mut env = self.env();
         loop {
@@ -930,7 +929,7 @@ impl Context for CallStack {
 
         let objc = obj.lazy_copy();
         self.env().insert(name, objc.mutable_view());
-        return Ok(objc);
+        Ok(objc)
     }
 
     // NOTE:

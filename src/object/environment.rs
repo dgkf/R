@@ -60,7 +60,6 @@ impl Environment {
 
     /// Find a variable in the environment or one of its parents.
     /// If the variable is found, a mutable view on it is returned.
-    #[must_use]
     pub fn find(&self, name: String) -> Result<(Obj, Rc<Environment>), Signal> {
         let mut env = self;
 
