@@ -1,4 +1,5 @@
-use std::{cell::RefCell, collections::HashMap, rc::Rc};
+use hashbrown::HashMap;
+use std::{cell::RefCell, rc::Rc};
 
 use super::Subset;
 

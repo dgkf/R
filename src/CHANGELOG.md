@@ -40,6 +40,9 @@
 
 * The `Clone` implementation for `Vector` now creates a lazy copy (@sebffischer)
 
+* Use a faster hash function (#138, @sebffischer)
+
+
 ## Notable Bugs Addressed
 
 * Fix accidental tail calls escaping binary operator evaluation (#115 @dgkf)

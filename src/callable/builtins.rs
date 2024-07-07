@@ -2,7 +2,7 @@
 ///
 /// The contents of this file are built by build.rs
 ///
-use std::collections::HashMap;
+use hashbrown::HashMap;
 
 use ::lazy_static::lazy_static;
 
