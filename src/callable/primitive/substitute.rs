@@ -2,6 +2,7 @@ use lazy_static::lazy_static;
 use r_derive::*;
 
 use crate::callable::core::*;
+use crate::callable::keywords::KeywordParen;
 use crate::context::Context;
 use crate::internal_err;
 use crate::lang::*;
@@ -41,33 +42,62 @@ impl Callable for PrimitiveSubstitute {
             return internal_err!();
         };
 
-        fn recurse(exprs: ExprList, env: &Environment) -> ExprList {
+        fn recurse(exprs: ExprList, env: &Environment, paren: bool) -> ExprList {
             exprs
                 .into_iter()
-                .map(|(key, expr)| (key, substitute(expr, env)))
+                .map(|(key, expr)| (key, substitute(expr, env, paren)))
                 .collect()
         }
 
-        fn substitute(expr: Expr, env: &Environment) -> Expr {
+        // add parenthesis around ambigous expressions, namely anonymous functions and infix calls
+        fn paren_if_infix(expr: Expr) -> Expr {
+            match expr {
+                Function(..) => Expr::new_primitive_call(KeywordParen, ExprList::from(vec![expr])),
+                Call(what, exprs) => match *what {
+                    Primitive(p) if p.is_infix() => {
+                        let expr = Call(Box::new(Primitive(p)), exprs);
+                        Expr::new_primitive_call(KeywordParen, ExprList::from(vec![expr]))
+                    }
+                    _ => Call(what, exprs),
+                },
+                _ => expr,
+            }
+        }
+
+        fn substitute(expr: Expr, env: &Environment, paren: bool) -> Expr {
             match expr {
                 Symbol(s) => {
-                    // promises are replaced
+                    // promises are replaced, not sure if correct behavior
                     match env.values.borrow().get(&s) {
-                        Some(Obj::Promise(_, expr, _)) => expr.clone(),
-                        Some(Obj::Expr(e)) => e.clone(),
+                        Some(Obj::Expr(expr)) | Some(Obj::Promise(_, expr, _)) => {
+                            if paren {
+                                paren_if_infix(expr.clone())
+                            } else {
+                                expr.clone()
+                            }
+                        }
                         _ => Symbol(s),
                     }
                 }
-                List(exprs) => List(recurse(exprs, env)),
-                Function(params, body) => {
-                    Function(recurse(params, env), Box::new(substitute(*body, env)))
-                }
-                Call(what, exprs) => Call(Box::new(substitute(*what, env)), recurse(exprs, env)),
+                List(exprs) => List(recurse(exprs, env, false)),
+                Function(params, body) => Function(
+                    recurse(params, env, false),
+                    Box::new(substitute(*body, env, false)),
+                ),
+                Call(what, exprs) => match *what {
+                    Primitive(p) if p.is_infix() => {
+                        Call(Box::new(Primitive(p)), recurse(exprs, env, true))
+                    }
+                    _ => Call(
+                        Box::new(substitute(*what, env, true)),
+                        recurse(exprs, env, false),
+                    ),
+                },
                 other => other,
             }
         }
 
-        match substitute(expr, env.as_ref()) {
+        match substitute(expr, env.as_ref(), false) {
             e @ (Symbol(_) | List(..) | Function(..) | Call(..) | Primitive(..)) => {
                 Ok(Obj::Expr(e))
             }
@@ -91,8 +121,32 @@ mod test {
     #[test]
     fn quoted_expressions() {
         assert_eq!(
-            r! { x <- quote(1 + 2); substitute(0 + x) },
-            r! { quote(0 + (1 + 2)) } // note non-default associativity
+            r! { x <- quote(a(b, c)); substitute(0 + x) },
+            r! { quote(0 + a(b, c)) }
+        );
+    }
+
+    #[test]
+    fn substituted_minimally_parenthesizes() {
+        assert_eq!(
+            r! { x <- quote(1 + 2); substitute(x(a, b, x)) },
+            r! { quote((1 + 2)(a, b, 1 + 2)) }
+        );
+    }
+
+    #[test]
+    fn substituted_infix_op_calls_get_parenthesized() {
+        assert_eq!(
+            r! { x <- quote(1 + 2); substitute(0 * x) },
+            r! { quote(0 * (1 + 2)) } // note non-default associativity
+        );
+    }
+
+    #[test]
+    fn substituted_functions_gets_parenthesized() {
+        assert_eq!(
+            r! { x <- quote(function(a, b) a + b); substitute(0 + x) },
+            r! { quote(0 + (function(a, b) a + b)) }
         );
     }
 
