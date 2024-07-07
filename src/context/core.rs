@@ -10,7 +10,7 @@ pub trait Context: std::fmt::Debug + std::fmt::Display {
         (*self).env().get(name)
     }
     #[inline]
-    fn get_mutable(&mut self, name: String) -> EvalResult {
+    fn get_mut(&mut self, name: String) -> EvalResult {
         self.get(name)
     }
 
@@ -43,7 +43,7 @@ pub trait Context: std::fmt::Debug + std::fmt::Display {
     }
 
     #[inline]
-    fn eval_mutable(&mut self, expr: Expr) -> EvalResult {
+    fn eval_mut(&mut self, expr: Expr) -> EvalResult {
         Error::CannotEvaluateAsMutable(expr.clone()).into()
     }
 

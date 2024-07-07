@@ -603,6 +603,51 @@ impl CallStack {
         self
     }
 
+    /// Find an object in the current environment or one of its parents and return a mutable view
+    /// of the object, as well as the environment in which it was found.
+    /// None is returned if the value was not found.
+    #[must_use]
+    fn find(&mut self, name: String) -> Result<(Obj, Rc<Environment>), Signal> {
+        let mut env = self.env();
+        loop {
+            // search in this environment for value by name
+            let Some(value) = env
+                .values
+                .borrow_mut()
+                .get(&name)
+                .map(|x| (*x).mutable_view())
+            else {
+                // if not found, search through parent if available
+                if let Some(parent) = &env.parent {
+                    env = parent.clone();
+                    continue;
+                } else {
+                    break;
+                }
+            };
+
+            return match value {
+                // evaluate promises
+                Obj::Promise(None, expr, p_env) => {
+                    let result = Obj::Promise(None, expr.clone(), p_env.clone()).force(self)?;
+                    let value = Some(Box::new(result.mutable_view()));
+                    env.insert(name, Obj::Promise(value, expr, p_env.clone()));
+                    Result::Ok((result, env))
+                }
+                _ => Result::Ok((value, env)),
+            };
+        }
+
+        if let Ok(prim) = builtin(name.as_str()) {
+            Result::Ok((
+                Obj::Function(ExprList::new(), Expr::Primitive(prim), self.env()),
+                env,
+            ))
+        } else {
+            Result::Err(Signal::Error(Error::VariableNotFound(name)))
+        }
+    }
+
     pub fn add_frame(&mut self, call: Expr, env: Rc<Environment>) -> usize {
         self.frames.push(Frame::new(call, env));
         self.frames.len()
@@ -864,122 +909,28 @@ impl Context for CallStack {
     }
 
     #[inline]
-    fn eval_mutable(&mut self, expr: Expr) -> EvalResult {
+    fn eval_mut(&mut self, expr: Expr) -> EvalResult {
         match expr {
-            Expr::Symbol(x) => self.get_mutable(x),
+            Expr::Symbol(x) => self.get_mut(x),
             e => Error::CannotEvaluateAsMutable(e).into(),
         }
     }
 
     fn get(&mut self, name: String) -> EvalResult {
-        let mut env = self.env();
-        loop {
-            // search in this environment for value by name
-            let Some(value) = env.values.borrow_mut().get(&name).cloned() else {
-                // if not found, search through parent if available
-                if let Some(parent) = &env.parent {
-                    env = parent.clone();
-                    continue;
-                } else {
-                    break;
-                }
-            };
-
-            return match value {
-                // evaluate promises
-                Obj::Promise(None, expr, p_env) => {
-                    let result = Obj::Promise(None, expr.clone(), p_env.clone()).force(self)?;
-                    let value = Some(Box::new(result.clone()));
-                    env.insert(name, Obj::Promise(value, expr, p_env.clone()));
-                    Ok(result)
-                }
-                _ => Ok(value),
-            };
-        }
-
-        if let Ok(prim) = builtin(name.as_str()) {
-            Ok(Obj::Function(
-                ExprList::new(),
-                Expr::Primitive(prim),
-                self.env(),
-            ))
-        } else {
-            Err(Signal::Error(Error::VariableNotFound(name)))
-        }
+        let (obj, _) = self.find(name.clone())?;
+        Ok(obj.lazy_copy())
     }
 
-    fn get_mutable(&mut self, name: String) -> EvalResult {
-        let mut env = self.env();
-        // whether the object was found immediately
-        let mut caller_env = true;
-        loop {
-            let value = if caller_env {
-                // search in this environment for value by name
-                let Some(value) = env
-                    .values
-                    .borrow_mut()
-                    .get(&name)
-                    .map(|o| (*o).mutable_view())
-                else {
-                    caller_env = false;
-                    // if not found, search through parent if available
-                    if let Some(parent) = &env.parent {
-                        env = parent.clone();
-                        continue;
-                    } else {
-                        break;
-                    }
-                };
-                value
-            } else {
-                let Some(value) = env.values.borrow_mut().get(&name).map(|o| (*o).lazy_copy())
-                else {
-                    // if not found, search through parent if available
-                    if let Some(parent) = &env.parent {
-                        env = parent.clone();
-                        continue;
-                    } else {
-                        break;
-                    }
-                };
-                value
-            };
+    fn get_mut(&mut self, name: String) -> EvalResult {
+        let (obj, env) = self.find(name.clone())?;
 
-            return match value {
-                // evaluate promises
-                Obj::Promise(None, expr, p_env) => {
-                    let result = Obj::Promise(None, expr.clone(), p_env.clone()).force(self)?;
-                    if caller_env {
-                        let value = Some(Box::new(result.mutable_view()));
-                        self.env()
-                            .insert(name, Obj::Promise(value, expr, p_env.clone()));
-                        return Ok(result);
-                    };
-                    // here we need to create two bindings for the promise, one where it was evaluated and a lazy copy in the environment
-                    // where it is accessed
-                    let value = Some(Box::new(result.lazy_copy()));
-                    env.insert(name.clone(), Obj::Promise(value, expr, p_env.clone()));
-                    self.env().insert(name, result.mutable_view());
-                    return Ok(result);
-                }
-                _ => {
-                    if !caller_env {
-                        self.env().insert(name, value.mutable_view());
-                    };
-                    Ok(value)
-                }
-            };
+        if self.env() == env {
+            return Ok(obj);
         }
 
-        if let Ok(prim) = builtin(name.as_str()) {
-            Ok(Obj::Function(
-                ExprList::new(),
-                Expr::Primitive(prim),
-                self.env(),
-            ))
-        } else {
-            Err(Signal::Error(Error::VariableNotFound(name)))
-        }
+        let objc = obj.lazy_copy();
+        self.env().insert(name, objc.mutable_view());
+        return Ok(objc);
     }
 
     // NOTE:
@@ -994,8 +945,8 @@ impl Context for Frame {
     fn env(&self) -> Rc<Environment> {
         self.env.clone()
     }
-    fn eval_mutable(&mut self, expr: Expr) -> EvalResult {
-        self.env().eval_mutable(expr)
+    fn eval_mut(&mut self, expr: Expr) -> EvalResult {
+        self.env().eval_mut(expr)
     }
 }
 
@@ -1007,8 +958,8 @@ impl Context for Obj {
         }
     }
 
-    fn eval_mutable(&mut self, expr: Expr) -> EvalResult {
-        self.env().eval_mutable(expr)
+    fn eval_mut(&mut self, expr: Expr) -> EvalResult {
+        self.env().eval_mut(expr)
     }
 
     fn eval(&mut self, expr: Expr) -> EvalResult {
@@ -1056,9 +1007,9 @@ impl Context for Rc<Environment> {
 
     /// Evaluates an expression mutably.
     /// This is used for things like `x[1:10] <- 2:11`
-    fn eval_mutable(&mut self, expr: Expr) -> EvalResult {
+    fn eval_mut(&mut self, expr: Expr) -> EvalResult {
         match expr {
-            Expr::Symbol(name) => self.get_mutable(name),
+            Expr::Symbol(name) => self.get_mut(name),
             expr => self.eval(expr),
         }
     }
@@ -1098,8 +1049,8 @@ impl Context for Rc<Environment> {
         Environment::get(self, name)
     }
 
-    fn get_mutable(&mut self, name: String) -> EvalResult {
-        Environment::get_mutable(self, name)
+    fn get_mut(&mut self, name: String) -> EvalResult {
+        Environment::get_mut(self, name)
     }
 }
 
@@ -1176,7 +1127,7 @@ mod test {
     }
 
     #[test]
-    fn fn_assign_dont_causes_binding() {
+    fn fn_assign_doesnt_cause_binding() {
         r_expect! {{"
             x <- 1
             f <- fn(x) {x; null}
@@ -1185,12 +1136,47 @@ mod test {
         "}}
     }
 
+    // TODO: https://github.com/dgkf/R/issues/141
+    // #[test]
+    // fn binding_promise_evaluates_curly() {
+    //     r_expect! {{"
+    //         f = fn(x) x
+    //         a = f({y = 2})
+    //         a == 2
+    //     "}}
+    // }
+
     #[test]
-    fn fn_assign_curly_causes_binding() {
+    fn binding_promise_binds_curly() {
         r_expect! {{"
-            x <- 1
-            f <- fn(x) {x; null}
-            f(x = {x = 2})
+            f = fn(x) x
+            f({y = 2})
+            y == 2
+        "}}
+    }
+
+    #[test]
+    fn binding_promise_evaluates_parenthesis() {
+        r_expect! {{"
+            f = fn(x) x
+            a = f((y = 2))
+            a == 2 
+        "}}
+    }
+
+    #[test]
+    fn binding_promise_binds_parenthesis() {
+        r_expect! {{"
+            f = fn(x) x
+            f((y = 2))
+            y == 2 
+        "}}
+    }
+
+    #[test]
+    fn curly_causes_binding() {
+        r_expect! {{"
+            x = {a = 2}
             x == 2
         "}}
     }

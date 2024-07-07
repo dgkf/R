@@ -7,7 +7,7 @@ use std::rc::Rc;
 use crate::callable::builtins::BUILTIN;
 use crate::context::Context;
 use crate::error::Error;
-use crate::lang::EvalResult;
+use crate::lang::{EvalResult, Signal};
 
 use super::{Expr, ExprList, List, Obj};
 
@@ -54,62 +54,58 @@ impl Environment {
     }
 
     pub fn get(&self, name: String) -> EvalResult {
-        self.get_internal(name).0
+        let (x, _) = self.find(name.clone())?;
+        EvalResult::Ok(x.lazy_copy())
     }
 
-    fn get_internal(&self, name: String) -> (EvalResult, bool) {
-        let mut caller_env = true;
-
+    /// Find a variable in the environment or one of its parents.
+    /// If the variable is found, a mutable view on it is returned.
+    #[must_use]
+    pub fn find(&self, name: String) -> Result<(Obj, Rc<Environment>), Signal> {
         let mut env = self;
 
         loop {
             if let Some(value) = env.values.borrow().get(&name) {
-                let result = value.clone();
+                let result = value.mutable_view();
 
                 let x = match result {
-                    Obj::Promise(None, expr, env) => env.clone().eval(expr),
-                    Obj::Promise(Some(result), ..) => Ok(*result),
-                    _ => Ok(result),
+                    Obj::Promise(None, expr, env) => env.clone().eval(expr)?,
+                    Obj::Promise(Some(result), ..) => *result,
+                    _ => result,
                 };
 
-                return (x, caller_env);
+                return Result::Ok((x, Rc::new(env.clone())));
 
             // if not found, search through parent if available
             } else if let Some(parent) = &env.parent {
-                caller_env = false;
                 env = parent;
                 continue;
 
             // if we're at the top level, fall back to primitives if available
             } else if let Ok(prim) = name.as_str().try_into() {
-                let x = Ok(Obj::Function(
+                let x = Obj::Function(
                     ExprList::new(),
                     Expr::Primitive(prim),
                     Rc::new(self.clone()), // TODO(bug): will this retain shared ref?
-                ));
+                );
 
-                return (x, caller_env);
+                return Result::Ok((x, Rc::new(env.clone())));
 
             // otherwise, throw error
             } else {
-                return (Err(Error::VariableNotFound(name).into()), caller_env);
+                return Result::Err(Signal::Error(Error::VariableNotFound(name)));
             }
         }
     }
 
-    pub fn get_mutable(&self, name: String) -> EvalResult {
-        let (x, caller_env) = self.get_internal(name.clone());
-        let x = x?;
-
-        // It was found in the current environment we don't have to bind it, as we are
-        // allowed to mutate it directly
-        if caller_env {
+    pub fn get_mut(&self, name: String) -> EvalResult {
+        let (x, env) = self.find(name.clone())?;
+        if *self == *env {
             return EvalResult::Ok(x.mutable_view());
         }
-        // If it was found in a parent environment or is a promise,
-        // we first bind it in the current environment
-        // so we don't accidentally change variables in the parent environment
 
+        // we found it in the parent environment, which means we first have to find it in the
+        // current environment so we then modify it in the correct scope
         let xc = x.lazy_copy();
         let xm = xc.mutable_view();
         self.insert(name, xc);

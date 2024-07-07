@@ -382,7 +382,7 @@ impl Callable for PostfixVecIndex {
     }
     fn call_mutable(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
         let x = args.unnamed_binary_args();
-        let what = stack.eval_mutable(x.0)?;
+        let what = stack.eval_mut(x.0)?;
         let index = stack.eval(x.1)?;
         what.try_get(index)
     }
