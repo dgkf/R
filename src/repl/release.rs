@@ -1,4 +1,5 @@
-use crate::{parser::Localization, session::Session};
+use crate::{cli::Experiment, parser::Localization, session::Session};
+use strum::IntoEnumIterator;
 
 pub const RELEASE_NAME: &str = "Beautiful You";
 
@@ -35,7 +36,6 @@ You should have received a copy of the GNU General Public License
 along with this program. If not, see <https://www.gnu.org/licenses/>.");
 }
 
-#[allow(clippy::const_is_empty)]
 pub fn session_header(session: &Session) -> String {
     let dev = if !GIT_HASH.is_empty() {
         format!(" (dev {:.8})", GIT_HASH)
@@ -49,9 +49,25 @@ pub fn session_header(session: &Session) -> String {
         COPYRIGHT.as_str()
     };
 
-    if session.locale == Localization::Pirate {
-        format!("Arr version {RELEASE_VERSION} -- \"{RELEASE_NAME}\"{dev}\n{license_info}\n",)
+    let experiments: String = {
+        let exp_strs: Vec<String> = Experiment::iter()
+            .map(|exp| {
+                if session.experiments.contains(&exp) {
+                    format!("  [x] {exp:?}")
+                } else {
+                    format!("  [ ] {exp:?}")
+                }
+            })
+            .collect();
+
+        format!("\nExperiments:\n{}", exp_strs.join("\n"))
+    };
+
+    let langname = if session.locale == Localization::Pirate {
+        "Arr"
     } else {
-        format!("R version {RELEASE_VERSION} -- \"{RELEASE_NAME}\"{dev}\n{license_info}\n",)
-    }
+        "R"
+    };
+
+    format!("{langname} version {RELEASE_VERSION} -- \"{RELEASE_NAME}\"{dev}\n{license_info}\n{experiments}\n",)
 }

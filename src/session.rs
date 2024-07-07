@@ -17,6 +17,22 @@ pub enum SessionOutput {
     Callback(Rc<dyn Fn(String)>),
 }
 
+// A subset of the Session info that is thread-safe for passing to reedline::{Validator, Highlighter}
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct SessionParserConfig {
+    pub locale: Localization,
+    pub experiments: Vec<Experiment>,
+}
+
+impl From<Session> for SessionParserConfig {
+    fn from(val: Session) -> Self {
+        SessionParserConfig {
+            locale: val.locale,
+            experiments: val.experiments,
+        }
+    }
+}
+
 impl std::fmt::Debug for SessionOutput {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -75,6 +91,11 @@ impl Session {
 
     pub fn with_output(mut self, output: SessionOutput) -> Session {
         self.output = output;
+        self
+    }
+
+    pub fn with_experiments(mut self, experiments: Vec<Experiment>) -> Session {
+        self.experiments = experiments;
         self
     }
 }
