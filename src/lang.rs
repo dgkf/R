@@ -1135,18 +1135,7 @@ mod test {
         "}}
     }
 
-    // TODO: https://github.com/dgkf/R/issues/141
-    // #[test]
-    // fn binding_promise_evaluates_curly() {
-    //     r_expect! {{"
-    //         f = fn(x) x
-    //         a = f({y = 2})
-    //         a == 2
-    //     "}}
-    // }
-
     #[test]
-    fn binding_promise_binds_curly() {
     fn fn_assign_in_arg_forces_all_promises() {
         r_expect! {{"
             f <- fn(x) { x }
