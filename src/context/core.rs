@@ -9,6 +9,10 @@ pub trait Context: std::fmt::Debug + std::fmt::Display {
     fn get(&mut self, name: String) -> EvalResult {
         (*self).env().get(name)
     }
+    #[inline]
+    fn get_mut(&mut self, name: String) -> EvalResult {
+        self.get(name)
+    }
 
     #[inline]
     fn get_ellipsis(&mut self) -> EvalResult {
@@ -36,6 +40,11 @@ pub trait Context: std::fmt::Debug + std::fmt::Display {
     #[inline]
     fn eval(&mut self, expr: Expr) -> EvalResult {
         self.env().eval(expr)
+    }
+
+    #[inline]
+    fn eval_mut(&mut self, expr: Expr) -> EvalResult {
+        Error::CannotEvaluateAsMutable(expr.clone()).into()
     }
 
     #[inline]

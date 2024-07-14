@@ -8,6 +8,8 @@
 
 * Added assertions on function parameters (#74)
 
+* Added the `length()` primitive (#105)
+
 * Assignment is now also possible using the `=` operator (#144 @sebffischer)
 
 * Added new primtiive function, `substitute()` (#125 @dgkf)
@@ -18,13 +20,36 @@
 
 * Promises now retain their expression even after being evaluated (#125 @dgkf)
 
+* The internal vector representation has been changed to allow for
+  in-place modification of vector, e.g. when they materialize themselves
+  from their lazy representation:
+  What was previously `Rep` is now `RepType` and `Rep` can switch out
+  one `RepType` for another. (#127 @sebffischer)
+
+* The internal vector representation has been extended to allow for mutable
+  views and lazy copies via the `VecData` type (#127 @sebffischer)
+
+* Added the internal `call_mutable()` method to `Callable`, which for now
+  is only implemented to retrieve vectors mutably from environments,
+  which drives call-assignment (things like `x[1] <- 2`) (@sebffischer).
+
+* Implemented `IntoIterator` for the Vector `Rep`presentation (@sebffischer).
+
+* Increased the version of `pest` for new clippy warnings:
+  https://github.com/pest-parser/pest/issues/1000 (@sebffischer)
+
+* The `Clone` implementation for `Vector` now creates a lazy copy (@sebffischer)
+
 * Use a faster hash function (#138, @sebffischer)
+
 
 ## Notable Bugs Addressed
 
 * Fix accidental tail calls escaping binary operator evaluation (#115 @dgkf)
 
 * Fix history file not being created if one doesn't already exist (@dgkf)
+
+* Vectors are no longer mutated in-place after assignment (#104 @sebffischer)
 
 # 0.3.3 "Beautiful You"
 

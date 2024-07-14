@@ -56,6 +56,7 @@ pub enum Error {
     // in-dev errors
     Unimplemented(Option<String>),
     Internal(Option<String>, &'static str, u32),
+    CannotEvaluateAsMutable(Expr),
 
     // features
     FeatureDisabledRestArgs,
@@ -99,6 +100,9 @@ impl Error {
             Error::ArgumentInvalid(s) => format!("argument '{s}' is invalid"),
             Error::Unimplemented(Some(s)) => {
                 format!("Uh, oh! Looks like '{s}' is only partially implemented")
+            }
+            Error::CannotEvaluateAsMutable(expr) => {
+                format!("Expression {expr} cannot be evaluated mutably")
             }
             Error::Unimplemented(_) => {
                 "Uh, oh! You tried to do something that is only partially implemented".to_string()

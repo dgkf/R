@@ -6,7 +6,7 @@ use crate::lang::Signal;
 
 use super::*;
 
-#[derive(Default, Debug, Clone)]
+#[derive(Default, Clone, Debug)]
 pub enum Obj {
     // Data structures
     #[default]

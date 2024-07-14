@@ -62,6 +62,22 @@ impl Obj {
         Signal::Return(self, visibility).into()
     }
 
+    pub fn mutable_view(&self) -> Self {
+        match self {
+            Obj::Vector(v) => Obj::Vector(v.mutable_view()),
+            // FIXME: this needs to be implemented for all objects that can be mutated
+            x => x.clone(),
+        }
+    }
+
+    pub fn lazy_copy(&self) -> Self {
+        match self {
+            Obj::Vector(v) => Obj::Vector(v.lazy_copy()),
+            // FIXME: this needs to be implemented for all objects that can be mutated
+            x => x.clone(),
+        }
+    }
+
     pub fn force(self, stack: &mut CallStack) -> EvalResult {
         match self {
             Obj::Promise(None, expr, env) => {
@@ -587,6 +603,50 @@ impl CallStack {
         self
     }
 
+    /// Find an object in the current environment or one of its parents and return a mutable view
+    /// of the object, as well as the environment in which it was found.
+    /// None is returned if the value was not found.
+    fn find(&mut self, name: String) -> Result<(Obj, Rc<Environment>), Signal> {
+        let mut env = self.env();
+        loop {
+            // search in this environment for value by name
+            let Some(value) = env
+                .values
+                .borrow_mut()
+                .get(&name)
+                .map(|x| (*x).mutable_view())
+            else {
+                // if not found, search through parent if available
+                if let Some(parent) = &env.parent {
+                    env = parent.clone();
+                    continue;
+                } else {
+                    break;
+                }
+            };
+
+            return match value {
+                // evaluate promises
+                Obj::Promise(None, expr, p_env) => {
+                    let result = Obj::Promise(None, expr.clone(), p_env.clone()).force(self)?;
+                    let value = Some(Box::new(result.mutable_view()));
+                    env.insert(name, Obj::Promise(value, expr, p_env.clone()));
+                    Result::Ok((result, env))
+                }
+                _ => Result::Ok((value, env)),
+            };
+        }
+
+        if let Ok(prim) = builtin(name.as_str()) {
+            Result::Ok((
+                Obj::Function(ExprList::new(), Expr::Primitive(prim), self.env()),
+                env,
+            ))
+        } else {
+            Result::Err(Signal::Error(Error::VariableNotFound(name)))
+        }
+    }
+
     pub fn add_frame(&mut self, call: Expr, env: Rc<Environment>) -> usize {
         self.frames.push(Frame::new(call, env));
         self.frames.len()
@@ -847,41 +907,29 @@ impl Context for CallStack {
         result
     }
 
+    #[inline]
+    fn eval_mut(&mut self, expr: Expr) -> EvalResult {
+        match expr {
+            Expr::Symbol(x) => self.get_mut(x),
+            e => Error::CannotEvaluateAsMutable(e).into(),
+        }
+    }
+
     fn get(&mut self, name: String) -> EvalResult {
-        let mut env = self.env();
-        loop {
-            // search in this environment for value by name
-            let Some(value) = env.values.borrow_mut().get(&name).cloned() else {
-                // if not found, search through parent if available
-                if let Some(parent) = &env.parent {
-                    env = parent.clone();
-                    continue;
-                } else {
-                    break;
-                }
-            };
+        let (obj, _) = self.find(name.clone())?;
+        Ok(obj.lazy_copy())
+    }
 
-            return match value {
-                // evaluate promises
-                Obj::Promise(None, expr, p_env) => {
-                    let result = Obj::Promise(None, expr.clone(), p_env.clone()).force(self)?;
-                    let value = Some(Box::new(result.clone()));
-                    env.insert(name, Obj::Promise(value, expr, p_env.clone()));
-                    Ok(result)
-                }
-                _ => Ok(value),
-            };
+    fn get_mut(&mut self, name: String) -> EvalResult {
+        let (obj, env) = self.find(name.clone())?;
+
+        if self.env() == env {
+            return Ok(obj);
         }
 
-        if let Ok(prim) = builtin(name.as_str()) {
-            Ok(Obj::Function(
-                ExprList::new(),
-                Expr::Primitive(prim),
-                self.env(),
-            ))
-        } else {
-            Err(Signal::Error(Error::VariableNotFound(name)))
-        }
+        let objc = obj.lazy_copy();
+        self.env().insert(name, objc.mutable_view());
+        Ok(objc)
     }
 
     // NOTE:
@@ -896,6 +944,9 @@ impl Context for Frame {
     fn env(&self) -> Rc<Environment> {
         self.env.clone()
     }
+    fn eval_mut(&mut self, expr: Expr) -> EvalResult {
+        self.env().eval_mut(expr)
+    }
 }
 
 impl Context for Obj {
@@ -904,6 +955,10 @@ impl Context for Obj {
             Obj::Environment(e) => e.clone(),
             _ => unimplemented!(),
         }
+    }
+
+    fn eval_mut(&mut self, expr: Expr) -> EvalResult {
+        self.env().eval_mut(expr)
     }
 
     fn eval(&mut self, expr: Expr) -> EvalResult {
@@ -949,6 +1004,15 @@ impl Context for Rc<Environment> {
         self.clone()
     }
 
+    /// Evaluates an expression mutably.
+    /// This is used for things like `x[1:10] <- 2:11`
+    fn eval_mut(&mut self, expr: Expr) -> EvalResult {
+        match expr {
+            Expr::Symbol(name) => self.get_mut(name),
+            expr => self.eval(expr),
+        }
+    }
+
     fn eval(&mut self, expr: Expr) -> EvalResult {
         match expr {
             Expr::Null => Ok(Obj::Null),
@@ -982,6 +1046,10 @@ impl Context for Rc<Environment> {
 
     fn get(&mut self, name: String) -> EvalResult {
         Environment::get(self, name)
+    }
+
+    fn get_mut(&mut self, name: String) -> EvalResult {
+        Environment::get_mut(self, name)
     }
 }
 
@@ -1058,7 +1126,7 @@ mod test {
     }
 
     #[test]
-    fn fn_assign_dont_causes_binding() {
+    fn fn_assign_doesnt_cause_binding() {
         r_expect! {{"
             x <- 1
             f <- fn(x) {x; null}
@@ -1079,9 +1147,34 @@ mod test {
     #[test]
     fn fn_assign_curly_causes_binding() {
         r_expect! {{"
-            x <- 1
-            f <- fn(x) {x; null}
-            f(x = {x = 2})
+            f = fn(x) x
+            f({y = 2})
+            y == 2
+        "}}
+    }
+
+    #[test]
+    fn binding_promise_evaluates_parenthesis() {
+        r_expect! {{"
+            f = fn(x) x
+            a = f((y = 2))
+            a == 2 
+        "}}
+    }
+
+    #[test]
+    fn binding_promise_binds_parenthesis() {
+        r_expect! {{"
+            f = fn(x) x
+            f((y = 2))
+            y == 2 
+        "}}
+    }
+
+    #[test]
+    fn curly_causes_binding() {
+        r_expect! {{"
+            x = {a = 2}
             x == 2
         "}}
     }
@@ -1092,4 +1185,68 @@ mod test {
         r_expect! { quote(x(1, 2, 3))[[3]] == quote(2) }
         assert_eq! { r! { quote(x(1, 2, 3))[1] }, r! { list(quote(x)) } }
     }
+
+    #[test]
+    fn dont_mutate_vec_inplace_after_assignment() {
+        r_expect! {{"
+            x = 1
+            y = x
+            y[1] = 2
+            (y == 2 & x == 1)
+        "}}
+    }
+    #[test]
+    fn vectors_are_mutable() {
+        r_expect! {{"
+            x = 1
+            x[1] = 2
+            x == 2
+        "}}
+    }
+
+    #[test]
+    fn dont_mutate_value_from_parent() {
+        r_expect! {{"
+            f = fn() x[1] <- -99
+            x = 10
+            f()
+            x == 10
+        "}}
+        r_expect! {{"
+             f = fn(x) {
+               x[1] <- -99
+               x
+             }
+             x1 = 10
+             x2 = f(x1)
+             (x1 == 10) && x2 == -99
+         "}}
+    }
+
+    #[test]
+    fn promises_can_be_mutated() {
+        r_expect! {{"
+            f = fn(x) {
+              x[1] = -99
+              x
+            }
+            x2 = f(c(1, 2))
+            (x2[1] == -99) && (x2[2] == 2)
+         "}}
+    }
+
+    // TODO: https://github.com/dgkf/R/issues/136
+    // #[test]
+    // fn nested_promises_can_be_mutated() {
+    //     r_expect! {{"
+    //         inc = fn(x) {
+    //           x[1] = x[1] + 1
+    //           x
+    //         }
+    //         add_two = fn(x) {
+    //           inc(inc(x))
+    //         }
+    //         add_two(1) == 3
+    //      "}}
+    // }
 }
