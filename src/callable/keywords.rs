@@ -211,6 +211,27 @@ impl Callable for KeywordRepeat {
 
 #[derive(Debug, Clone, PartialEq)]
 #[builtin]
+pub struct KeywordParen;
+
+impl Format for KeywordParen {
+    fn rfmt_call_with(&self, _state: FormatState, args: &ExprList) -> String {
+        format!("({})", args.values.first().unwrap())
+    }
+
+    fn rfmt_with(&self, _: FormatState) -> String {
+        "(".to_string()
+    }
+}
+
+impl Callable for KeywordParen {
+    fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
+        let expr = args.values.into_iter().next().unwrap();
+        stack.eval_and_finalize(expr)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+#[builtin]
 pub struct KeywordBlock;
 
 impl Format for KeywordBlock {

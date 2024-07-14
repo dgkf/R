@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
     derive(Serialize, Deserialize),
     serde(rename_all(serialize = "kebab-case", deserialize = "kebab-case"))
 )]
-#[derive(Debug, Copy, Clone, PartialEq, clap::ValueEnum, strum::EnumString)]
+#[derive(Debug, Copy, Clone, PartialEq, clap::ValueEnum, strum::EnumString, strum::EnumIter)]
 #[strum(serialize_all = "kebab-case")]
 pub enum Experiment {
     TailCalls,

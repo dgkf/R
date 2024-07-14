@@ -8,7 +8,7 @@ use crate::context::Context;
 use crate::lang::{CallStack, Cond, EvalResult, Signal};
 use crate::object::Environment;
 use crate::parser::{Localization, LocalizedParser};
-use crate::session::Session;
+use crate::session::{Session, SessionParserConfig};
 
 pub fn repl(mut session: Session) -> Result<(), Signal> {
     writeln!(session.output, "{}", session_header(&session)).ok();
@@ -26,9 +26,10 @@ pub fn repl(mut session: Session) -> Result<(), Signal> {
                 .expect("Error configuring history with file")
         });
 
+    let parser_config: SessionParserConfig = session.clone().into();
     let mut line_editor = Reedline::create()
-        .with_validator(Box::new(session.locale))
-        .with_highlighter(Box::new(session.locale))
+        .with_validator(Box::new(parser_config.clone()))
+        .with_highlighter(Box::new(parser_config.clone()))
         .with_history(Box::new(history));
 
     // initialize our repl prompt
@@ -45,7 +46,7 @@ pub fn repl(mut session: Session) -> Result<(), Signal> {
                 }
 
                 // otherwise parse and evaluate entry
-                let parse_res = session.locale.parse_input(&line);
+                let parse_res = parser_config.locale.parse_input_with(&line, &parser_config);
                 match parse_res {
                     Ok(expr) => {
                         let mut stack =

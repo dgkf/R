@@ -82,7 +82,7 @@ impl Obj {
         match self {
             Obj::Promise(None, expr, env) => {
                 stack.add_frame(expr.clone(), env.clone());
-                let result = stack.eval(expr);
+                let result = stack.eval_and_finalize(expr);
                 stack.pop_frame_and_return(result)
             }
             Obj::Promise(Some(value), ..) => Ok(*value),
@@ -1147,6 +1147,16 @@ mod test {
 
     #[test]
     fn binding_promise_binds_curly() {
+    fn fn_assign_in_arg_forces_all_promises() {
+        r_expect! {{"
+            f <- fn(x) { x }
+            z <- f({ y <- 123 })
+            z == 123 && y == 123
+        "}}
+    }
+
+    #[test]
+    fn fn_assign_curly_causes_binding() {
         r_expect! {{"
             f = fn(x) x
             f({y = 2})

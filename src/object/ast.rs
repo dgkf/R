@@ -85,7 +85,7 @@ impl fmt::Display for Expr {
             Expr::Call(what, args) => match &**what {
                 Expr::Primitive(p) => write!(f, "{}", p.rfmt_call(args)),
                 Expr::String(s) | Expr::Symbol(s) => write!(f, "{}({})", s, args),
-                rexpr => write!(f, "({})({})", rexpr, args),
+                rexpr => write!(f, "{}({})", rexpr, args),
             },
             Expr::Function(head, body) => write!(f, "function({}) {}", head, body),
             Expr::Primitive(p) => write!(f, "Primitive(\"{}\")", p.rfmt()),

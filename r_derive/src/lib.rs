@@ -77,7 +77,11 @@ pub fn builtin(attr: TokenStream, item: TokenStream) -> TokenStream {
             }
 
             #[automatically_derived]
-            impl Builtin for #what {}
+            impl Builtin for #what {
+                fn kind(&self) -> SymKind {
+                    SymKind::#kind
+                }
+            }
         },
         Builtin::Keyword => quote! {
             #item
@@ -96,6 +100,10 @@ pub fn builtin(attr: TokenStream, item: TokenStream) -> TokenStream {
             impl Builtin for #what {
                 fn is_transparent(&self) -> bool {
                     true
+                }
+
+                fn kind(&self) -> SymKind {
+                    SymKind::Keyword
                 }
             }
         },
@@ -280,10 +288,10 @@ pub fn derive_localized_parser(input: TokenStream) -> TokenStream {
         extern crate self as __localized_parser_r__;
         use __localized_parser_r__::error::Error;
         use __localized_parser_r__::lang:: Signal;
-        use __localized_parser_r__::session:: Session;
+        use __localized_parser_r__::session:: SessionParserConfig;
         use __localized_parser_r__::parser::*;
         impl LocalizedParser for #what {
-            fn parse_input_with(&self, input: &str, session: &Session) -> ParseResult {
+            fn parse_input_with(&self, input: &str, config: &SessionParserConfig) -> ParseResult {
                 let pairs = <Self as pest::Parser<Rule>>::parse(Rule::repl, input);
 
                 match pairs {
@@ -291,12 +299,12 @@ pub fn derive_localized_parser(input: TokenStream) -> TokenStream {
                     Ok(pairs) if pairs.len() == 0 => Err(Signal::Thunk),
 
                     // for any expressions
-                    Ok(pairs) => parse_expr(session, self, pratt_parser(), pairs),
+                    Ok(pairs) => parse_expr(config, self, pratt_parser(), pairs),
                     Err(e) => Err(Signal::Error(Error::from_parse_error(input, e))),
                 }
             }
 
-            fn parse_highlight_with(&self, input: &str, session: &Session) -> HighlightResult {
+            fn parse_highlight_with(&self, input: &str, config: &SessionParserConfig) -> HighlightResult {
                 let pairs = <Self as pest::Parser<Rule>>::parse(Rule::hl, input);
                 match pairs {
                     Ok(pairs) => Ok(pairs
