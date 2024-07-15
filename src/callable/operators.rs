@@ -370,6 +370,13 @@ impl Callable for PostfixIndex {
         let (what, index) = stack.eval_binary(args.unnamed_binary_args())?;
         what.try_get_inner(index)
     }
+
+    fn call_mutable(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
+        let x = args.unnamed_binary_args();
+        let what = stack.eval_mut(x.0)?;
+        let index = stack.eval(x.1)?;
+        what.try_get_inner(index)
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -380,6 +387,7 @@ impl Callable for PostfixVecIndex {
         let (what, index) = stack.eval_binary(args.unnamed_binary_args())?;
         what.try_get(index)
     }
+
     fn call_mutable(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
         let x = args.unnamed_binary_args();
         let what = stack.eval_mut(x.0)?;
