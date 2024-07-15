@@ -2,7 +2,8 @@
   "name": "r",
   "type": "module",
   "collaborators": [
-    "Doug Kelkhoff"
+    "Doug Kelkhoff",
+    "Sebastian Fischer"
   ],
   "description": "An experimental reimaginging of R",
   "version": "0.3.3",
