@@ -106,14 +106,7 @@ where
         en::Rule::val_inf => Ok(Expr::Inf),
 
         // reserved symbols
-        en::Rule::ellipsis => Ok(Expr::Ellipsis(None)),
-        en::Rule::more => {
-            if config.experiments.contains(&Experiment::RestArgs) {
-                Ok(Expr::More)
-            } else {
-                Err(Error::FeatureDisabledRestArgs.into())
-            }
-        }
+        en::Rule::more => Ok(Expr::More),
 
         // atomic values
         en::Rule::number => Ok(Expr::Number(

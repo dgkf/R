@@ -1074,7 +1074,11 @@ pub fn assert_formals(session: &Session, formals: ExprList) -> Result<ExprList, 
     }
 
     if ellipsis > 1 {
-        return Error::DuplicatedParameter("...".to_string()).into();
+        if allow_rest_args {
+            return Error::DuplicatedParameter("...".to_string()).into();
+        } else {
+            return Error::DuplicatedMoreParameter().into();
+        }
     }
 
     Ok(formals)

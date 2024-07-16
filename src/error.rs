@@ -39,6 +39,7 @@ pub enum Error {
     // function parsing
     InvalidFunctionParameter(Expr),
     DuplicatedParameter(String),
+    DuplicatedMoreParameter(),
 
     Missing,
     ArgumentMissing(String),
@@ -117,6 +118,7 @@ impl Error {
             Error::Missing => "object is missing".to_string(),
             Error::InvalidFunctionParameter(expr) => format!("invalid function parameter: {}", expr),
             Error::DuplicatedParameter(name) => format!("duplicated parameter name: {}", name),
+            Error::DuplicatedMoreParameter() => "duplicated '..<more>' parameters".to_string(),
         }
     }
 
