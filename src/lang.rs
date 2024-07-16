@@ -1060,9 +1060,13 @@ pub fn assert_formals(session: &Session, formals: ExprList) -> Result<ExprList, 
 
     for (key, value) in formals.keys.iter().zip(formals.values.iter()) {
         match *value {
-            Expr::Ellipsis(None) => ellipsis += 1,
-            Expr::Ellipsis(Some(_)) if allow_rest_args => ellipsis += 1,
-            Expr::Ellipsis(Some(_)) => return Error::FeatureDisabledRestArgs.into(),
+            Expr::Ellipsis(_) => match value.clone() {
+                Expr::Ellipsis(None) => ellipsis += 1,
+                Expr::Ellipsis(Some(x)) if x == "." => ellipsis += 1,
+                Expr::Ellipsis(Some(_)) if allow_rest_args => ellipsis += 1,
+                Expr::Ellipsis(Some(_)) => return Error::FeatureDisabledRestArgs.into(),
+                _ => unreachable!(),
+            },
             _ if key.is_none() => return Error::InvalidFunctionParameter(value.clone()).into(),
             _ => (),
         }

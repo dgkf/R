@@ -28,7 +28,7 @@ pub fn repl(mut session: Session) -> Result<(), Signal> {
 
     let parser_config: SessionParserConfig = session.clone().into();
     let mut line_editor = Reedline::create()
-        .with_validator(Box::new(parser_config.clone()))
+        // .with_validator(Box::new(parser_config.clone()))
         .with_highlighter(Box::new(parser_config.clone()))
         .with_history(Box::new(history));
 
