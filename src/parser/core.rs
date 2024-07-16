@@ -106,13 +106,13 @@ where
         en::Rule::val_inf => Ok(Expr::Inf),
 
         // reserved symbols
-        en::Rule::ellipsis => Ok(Expr::Ellipsis(None)),
+        // en::Rule::ellipsis => Ok(Expr::Ellipsis(None)),
         en::Rule::more => {
-            if config.experiments.contains(&Experiment::RestArgs) {
-                Ok(Expr::More)
-            } else {
-                Err(Error::FeatureDisabledRestArgs.into())
-            }
+            // if config.experiments.contains(&Experiment::RestArgs) {
+            Ok(Expr::More)
+            // } else {
+            //     Err(Error::FeatureDisabledRestArgs.into())
+            // }
         }
 
         // atomic values
@@ -217,7 +217,7 @@ where
         .into_inner()
         .map(|i| match i.as_rule().into() {
             en::Rule::named => parse_named(config, parser, pratt, i),
-            en::Rule::ellipsis => Ok((None, Expr::Ellipsis(None))),
+            // en::Rule::ellipsis => Ok((None, Expr::Ellipsis(None))),
             _ => Ok((None, parse_primary(config, parser, pratt, i)?)),
         })
         .collect::<Result<_, _>>()?;
@@ -415,8 +415,11 @@ where
         )),
 
         en::Rule::more => {
-            if config.experiments.contains(&Experiment::RestArgs) {
-                let val = pair.as_str();
+            let val = pair.as_str();
+            let is_ellipsis = val == ".";
+            if is_ellipsis {
+                Ok((Expr::Ellipsis(None), ExprList::new()))
+            } else if config.experiments.contains(&Experiment::RestArgs) {
                 Ok((Expr::Ellipsis(Some(val.to_string())), ExprList::new()))
             } else {
                 Err(Error::FeatureDisabledRestArgs.into())
@@ -485,7 +488,10 @@ where
             }
 
             en::Rule::more => {
-                if config.experiments.contains(&Experiment::RestArgs) {
+                let is_ellipsis = result.to_string() == ".";
+                if is_ellipsis {
+                    Expr::Ellipsis(None)
+                } else if config.experiments.contains(&Experiment::RestArgs) {
                     Expr::Ellipsis(Some(result.to_string()))
                 } else {
                     return Err(Error::FeatureDisabledRestArgs.into());

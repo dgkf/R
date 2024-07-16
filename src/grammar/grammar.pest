@@ -189,12 +189,13 @@
     symbol = _{ symbol_with_backticks | symbol_ident }
         symbol_with_backticks = _{ "`" ~ symbol_backticked ~ "`" }
         symbol_backticked = ${ ( !"`" ~ ANY )* }
-        symbol_ident = ${ ( LETTER | OTHER_SYMBOL | "_" ) ~ ( ASCII_ALPHANUMERIC | "_" )* }
+        symbol_ident = ${ ( LETTER | OTHER_SYMBOL | "_" | "." ) ~ ( ASCII_ALPHANUMERIC | "_" | "." )* }
 
     list = { "(" ~ pairs ~ ")" }
         pairs = _{ ( ( WS* ~ elem ~ WS* ~ "," )* ~ WS* ~ elem? )? ~ WS* }
-        ellipsis = { "..." }
-        elem = _{ ellipsis | named | expr }
+        // ellipsis = { "..." }
+        // elem = _{ ellipsis | named | expr }
+        elem = _{ named | expr }
         named = { symbol ~ WS* ~ "=" ~ WS* ~ expr? }
 
     vec = { "[" ~ pairs ~ "]" }
