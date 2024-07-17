@@ -193,8 +193,6 @@
 
     list = { "(" ~ pairs ~ ")" }
         pairs = _{ ( ( WS* ~ elem ~ WS* ~ "," )* ~ WS* ~ elem? )? ~ WS* }
-        // ellipsis = { "..." }
-        // elem = _{ ellipsis | named | expr }
         elem = _{ named | expr }
         named = { symbol ~ WS* ~ "=" ~ WS* ~ expr? }
 

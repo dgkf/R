@@ -35,7 +35,6 @@ impl Callable for PrimitiveNames {
             }
             Environment(e) => {
                 let mut names = e.values.borrow().keys().cloned().collect::<Vec<String>>();
-
                 names.sort();
                 Ok(names.into())
             }

@@ -5,9 +5,9 @@ use std::rc::Rc;
 use super::prompt::Prompt;
 use super::release::*;
 use crate::context::Context;
-use crate::lang::{CallStack, Cond, EvalResult, Signal};
+use crate::lang::{CallStack, Cond, Signal};
 use crate::object::Environment;
-use crate::parser::{Localization, LocalizedParser};
+use crate::parser::LocalizedParser;
 use crate::session::{Session, SessionParserConfig};
 
 pub fn repl(mut session: Session) -> Result<(), Signal> {
@@ -28,7 +28,7 @@ pub fn repl(mut session: Session) -> Result<(), Signal> {
 
     let parser_config: SessionParserConfig = session.clone().into();
     let mut line_editor = Reedline::create()
-        // .with_validator(Box::new(parser_config.clone()))
+        .with_validator(Box::new(parser_config.clone()))
         .with_highlighter(Box::new(parser_config.clone()))
         .with_history(Box::new(history));
 
@@ -46,7 +46,7 @@ pub fn repl(mut session: Session) -> Result<(), Signal> {
                 }
 
                 // otherwise parse and evaluate entry
-                let parse_res = parser_config.locale.parse_input_with(&line, &parser_config);
+                let parse_res = parser_config.parse_input(&line);
                 match parse_res {
                     Ok(expr) => {
                         let mut stack =
@@ -80,18 +80,4 @@ pub fn repl(mut session: Session) -> Result<(), Signal> {
     }
 
     Ok(())
-}
-
-pub fn eval(input: &str) -> EvalResult {
-    let global_env = Rc::new(Environment {
-        parent: Some(Environment::from_builtins()),
-        ..Default::default()
-    });
-
-    let locale = Localization::En;
-    let mut stack = CallStack::from(Session::default()).with_global_env(global_env);
-    match locale.parse_input(input) {
-        Ok(expr) => stack.eval_and_finalize(expr),
-        Err(e) => Err(e),
-    }
 }

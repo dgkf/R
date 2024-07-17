@@ -61,3 +61,37 @@ impl LocalizedParser for Localization {
         }
     }
 }
+
+impl LocalizedParser for SessionParserConfig {
+    fn parse_input_with(&self, _input: &str, _config: &SessionParserConfig) -> ParseResult {
+        unimplemented!()
+    }
+
+    fn parse_input(&self, input: &str) -> ParseResult {
+        use Localization::*;
+        match self.locale {
+            En => LocalizedParser::parse_input_with(&en::Parser, input, self),
+            Es => LocalizedParser::parse_input_with(&es::Parser, input, self),
+            De => LocalizedParser::parse_input_with(&de::Parser, input, self),
+            Zh => LocalizedParser::parse_input_with(&zh::Parser, input, self),
+            Pirate => LocalizedParser::parse_input_with(&pirate::Parser, input, self),
+            Emoji => LocalizedParser::parse_input_with(&emoji::Parser, input, self),
+        }
+    }
+
+    fn parse_highlight_with(&self, _input: &str, _config: &SessionParserConfig) -> HighlightResult {
+        unimplemented!()
+    }
+
+    fn parse_highlight(&self, input: &str) -> HighlightResult {
+        use Localization::*;
+        match self.locale {
+            En => LocalizedParser::parse_highlight_with(&en::Parser, input, self),
+            Es => LocalizedParser::parse_highlight_with(&es::Parser, input, self),
+            De => LocalizedParser::parse_highlight_with(&de::Parser, input, self),
+            Zh => LocalizedParser::parse_highlight_with(&zh::Parser, input, self),
+            Pirate => LocalizedParser::parse_highlight_with(&pirate::Parser, input, self),
+            Emoji => LocalizedParser::parse_highlight_with(&emoji::Parser, input, self),
+        }
+    }
+}

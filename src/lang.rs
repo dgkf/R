@@ -5,7 +5,9 @@ use crate::error::*;
 use crate::internal_err;
 use crate::object::types::*;
 use crate::object::*;
-use crate::session::Session;
+use crate::parser::LocalizedParser;
+use crate::parser::ParseResult;
+use crate::session::{Session, SessionParserConfig};
 use std::collections::HashSet;
 
 use core::fmt;
@@ -591,15 +593,46 @@ impl Display for Frame {
     }
 }
 
-#[derive(Debug, Default, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct CallStack {
     pub session: Session,
     pub frames: Vec<Frame>,
 }
 
 impl CallStack {
+    pub fn parse(&self, input: &str) -> ParseResult {
+        let config: SessionParserConfig = self.session.clone().into();
+        config.parse_input(input)
+    }
+
+    pub fn parse_and_eval(mut self, input: &str) -> EvalResult {
+        let expr = self.parse(input)?;
+        self.eval_and_finalize(expr)
+    }
+}
+
+impl Default for CallStack {
+    fn default() -> Self {
+        let global_env = Rc::new(Environment {
+            parent: Some(Environment::from_builtins()),
+            ..Default::default()
+        });
+
+        CallStack {
+            session: Session::default(),
+            frames: vec![Frame::new(Expr::Null, global_env)],
+        }
+    }
+}
+
+impl CallStack {
     pub fn with_global_env(mut self, env: Rc<Environment>) -> Self {
         self.frames = vec![Frame::new(Expr::Null, env)];
+        self
+    }
+
+    pub fn map_session(mut self, f: impl Fn(Session) -> Session) -> Self {
+        self.session = f(self.session);
         self
     }
 
@@ -726,10 +759,7 @@ impl Display for CallStack {
 
 impl From<Session> for CallStack {
     fn from(value: Session) -> Self {
-        CallStack {
-            session: value,
-            frames: vec![],
-        }
+        CallStack::default().map_session(|_| value.clone())
     }
 }
 
@@ -1102,7 +1132,7 @@ mod test {
     fn fn_multiple_ellipsis() {
         assert_eq!(
             r! { fn(..., ...) {} },
-            EvalResult::Err(Signal::Error(Error::DuplicatedParameter("...".to_string())))
+            EvalResult::Err(Signal::Error(Error::DuplicatedMoreParameter()))
         );
     }
 
@@ -1112,6 +1142,21 @@ mod test {
         assert_eq!(
             assert_formals(&Session::default(), formals),
             Result::Err(Signal::Error(Error::FeatureDisabledRestArgs))
+        )
+    }
+
+    #[test]
+    fn fn_rest_arg_ellipsis() {
+        assert_eq!(
+            CallStack::default()
+                .map_session(|s| s.with_experiments(vec![Experiment::RestArgs]))
+                .parse_and_eval(
+                    "
+                    f <- fn(...) { . }
+                    f(1, 2, 3)
+                    ",
+                ),
+            r! { list(1, 2, 3) }
         )
     }
 
