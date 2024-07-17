@@ -13,16 +13,16 @@ impl<T, U> SameType<T> for U {
 #[macro_export]
 macro_rules! r {
     // evaluate a single token directly
-    {{ $expr:tt }} => {{
+    {{ $expr:literal }} => {{
         {
             // test if token is a string literal and evaluate directly
             if let Some(s) = (&$expr as &dyn std::any::Any).downcast_ref::<&str>() {
-                $crate::repl::eval(&s)
+                $crate::lang::CallStack::default().parse_and_eval(s)
 
             // otherwise stringify token before evaluating
             } else {
                 let expr = stringify!($expr);
-                $crate::repl::eval(expr)
+                $crate::lang::CallStack::default().parse_and_eval(expr)
             }
         }
     }};
@@ -32,7 +32,7 @@ macro_rules! r {
     { $($expr:tt)+ } => {{
         {
             let expr = stringify!($($expr)+);
-            $crate::repl::eval(expr)
+            $crate::lang::CallStack::default().parse_and_eval(expr)
         }
     }};
 }
@@ -44,12 +44,14 @@ macro_rules! r_expect {
         {
             // test if token is a string literal and evaluate directly
             if let Some(s) = (&$expr as &dyn std::any::Any).downcast_ref::<&str>() {
-                assert_eq!($crate::repl::eval(&s), r!{ true })
+                let res  = $crate::lang::CallStack::default().parse_and_eval(s);
+                assert_eq!(res, r!{ true })
 
             // otherwise stringify token before evaluating
             } else {
                 let expr = stringify!($expr);
-                assert_eq!($crate::repl::eval(expr), r!{ true })
+                let res  = $crate::lang::CallStack::default().parse_and_eval(expr);
+                assert_eq!(res, r!{ true })
             }
         }
     }};
@@ -59,7 +61,8 @@ macro_rules! r_expect {
     { $($expr:tt)+ } => {{
         {
             let expr = stringify!($($expr)+);
-            assert_eq!($crate::repl::eval(expr), r!{ true })
+            let res  = $crate::lang::CallStack::default().parse_and_eval(expr);
+            assert_eq!(res, r!{ true })
         }
     }};
 }

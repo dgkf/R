@@ -2,6 +2,7 @@ extern crate r_derive;
 
 use crate::callable::builtins::BUILTIN;
 use crate::callable::dyncompare::*;
+use crate::cli::Experiment;
 use crate::context::Context;
 use crate::error::Error;
 use crate::object::List;
@@ -333,7 +334,10 @@ impl Callable for Obj {
             return internal_err!();
         };
 
-        stack.env().insert("...".to_string(), Obj::List(ellipsis));
+        if !stack.session.experiments.contains(&Experiment::RestArgs) {
+            stack.env().insert("...".to_string(), Obj::List(ellipsis));
+        }
+
         stack.env().append(args);
         stack.eval(body.clone())
     }

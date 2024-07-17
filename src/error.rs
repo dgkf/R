@@ -39,6 +39,7 @@ pub enum Error {
     // function parsing
     InvalidFunctionParameter(Expr),
     DuplicatedParameter(String),
+    DuplicatedMoreParameter(),
 
     Missing,
     ArgumentMissing(String),
@@ -112,11 +113,12 @@ impl Error {
                 format!("Internal Error ({file}:{line})\n{msg}")
             }
             Error::FeatureDisabledRestArgs => {
-                "..rest syntax currently disabled. To enable, re-build with\n\n    cargo build --features rest-args\n".to_string()
+                "..rest syntax currently disabled. To enable launch with\n\n    --experiments rest-args\n".to_string()
             }
             Error::Missing => "object is missing".to_string(),
             Error::InvalidFunctionParameter(expr) => format!("invalid function parameter: {}", expr),
             Error::DuplicatedParameter(name) => format!("duplicated parameter name: {}", name),
+            Error::DuplicatedMoreParameter() => "duplicated '..<more>' parameters".to_string(),
         }
     }
 

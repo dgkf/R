@@ -106,14 +106,7 @@ where
         en::Rule::val_inf => Ok(Expr::Inf),
 
         // reserved symbols
-        en::Rule::ellipsis => Ok(Expr::Ellipsis(None)),
-        en::Rule::more => {
-            if config.experiments.contains(&Experiment::RestArgs) {
-                Ok(Expr::More)
-            } else {
-                Err(Error::FeatureDisabledRestArgs.into())
-            }
-        }
+        en::Rule::more => Ok(Expr::More),
 
         // atomic values
         en::Rule::number => Ok(Expr::Number(
@@ -203,7 +196,7 @@ where
     Ok((Some(name), parse_expr(config, parser, pratt, inner)?))
 }
 
-fn parse_pairlist<P, R>(
+fn parse_list_elements<P, R>(
     config: &SessionParserConfig,
     parser: &P,
     pratt: &PrattParser<R>,
@@ -217,7 +210,6 @@ where
         .into_inner()
         .map(|i| match i.as_rule().into() {
             en::Rule::named => parse_named(config, parser, pratt, i),
-            en::Rule::ellipsis => Ok((None, Expr::Ellipsis(None))),
             _ => Ok((None, parse_primary(config, parser, pratt, i)?)),
         })
         .collect::<Result<_, _>>()?;
@@ -237,7 +229,7 @@ where
 {
     let mut inner = pair.into_inner();
     let name = inner.next().map_or(internal_err!(), |i| Ok(i.as_str()))?;
-    let pairs = parse_pairlist(
+    let pairs = parse_list_elements(
         config,
         parser,
         pratt,
@@ -261,7 +253,7 @@ where
     R: RuleType + Into<en::Rule>,
 {
     let mut inner = pair.into_inner();
-    let params = parse_pairlist(
+    let params = parse_list_elements(
         config,
         parser,
         pratt,
@@ -404,20 +396,26 @@ where
     R: RuleType + Into<en::Rule>,
 {
     match pair.as_rule().into() {
-        en::Rule::call => Ok((Expr::Null, parse_pairlist(config, parser, pratt, pair)?)),
+        en::Rule::call => Ok((
+            Expr::Null,
+            parse_list_elements(config, parser, pratt, pair)?,
+        )),
         en::Rule::index => {
-            let args = parse_pairlist(config, parser, pratt, pair)?;
+            let args = parse_list_elements(config, parser, pratt, pair)?;
             Ok((Expr::as_primitive(PostfixIndex), args))
         }
         en::Rule::vector_index => Ok((
             Expr::as_primitive(PostfixVecIndex),
-            parse_pairlist(config, parser, pratt, pair)?,
+            parse_list_elements(config, parser, pratt, pair)?,
         )),
 
         en::Rule::more => {
+            let val = pair.as_str();
+            let is_ellipsis = val == ".";
             if config.experiments.contains(&Experiment::RestArgs) {
-                let val = pair.as_str();
                 Ok((Expr::Ellipsis(Some(val.to_string())), ExprList::new()))
+            } else if is_ellipsis {
+                Ok((Expr::Ellipsis(None), ExprList::new()))
             } else {
                 Err(Error::FeatureDisabledRestArgs.into())
             }
@@ -485,8 +483,11 @@ where
             }
 
             en::Rule::more => {
+                let is_ellipsis = result.to_string() == ".";
                 if config.experiments.contains(&Experiment::RestArgs) {
                     Expr::Ellipsis(Some(result.to_string()))
+                } else if is_ellipsis {
+                    Expr::Ellipsis(None)
                 } else {
                     return Err(Error::FeatureDisabledRestArgs.into());
                 }
@@ -512,7 +513,7 @@ where
     P: Parser<R> + LocalizedParser,
     R: RuleType + Into<en::Rule>,
 {
-    let args = parse_pairlist(config, parser, pratt, pair)?;
+    let args = parse_list_elements(config, parser, pratt, pair)?;
     Ok(Expr::new_primitive_call(PrimVec, args))
 }
 
@@ -526,7 +527,7 @@ where
     P: Parser<R> + LocalizedParser,
     R: RuleType + Into<en::Rule>,
 {
-    let args = parse_pairlist(config, parser, pratt, pair)?;
+    let args = parse_list_elements(config, parser, pratt, pair)?;
     Ok(Expr::List(args))
 }
 

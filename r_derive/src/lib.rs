@@ -237,7 +237,6 @@ pub fn derive_translate(_input: TokenStream) -> TokenStream {
                     Rule::symbol_ident => en::Rule::symbol_ident,
                     Rule::list => en::Rule::list,
                     Rule::pairs => en::Rule::pairs,
-                    Rule::ellipsis => en::Rule::ellipsis,
                     Rule::elem => en::Rule::elem,
                     Rule::named => en::Rule::named,
                     Rule::vec => en::Rule::vec,
