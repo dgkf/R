@@ -155,6 +155,7 @@ where
     pub fn as_mode<Mode>(&self) -> Rep<Mode>
     where
         T: CoercibleInto<Mode>,
+        Mode: Clone,
     {
         Rep(RefCell::new(self.borrow().as_mode()))
     }

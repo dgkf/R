@@ -228,6 +228,7 @@ impl<T: AtomicMode + Clone + Default> RepType<T> {
     pub fn as_mode<Mode>(&self) -> RepType<Mode>
     where
         T: CoercibleInto<Mode>,
+        Mode: Clone,
     {
         match self {
             RepType::Subset(v, subsets) => {

@@ -83,9 +83,13 @@ pub trait Callable {
                 None => {
                     let next_unassigned_formal = formals.remove(0);
                     if let Some((Some(param), _)) = next_unassigned_formal {
-                        matched_args.values.borrow_mut().push((Some(param), value));
+                        matched_args
+                            .values
+                            .with_inner_mut(|vals| vals.push((Some(param), value)));
                     } else {
-                        ellipsis.values.borrow_mut().push((None, value));
+                        matched_args
+                            .values
+                            .with_inner_mut(|vals| vals.push((None, value)));
                     }
                 }
             }
@@ -93,22 +97,22 @@ pub trait Callable {
 
         // add back in parameter defaults that weren't filled with args
         for (param, default) in formals.into_iter() {
-            matched_args.values.borrow_mut().push((
-                param,
-                Obj::Promise(None, default, stack.last_frame().env().clone()),
-            ));
+            matched_args.values.with_inner_mut(|v| {
+                v.push((
+                    param,
+                    Obj::Promise(None, default, stack.last_frame().env().clone()),
+                ));
+            })
         }
 
         if let Some(Expr::Ellipsis(Some(name))) = remainder.get(0) {
             matched_args
                 .values
-                .borrow_mut()
-                .push((Some(name), Obj::List(ellipsis.clone())))
+                .with_inner_mut(|v| v.push((Some(name), Obj::List(ellipsis.clone()))))
         } else if !remainder.is_empty() {
             matched_args
                 .values
-                .borrow_mut()
-                .push((Some("...".to_string()), Obj::List(ellipsis.clone())))
+                .with_inner_mut(|v| v.push((Some("...".to_string()), Obj::List(ellipsis.clone()))))
         }
 
         Ok((matched_args, ellipsis))
@@ -290,7 +294,6 @@ pub fn force_promises(
     // Force any closures that were created during call. This helps with using
     // variables as argument for sep and collapse parameters.
     vals.values
-        .borrow_mut()
         .clone()
         .into_iter()
         .map(|(k, v)| match (k, v.force(stack)) {

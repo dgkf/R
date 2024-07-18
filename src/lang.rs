@@ -67,6 +67,16 @@ impl Obj {
     pub fn mutable_view(&self) -> Self {
         match self {
             Obj::Vector(v) => Obj::Vector(v.mutable_view()),
+            Obj::List(List {
+                names,
+                values,
+                subsets,
+            }) => Obj::List(List {
+                // FIXME: ensure that this is properly implemented for names and subsets
+                names: (*names).clone(),
+                values: (*values).mutable_view(),
+                subsets: (*subsets).clone(),
+            }),
             // FIXME: this needs to be implemented for all objects that can be mutated
             x => x.clone(),
         }
@@ -75,6 +85,18 @@ impl Obj {
     pub fn lazy_copy(&self) -> Self {
         match self {
             Obj::Vector(v) => Obj::Vector(v.lazy_copy()),
+            Obj::List(List {
+                names,
+                values,
+                subsets,
+            }) => {
+                Obj::List(List {
+                    // FIXME: ensure that this is properly implemented for names and subsets
+                    names: (*names).clone(),
+                    values: (*values).lazy_copy(),
+                    subsets: (*subsets).clone(),
+                })
+            }
             // FIXME: this needs to be implemented for all objects that can be mutated
             x => x.clone(),
         }
@@ -235,18 +257,18 @@ impl Obj {
     pub fn set_named(&mut self, name: &str, value: Obj) -> EvalResult {
         match self {
             Obj::List(v) => {
-                let mut vb = v.values.borrow_mut();
-
-                let loc = vb
-                    .iter()
+                let loc = v
+                    .values
+                    .clone()
+                    .into_iter()
                     .enumerate()
                     .find(|(_, (k, _))| *k == Some(name.into()))
                     .map(|(i, _)| i);
 
-                match loc {
+                v.values.with_inner_mut(|vb| match loc {
                     Some(i) => vb[i].1 = value.clone(),
                     None => vb.push((Some(name.into()), value.clone())),
-                }
+                });
 
                 Ok(value)
             }

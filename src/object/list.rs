@@ -275,7 +275,7 @@ impl List {
 
 #[cfg(test)]
 mod tests {
-    use crate::r;
+    use crate::{r, r_expect};
     #[test]
     fn list_declaration_ambiguity() {
         assert_eq!(r!((a = 1,)), r!(list(a = 1)));
@@ -283,4 +283,29 @@ mod tests {
         assert_eq!(r!((1)), r!(1));
         assert_eq!(r!((1,)), r!(list(1)));
     }
+
+    #[test]
+    fn copy_on_write_single_bracket() {
+        r_expect! {{"
+            l1 = (1,)
+            l2 = l1
+            l1[1] = 2
+            l1[[1]] == 2 & l2[[1]] == 1
+        "}}
+    }
+    // #[test]
+    // fn copy_on_write_double_bracket() {
+    //     r_expect! {{"
+    //         l1 = (1,)
+    //         l2 = l1
+    //         l1[[1]] = 2
+    //         l1[[1]] == 2 & l2[[1]] == 1
+    //     "}}
+    // }
+    #[test]
+    fn copy_on_write_double_bracket_names() {}
+    #[test]
+    fn copy_on_write_single_bracket_names() {}
+    #[test]
+    fn copy_on_write_subsetted_list() {}
 }
