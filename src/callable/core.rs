@@ -59,8 +59,7 @@ pub trait Callable {
 
             matched_args
                 .values
-                .borrow_mut()
-                .push(args.values.borrow_mut().remove(i));
+                .with_inner_mut(|v| v.push(args.values.with_inner_mut(|x| x.remove(i))))
         }
 
         // TODO(bug): need to evaluate trailing unassigned params that have
@@ -70,12 +69,14 @@ pub trait Callable {
         let remainder = formals.pop_trailing();
 
         // backfill unnamed args, populating ellipsis with overflow
-        let argsiter = args.values.borrow_mut().clone().into_iter();
+        let argsiter = args.values.into_iter();
         for (key, value) in argsiter {
             match key {
                 // named args go directly to ellipsis, they did not match a formal
                 Some(arg) => {
-                    ellipsis.values.borrow_mut().push((Some(arg), value));
+                    ellipsis
+                        .values
+                        .with_inner_mut(|v| v.push((Some(arg), value)));
                 }
 
                 // unnamed args populate next formal, or ellipsis if formals exhausted

@@ -1,12 +1,26 @@
 use std::cell::{Ref, RefCell, RefMut};
 use std::rc::Rc;
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Default)]
 pub struct VecData<T>(Rc<RefCell<Rc<Vec<T>>>>);
 
 pub struct VecDataIter<T> {
     data: VecData<T>,
     index: usize,
+}
+
+impl<T> IntoIterator for VecData<T>
+where
+    T: Clone + Default,
+{
+    type Item = T;
+    type IntoIter = VecDataIter<T>;
+    fn into_iter(self) -> Self::IntoIter {
+        VecDataIter {
+            data: self,
+            index: 0,
+        }
+    }
 }
 
 impl<T> VecDataIter<T> {
@@ -36,11 +50,29 @@ impl<T: Clone> Iterator for VecDataIter<T> {
 /// the vector.
 /// The former is used to modify vectors in-place, while the latter is used to create new vectors
 /// with an internal copy-on-write mechanism to avoid unnecessary clones.
-impl<T> VecData<T> {
+impl<T: Clone> VecData<T> {
     /// Create a new instance
     pub fn new(x: Rc<RefCell<Rc<Vec<T>>>>) -> Self {
         VecData(x)
     }
+
+    pub fn len(&self) -> usize {
+        self.0.borrow().len()
+    }
+
+    /// Write into the internal vector data.
+    /// In case more than one reference to the internal data exists,
+    /// the vector is cloned.
+    pub fn with_inner_mut<F, R>(&self, f: F) -> R
+    where
+        F: FnOnce(&mut Vec<T>) -> R,
+    {
+        let VecData(x) = self;
+        let x1 = &mut *x.borrow_mut();
+        let vals = Rc::make_mut(x1);
+        f(vals)
+    }
+
     /// Create a (lazy) copy of the vector data by cloning the *inner* Rc.
     pub fn lazy_copy(&self) -> Self {
         Self::new(Rc::new(RefCell::new(self.0.borrow().clone())))
@@ -59,7 +91,7 @@ impl<T> VecData<T> {
     }
 }
 
-impl<T> From<Vec<T>> for VecData<T> {
+impl<T: Clone> From<Vec<T>> for VecData<T> {
     fn from(x: Vec<T>) -> Self {
         VecData::new(Rc::new(RefCell::new(Rc::new(x))))
     }
@@ -106,7 +138,4 @@ mod tests {
         assert_eq!(x2.borrow().as_ref()[0], -10);
         assert_eq!(x3.borrow().as_ref()[0], 1);
     }
-
-    #[test]
-    fn mutable_view() {}
 }
