@@ -82,6 +82,10 @@ impl<T: Clone> Data<Vec<T>> {
     pub fn len(&self) -> usize {
         self.0.borrow().len()
     }
+
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
 }
 
 pub type VecData<T> = Data<Vec<T>>;
@@ -133,6 +137,6 @@ mod tests {
         let _x1 = x.lazy_copy();
         let _x2 = x.mutable_view();
         x.with_inner_mut(|v| v.push(1));
-        assert_eq!(x.0.borrow().get(0).cloned().unwrap(), 1);
+        assert_eq!(x.0.borrow().first().cloned().unwrap(), 1);
     }
 }
