@@ -1,6 +1,4 @@
 use hashbrown::HashMap;
-use std::cell::RefCell;
-use std::rc::Rc;
 
 use crate::error::Error;
 use crate::lang::EvalResult;
@@ -11,7 +9,7 @@ type ListNameMap = HashMap<String, Vec<usize>>;
 
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct List {
-    pub names: Rc<RefCell<ListNameMap>>,
+    pub names: Data<ListNameMap>,
     pub values: VecData<(Option<String>, Obj)>,
     pub subsets: Subsets,
 }
@@ -30,17 +28,18 @@ impl From<Vec<(Option<String>, Obj)>> for List {
 
 impl List {
     pub fn reindex(&mut self) {
-        let mut names = self.names.borrow_mut();
-        names.drain();
+        self.names.with_inner_mut(|names| {
+            names.drain();
 
-        for (i, (k, _)) in self.values.borrow().iter().enumerate() {
-            if let Some(name) = k {
-                let indices = names.entry(name.clone()).or_default();
-                if !indices.contains(&i) {
-                    indices.push(i)
+            for (i, (k, _)) in self.values.borrow().iter().enumerate() {
+                if let Some(name) = k {
+                    let indices = names.entry(name.clone()).or_default();
+                    if !indices.contains(&i) {
+                        indices.push(i)
+                    }
                 }
             }
-        }
+        })
     }
 
     pub fn subset(&self, by: Subset) -> List {
@@ -232,8 +231,7 @@ impl List {
     }
 
     pub fn dedup_last(self) -> Self {
-        {
-            let names = self.names.borrow();
+        self.names.with_inner_mut(|names| {
             let mut dups: Vec<usize> = names
                 .iter()
                 .flat_map(|(_, indices)| {
@@ -250,11 +248,13 @@ impl List {
                     vs.remove(i);
                 }
             });
-        }
+        });
 
-        for (_, indices) in self.names.borrow_mut().iter_mut() {
-            indices.drain(0..indices.len());
-        }
+        self.names.with_inner_mut(|names| {
+            for (_, indices) in names.iter_mut() {
+                indices.drain(0..indices.len());
+            }
+        });
 
         self
     }

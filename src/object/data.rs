@@ -1,41 +1,28 @@
 use std::cell::{Ref, RefCell, RefMut};
+use std::iter::Iterator;
 use std::rc::Rc;
 
-#[derive(Debug, PartialEq, Clone, Default)]
-pub struct VecData<T>(Rc<RefCell<Rc<Vec<T>>>>);
+/// Internal Data representation for copy-on-write semantics.
+#[derive(Debug, PartialEq, Default, Clone)]
+pub struct Data<T: Clone>(Rc<RefCell<Rc<T>>>);
 
-pub struct VecDataIter<T> {
-    data: VecData<T>,
+impl<T: Clone> From<T> for Data<T> {
+    fn from(x: T) -> Self {
+        Data::new(Rc::new(RefCell::new(Rc::new(x))))
+    }
+}
+
+pub struct DataIter<T: Clone> {
+    data: Rc<Vec<T>>,
     index: usize,
 }
 
-impl<T> IntoIterator for VecData<T>
-where
-    T: Clone + Default,
-{
-    type Item = T;
-    type IntoIter = VecDataIter<T>;
-    fn into_iter(self) -> Self::IntoIter {
-        VecDataIter {
-            data: self,
-            index: 0,
-        }
-    }
-}
-
-impl<T> VecDataIter<T> {
-    pub fn new(data: VecData<T>) -> Self {
-        VecDataIter { data, index: 0 }
-    }
-}
-
-impl<T: Clone> Iterator for VecDataIter<T> {
+impl<T: Clone> Iterator for DataIter<T> {
     type Item = T;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let vec = self.data.0.borrow();
-        if self.index < vec.len() {
-            let item = vec[self.index].clone();
+        if self.index < self.data.len() {
+            let item = self.data[self.index].clone();
             self.index += 1;
             Some(item)
         } else {
@@ -44,20 +31,19 @@ impl<T: Clone> Iterator for VecDataIter<T> {
     }
 }
 
-/// Vector Data
-///
-/// This data structure allows to both get mutable views of the vector and to create lazy copies of
-/// the vector.
-/// The former is used to modify vectors in-place, while the latter is used to create new vectors
-/// with an internal copy-on-write mechanism to avoid unnecessary clones.
-impl<T: Clone> VecData<T> {
-    /// Create a new instance
-    pub fn new(x: Rc<RefCell<Rc<Vec<T>>>>) -> Self {
-        VecData(x)
-    }
+impl<T: Clone> IntoIterator for Data<Vec<T>> {
+    type Item = T;
+    type IntoIter = DataIter<T>;
 
-    pub fn len(&self) -> usize {
-        self.0.borrow().len()
+    fn into_iter(self) -> Self::IntoIter {
+        let x = self.borrow().clone();
+        DataIter { data: x, index: 0 }
+    }
+}
+impl<T: Clone> Data<T> {
+    /// Create a new instance
+    pub fn new(x: Rc<RefCell<Rc<T>>>) -> Self {
+        Data(x)
     }
 
     /// Get mutable access to the internal vector.
@@ -65,15 +51,24 @@ impl<T: Clone> VecData<T> {
     /// the vector is cloned.
     pub fn with_inner_mut<F, R>(&self, f: F) -> R
     where
-        F: FnOnce(&mut Vec<T>) -> R,
+        F: FnOnce(&mut T) -> R,
     {
-        let VecData(x) = self;
+        let Data(x) = self;
         let x1 = &mut *x.borrow_mut();
         let vals = Rc::make_mut(x1);
         f(vals)
     }
 
-    /// Create a (lazy) copy of the vector data by cloning the *inner* Rc.
+    /// Get a mutable access to the data.
+    pub fn borrow_mut(&self) -> RefMut<Rc<T>> {
+        self.0.borrow_mut()
+    }
+    /// Borrow the internal data immutably.
+    pub fn borrow(&self) -> Ref<'_, Rc<T>> {
+        self.0.borrow()
+    }
+
+    // TODO: remove both methods below
     pub fn lazy_copy(&self) -> Self {
         Self::new(Rc::new(RefCell::new(self.0.borrow().clone())))
     }
@@ -81,22 +76,15 @@ impl<T: Clone> VecData<T> {
     pub fn mutable_view(&self) -> Self {
         Self::new(Rc::clone(&self.0))
     }
-    /// Get a mutable access to the data.
-    pub fn borrow_mut(&self) -> RefMut<Rc<Vec<T>>> {
-        self.0.borrow_mut()
-    }
-    /// Borrow the internal data immutably.
-    pub fn borrow(&self) -> Ref<'_, Rc<Vec<T>>> {
-        self.0.borrow()
+}
+
+impl<T: Clone> Data<Vec<T>> {
+    pub fn len(&self) -> usize {
+        self.0.borrow().len()
     }
 }
 
-impl<T: Clone> From<Vec<T>> for VecData<T> {
-    fn from(x: Vec<T>) -> Self {
-        VecData::new(Rc::new(RefCell::new(Rc::new(x))))
-    }
-}
-
+pub type VecData<T> = Data<Vec<T>>;
 #[cfg(test)]
 mod tests {
     use super::VecData;

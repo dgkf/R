@@ -15,7 +15,7 @@ use crate::object::VecData;
 /// The ref-cell is used so vectors can change there internal representation,
 /// e.g. by materializing.
 #[derive(Debug, Clone, PartialEq)]
-pub struct Rep<T>(pub RefCell<RepType<T>>);
+pub struct Rep<T: Clone>(pub RefCell<RepType<T>>);
 
 impl<T> Rep<T>
 where
@@ -227,7 +227,7 @@ where
     }
 }
 
-pub struct RepIter<T>(RepTypeIter<T>);
+pub struct RepIter<T: Clone>(RepTypeIter<T>);
 
 impl<T> IntoIterator for Rep<T>
 where
@@ -394,6 +394,7 @@ where
     L: AtomicMode + Default + Clone + MinimallyNumeric<As = LNum> + CoercibleInto<LNum>,
     LNum: std::ops::Neg<Output = O>,
     RepType<O>: From<Vec<O>>,
+    O: Clone,
 {
     type Output = Rep<O>;
     fn neg(self) -> Self::Output {
@@ -437,6 +438,8 @@ where
     (LNum, RNum): CommonNum<Common = C>,
     C: std::ops::Sub<Output = O>,
     RepType<C>: From<Vec<O>>,
+    O: Clone,
+    C: Clone,
 {
     type Output = Rep<C>;
     fn sub(self, rhs: Rep<R>) -> Self::Output {
@@ -452,6 +455,8 @@ where
     (LNum, RNum): CommonNum<Common = C>,
     C: std::ops::Mul<Output = O>,
     RepType<C>: From<Vec<O>>,
+    O: Clone,
+    C: Clone,
 {
     type Output = Rep<C>;
     fn mul(self, rhs: Rep<R>) -> Self::Output {
@@ -469,6 +474,8 @@ where
     (LNum, RNum): CommonNum<Common = C>,
     C: std::ops::Div<Output = O>,
     RepType<C>: From<Vec<O>>,
+    O: Clone,
+    C: Clone,
 {
     type Output = Rep<C>;
     fn div(self, rhs: Rep<R>) -> Self::Output {
@@ -484,6 +491,10 @@ where
     (LNum, RNum): CommonNum<Common = C>,
     C: std::ops::Rem<Output = O>,
     RepType<C>: From<Vec<O>>,
+    L: Clone,
+    R: Clone,
+    C: Clone,
+    O: Clone,
 {
     type Output = Rep<C>;
     fn rem(self, rhs: Rep<R>) -> Self::Output {
@@ -499,6 +510,9 @@ where
     R: AtomicMode + Default + Clone + MinimallyNumeric<As = RNum> + CoercibleInto<RNum>,
     LNum: Pow<RNum, Output = O>,
     RepType<O>: From<Vec<O>>,
+    L: Clone,
+    R: Clone,
+    O: Clone,
 {
     type Output = Rep<O>;
     fn power(self, rhs: Rep<R>) -> Self::Output {
@@ -513,6 +527,9 @@ where
     R: AtomicMode + Default + Clone + CoercibleInto<Logical>,
     Logical: std::ops::BitOr<Logical, Output = O>,
     RepType<O>: From<Vec<O>>,
+    L: Clone,
+    R: Clone,
+    O: Clone,
 {
     type Output = Rep<O>;
     fn bitor(self, rhs: Rep<R>) -> Self::Output {
@@ -527,6 +544,9 @@ where
     R: AtomicMode + Default + Clone + CoercibleInto<Logical>,
     Logical: std::ops::BitAnd<Logical, Output = O>,
     RepType<O>: From<Vec<O>>,
+    L: Clone,
+    R: Clone,
+    O: Clone,
 {
     type Output = Rep<O>;
     fn bitand(self, rhs: Rep<R>) -> Self::Output {
@@ -541,6 +561,9 @@ where
     R: AtomicMode + Default + Clone + CoercibleInto<C>,
     (L, R): CommonCmp<Common = C>,
     C: PartialOrd,
+    L: Clone,
+    R: Clone,
+    C: Clone,
 {
     type Output = Rep<Logical>;
 

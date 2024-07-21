@@ -73,7 +73,7 @@ impl Obj {
                 subsets,
             }) => Obj::List(List {
                 // FIXME: ensure that this is properly implemented for names and subsets
-                names: (*names).clone(),
+                names: (*names).mutable_view(),
                 values: (*values).mutable_view(),
                 subsets: (*subsets).clone(),
             }),
@@ -92,7 +92,7 @@ impl Obj {
             }) => {
                 Obj::List(List {
                     // FIXME: ensure that this is properly implemented for names and subsets
-                    names: (*names).clone(),
+                    names: (*names).lazy_copy(),
                     values: (*values).lazy_copy(),
                     subsets: (*subsets).clone(),
                 })
