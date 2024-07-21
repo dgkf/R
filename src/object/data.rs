@@ -16,7 +16,6 @@ pub struct Data<T: Clone>(Rc<RefCell<Rc<T>>>);
 impl<T: Clone> Clone for Data<T> {
     fn clone(&self) -> Self {
         Self::new(Rc::new(RefCell::new(self.0.borrow().clone())))
-        // Self::new(Rc::clone(&self.0))
     }
 }
 
