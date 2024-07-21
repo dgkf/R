@@ -52,10 +52,10 @@ impl Subset {
 
     pub fn len(&self) -> usize {
         match self {
-            Subset::Indices(i) => i.clone().borrow().len(),
+            Subset::Indices(i) => i.len(),
             Subset::Range(r) => r.end - r.start,
             Subset::Mask(_) => usize::MAX,
-            Subset::Names(n) => n.clone().borrow().len(),
+            Subset::Names(n) => n.len(),
         }
     }
 

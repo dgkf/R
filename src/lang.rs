@@ -73,8 +73,8 @@ impl Obj {
                 subsets,
             }) => Obj::List(List {
                 // FIXME: ensure that this is properly implemented for names and subsets
-                names: (*names).mutable_view(),
-                values: (*values).mutable_view(),
+                names: (*names).view_mut(),
+                values: (*values).view_mut(),
                 subsets: (*subsets).clone(),
             }),
             // FIXME: this needs to be implemented for all objects that can be mutated

@@ -47,7 +47,7 @@ impl List {
         inner.push(by);
         List {
             names: self.names.clone(),
-            values: self.values.clone(),
+            values: self.values.view_mut(),
             subsets: Subsets(inner),
         }
     }
@@ -322,7 +322,7 @@ mod tests {
         "#}}
     }
     #[test]
-    fn copy_on_write_slice_indixes() {
+    fn copy_on_write_slice_indices() {
         r_expect! {{"
             l = (1, 2)
             l1 = l

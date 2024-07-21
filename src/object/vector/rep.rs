@@ -34,19 +34,13 @@ where
 
     pub fn mutable_view(&self) -> Self {
         match self.borrow().clone() {
-            RepType::Subset(v, s) => {
-                // FIXME(don't clone all the subsets, they are read only anyway?)
-                Rep(RefCell::new(RepType::Subset(v.mutable_view(), s.clone())))
-            }
+            RepType::Subset(v, s) => Rep(RefCell::new(RepType::Subset(v.view_mut(), s.clone()))),
         }
     }
 
     pub fn lazy_copy(&self) -> Self {
         match self.borrow().clone() {
-            RepType::Subset(v, s) => {
-                // FIXME(don't clone all the subsets, they are read only anyway?)
-                Rep(RefCell::new(RepType::Subset(v.lazy_copy(), s.clone())))
-            }
+            RepType::Subset(v, s) => Rep(RefCell::new(RepType::Subset(v.lazy_copy(), s.clone()))),
         }
     }
 
