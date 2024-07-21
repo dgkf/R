@@ -293,19 +293,41 @@ mod tests {
             l1[[1]] == 2 & l2[[1]] == 1
         "}}
     }
-    // #[test]
-    // fn copy_on_write_double_bracket() {
-    //     r_expect! {{"
-    //         l1 = (1,)
-    //         l2 = l1
-    //         l1[[1]] = 2
-    //         l1[[1]] == 2 & l2[[1]] == 1
-    //     "}}
-    // }
     #[test]
-    fn copy_on_write_double_bracket_names() {}
+    fn copy_on_write_bracket_index() {
+        r_expect! {{"
+            l1 = (1,)
+            l2 = l1
+            l1[1] = 2
+            l1[[1]] == 2 & l2[[1]] == 1
+        "}}
+    }
     #[test]
-    fn copy_on_write_single_bracket_names() {}
+    fn copy_on_write_bracket_names() {
+        r_expect! {{r#"
+            l1 = (a = 1,)
+            l2 = l1
+            l1["a"] = 2
+            l1$a == 2 & l2$a == 1
+        "#}}
+    }
     #[test]
-    fn copy_on_write_subsetted_list() {}
+    fn copy_on_write_slice_names() {
+        r_expect! {{r#"
+            l = (a = 1, b = 2, c = 3)
+            l1 = l
+            l1[c("a", "b")] = c(10, 20)
+
+            l1$a == 10 && l1$b == 20 & l$a == 1 & l$b == 2
+        "#}}
+    }
+    #[test]
+    fn copy_on_write_slice_indixes() {
+        r_expect! {{"
+            l = (1, 2)
+            l1 = l
+            l1[1:2] = [10, 20]
+            l1[[1]] == 10 && l1[[2]] == 20 & l[[1]] == 1 & l[[2]] == 2
+        "}}
+    }
 }
