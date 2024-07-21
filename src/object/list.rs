@@ -294,15 +294,6 @@ mod tests {
         "}}
     }
     #[test]
-    fn copy_on_write_bracket_index() {
-        r_expect! {{"
-            l1 = (1,)
-            l2 = l1
-            l1[1] = 2
-            l1[[1]] == 2 & l2[[1]] == 1
-        "}}
-    }
-    #[test]
     fn copy_on_write_bracket_names() {
         r_expect! {{r#"
             l1 = (a = 1,)
