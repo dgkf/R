@@ -6,16 +6,25 @@ use super::subset::Subset;
 use super::subsets::Subsets;
 use super::types::*;
 use super::{OptionNA, Pow, VecPartialCmp};
+use crate::object::Mutable;
 
 use crate::object::VecData;
 
 /// Vector
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub enum RepType<T: Clone> {
     // Vector::Subset encompasses a "raw" vector (no subsetting)
     Subset(VecData<T>, Subsets),
     // Iterator includes things like ranges 1:Inf, and lazily computed values
     // Iter(Box<dyn Iterator<Item = &T>>)
+}
+
+impl<T: Clone> Clone for RepType<T> {
+    fn clone(&self) -> Self {
+        match self {
+            RepType::Subset(v, s) => RepType::Subset(v.view_mut(), s.clone()),
+        }
+    }
 }
 
 impl<T: AtomicMode + Clone + Default> Default for RepType<T> {
@@ -60,6 +69,14 @@ impl<T: AtomicMode + Clone + Default> Iterator for RepTypeIter<T> {
     }
 }
 
+impl<T: Clone> Mutable for RepType<T> {
+    fn view_mut(&self) -> Self {
+        match self {
+            RepType::Subset(v, s) => RepType::Subset(v.view_mut(), s.clone()),
+        }
+    }
+}
+
 impl<T: AtomicMode + Clone + Default> RepType<T> {
     /// Create an empty vector
     ///
@@ -86,7 +103,7 @@ impl<T: AtomicMode + Clone + Default> RepType<T> {
     /// Access a lazy copy of the internal vector data
     pub fn inner(&self) -> VecData<T> {
         match self.materialize() {
-            RepType::Subset(v, _) => v.lazy_copy(),
+            RepType::Subset(v, _) => v.clone(),
         }
     }
 

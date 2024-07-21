@@ -8,6 +8,7 @@ use crate::callable::builtins::BUILTIN;
 use crate::context::Context;
 use crate::error::Error;
 use crate::lang::{EvalResult, Signal};
+use crate::object::Mutable;
 
 use super::{Expr, ExprList, List, Obj};
 
@@ -55,7 +56,7 @@ impl Environment {
 
     pub fn get(&self, name: String) -> EvalResult {
         let (x, _) = self.find(name.clone())?;
-        EvalResult::Ok(x.lazy_copy())
+        EvalResult::Ok(x.clone())
     }
 
     /// Find a variable in the environment or one of its parents.
@@ -65,7 +66,7 @@ impl Environment {
 
         loop {
             if let Some(value) = env.values.borrow().get(&name) {
-                let result = value.mutable_view();
+                let result = value.view_mut();
 
                 let x = match result {
                     Obj::Promise(None, expr, env) => env.clone().eval(expr)?,
@@ -100,13 +101,13 @@ impl Environment {
     pub fn get_mut(&self, name: String) -> EvalResult {
         let (x, env) = self.find(name.clone())?;
         if *self == *env {
-            return EvalResult::Ok(x.mutable_view());
+            return EvalResult::Ok(x.view_mut());
         }
 
         // we found it in the parent environment, which means we first have to find it in the
         // current environment so we then modify it in the correct scope
-        let xc = x.lazy_copy();
-        let xm = xc.mutable_view();
+        let xc = x.clone();
+        let xm = xc.view_mut();
         self.insert(name, xc);
 
         EvalResult::Ok(xm)

@@ -8,14 +8,29 @@ use super::reptype::RepTypeIter;
 use super::subset::Subset;
 use super::types::*;
 use super::{OptionNA, Pow, VecPartialCmp};
+use crate::object::Mutable;
 use crate::object::VecData;
 
 /// Vector Representation
 ///
 /// The ref-cell is used so vectors can change there internal representation,
 /// e.g. by materializing.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct Rep<T: Clone>(pub RefCell<RepType<T>>);
+
+impl<T: Clone + AtomicMode + Default> Clone for Rep<T> {
+    fn clone(&self) -> Self {
+        match self.borrow().clone() {
+            RepType::Subset(v, s) => Rep(RefCell::new(RepType::Subset(v.clone(), s.clone()))),
+        }
+    }
+}
+
+impl<T: Clone + AtomicMode + Default> Mutable for Rep<T> {
+    fn view_mut(&self) -> Self {
+        Self(RefCell::new(self.borrow().view_mut()))
+    }
+}
 
 impl<T> Rep<T>
 where
@@ -30,18 +45,6 @@ where
         self.0.replace(new_repr);
 
         self
-    }
-
-    pub fn mutable_view(&self) -> Self {
-        match self.borrow().clone() {
-            RepType::Subset(v, s) => Rep(RefCell::new(RepType::Subset(v.view_mut(), s.clone()))),
-        }
-    }
-
-    pub fn lazy_copy(&self) -> Self {
-        match self.borrow().clone() {
-            RepType::Subset(v, s) => Rep(RefCell::new(RepType::Subset(v.lazy_copy(), s.clone()))),
-        }
     }
 
     pub fn materialize(&self) -> Self {

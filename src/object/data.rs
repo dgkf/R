@@ -2,6 +2,10 @@ use std::cell::{Ref, RefCell, RefMut};
 use std::iter::Iterator;
 use std::rc::Rc;
 
+pub trait Mutable {
+    fn view_mut(&self) -> Self;
+}
+
 /// Internal Data representation for copy-on-write semantics.
 #[derive(Debug, PartialEq, Default)]
 pub struct Data<T: Clone>(Rc<RefCell<Rc<T>>>);
@@ -74,13 +78,11 @@ impl<T: Clone> Data<T> {
     pub fn borrow(&self) -> Ref<'_, Rc<T>> {
         self.0.borrow()
     }
+}
 
-    // TODO: remove both methods below
-    pub fn lazy_copy(&self) -> Self {
-        Self::new(Rc::new(RefCell::new(self.0.borrow().clone())))
-    }
+impl<T: Clone> Mutable for Data<T> {
     /// Create a mutable view on the data.
-    pub fn view_mut(&self) -> Self {
+    fn view_mut(&self) -> Self {
         Self::new(Rc::clone(&self.0))
     }
 }
@@ -103,11 +105,12 @@ pub type VecData<T> = Data<Vec<T>>;
 #[cfg(test)]
 mod tests {
     use super::VecData;
+    use crate::object::Mutable;
 
     #[test]
     fn with_inner_mut() {
         let x = VecData::from(vec![]);
-        let _x1 = x.lazy_copy();
+        let _x1 = x.clone();
         let _x2 = x.view_mut();
         x.with_inner_mut(|v| v.push(1));
         assert_eq!(x.0.borrow().first().cloned().unwrap(), 1);

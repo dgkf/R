@@ -59,12 +59,8 @@ impl Display for Signal {
     }
 }
 
-impl Obj {
-    pub fn with_visibility(self, visibility: bool) -> EvalResult {
-        Signal::Return(self, visibility).into()
-    }
-
-    pub fn mutable_view(&self) -> Self {
+impl Mutable for Obj {
+    fn view_mut(&self) -> Self {
         match self {
             Obj::Vector(v) => Obj::Vector(v.mutable_view()),
             Obj::List(List {
@@ -81,25 +77,11 @@ impl Obj {
             x => x.clone(),
         }
     }
+}
 
-    pub fn lazy_copy(&self) -> Self {
-        match self {
-            Obj::Vector(v) => Obj::Vector(v.lazy_copy()),
-            Obj::List(List {
-                names,
-                values,
-                subsets,
-            }) => {
-                Obj::List(List {
-                    // FIXME: ensure that this is properly implemented for names and subsets
-                    names: (*names).lazy_copy(),
-                    values: (*values).lazy_copy(),
-                    subsets: (*subsets).clone(),
-                })
-            }
-            // FIXME: this needs to be implemented for all objects that can be mutated
-            x => x.clone(),
-        }
+impl Obj {
+    pub fn with_visibility(self, visibility: bool) -> EvalResult {
+        Signal::Return(self, visibility).into()
     }
 
     pub fn force(self, stack: &mut CallStack) -> EvalResult {
@@ -665,12 +647,7 @@ impl CallStack {
         let mut env = self.env();
         loop {
             // search in this environment for value by name
-            let Some(value) = env
-                .values
-                .borrow_mut()
-                .get(&name)
-                .map(|x| (*x).mutable_view())
-            else {
+            let Some(value) = env.values.borrow_mut().get(&name).map(|x| (*x).view_mut()) else {
                 // if not found, search through parent if available
                 if let Some(parent) = &env.parent {
                     env = parent.clone();
@@ -684,7 +661,7 @@ impl CallStack {
                 // evaluate promises
                 Obj::Promise(None, expr, p_env) => {
                     let result = Obj::Promise(None, expr.clone(), p_env.clone()).force(self)?;
-                    let value = Some(Box::new(result.mutable_view()));
+                    let value = Some(Box::new(result.view_mut()));
                     env.insert(name, Obj::Promise(value, expr, p_env.clone()));
                     Result::Ok((result, env))
                 }
@@ -969,7 +946,7 @@ impl Context for CallStack {
 
     fn get(&mut self, name: String) -> EvalResult {
         let (obj, _) = self.find(name.clone())?;
-        Ok(obj.lazy_copy())
+        Ok(obj.clone())
     }
 
     fn get_mut(&mut self, name: String) -> EvalResult {
@@ -979,8 +956,8 @@ impl Context for CallStack {
             return Ok(obj);
         }
 
-        let objc = obj.lazy_copy();
-        self.env().insert(name, objc.mutable_view());
+        let objc = obj.clone();
+        self.env().insert(name, objc.view_mut());
         Ok(objc)
     }
 
