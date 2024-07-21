@@ -159,7 +159,7 @@ impl List {
                 }))
             }
             other => {
-                let n = self.len();
+                let n = self.values.len();
                 let indices = self
                     .subsets
                     .clone()

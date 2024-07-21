@@ -43,7 +43,7 @@ pub trait Callable {
 
         // assign named args to corresponding formals
         let mut i: usize = 0;
-        'outer: while i < args.values.borrow().len() {
+        'outer: while i < args.values.len() {
             'inner: {
                 // check argname with immutable borrow, but drop scope. If
                 // found, drop borrow so we can mutably assign it
@@ -87,7 +87,7 @@ pub trait Callable {
                             .values
                             .with_inner_mut(|vals| vals.push((Some(param), value)));
                     } else {
-                        matched_args
+                        ellipsis
                             .values
                             .with_inner_mut(|vals| vals.push((None, value)));
                     }
@@ -294,7 +294,6 @@ pub fn force_promises(
     // Force any closures that were created during call. This helps with using
     // variables as argument for sep and collapse parameters.
     vals.values
-        .clone()
         .into_iter()
         .map(|(k, v)| match (k, v.force(stack)) {
             (k, Ok(v)) => Ok((k, v)),

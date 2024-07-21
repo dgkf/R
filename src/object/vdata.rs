@@ -60,7 +60,7 @@ impl<T: Clone> VecData<T> {
         self.0.borrow().len()
     }
 
-    /// Write into the internal vector data.
+    /// Get mutable access to the internal vector.
     /// In case more than one reference to the internal data exists,
     /// the vector is cloned.
     pub fn with_inner_mut<F, R>(&self, f: F) -> R
@@ -137,5 +137,14 @@ mod tests {
         }
         assert_eq!(x2.borrow().as_ref()[0], -10);
         assert_eq!(x3.borrow().as_ref()[0], 1);
+    }
+
+    #[test]
+    fn with_inner_mut() {
+        let x = VecData::from(vec![]);
+        let _x1 = x.lazy_copy();
+        let _x2 = x.mutable_view();
+        x.with_inner_mut(|v| v.push(1));
+        assert_eq!(x.0.borrow().get(0).cloned().unwrap(), 1);
     }
 }
