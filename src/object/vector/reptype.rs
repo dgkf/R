@@ -6,7 +6,7 @@ use super::subset::Subset;
 use super::subsets::Subsets;
 use super::types::*;
 use super::{OptionNA, Pow, VecPartialCmp};
-use crate::object::Mutable;
+use crate::object::ViewMut;
 
 use crate::object::VecData;
 
@@ -69,7 +69,7 @@ impl<T: AtomicMode + Clone + Default> Iterator for RepTypeIter<T> {
     }
 }
 
-impl<T: Clone> Mutable for RepType<T> {
+impl<T: Clone> ViewMut for RepType<T> {
     fn view_mut(&self) -> Self {
         match self {
             RepType::Subset(v, s) => RepType::Subset(v.view_mut(), s.clone()),
@@ -191,11 +191,7 @@ impl<T: AtomicMode + Clone + Default> RepType<T> {
                     }
                 });
 
-                // for x in lv.iter() {
-                //     dbg!(x);
-                // }
-
-                RepType::Subset(lv.view_mut(), ls.clone())
+                RepType::Subset(lv.clone(), ls.clone())
             }
         }
     }

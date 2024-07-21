@@ -8,7 +8,7 @@ use crate::callable::builtins::BUILTIN;
 use crate::context::Context;
 use crate::error::Error;
 use crate::lang::{EvalResult, Signal};
-use crate::object::Mutable;
+use crate::object::ViewMut;
 
 use super::{Expr, ExprList, List, Obj};
 

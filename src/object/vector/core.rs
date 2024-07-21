@@ -3,7 +3,7 @@ use std::fmt::Display;
 
 use crate::error::Error;
 use crate::lang::EvalResult;
-use crate::object::{Mutable, Obj};
+use crate::object::{Obj, ViewMut};
 
 use super::coercion::CoercibleInto;
 use super::rep::Rep;

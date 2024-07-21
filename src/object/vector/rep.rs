@@ -8,8 +8,8 @@ use super::reptype::RepTypeIter;
 use super::subset::Subset;
 use super::types::*;
 use super::{OptionNA, Pow, VecPartialCmp};
-use crate::object::Mutable;
 use crate::object::VecData;
+use crate::object::ViewMut;
 
 /// Vector Representation
 ///
@@ -26,7 +26,7 @@ impl<T: Clone + AtomicMode + Default> Clone for Rep<T> {
     }
 }
 
-impl<T: Clone + AtomicMode + Default> Mutable for Rep<T> {
+impl<T: Clone + AtomicMode + Default> ViewMut for Rep<T> {
     fn view_mut(&self) -> Self {
         Self(RefCell::new(self.borrow().view_mut()))
     }

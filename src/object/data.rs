@@ -1,8 +1,11 @@
-use std::cell::{Ref, RefCell, RefMut};
+use std::cell::{Ref, RefCell};
 use std::iter::Iterator;
 use std::rc::Rc;
 
-pub trait Mutable {
+/// View an object mutably.
+/// This trait drives the assignment into vectors and lists, primarily
+/// via the `Data` struct.
+pub trait ViewMut {
     fn view_mut(&self) -> Self;
 }
 
@@ -70,17 +73,13 @@ impl<T: Clone> Data<T> {
         f(vals)
     }
 
-    /// Get a mutable access to the data.
-    pub fn borrow_mut(&self) -> RefMut<Rc<T>> {
-        self.0.borrow_mut()
-    }
     /// Borrow the internal data immutably.
     pub fn borrow(&self) -> Ref<'_, Rc<T>> {
         self.0.borrow()
     }
 }
 
-impl<T: Clone> Mutable for Data<T> {
+impl<T: Clone> ViewMut for Data<T> {
     /// Create a mutable view on the data.
     fn view_mut(&self) -> Self {
         Self::new(Rc::clone(&self.0))
@@ -105,7 +104,7 @@ pub type VecData<T> = Data<Vec<T>>;
 #[cfg(test)]
 mod tests {
     use super::VecData;
-    use crate::object::Mutable;
+    use crate::object::ViewMut;
 
     #[test]
     fn with_inner_mut() {

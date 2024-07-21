@@ -59,7 +59,7 @@ impl Display for Signal {
     }
 }
 
-impl Mutable for Obj {
+impl ViewMut for Obj {
     fn view_mut(&self) -> Self {
         match self {
             Obj::Vector(v) => Obj::Vector(v.mutable_view()),
@@ -68,7 +68,6 @@ impl Mutable for Obj {
                 values,
                 subsets,
             }) => Obj::List(List {
-                // FIXME: ensure that this is properly implemented for names and subsets
                 names: (*names).view_mut(),
                 values: (*values).view_mut(),
                 subsets: (*subsets).clone(),
@@ -241,8 +240,7 @@ impl Obj {
             Obj::List(v) => {
                 let loc = v
                     .values
-                    .clone()
-                    .into_iter()
+                    .iter()
                     .enumerate()
                     .find(|(_, (k, _))| *k == Some(name.into()))
                     .map(|(i, _)| i);
