@@ -11,10 +11,18 @@ use crate::lang::{EvalResult, Signal};
 
 use super::{Expr, ExprList, List, Obj};
 
-#[derive(Debug, Default, Clone, PartialEq)]
+#[derive(Default, Clone, PartialEq)]
 pub struct Environment {
     pub values: RefCell<HashMap<String, Obj>>,
     pub parent: Option<Rc<Environment>>,
+}
+
+impl fmt::Debug for Environment {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.debug_struct("Environment")
+            .field("map", &self.values)
+            .finish()
+    }
 }
 
 impl Environment {
