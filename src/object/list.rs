@@ -321,4 +321,14 @@ mod tests {
             l1[[1]] == 10 && l1[[2]] == 20 & l[[1]] == 1 & l[[2]] == 2
         "}}
     }
+    
+    #[test]
+    fn copy_on_write_index() {
+        r_expect! {{"
+            l = (1, 2)
+            l_cow = l  # at this point, a copy-on-write reference
+            l_cow[[2]] = 20
+            l_cow[[1]] == 1 && l_cow[[2]] == 20 && l[[1]] == 1 && l[[2]] == 2
+        "}}
+    }
 }
