@@ -204,7 +204,7 @@ impl List {
         }
     }
 
-    pub fn try_get_inner(&self, index: Obj) -> EvalResult {
+    pub fn try_get_inner_mut(&self, index: Obj) -> EvalResult {
         let err_invalid = Error::Other("Cannot use object for indexing".to_string());
         let err_index_invalid = Error::Other("Index out of bounds".to_string());
 
@@ -218,16 +218,20 @@ impl List {
                     .into_iter()
                     .next()
                 {
-                    self.values
-                        .borrow()
-                        .get(i)
-                        .map_or(Err(err_index_invalid.into()), |(_, i)| Ok(i.clone()))
+                    self.values.with_inner_mut(|v| {
+                        v.get_mut(i)
+                            .map_or(Err(err_index_invalid.into()), |(_, i)| Ok(i.view_mut()))
+                    })
                 } else {
                     Ok(Obj::Null)
                 }
             }
             _ => Err(err_invalid.into()),
         }
+    }
+
+    pub fn try_get_inner(&self, index: Obj) -> EvalResult {
+        self.try_get_inner_mut(index).map(|v| v.clone())
     }
 
     pub fn dedup_last(self) -> Self {
@@ -321,7 +325,7 @@ mod tests {
             l1[[1]] == 10 && l1[[2]] == 20 & l[[1]] == 1 & l[[2]] == 2
         "}}
     }
-    
+
     #[test]
     fn copy_on_write_index() {
         r_expect! {{"

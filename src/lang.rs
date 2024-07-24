@@ -294,6 +294,15 @@ impl Obj {
         }
     }
 
+    // Used for assignment to [[ ]]
+    pub fn try_get_inner_mut(&self, index: Obj) -> EvalResult {
+        match self {
+            Obj::Vector(v) => v.try_get(index),
+            Obj::List(l) => l.try_get_inner_mut(index),
+            obj => obj.as_list()?.try_get_inner_mut(index),
+        }
+    }
+
     pub fn len(&self) -> Option<usize> {
         match self {
             Obj::Vector(v) => Some(v.len()),

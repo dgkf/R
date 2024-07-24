@@ -1,4 +1,4 @@
-use std::cell::{Ref, RefCell};
+use std::cell::{Ref, RefCell, RefMut};
 use std::iter::Iterator;
 use std::rc::Rc;
 
@@ -75,6 +75,11 @@ impl<T: Clone> Data<T> {
     /// Borrow the internal data immutably.
     pub fn borrow(&self) -> Ref<'_, Rc<T>> {
         self.0.borrow()
+    }
+
+    /// Borrow the internal data mutably.
+    pub fn borrow_mut(&self) -> RefMut<'_, Rc<T>> {
+        self.0.borrow_mut()
     }
 }
 

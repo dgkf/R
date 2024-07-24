@@ -394,7 +394,7 @@ impl Callable for PostfixIndex {
         let x = args.unnamed_binary_args();
         let what = stack.eval_mut(x.0)?;
         let index = stack.eval(x.1)?;
-        what.try_get_inner(index)
+        what.try_get_inner_mut(index)
     }
 }
 
