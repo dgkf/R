@@ -36,6 +36,10 @@ pub trait Context: std::fmt::Debug + std::fmt::Display {
     fn eval_call(&mut self, expr: Expr) -> EvalResult {
         self.eval(expr)
     }
+    #[inline]
+    fn eval_call_mut(&mut self, expr: Expr) -> EvalResult {
+        Error::CannotEvaluateAsMutable(expr.clone()).into()
+    }
 
     #[inline]
     fn eval(&mut self, expr: Expr) -> EvalResult {

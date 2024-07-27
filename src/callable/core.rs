@@ -133,7 +133,7 @@ pub trait Callable {
         self.call_matched(args, ellipsis, stack)
     }
 
-    fn call_mutable(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
+    fn call_mut(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
         self.call(args, stack)
     }
 
@@ -146,8 +146,9 @@ pub trait Callable {
         unimplemented!()
     }
 
+
     fn call_assign(&self, value: Expr, args: ExprList, stack: &mut CallStack) -> EvalResult {
-        let what = self.call_mutable(args, stack)?;
+        let what = self.call_mut(args, stack)?;
         let value = stack.eval(value)?;
         what.assign(value)
     }

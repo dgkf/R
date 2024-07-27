@@ -81,17 +81,6 @@ impl Vector {
         }
     }
 
-    /// Get a mutable view of the vector.
-    /// This is used for things like `x[1] = 2`.
-    pub fn mutable_view(&self) -> Self {
-        match self {
-            Vector::Double(v) => Vector::Double(v.view_mut()),
-            Vector::Character(v) => Vector::Character(v.view_mut()),
-            Vector::Integer(v) => Vector::Integer(v.view_mut()),
-            Vector::Logical(v) => Vector::Logical(v.view_mut()),
-        }
-    }
-
     pub fn try_get(&self, index: Obj) -> EvalResult {
         let err =
             Error::Other("Vector index cannot be coerced into a valid indexing type.".to_string());

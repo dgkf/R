@@ -329,7 +329,7 @@ impl Callable for InfixDollar {
         }
     }
 
-    fn call_mutable(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
+    fn call_mut(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
         let mut argstream = args.into_iter();
 
         let Some((_, what)) = argstream.next() else {
@@ -390,7 +390,7 @@ impl Callable for PostfixIndex {
         what.try_get_inner(index)
     }
 
-    fn call_mutable(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
+    fn call_mut(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
         let x = args.unnamed_binary_args();
         let what = stack.eval_mut(x.0)?;
         let index = stack.eval(x.1)?;
@@ -407,7 +407,7 @@ impl Callable for PostfixVecIndex {
         what.try_get(index)
     }
 
-    fn call_mutable(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
+    fn call_mut(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
         let x = args.unnamed_binary_args();
         let what = stack.eval_mut(x.0)?;
         let index = stack.eval(x.1)?;

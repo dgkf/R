@@ -62,7 +62,13 @@ impl Display for Signal {
 impl ViewMut for Obj {
     fn view_mut(&self) -> Self {
         match self {
-            Obj::Vector(v) => Obj::Vector(v.mutable_view()),
+            Obj::Vector(v) => Obj::Vector(match v {
+                Vector::Double(v) => Vector::Double(v.view_mut()),
+                Vector::Character(v) => Vector::Character(v.view_mut()),
+                Vector::Integer(v) => Vector::Integer(v.view_mut()),
+                Vector::Logical(v) => Vector::Logical(v.view_mut()),
+            }),
+
             Obj::List(List {
                 names,
                 values,
@@ -840,80 +846,12 @@ impl Context for CallStack {
         self.last_frame().env().clone()
     }
 
+    fn eval_call_mut(&mut self, expr: Expr) -> EvalResult {
+        eval_call(self, expr, true)
+    }
+
     fn eval_call(&mut self, expr: Expr) -> EvalResult {
-        let Expr::Call(what, args) = expr.clone() else {
-            return internal_err!();
-        };
-
-        match *what {
-            Expr::Primitive(f) if f.is_transparent() => f.call(args, self),
-            Expr::Primitive(f) => {
-                self.add_frame(expr, self.last_frame().env().clone());
-                let result = f.call(args, self);
-                self.pop_frame_and_return(result)
-            }
-            Expr::String(name) | Expr::Symbol(name) if builtin(&name).is_ok() => {
-                let f = builtin(&name)?;
-                self.add_frame(expr, self.last_frame().env().clone());
-                let result = f.call(args, self);
-                self.pop_frame_and_return(result)
-            }
-            Expr::String(name) | Expr::Symbol(name) => {
-                use Signal::*;
-
-                // look up our call target
-                let obj = self.env().get(name.clone())?;
-
-                // ensure our call target expression has an encapsulating environment
-                let Some(env) = obj.environment() else {
-                    return internal_err!();
-                };
-
-                // introduce a new call frame and evaluate body in new frame
-                self.add_child_frame(expr, env.clone());
-
-                // handle tail call recursion
-                let mut result = obj.call(args, self);
-
-                // intercept and rearrange call stack to handle tail calls
-                if self.session.experiments.contains(&Experiment::TailCalls) {
-                    while let Err(Tail(Expr::Call(what, args), _vis)) = result {
-                        let tail = Expr::Call(what.clone(), args.clone());
-
-                        // tail is recursive call if it calls out to same object
-                        // that was called to enter current frame
-                        let what_obj = self.eval(*what)?;
-                        if what_obj == self.last_frame().to {
-                            // eagerly evaluate and match argument expressions in tail frame
-                            let args: List = self.eval_list_eager(args)?.try_into()?;
-                            let (args, ellipsis) = what_obj.match_args(args, self)?;
-
-                            // pop tail frame and add a new local frame
-                            self.frames.pop();
-                            self.add_child_frame(tail, env.clone());
-
-                            // call with pre-matched args
-                            result = what_obj.call_matched(args, ellipsis, self);
-                            continue;
-                        }
-
-                        result = self.eval_call(tail);
-                    }
-                }
-
-                // evaluate any lingering tail calls in the current frame
-                while let Err(Tail(expr, _vis)) = result {
-                    result = self.eval(expr)
-                }
-
-                self.pop_frame_and_return(result)
-            }
-            _ => {
-                self.add_frame(expr, self.last_frame().env().clone());
-                let result = (self.eval(*what)?).call(args, self);
-                self.pop_frame_and_return(result)
-            }
-        }
+        eval_call(self, expr, false)
     }
 
     fn eval(&mut self, expr: Expr) -> EvalResult {
@@ -947,6 +885,7 @@ impl Context for CallStack {
     fn eval_mut(&mut self, expr: Expr) -> EvalResult {
         match expr {
             Expr::Symbol(x) => self.get_mut(x),
+            Expr::Call(..) => self.eval_call_mut(expr),
             e => Error::CannotEvaluateAsMutable(e).into(),
         }
     }
@@ -976,6 +915,107 @@ impl Context for CallStack {
     // Try.
 }
 
+fn eval_call(callstack: &mut CallStack, expr: Expr, mutable: bool) -> EvalResult {
+    let Expr::Call(what, args) = expr.clone() else {
+        return internal_err!();
+    };
+
+    match *what {
+        Expr::Primitive(f) if f.is_transparent() => {
+            if mutable {
+                f.call_mut(args, callstack)
+            } else {
+                f.call(args, callstack)
+            }
+        }
+        Expr::Primitive(f) => {
+            callstack.add_frame(expr, callstack.last_frame().env().clone());
+            let result = if mutable {
+                f.call_mut(args, callstack)
+            } else {
+                f.call(args, callstack)
+            };
+            callstack.pop_frame_and_return(result)
+        }
+        Expr::String(name) | Expr::Symbol(name) if builtin(&name).is_ok() => {
+            let f = builtin(&name)?;
+            callstack.add_frame(expr, callstack.last_frame().env().clone());
+            let result = if mutable {
+                f.call_mut(args, callstack)
+            } else {
+                f.call(args, callstack)
+            };
+            callstack.pop_frame_and_return(result)
+        }
+        Expr::String(name) | Expr::Symbol(name) => {
+            use Signal::*;
+
+            // look up our call target
+            let obj = callstack.env().get(name.clone())?;
+
+            // ensure our call target expression has an encapsulating environment
+            let Some(env) = obj.environment() else {
+                return internal_err!();
+            };
+
+            // introduce a new call frame and evaluate body in new frame
+            callstack.add_child_frame(expr, env.clone());
+
+            // handle tail call recursion
+            let mut result = obj.call(args, callstack);
+
+            // intercept and rearrange call stack to handle tail calls
+            if callstack
+                .session
+                .experiments
+                .contains(&Experiment::TailCalls)
+            {
+                while let Err(Tail(Expr::Call(what, args), _vis)) = result {
+                    let tail = Expr::Call(what.clone(), args.clone());
+
+                    // tail is recursive call if it calls out to same object
+                    // that was called to enter current frame
+                    let what_obj = callstack.eval_mut(*what)?;
+                    let is_tailcall = what_obj == callstack.last_frame().to;
+                    if mutable && is_tailcall {
+                        // TODO(fix): Because tailcalls call into call_matched, and call_matched is sometimes
+                        // overwritten by the primitives / operators, it is a bit annoying to implement
+                        // mutable tailcalls with the current design of copy-on-write
+                        // as this probably requires a redesign anyway, we don't implement it for now
+                        return internal_err!();
+                    }
+                    if is_tailcall {
+                        // eagerly evaluate and match argument expressions in tail frame
+                        let args: List = callstack.eval_list_eager(args)?.try_into()?;
+                        let (args, ellipsis) = what_obj.match_args(args, callstack)?;
+
+                        // pop tail frame and add a new local frame
+                        callstack.frames.pop();
+                        callstack.add_child_frame(tail, env.clone());
+
+                        // call with pre-matched args
+                        result = what_obj.call_matched(args, ellipsis, callstack);
+                        continue;
+                    }
+
+                    result = callstack.eval_call_mut(tail);
+                }
+            }
+
+            // evaluate any lingering tail calls in the current frame
+            while let Err(Tail(expr, _vis)) = result {
+                result = callstack.eval(expr)
+            }
+
+            callstack.pop_frame_and_return(result)
+        }
+        _ => {
+            callstack.add_frame(expr, callstack.last_frame().env().clone());
+            let result = (callstack.eval(*what)?).call(args, callstack);
+            callstack.pop_frame_and_return(result)
+        }
+    }
+}
 impl Context for Frame {
     fn env(&self) -> Rc<Environment> {
         self.env.clone()

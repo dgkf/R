@@ -335,4 +335,14 @@ mod tests {
             l_cow[[1]] == 1 && l_cow[[2]] == 20 && l[[1]] == 1 && l[[2]] == 2
         "}}
     }
+
+    #[test]
+    fn nested_double_bracket() {
+        r_expect! {{"
+            l = ((1,),)
+            l_cow = l  # at this point, a copy-on-write reference
+            l_cow[[1]][[1]] = 20
+            l_cow[[1]][[1]] == 20 && l[[1]][[1]] == 1
+        "}}
+    }
 }
