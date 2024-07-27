@@ -99,16 +99,14 @@ impl<T: Clone> CowObj<Vec<T>> {
     }
 }
 
-pub type CowObjVec<T> = CowObj<Vec<T>>;
-
 #[cfg(test)]
 mod tests {
-    use super::CowObjVec;
+    use super::CowObj;
     use crate::object::ViewMut;
 
     #[test]
     fn with_inner_mut() {
-        let x = CowObjVec::from(vec![]);
+        let x = CowObj::from(vec![]);
         let _x1 = x.clone();
         let _x2 = x.view_mut();
         x.with_inner_mut(|v| v.push(1));
