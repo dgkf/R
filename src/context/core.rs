@@ -77,7 +77,7 @@ pub trait Context: std::fmt::Debug + std::fmt::Display {
                         if let Ok(Obj::List(ellipsis)) = self.get_ellipsis() {
                             Ok(ellipsis.values.into_iter())
                         } else {
-                            Ok(VecData::from(vec![]).into_iter())
+                            Ok(CowObjVec::from(vec![]).into_iter())
                         }
                     }
                     (_, Expr::Ellipsis(Some(name))) => {
@@ -89,8 +89,8 @@ pub trait Context: std::fmt::Debug + std::fmt::Display {
                     }
                     // Avoid creating a new closure just to point to another, just reuse it
                     (k, Expr::Symbol(s)) => match self.env().get(s.clone()) {
-                        Ok(c @ Obj::Promise(..)) => Ok(VecData::from(vec![(k, c)]).into_iter()),
-                        _ => Ok(VecData::from(vec![(
+                        Ok(c @ Obj::Promise(..)) => Ok(CowObjVec::from(vec![(k, c)]).into_iter()),
+                        _ => Ok(CowObjVec::from(vec![(
                             k,
                             Obj::Promise(None, Expr::Symbol(s), self.env()),
                         )])
@@ -98,11 +98,11 @@ pub trait Context: std::fmt::Debug + std::fmt::Display {
                     },
                     (k, c @ Expr::Call(..)) => {
                         let elem = vec![(k, Obj::Promise(None, c, self.env()))];
-                        Ok(VecData::from(elem).into_iter())
+                        Ok(CowObjVec::from(elem).into_iter())
                     }
                     (k, v) => {
                         if let Ok(elem) = self.eval(v) {
-                            Ok(VecData::from(vec![(k, elem)]).into_iter())
+                            Ok(CowObjVec::from(vec![(k, elem)]).into_iter())
                         } else {
                             internal_err!()
                         }
@@ -123,18 +123,18 @@ pub trait Context: std::fmt::Debug + std::fmt::Display {
                         if let Ok(Obj::List(ellipsis)) = self.get_ellipsis() {
                             Ok(ellipsis.values.into_iter())
                         } else {
-                            Ok(VecData::from(vec![]).into_iter())
+                            Ok(CowObjVec::from(vec![]).into_iter())
                         }
                     }
                     (_, Expr::Ellipsis(Some(name))) => {
                         if let Ok(Obj::List(more)) = self.get(name) {
                             Ok(more.values.into_iter())
                         } else {
-                            Ok(VecData::from(vec![]).into_iter())
+                            Ok(CowObjVec::from(vec![]).into_iter())
                         }
                     }
                     (k, v) => match self.eval(v) {
-                        Ok(elem) => Ok(VecData::from(vec![(k, elem)]).into_iter()),
+                        Ok(elem) => Ok(CowObjVec::from(vec![(k, elem)]).into_iter()),
                         Err(e) => Err(e),
                     },
                 })

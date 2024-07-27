@@ -8,13 +8,13 @@ use super::types::*;
 use super::{OptionNA, Pow, VecPartialCmp};
 use crate::object::ViewMut;
 
-use crate::object::VecData;
+use crate::object::CowObjVec;
 
 /// Vector
 #[derive(Debug, PartialEq)]
 pub enum RepType<T: Clone> {
     // Vector::Subset encompasses a "raw" vector (no subsetting)
-    Subset(VecData<T>, Subsets),
+    Subset(CowObjVec<T>, Subsets),
     // Iterator includes things like ranges 1:Inf, and lazily computed values
     // Iter(Box<dyn Iterator<Item = &T>>)
 }
@@ -101,7 +101,7 @@ impl<T: AtomicMode + Clone + Default> RepType<T> {
     }
 
     /// Access a lazy copy of the internal vector data
-    pub fn inner(&self) -> VecData<T> {
+    pub fn inner(&self) -> CowObjVec<T> {
         match self.materialize() {
             RepType::Subset(v, _) => v.clone(),
         }

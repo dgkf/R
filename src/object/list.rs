@@ -9,15 +9,15 @@ type ListNameMap = HashMap<String, Vec<usize>>;
 
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct List {
-    pub names: Data<ListNameMap>,
-    pub values: VecData<(Option<String>, Obj)>,
+    pub names: CowObj<ListNameMap>,
+    pub values: CowObjVec<(Option<String>, Obj)>,
     pub subsets: Subsets,
 }
 
 impl From<Vec<(Option<String>, Obj)>> for List {
     fn from(value: Vec<(Option<String>, Obj)>) -> Self {
         let mut result = List {
-            values: VecData::from(value),
+            values: CowObjVec::from(value),
             ..Default::default()
         };
 

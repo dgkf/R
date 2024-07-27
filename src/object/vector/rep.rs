@@ -8,7 +8,7 @@ use super::reptype::RepTypeIter;
 use super::subset::Subset;
 use super::types::*;
 use super::{OptionNA, Pow, VecPartialCmp};
-use crate::object::VecData;
+use crate::object::CowObjVec;
 use crate::object::ViewMut;
 
 /// Vector Representation
@@ -73,7 +73,7 @@ where
         RepType::new().into()
     }
 
-    pub fn inner(&self) -> VecData<T> {
+    pub fn inner(&self) -> CowObjVec<T> {
         self.borrow().inner()
     }
 

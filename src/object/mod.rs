@@ -13,5 +13,5 @@ pub use vector::*;
 mod list;
 pub use list::*;
 
-mod data;
-pub use data::*;
+mod cow;
+pub use cow::*;

@@ -1,4 +1,4 @@
-use std::cell::{Ref, RefCell, RefMut};
+use std::cell::{Ref, RefCell};
 use std::iter::Iterator;
 use std::rc::Rc;
 
@@ -11,26 +11,26 @@ pub trait ViewMut {
 
 /// Internal Data representation for copy-on-write semantics.
 #[derive(Debug, PartialEq, Default)]
-pub struct Data<T: Clone>(Rc<RefCell<Rc<T>>>);
+pub struct CowObj<T: Clone>(Rc<RefCell<Rc<T>>>);
 
-impl<T: Clone> Clone for Data<T> {
+impl<T: Clone> Clone for CowObj<T> {
     fn clone(&self) -> Self {
         Self::new(Rc::new(RefCell::new(self.0.borrow().clone())))
     }
 }
 
-impl<T: Clone> From<T> for Data<T> {
+impl<T: Clone> From<T> for CowObj<T> {
     fn from(x: T) -> Self {
-        Data::new(Rc::new(RefCell::new(Rc::new(x))))
+        CowObj::new(Rc::new(RefCell::new(Rc::new(x))))
     }
 }
 
-pub struct DataIter<T: Clone> {
+pub struct CowObjIter<T: Clone> {
     data: Rc<Vec<T>>,
     index: usize,
 }
 
-impl<T: Clone> Iterator for DataIter<T> {
+impl<T: Clone> Iterator for CowObjIter<T> {
     type Item = T;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -44,19 +44,19 @@ impl<T: Clone> Iterator for DataIter<T> {
     }
 }
 
-impl<T: Clone> IntoIterator for Data<Vec<T>> {
+impl<T: Clone> IntoIterator for CowObj<Vec<T>> {
     type Item = T;
-    type IntoIter = DataIter<T>;
+    type IntoIter = CowObjIter<T>;
 
     fn into_iter(self) -> Self::IntoIter {
         let x = self.borrow().clone();
-        DataIter { data: x, index: 0 }
+        CowObjIter { data: x, index: 0 }
     }
 }
-impl<T: Clone> Data<T> {
+impl<T: Clone> CowObj<T> {
     /// Create a new instance
     pub fn new(x: Rc<RefCell<Rc<T>>>) -> Self {
-        Data(x)
+        CowObj(x)
     }
 
     /// Get mutable access to the internal vector.
@@ -66,7 +66,7 @@ impl<T: Clone> Data<T> {
     where
         F: FnOnce(&mut T) -> R,
     {
-        let Data(x) = self;
+        let CowObj(x) = self;
         let x1 = &mut *x.borrow_mut();
         let vals = Rc::make_mut(x1);
         f(vals)
@@ -78,14 +78,14 @@ impl<T: Clone> Data<T> {
     }
 }
 
-impl<T: Clone> ViewMut for Data<T> {
+impl<T: Clone> ViewMut for CowObj<T> {
     /// Create a mutable view on the data.
     fn view_mut(&self) -> Self {
         Self::new(Rc::clone(&self.0))
     }
 }
 
-impl<T: Clone> Data<Vec<T>> {
+impl<T: Clone> CowObj<Vec<T>> {
     pub fn len(&self) -> usize {
         self.0.borrow().len()
     }
@@ -94,20 +94,21 @@ impl<T: Clone> Data<Vec<T>> {
         self.len() == 0
     }
 
-    pub fn iter(&self) -> DataIter<T> {
+    pub fn iter(&self) -> CowObjIter<T> {
         self.clone().into_iter()
     }
 }
 
-pub type VecData<T> = Data<Vec<T>>;
+pub type CowObjVec<T> = CowObj<Vec<T>>;
+
 #[cfg(test)]
 mod tests {
-    use super::VecData;
+    use super::CowObjVec;
     use crate::object::ViewMut;
 
     #[test]
     fn with_inner_mut() {
-        let x = VecData::from(vec![]);
+        let x = CowObjVec::from(vec![]);
         let _x1 = x.clone();
         let _x2 = x.view_mut();
         x.with_inner_mut(|v| v.push(1));
