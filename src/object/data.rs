@@ -76,11 +76,6 @@ impl<T: Clone> Data<T> {
     pub fn borrow(&self) -> Ref<'_, Rc<T>> {
         self.0.borrow()
     }
-
-    /// Borrow the internal data mutably.
-    pub fn borrow_mut(&self) -> RefMut<'_, Rc<T>> {
-        self.0.borrow_mut()
-    }
 }
 
 impl<T: Clone> ViewMut for Data<T> {
