@@ -975,16 +975,8 @@ fn eval_call(callstack: &mut CallStack, expr: Expr, mutable: bool) -> EvalResult
 
                     // tail is recursive call if it calls out to same object
                     // that was called to enter current frame
-                    let what_obj = callstack.eval_mut(*what)?;
-                    let is_tailcall = what_obj == callstack.last_frame().to;
-                    if mutable && is_tailcall {
-                        // TODO(fix): Because tailcalls call into call_matched, and call_matched is sometimes
-                        // overwritten by the primitives / operators, it is a bit annoying to implement
-                        // mutable tailcalls with the current design of copy-on-write
-                        // as this probably requires a redesign anyway, we don't implement it for now
-                        return internal_err!();
-                    }
-                    if is_tailcall {
+                    let what_obj = callstack.eval(*what)?;
+                    if what_obj == callstack.last_frame().to {
                         // eagerly evaluate and match argument expressions in tail frame
                         let args: List = callstack.eval_list_eager(args)?.try_into()?;
                         let (args, ellipsis) = what_obj.match_args(args, callstack)?;
@@ -998,13 +990,19 @@ fn eval_call(callstack: &mut CallStack, expr: Expr, mutable: bool) -> EvalResult
                         continue;
                     }
 
-                    result = callstack.eval_call_mut(tail);
+                    result = callstack.eval_call(tail);
                 }
             }
 
             // evaluate any lingering tail calls in the current frame
-            while let Err(Tail(expr, _vis)) = result {
-                result = callstack.eval(expr)
+            if mutable {
+                while let Err(Tail(expr, _vis)) = result {
+                    result = callstack.eval_mut(expr)
+                }
+            } else {
+                while let Err(Tail(expr, _vis)) = result {
+                    result = callstack.eval(expr)
+                }
             }
 
             callstack.pop_frame_and_return(result)
@@ -1332,6 +1330,17 @@ mod test {
             x2 = f(c(1, 2))
             (x2[1] == -99) && (x2[2] == 2)
          "}}
+    }
+
+    #[test]
+    fn tail_calls() {
+        r_expect! {{r#"
+            f = fn(x) {
+              if (x == 1) return("done")
+              f(x - 1)
+            }
+            f(1000) == "done"
+         "#}}
     }
 
     // TODO: https://github.com/dgkf/R/issues/136
