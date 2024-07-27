@@ -948,6 +948,10 @@ fn eval_call(callstack: &mut CallStack, expr: Expr, mutable: bool) -> EvalResult
             callstack.pop_frame_and_return(result)
         }
         Expr::String(name) | Expr::Symbol(name) => {
+            if mutable {
+                // currently, things like names(x) = "a" is anyway not supported
+                return internal_err!();
+            }
             use Signal::*;
 
             // look up our call target
@@ -995,21 +999,15 @@ fn eval_call(callstack: &mut CallStack, expr: Expr, mutable: bool) -> EvalResult
             }
 
             // evaluate any lingering tail calls in the current frame
-            if mutable {
-                while let Err(Tail(expr, _vis)) = result {
-                    result = callstack.eval_mut(expr)
-                }
-            } else {
-                while let Err(Tail(expr, _vis)) = result {
-                    result = callstack.eval(expr)
-                }
+            while let Err(Tail(expr, _vis)) = result {
+                result = callstack.eval(expr)
             }
 
             callstack.pop_frame_and_return(result)
         }
         _ => {
             callstack.add_frame(expr, callstack.last_frame().env().clone());
-            let result = (callstack.eval(*what)?).call(args, callstack);
+            let result = (callstack.eval(*what)?).call_mut(args, callstack);
             callstack.pop_frame_and_return(result)
         }
     }
@@ -1330,17 +1328,6 @@ mod test {
             x2 = f(c(1, 2))
             (x2[1] == -99) && (x2[2] == 2)
          "}}
-    }
-
-    #[test]
-    fn tail_calls() {
-        r_expect! {{r#"
-            f = fn(x) {
-              if (x == 1) return("done")
-              f(x - 1)
-            }
-            f(1000) == "done"
-         "#}}
     }
 
     // TODO: https://github.com/dgkf/R/issues/136

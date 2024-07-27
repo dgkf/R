@@ -231,6 +231,7 @@ impl List {
     }
 
     pub fn try_get_inner(&self, index: Obj) -> EvalResult {
+        #[allow(clippy::map_clone)]
         self.try_get_inner_mut(index).map(|v| v.clone())
     }
 
@@ -337,12 +338,30 @@ mod tests {
     }
 
     #[test]
-    fn nested_double_bracket() {
+    fn nested_double_bracket_index() {
         r_expect! {{"
             l = ((1,),)
-            l_cow = l  # at this point, a copy-on-write reference
+            l_cow = l
             l_cow[[1]][[1]] = 20
             l_cow[[1]][[1]] == 20 && l[[1]][[1]] == 1
         "}}
+    }
+    #[test]
+    fn nested_double_bracket_names() {
+        r_expect! {{r#"
+            l = (a = (b = 1,),)
+            l_cow = l
+            l_cow[["a"]][["b"]] = 20
+            l_cow[["a"]][["b"]] == 20 && l[["a"]][["b"]] == 1
+        "#}}
+    }
+    #[test]
+    fn nested_double_bracket_mixed() {
+        r_expect! {{r#"
+            l = (a = (1,),)
+            l_cow = l
+            l_cow[["a"]][[1]] = 20
+            l_cow[["a"]][[1]] == 20 && l[["a"]][[1]] == 1
+        "#}}
     }
 }

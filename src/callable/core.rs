@@ -146,7 +146,6 @@ pub trait Callable {
         unimplemented!()
     }
 
-
     fn call_assign(&self, value: Expr, args: ExprList, stack: &mut CallStack) -> EvalResult {
         let what = self.call_mut(args, stack)?;
         let value = stack.eval(value)?;
