@@ -29,12 +29,6 @@ export function wasm_parse_errors(args: any, input: string): (ParseError)[];
 export function wasm_highlight(args: any, input: string): any[];
 /**
 */
-export enum Experiment {
-  TailCalls = 0,
-  RestArgs = 1,
-}
-/**
-*/
 export enum Localization {
   En = 0,
   Es = 1,
@@ -42,6 +36,12 @@ export enum Localization {
   De = 3,
   Pirate = 4,
   Emoji = 5,
+}
+/**
+*/
+export enum Experiment {
+  TailCalls = 0,
+  RestArgs = 1,
 }
 /**
 * Run the R REPL
@@ -83,6 +83,13 @@ export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembl
 
 export interface InitOutput {
   readonly memory: WebAssembly.Memory;
+  readonly __wbg_cli_free: (a: number) => void;
+  readonly __wbg_get_cli_locale: (a: number) => number;
+  readonly __wbg_set_cli_locale: (a: number, b: number) => void;
+  readonly __wbg_get_cli_warranty: (a: number) => number;
+  readonly __wbg_set_cli_warranty: (a: number, b: number) => void;
+  readonly __wbg_get_cli_experiments: (a: number, b: number) => void;
+  readonly __wbg_set_cli_experiments: (a: number, b: number, c: number) => void;
   readonly __wbg_parseerror_free: (a: number) => void;
   readonly parseerror_start: (a: number) => number;
   readonly parseerror_end: (a: number) => number;
@@ -91,13 +98,6 @@ export interface InitOutput {
   readonly wasm_runtime: (a: number) => number;
   readonly wasm_parse_errors: (a: number, b: number, c: number, d: number) => void;
   readonly wasm_highlight: (a: number, b: number, c: number, d: number) => void;
-  readonly __wbg_cli_free: (a: number) => void;
-  readonly __wbg_get_cli_locale: (a: number) => number;
-  readonly __wbg_set_cli_locale: (a: number, b: number) => void;
-  readonly __wbg_get_cli_warranty: (a: number) => number;
-  readonly __wbg_set_cli_warranty: (a: number, b: number) => void;
-  readonly __wbg_get_cli_experiments: (a: number, b: number) => void;
-  readonly __wbg_set_cli_experiments: (a: number, b: number, c: number) => void;
   readonly __wbindgen_malloc: (a: number, b: number) => number;
   readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
   readonly __wbindgen_export_2: WebAssembly.Table;
