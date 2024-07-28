@@ -341,6 +341,13 @@ impl From<Vec<OptionNA<f64>>> for RepType<Double> {
     }
 }
 
+impl From<Vec<&str>> for RepType<Character> {
+    fn from(value: Vec<&str>) -> Self {
+        let value: Vec<_> = value.into_iter().map(|i| i.to_string()).collect();
+        RepType::Subset(value.into(), Subsets(Vec::new()))
+    }
+}
+
 impl From<Vec<f64>> for RepType<Double> {
     fn from(value: Vec<f64>) -> Self {
         let value: Vec<_> = value.into_iter().map(|i| i.coerce_into()).collect();
@@ -385,7 +392,7 @@ impl From<Vec<OptionNA<String>>> for RepType<Character> {
 
 impl From<Vec<String>> for RepType<Character> {
     fn from(value: Vec<String>) -> Self {
-        let value: Vec<_> = value.into_iter().map(|i| i.coerce_into()).collect();
+        let value: Vec<_> = value.into_iter().map(|i| OptionNA::Some(i)).collect();
         RepType::Subset(value.into(), Subsets(Vec::new()))
     }
 }

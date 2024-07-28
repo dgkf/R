@@ -66,3 +66,12 @@ macro_rules! r_expect {
         }
     }};
 }
+
+#[macro_export]
+macro_rules! r_vec {
+    ($($x:tt)*) => {
+        {
+            Obj::Vector(Vector::from(vec![$($x)*]))
+        }
+    }
+ }

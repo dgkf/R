@@ -4,6 +4,7 @@ use crate::context::Context;
 use crate::error::*;
 use crate::internal_err;
 use crate::object::types::*;
+use crate::object::CoercibleToNumeric;
 use crate::object::*;
 use crate::parser::LocalizedParser;
 use crate::parser::ParseResult;
@@ -424,9 +425,12 @@ impl std::ops::Add for Obj {
     type Output = EvalResult;
 
     fn add(self, rhs: Self) -> Self::Output {
-        match (self.as_double()?, rhs.as_double()?) {
+        if !(&self, &rhs).coercible_to_numeric() {
+            return Err(Signal::Error(Error::CannotBeCoercedToNumerics));
+        }
+        match (self, rhs) {
             (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector(l + r)),
-            _ => internal_err!(),
+            _ => unreachable!("coercible_to_numeric call before already checks this"),
         }
     }
 }
@@ -435,9 +439,12 @@ impl std::ops::Sub for Obj {
     type Output = EvalResult;
 
     fn sub(self, rhs: Self) -> Self::Output {
-        match (self.as_double()?, rhs.as_double()?) {
+        if !(&self, &rhs).coercible_to_numeric() {
+            return Err(Signal::Error(Error::CannotBeCoercedToNumerics));
+        }
+        match (self, rhs) {
             (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector(l - r)),
-            _ => internal_err!(),
+            _ => unreachable!("coercible_to_numeric call before already checks this"),
         }
     }
 }
@@ -446,9 +453,12 @@ impl std::ops::Neg for Obj {
     type Output = EvalResult;
 
     fn neg(self) -> Self::Output {
-        match self.as_double()? {
+        if !(&self).coercible_to_numeric() {
+            return Err(Signal::Error(Error::CannotBeCoercedToNumeric));
+        }
+        match self {
             Obj::Vector(x) => Ok(Obj::Vector(-x)),
-            _ => internal_err!(),
+            _ => unreachable!("coercible_to_numeric call before already checks this"),
         }
     }
 }
@@ -457,9 +467,12 @@ impl std::ops::Mul for Obj {
     type Output = EvalResult;
 
     fn mul(self, rhs: Self) -> Self::Output {
-        match (self.as_double()?, rhs.as_double()?) {
+        if !(&self, &rhs).coercible_to_numeric() {
+            return Err(Signal::Error(Error::CannotBeCoercedToNumerics));
+        }
+        match (self, rhs) {
             (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector(l * r)),
-            _ => internal_err!(),
+            _ => unreachable!("coercible_to_numeric call before already checks this"),
         }
     }
 }
@@ -468,9 +481,12 @@ impl std::ops::Div for Obj {
     type Output = EvalResult;
 
     fn div(self, rhs: Self) -> Self::Output {
-        match (self.as_double()?, rhs.as_double()?) {
+        if !(&self, &rhs).coercible_to_numeric() {
+            return Err(Signal::Error(Error::CannotBeCoercedToNumerics));
+        }
+        match (self, rhs) {
             (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector(l / r)),
-            _ => internal_err!(),
+            _ => unreachable!("coercible_to_numeric call before already checks this"),
         }
     }
 }
@@ -479,9 +495,12 @@ impl super::object::Pow<Obj> for Obj {
     type Output = EvalResult;
 
     fn power(self, rhs: Self) -> Self::Output {
-        match (self.as_double()?, rhs.as_double()?) {
+        if !(&self, &rhs).coercible_to_numeric() {
+            return Err(Signal::Error(Error::CannotBeCoercedToNumerics));
+        }
+        match (self, rhs) {
             (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector(l.power(r))),
-            _ => internal_err!(),
+            _ => unreachable!("coercible_to_numeric call before already checks this"),
         }
     }
 }
@@ -490,9 +509,12 @@ impl std::ops::Rem for Obj {
     type Output = EvalResult;
 
     fn rem(self, rhs: Self) -> Self::Output {
-        match (self.as_double()?, rhs.as_double()?) {
+        if !(&self, &rhs).coercible_to_numeric() {
+            return Err(Signal::Error(Error::CannotBeCoercedToNumerics));
+        }
+        match (self, rhs) {
             (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector(l % r)),
-            _ => internal_err!(),
+            _ => unreachable!("coercible_to_numeric call before already checks this"),
         }
     }
 }
@@ -501,9 +523,12 @@ impl std::ops::BitOr for Obj {
     type Output = EvalResult;
 
     fn bitor(self, rhs: Self) -> Self::Output {
-        match (self.as_logical()?, rhs.as_logical()?) {
+        if !(&self, &rhs).coercible_to_numeric() {
+            return Err(Signal::Error(Error::CannotBeCoercedToNumerics));
+        }
+        match (self, rhs) {
             (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector(l | r)),
-            _ => internal_err!(),
+            _ => unreachable!("coercible_to_numeric call before already checks this"),
         }
     }
 }
@@ -512,9 +537,12 @@ impl std::ops::BitAnd for Obj {
     type Output = EvalResult;
 
     fn bitand(self, rhs: Self) -> Self::Output {
-        match (self.as_logical()?, rhs.as_logical()?) {
+        if !(&self, &rhs).coercible_to_numeric() {
+            return Err(Signal::Error(Error::CannotBeCoercedToNumerics));
+        }
+        match (self, rhs) {
             (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector(l & r)),
-            _ => internal_err!(),
+            _ => unreachable!("coercible_to_numeric call before already checks this"),
         }
     }
 }
@@ -522,30 +550,42 @@ impl std::ops::BitAnd for Obj {
 impl VecPartialCmp<Obj> for Obj {
     type Output = EvalResult;
     fn vec_gt(self, rhs: Self) -> Self::Output {
-        match (self.as_vector()?, rhs.as_vector()?) {
+        if !(&self, &rhs).comparable() {
+            return Err(Signal::Error(Error::CannotBeOrdered));
+        }
+        match (self, rhs) {
             (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector(l.vec_gt(r))),
-            _ => internal_err!(),
+            _ => unreachable!("comparable call before already checks this"),
         }
     }
 
     fn vec_gte(self, rhs: Self) -> Self::Output {
-        match (self.as_vector()?, rhs.as_vector()?) {
+        if !(&self, &rhs).comparable() {
+            return Err(Signal::Error(Error::CannotBeOrdered));
+        }
+        match (self, rhs) {
             (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector(l.vec_gte(r))),
-            _ => internal_err!(),
+            _ => unreachable!("comparable call before already checks this"),
         }
     }
 
     fn vec_lt(self, rhs: Self) -> Self::Output {
-        match (self.as_vector()?, rhs.as_vector()?) {
+        if !(&self, &rhs).comparable() {
+            return Err(Signal::Error(Error::CannotBeOrdered));
+        }
+        match (self, rhs) {
             (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector(l.vec_lt(r))),
-            _ => internal_err!(),
+            _ => unreachable!("comparable call before already checks this"),
         }
     }
 
     fn vec_lte(self, rhs: Self) -> Self::Output {
-        match (self.as_vector()?, rhs.as_vector()?) {
+        if !(&self, &rhs).comparable() {
+            return Err(Signal::Error(Error::CannotBeOrdered));
+        }
+        match (self, rhs) {
             (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector(l.vec_lte(r))),
-            _ => internal_err!(),
+            _ => unreachable!("comparable call before already checks this"),
         }
     }
 
@@ -555,9 +595,9 @@ impl VecPartialCmp<Obj> for Obj {
             (lhs @ Obj::Promise(..), rhs @ Obj::Promise(..)) => Ok((lhs == rhs).into()),
             (lhs @ Obj::Function(..), rhs @ Obj::Function(..)) => Ok((lhs == rhs).into()),
             (lhs @ Obj::Environment(_), rhs @ Obj::Environment(_)) => Ok((lhs == rhs).into()),
-            (lhs, rhs) => match (lhs.as_vector()?, rhs.as_vector()?) {
+            (lhs, rhs) => match (lhs, rhs) {
                 (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector(l.vec_eq(r))),
-                _ => internal_err!(),
+                _ => Err(Signal::Error(Error::CannotBeCompared)),
             },
         }
     }
@@ -570,7 +610,7 @@ impl VecPartialCmp<Obj> for Obj {
             (lhs @ Obj::Environment(_), rhs @ Obj::Environment(_)) => Ok((lhs != rhs).into()),
             (lhs, rhs) => match (lhs.as_vector()?, rhs.as_vector()?) {
                 (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector(l.vec_neq(r))),
-                _ => internal_err!(),
+                _ => Err(Signal::Error(Error::CannotBeCompared)),
             },
         }
     }
