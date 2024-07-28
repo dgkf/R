@@ -431,3 +431,20 @@ impl Callable for PrimVec {
         super::primitive::PrimitiveC.call(args, stack)
     }
 }
+
+#[derive(Debug, Clone, PartialEq)]
+#[builtin]
+pub struct PrimList;
+
+impl Format for PrimList {
+    fn rfmt_call_with(&self, _state: FormatState, args: &ExprList) -> String {
+        let trailing_comma = if args.len() > 1 { "" } else { "," };
+        format!("({}{})", args, trailing_comma)
+    }
+}
+
+impl Callable for PrimList {
+    fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
+        super::primitive::PrimitiveList.call(args, stack)
+    }
+}

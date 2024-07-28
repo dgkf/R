@@ -527,9 +527,8 @@ where
     P: Parser<R> + LocalizedParser,
     R: RuleType + Into<en::Rule>,
 {
-    use crate::callable::primitive::PrimitiveList;
     let args = parse_list_elements(config, parser, pratt, pair)?;
-    Ok(Expr::new_primitive_call(PrimitiveList, args))
+    Ok(Expr::new_primitive_call(PrimList, args))
 }
 
 #[cfg(test)]
