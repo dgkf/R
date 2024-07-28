@@ -15,3 +15,6 @@ pub use list::*;
 
 mod cow;
 pub use cow::*;
+
+mod coercion;
+pub use coercion::*;

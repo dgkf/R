@@ -340,6 +340,12 @@ impl From<Vec<String>> for Vector {
     }
 }
 
+impl From<Vec<&str>> for Vector {
+    fn from(x: Vec<&str>) -> Self {
+        Vector::Character(x.into())
+    }
+}
+
 impl From<Vector> for String {
     fn from(val: Vector) -> Self {
         match val.as_character() {

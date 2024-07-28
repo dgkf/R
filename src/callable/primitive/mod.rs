@@ -30,3 +30,5 @@ mod sum;
 pub use sum::PrimitiveSum;
 mod length;
 pub use length::PrimitiveLength;
+mod type_reflection;
+pub use type_reflection::PrimitiveType;
