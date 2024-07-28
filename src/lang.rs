@@ -217,7 +217,7 @@ impl Obj {
         match self {
             Obj::Vector(v) => v.get(index).map(Obj::Vector),
             Obj::Null => None,
-            Obj::List(..) => None,
+            Obj::List(l) => l.values.borrow().get(index).map(|x| x.1.clone()),
             Obj::Expr(..) => None,
             Obj::Promise(..) => None,
             Obj::Function(..) => None,
