@@ -528,7 +528,7 @@ where
     R: RuleType + Into<en::Rule>,
 {
     let args = parse_list_elements(config, parser, pratt, pair)?;
-    Ok(Expr::List(args))
+    Ok(Expr::new_primitive_call(PrimList, args))
 }
 
 #[cfg(test)]

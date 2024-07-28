@@ -133,7 +133,7 @@ pub trait Context: std::fmt::Debug + std::fmt::Display {
                             Ok(CowObj::from(vec![]).into_iter())
                         }
                     }
-                    (k, v) => match self.eval(v) {
+                    (k, v) => match self.eval_and_finalize(v) {
                         Ok(elem) => Ok(CowObj::from(vec![(k, elem)]).into_iter()),
                         Err(e) => Err(e),
                     },
