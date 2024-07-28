@@ -36,6 +36,10 @@ pub trait Context: std::fmt::Debug + std::fmt::Display {
     fn eval_call(&mut self, expr: Expr) -> EvalResult {
         self.eval(expr)
     }
+    #[inline]
+    fn eval_call_mut(&mut self, expr: Expr) -> EvalResult {
+        Error::CannotEvaluateAsMutable(expr.clone()).into()
+    }
 
     #[inline]
     fn eval(&mut self, expr: Expr) -> EvalResult {
@@ -71,33 +75,34 @@ pub trait Context: std::fmt::Debug + std::fmt::Display {
                 .map(|pair| match pair {
                     (_, Expr::Ellipsis(None)) => {
                         if let Ok(Obj::List(ellipsis)) = self.get_ellipsis() {
-                            Ok(ellipsis.values.borrow_mut().clone().into_iter())
+                            Ok(ellipsis.values.into_iter())
                         } else {
-                            Ok(vec![].into_iter())
+                            Ok(CowObj::from(vec![]).into_iter())
                         }
                     }
                     (_, Expr::Ellipsis(Some(name))) => {
                         if let Ok(Obj::List(more)) = self.get(name) {
-                            Ok(more.values.borrow_mut().clone().into_iter())
+                            Ok(more.values.into_iter())
                         } else {
                             internal_err!()
                         }
                     }
                     // Avoid creating a new closure just to point to another, just reuse it
-                    (k, Expr::Symbol(s)) => {
-                        match self.env().get(s.clone()) {
-                            Ok(c @ Obj::Promise(..)) => Ok(vec![(k, c)].into_iter()),
-                            _ => Ok(vec![(k, Obj::Promise(None, Expr::Symbol(s), self.env()))]
-                                .into_iter()),
-                        }
-                    }
+                    (k, Expr::Symbol(s)) => match self.env().get(s.clone()) {
+                        Ok(c @ Obj::Promise(..)) => Ok(CowObj::from(vec![(k, c)]).into_iter()),
+                        _ => Ok(CowObj::from(vec![(
+                            k,
+                            Obj::Promise(None, Expr::Symbol(s), self.env()),
+                        )])
+                        .into_iter()),
+                    },
                     (k, c @ Expr::Call(..)) => {
                         let elem = vec![(k, Obj::Promise(None, c, self.env()))];
-                        Ok(elem.into_iter())
+                        Ok(CowObj::from(elem).into_iter())
                     }
                     (k, v) => {
                         if let Ok(elem) = self.eval(v) {
-                            Ok(vec![(k, elem)].into_iter())
+                            Ok(CowObj::from(vec![(k, elem)]).into_iter())
                         } else {
                             internal_err!()
                         }
@@ -116,20 +121,20 @@ pub trait Context: std::fmt::Debug + std::fmt::Display {
                 .map(|pair| match pair {
                     (_, Expr::Ellipsis(None)) => {
                         if let Ok(Obj::List(ellipsis)) = self.get_ellipsis() {
-                            Ok(ellipsis.values.borrow_mut().clone().into_iter())
+                            Ok(ellipsis.values.into_iter())
                         } else {
-                            Ok(vec![].into_iter())
+                            Ok(CowObj::from(vec![]).into_iter())
                         }
                     }
                     (_, Expr::Ellipsis(Some(name))) => {
                         if let Ok(Obj::List(more)) = self.get(name) {
-                            Ok(more.values.borrow_mut().clone().into_iter())
+                            Ok(more.values.into_iter())
                         } else {
-                            Ok(vec![].into_iter())
+                            Ok(CowObj::from(vec![]).into_iter())
                         }
                     }
                     (k, v) => match self.eval(v) {
-                        Ok(elem) => Ok(vec![(k, elem)].into_iter()),
+                        Ok(elem) => Ok(CowObj::from(vec![(k, elem)]).into_iter()),
                         Err(e) => Err(e),
                     },
                 })

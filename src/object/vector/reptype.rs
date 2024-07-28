@@ -1,5 +1,4 @@
 use std::fmt::Debug;
-use std::rc::Rc;
 
 use super::coercion::{AtomicMode, CoercibleInto, CommonCmp, CommonNum, MinimallyNumeric};
 use super::iterators::{map_common_numeric, zip_recycle};
@@ -7,16 +6,23 @@ use super::subset::Subset;
 use super::subsets::Subsets;
 use super::types::*;
 use super::{OptionNA, Pow, VecPartialCmp};
-
-use crate::object::VecData;
+use crate::object::{CowObj, ViewMut};
 
 /// Vector
-#[derive(Debug, Clone, PartialEq)]
-pub enum RepType<T> {
+#[derive(Debug, PartialEq)]
+pub enum RepType<T: Clone> {
     // Vector::Subset encompasses a "raw" vector (no subsetting)
-    Subset(VecData<T>, Subsets),
+    Subset(CowObj<Vec<T>>, Subsets),
     // Iterator includes things like ranges 1:Inf, and lazily computed values
     // Iter(Box<dyn Iterator<Item = &T>>)
+}
+
+impl<T: Clone> Clone for RepType<T> {
+    fn clone(&self) -> Self {
+        match self {
+            RepType::Subset(v, s) => RepType::Subset(v.view_mut(), s.clone()),
+        }
+    }
 }
 
 impl<T: AtomicMode + Clone + Default> Default for RepType<T> {
@@ -40,7 +46,7 @@ where
     }
 }
 
-pub enum RepTypeIter<T> {
+pub enum RepTypeIter<T: Clone> {
     SubsetIter(RepType<T>, usize, usize),
 }
 
@@ -57,6 +63,14 @@ impl<T: AtomicMode + Clone + Default> Iterator for RepTypeIter<T> {
                     None
                 }
             }
+        }
+    }
+}
+
+impl<T: Clone> ViewMut for RepType<T> {
+    fn view_mut(&self) -> Self {
+        match self {
+            RepType::Subset(v, s) => RepType::Subset(v.view_mut(), s.clone()),
         }
     }
 }
@@ -85,9 +99,9 @@ impl<T: AtomicMode + Clone + Default> RepType<T> {
     }
 
     /// Access a lazy copy of the internal vector data
-    pub fn inner(&self) -> VecData<T> {
+    pub fn inner(&self) -> CowObj<Vec<T>> {
         match self.materialize() {
-            RepType::Subset(v, _) => v.lazy_copy(),
+            RepType::Subset(v, _) => v.clone(),
         }
     }
 
@@ -100,7 +114,7 @@ impl<T: AtomicMode + Clone + Default> RepType<T> {
             RepType::Subset(v, Subsets(subsets)) => {
                 let mut subsets = subsets.clone();
                 subsets.push(subset);
-                RepType::Subset(v.mutable_view(), Subsets(subsets))
+                RepType::Subset(v.view_mut(), Subsets(subsets))
             }
         }
     }
@@ -158,25 +172,24 @@ impl<T: AtomicMode + Clone + Default> RepType<T> {
     {
         match (self, value) {
             (RepType::Subset(lv, ls), RepType::Subset(rv, rs)) => {
-                let lvc = lv.clone();
-                let lvb_rm = &mut *lvc.borrow_mut();
-                let lvb = Rc::make_mut(lvb_rm);
-                let rvc = rv.clone();
-                let rvb = rvc.borrow();
+                lv.with_inner_mut(|lvb| {
+                    let rvc = rv.clone();
+                    let rvb = rvc.borrow();
 
-                let lv_len = lvb.len();
-                let l_indices = ls.clone().into_iter().take_while(|(i, _)| i < &lv_len);
-                let r_indices = rs.clone().into_iter().take_while(|(i, _)| i < &lv_len);
+                    let lv_len = lvb.len();
+                    let l_indices = ls.clone().into_iter().take_while(|(i, _)| i < &lv_len);
+                    let r_indices = rs.clone().into_iter().take_while(|(i, _)| i < &lv_len);
 
-                for ((_, li), (_, ri)) in l_indices.zip(r_indices) {
-                    match (li, ri) {
-                        (Some(li), None) => lvb[li] = T::default(),
-                        (Some(li), Some(ri)) => lvb[li] = rvb[ri % rvb.len()].clone(),
-                        _ => (),
+                    for ((_, li), (_, ri)) in l_indices.zip(r_indices) {
+                        match (li, ri) {
+                            (Some(li), None) => lvb[li] = T::default(),
+                            (Some(li), Some(ri)) => lvb[li] = rvb[ri % rvb.len()].clone(),
+                            _ => (),
+                        }
                     }
-                }
+                });
 
-                RepType::Subset(lvc.clone(), ls.clone())
+                RepType::Subset(lv.clone(), ls.clone())
             }
         }
     }
@@ -228,6 +241,7 @@ impl<T: AtomicMode + Clone + Default> RepType<T> {
     pub fn as_mode<Mode>(&self) -> RepType<Mode>
     where
         T: CoercibleInto<Mode>,
+        Mode: Clone,
     {
         match self {
             RepType::Subset(v, subsets) => {
@@ -296,8 +310,7 @@ impl<T: AtomicMode + Clone + Default> RepType<T> {
     pub fn get_inner(&self, index: usize) -> Option<T> {
         match self {
             RepType::Subset(v, subsets) => {
-                let vc = v.clone();
-                let vb = vc.borrow();
+                let vb = v.borrow();
                 let index = subsets.get_index_at(index)?;
                 vb.get(index).cloned()
             }
@@ -380,6 +393,7 @@ impl From<Vec<String>> for RepType<Character> {
 impl<F, T> From<(Vec<F>, Subsets)> for RepType<T>
 where
     RepType<T>: From<Vec<F>>,
+    T: Clone,
 {
     fn from(value: (Vec<F>, Subsets)) -> Self {
         match Self::from(value.0) {
@@ -393,13 +407,12 @@ where
     L: AtomicMode + Default + Clone + MinimallyNumeric<As = LNum> + CoercibleInto<LNum>,
     LNum: std::ops::Neg<Output = O>,
     RepType<O>: From<Vec<O>>,
+    O: Clone,
 {
     type Output = RepType<O>;
     fn neg(self) -> Self::Output {
         RepType::from(
             self.inner()
-                .clone()
-                .borrow()
                 .iter()
                 .map(|l| CoercibleInto::<LNum>::coerce_into(l.clone()).neg())
                 .collect::<Vec<O>>(),
@@ -438,8 +451,9 @@ where
     L: AtomicMode + Default + Clone + MinimallyNumeric<As = LNum> + CoercibleInto<LNum>,
     R: AtomicMode + Default + Clone + MinimallyNumeric<As = RNum> + CoercibleInto<RNum>,
     (LNum, RNum): CommonNum<Common = C>,
-    C: std::ops::Sub<Output = O>,
+    C: std::ops::Sub<Output = O> + Clone,
     RepType<C>: From<Vec<O>>,
+    O: Clone,
 {
     type Output = RepType<C>;
     fn sub(self, rhs: RepType<R>) -> Self::Output {
@@ -464,7 +478,7 @@ where
     L: AtomicMode + Default + Clone + MinimallyNumeric<As = LNum> + CoercibleInto<LNum>,
     R: AtomicMode + Default + Clone + MinimallyNumeric<As = RNum> + CoercibleInto<RNum>,
     (LNum, RNum): CommonNum<Common = C>,
-    C: std::ops::Mul<Output = O>,
+    C: std::ops::Mul<Output = O> + Clone,
     RepType<C>: From<Vec<O>>,
 {
     type Output = RepType<C>;
@@ -490,8 +504,9 @@ where
     L: AtomicMode + Default + Clone + MinimallyNumeric<As = LNum> + CoercibleInto<LNum>,
     R: AtomicMode + Default + Clone + MinimallyNumeric<As = RNum> + CoercibleInto<RNum>,
     (LNum, RNum): CommonNum<Common = C>,
-    C: std::ops::Div<Output = O>,
+    C: std::ops::Div<Output = O> + Clone,
     RepType<C>: From<Vec<O>>,
+    O: Clone,
 {
     type Output = RepType<C>;
     fn div(self, rhs: RepType<R>) -> Self::Output {
@@ -516,7 +531,8 @@ where
     L: AtomicMode + Default + Clone + MinimallyNumeric<As = LNum> + CoercibleInto<LNum>,
     R: AtomicMode + Default + Clone + MinimallyNumeric<As = RNum> + CoercibleInto<RNum>,
     (LNum, RNum): CommonNum<Common = C>,
-    C: std::ops::Rem<Output = O>,
+    C: std::ops::Rem<Output = O> + Clone,
+    O: Clone,
     RepType<C>: From<Vec<O>>,
 {
     type Output = RepType<C>;
@@ -543,6 +559,7 @@ where
     R: AtomicMode + Default + Clone + MinimallyNumeric<As = RNum> + CoercibleInto<RNum>,
     LNum: Pow<RNum, Output = O>,
     RepType<O>: From<Vec<O>>,
+    O: Clone,
 {
     type Output = RepType<O>;
     fn power(self, rhs: RepType<R>) -> Self::Output {
@@ -568,6 +585,7 @@ where
     R: AtomicMode + Default + Clone + CoercibleInto<Logical>,
     Logical: std::ops::BitOr<Logical, Output = O>,
     RepType<O>: From<Vec<O>>,
+    O: Clone,
 {
     type Output = RepType<O>;
     fn bitor(self, rhs: RepType<R>) -> Self::Output {
@@ -593,6 +611,7 @@ where
     R: AtomicMode + Default + Clone + CoercibleInto<Logical>,
     Logical: std::ops::BitAnd<Logical, Output = O>,
     RepType<O>: From<Vec<O>>,
+    O: Clone,
 {
     type Output = RepType<O>;
     fn bitand(self, rhs: RepType<R>) -> Self::Output {

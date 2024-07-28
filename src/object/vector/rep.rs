@@ -8,14 +8,29 @@ use super::reptype::RepTypeIter;
 use super::subset::Subset;
 use super::types::*;
 use super::{OptionNA, Pow, VecPartialCmp};
-use crate::object::VecData;
+use crate::object::CowObj;
+use crate::object::ViewMut;
 
 /// Vector Representation
 ///
 /// The ref-cell is used so vectors can change there internal representation,
 /// e.g. by materializing.
-#[derive(Debug, Clone, PartialEq)]
-pub struct Rep<T>(pub RefCell<RepType<T>>);
+#[derive(Debug, PartialEq)]
+pub struct Rep<T: Clone>(pub RefCell<RepType<T>>);
+
+impl<T: Clone + AtomicMode + Default> Clone for Rep<T> {
+    fn clone(&self) -> Self {
+        match self.borrow().clone() {
+            RepType::Subset(v, s) => Rep(RefCell::new(RepType::Subset(v.clone(), s.clone()))),
+        }
+    }
+}
+
+impl<T: Clone + AtomicMode + Default> ViewMut for Rep<T> {
+    fn view_mut(&self) -> Self {
+        Self(RefCell::new(self.borrow().view_mut()))
+    }
+}
 
 impl<T> Rep<T>
 where
@@ -30,24 +45,6 @@ where
         self.0.replace(new_repr);
 
         self
-    }
-
-    pub fn mutable_view(&self) -> Self {
-        match self.borrow().clone() {
-            RepType::Subset(v, s) => {
-                // FIXME(don't clone all the subsets, they are read only anyway?)
-                Rep(RefCell::new(RepType::Subset(v.mutable_view(), s.clone())))
-            }
-        }
-    }
-
-    pub fn lazy_copy(&self) -> Self {
-        match self.borrow().clone() {
-            RepType::Subset(v, s) => {
-                // FIXME(don't clone all the subsets, they are read only anyway?)
-                Rep(RefCell::new(RepType::Subset(v.lazy_copy(), s.clone())))
-            }
-        }
     }
 
     pub fn materialize(&self) -> Self {
@@ -76,7 +73,7 @@ where
         RepType::new().into()
     }
 
-    pub fn inner(&self) -> VecData<T> {
+    pub fn inner(&self) -> CowObj<Vec<T>> {
         self.borrow().inner()
     }
 
@@ -155,6 +152,7 @@ where
     pub fn as_mode<Mode>(&self) -> Rep<Mode>
     where
         T: CoercibleInto<Mode>,
+        Mode: Clone,
     {
         Rep(RefCell::new(self.borrow().as_mode()))
     }
@@ -226,7 +224,7 @@ where
     }
 }
 
-pub struct RepIter<T>(RepTypeIter<T>);
+pub struct RepIter<T: Clone>(RepTypeIter<T>);
 
 impl<T> IntoIterator for Rep<T>
 where
@@ -393,6 +391,7 @@ where
     L: AtomicMode + Default + Clone + MinimallyNumeric<As = LNum> + CoercibleInto<LNum>,
     LNum: std::ops::Neg<Output = O>,
     RepType<O>: From<Vec<O>>,
+    O: Clone,
 {
     type Output = Rep<O>;
     fn neg(self) -> Self::Output {
@@ -436,6 +435,8 @@ where
     (LNum, RNum): CommonNum<Common = C>,
     C: std::ops::Sub<Output = O>,
     RepType<C>: From<Vec<O>>,
+    O: Clone,
+    C: Clone,
 {
     type Output = Rep<C>;
     fn sub(self, rhs: Rep<R>) -> Self::Output {
@@ -451,6 +452,8 @@ where
     (LNum, RNum): CommonNum<Common = C>,
     C: std::ops::Mul<Output = O>,
     RepType<C>: From<Vec<O>>,
+    O: Clone,
+    C: Clone,
 {
     type Output = Rep<C>;
     fn mul(self, rhs: Rep<R>) -> Self::Output {
@@ -468,6 +471,8 @@ where
     (LNum, RNum): CommonNum<Common = C>,
     C: std::ops::Div<Output = O>,
     RepType<C>: From<Vec<O>>,
+    O: Clone,
+    C: Clone,
 {
     type Output = Rep<C>;
     fn div(self, rhs: Rep<R>) -> Self::Output {
@@ -483,6 +488,10 @@ where
     (LNum, RNum): CommonNum<Common = C>,
     C: std::ops::Rem<Output = O>,
     RepType<C>: From<Vec<O>>,
+    L: Clone,
+    R: Clone,
+    C: Clone,
+    O: Clone,
 {
     type Output = Rep<C>;
     fn rem(self, rhs: Rep<R>) -> Self::Output {
@@ -498,6 +507,9 @@ where
     R: AtomicMode + Default + Clone + MinimallyNumeric<As = RNum> + CoercibleInto<RNum>,
     LNum: Pow<RNum, Output = O>,
     RepType<O>: From<Vec<O>>,
+    L: Clone,
+    R: Clone,
+    O: Clone,
 {
     type Output = Rep<O>;
     fn power(self, rhs: Rep<R>) -> Self::Output {
@@ -512,6 +524,9 @@ where
     R: AtomicMode + Default + Clone + CoercibleInto<Logical>,
     Logical: std::ops::BitOr<Logical, Output = O>,
     RepType<O>: From<Vec<O>>,
+    L: Clone,
+    R: Clone,
+    O: Clone,
 {
     type Output = Rep<O>;
     fn bitor(self, rhs: Rep<R>) -> Self::Output {
@@ -526,6 +541,9 @@ where
     R: AtomicMode + Default + Clone + CoercibleInto<Logical>,
     Logical: std::ops::BitAnd<Logical, Output = O>,
     RepType<O>: From<Vec<O>>,
+    L: Clone,
+    R: Clone,
+    O: Clone,
 {
     type Output = Rep<O>;
     fn bitand(self, rhs: Rep<R>) -> Self::Output {
@@ -540,6 +558,9 @@ where
     R: AtomicMode + Default + Clone + CoercibleInto<C>,
     (L, R): CommonCmp<Common = C>,
     C: PartialOrd,
+    L: Clone,
+    R: Clone,
+    C: Clone,
 {
     type Output = Rep<Logical>;
 

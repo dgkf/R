@@ -74,21 +74,10 @@ impl Vector {
     /// one such lazy copy.
     pub fn lazy_copy(&self) -> Self {
         match self {
-            Vector::Double(v) => Vector::Double(v.lazy_copy()),
-            Vector::Character(v) => Vector::Character(v.lazy_copy()),
-            Vector::Integer(v) => Vector::Integer(v.lazy_copy()),
-            Vector::Logical(v) => Vector::Logical(v.lazy_copy()),
-        }
-    }
-
-    /// Get a mutable view of the vector.
-    /// This is used for things like `x[1] = 2`.
-    pub fn mutable_view(&self) -> Self {
-        match self {
-            Vector::Double(v) => Vector::Double(v.mutable_view()),
-            Vector::Character(v) => Vector::Character(v.mutable_view()),
-            Vector::Integer(v) => Vector::Integer(v.mutable_view()),
-            Vector::Logical(v) => Vector::Logical(v.mutable_view()),
+            Vector::Double(v) => Vector::Double(v.clone()),
+            Vector::Character(v) => Vector::Character(v.clone()),
+            Vector::Integer(v) => Vector::Integer(v.clone()),
+            Vector::Logical(v) => Vector::Logical(v.clone()),
         }
     }
 

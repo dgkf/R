@@ -1,6 +1,4 @@
 use hashbrown::HashMap;
-use std::cell::RefCell;
-use std::rc::Rc;
 
 use crate::error::Error;
 use crate::lang::EvalResult;
@@ -8,19 +6,18 @@ use crate::lang::EvalResult;
 use super::*;
 
 type ListNameMap = HashMap<String, Vec<usize>>;
-type ListValues = Vec<(Option<String>, Obj)>;
 
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct List {
-    pub names: Rc<RefCell<ListNameMap>>,
-    pub values: Rc<RefCell<ListValues>>,
+    pub names: CowObj<ListNameMap>,
+    pub values: CowObj<Vec<(Option<String>, Obj)>>,
     pub subsets: Subsets,
 }
 
 impl From<Vec<(Option<String>, Obj)>> for List {
     fn from(value: Vec<(Option<String>, Obj)>) -> Self {
         let mut result = List {
-            values: Rc::new(RefCell::new(value)),
+            values: CowObj::from(value),
             ..Default::default()
         };
 
@@ -31,17 +28,18 @@ impl From<Vec<(Option<String>, Obj)>> for List {
 
 impl List {
     pub fn reindex(&mut self) {
-        let mut names = self.names.borrow_mut();
-        names.drain();
+        self.names.with_inner_mut(|names| {
+            names.drain();
 
-        for (i, (k, _)) in self.values.borrow().iter().enumerate() {
-            if let Some(name) = k {
-                let indices = names.entry(name.clone()).or_default();
-                if !indices.contains(&i) {
-                    indices.push(i)
+            for (i, (k, _)) in self.values.borrow().iter().enumerate() {
+                if let Some(name) = k {
+                    let indices = names.entry(name.clone()).or_default();
+                    if !indices.contains(&i) {
+                        indices.push(i)
+                    }
                 }
             }
-        }
+        })
     }
 
     pub fn subset(&self, by: Subset) -> List {
@@ -49,7 +47,7 @@ impl List {
         inner.push(by);
         List {
             names: self.names.clone(),
-            values: self.values.clone(),
+            values: self.values.view_mut(),
             subsets: Subsets(inner),
         }
     }
@@ -58,7 +56,7 @@ impl List {
         match value {
             // remove elements from list
             Obj::Null => {
-                let n = self.values.borrow().len();
+                let n = self.values.len();
                 let indices = self
                     .subsets
                     .clone()
@@ -66,12 +64,11 @@ impl List {
                     .into_iter()
                     .take(n);
 
-                {
-                    let mut values = self.values.borrow_mut();
+                self.values.with_inner_mut(|values| {
                     for (i, _) in indices {
                         values.remove(i);
                     }
-                }
+                });
 
                 self.reindex();
 
@@ -87,8 +84,7 @@ impl List {
 
             // any single length R value
             any if any.len() == Some(1) => {
-                let mut v = self.values.borrow_mut();
-                let n = v.len();
+                let n = self.values.len();
                 let indices = self
                     .subsets
                     .clone()
@@ -96,24 +92,26 @@ impl List {
                     .into_iter()
                     .take(n);
 
-                // first check to see if we need to extend
-                if let Some(max) = self
-                    .subsets
-                    .clone()
-                    .bind_names(self.names.clone())
-                    .into_iter()
-                    .map(|(i, _)| i)
-                    .max()
-                {
-                    v.reserve(max.saturating_sub(n))
-                }
-
-                // then assign to indices
-                for (_, i) in indices {
-                    if let Some(i) = i {
-                        v[i].1 = any.clone()
+                self.values.with_inner_mut(|v| {
+                    // first check to see if we need to extend
+                    if let Some(max) = self
+                        .subsets
+                        .clone()
+                        .bind_names(self.names.clone())
+                        .into_iter()
+                        .map(|(i, _)| i)
+                        .max()
+                    {
+                        v.reserve(max.saturating_sub(n))
                     }
-                }
+
+                    // then assign to indices
+                    for (_, i) in indices {
+                        if let Some(i) = i {
+                            v[i].1 = any.clone()
+                        }
+                    }
+                });
 
                 Ok(Obj::List(List {
                     names: self.names.clone(),
@@ -124,8 +122,7 @@ impl List {
             // vectorized assignment
             // TODO(feature): warn when index recycling does not cycle evenly
             any if any.len() == Some(self.len()) => {
-                let mut v = self.values.borrow_mut();
-                let n = v.len();
+                let n = self.values.len();
                 let indices = self
                     .subsets
                     .clone()
@@ -133,24 +130,26 @@ impl List {
                     .into_iter()
                     .take(n);
 
-                // first check to see if we need to extend
-                if let Some(max) = self
-                    .subsets
-                    .clone()
-                    .bind_names(self.names.clone())
-                    .into_iter()
-                    .map(|(i, _)| i)
-                    .max()
-                {
-                    v.reserve(max.saturating_sub(n))
-                }
-
-                // then assign to indices
-                for (any_i, (_, i)) in indices.enumerate() {
-                    if let (Some(value), Some(i)) = (any.get(any_i), i) {
-                        v[i].1 = value;
+                self.values.with_inner_mut(|v| {
+                    // first check to see if we need to extend
+                    if let Some(max) = self
+                        .subsets
+                        .clone()
+                        .bind_names(self.names.clone())
+                        .into_iter()
+                        .map(|(i, _)| i)
+                        .max()
+                    {
+                        v.reserve(max.saturating_sub(n))
                     }
-                }
+
+                    // then assign to indices
+                    for (any_i, (_, i)) in indices.enumerate() {
+                        if let (Some(value), Some(i)) = (any.get(any_i), i) {
+                            v[i].1 = value;
+                        }
+                    }
+                });
 
                 Ok(Obj::List(List {
                     names: self.names.clone(),
@@ -159,8 +158,7 @@ impl List {
                 }))
             }
             other => {
-                let mut v = self.values.borrow_mut();
-                let n = v.len();
+                let n = self.values.len();
                 let indices = self
                     .subsets
                     .clone()
@@ -168,24 +166,26 @@ impl List {
                     .into_iter()
                     .take(n);
 
-                // first check to see if we need to extend
-                if let Some(max) = self
-                    .subsets
-                    .clone()
-                    .bind_names(self.names.clone())
-                    .into_iter()
-                    .map(|(i, _)| i)
-                    .max()
-                {
-                    v.reserve(max.saturating_sub(n))
-                }
-
-                // then assign to indices
-                for (_, i) in indices {
-                    if let Some(i) = i {
-                        v[i].1 = other.clone()
+                self.values.with_inner_mut(|v| {
+                    // first check to see if we need to extend
+                    if let Some(max) = self
+                        .subsets
+                        .clone()
+                        .bind_names(self.names.clone())
+                        .into_iter()
+                        .map(|(i, _)| i)
+                        .max()
+                    {
+                        v.reserve(max.saturating_sub(n))
                     }
-                }
+
+                    // then assign to indices
+                    for (_, i) in indices {
+                        if let Some(i) = i {
+                            v[i].1 = other.clone()
+                        }
+                    }
+                });
 
                 Ok(Obj::List(List {
                     names: self.names.clone(),
@@ -204,7 +204,7 @@ impl List {
         }
     }
 
-    pub fn try_get_inner(&self, index: Obj) -> EvalResult {
+    pub fn try_get_inner_mut(&self, index: Obj) -> EvalResult {
         let err_invalid = Error::Other("Cannot use object for indexing".to_string());
         let err_index_invalid = Error::Other("Index out of bounds".to_string());
 
@@ -218,10 +218,10 @@ impl List {
                     .into_iter()
                     .next()
                 {
-                    self.values
-                        .borrow()
-                        .get(i)
-                        .map_or(Err(err_index_invalid.into()), |(_, i)| Ok(i.clone()))
+                    self.values.with_inner_mut(|v| {
+                        v.get_mut(i)
+                            .map_or(Err(err_index_invalid.into()), |(_, i)| Ok(i.view_mut()))
+                    })
                 } else {
                     Ok(Obj::Null)
                 }
@@ -230,9 +230,13 @@ impl List {
         }
     }
 
+    pub fn try_get_inner(&self, index: Obj) -> EvalResult {
+        #[allow(clippy::map_clone)]
+        self.try_get_inner_mut(index).map(|v| v.clone())
+    }
+
     pub fn dedup_last(self) -> Self {
-        {
-            let names = self.names.borrow();
+        self.names.with_inner_mut(|names| {
             let mut dups: Vec<usize> = names
                 .iter()
                 .flat_map(|(_, indices)| {
@@ -244,15 +248,18 @@ impl List {
 
             dups.sort();
 
-            let mut vs = self.values.borrow_mut();
-            for i in dups.into_iter().rev() {
-                vs.remove(i);
-            }
-        }
+            self.values.with_inner_mut(|vs| {
+                for i in dups.into_iter().rev() {
+                    vs.remove(i);
+                }
+            });
+        });
 
-        for (_, indices) in self.names.borrow_mut().iter_mut() {
-            indices.drain(0..indices.len());
-        }
+        self.names.with_inner_mut(|names| {
+            for (_, indices) in names.iter_mut() {
+                indices.drain(0..indices.len());
+            }
+        });
 
         self
     }
@@ -268,5 +275,93 @@ impl List {
     #[must_use]
     pub fn is_empty(&self) -> bool {
         self.len() == 0
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{r, r_expect};
+    #[test]
+    fn list_declaration_ambiguity() {
+        assert_eq!(r!((a = 1,)), r!(list(a = 1)));
+        assert_eq!(r!((a = 1)), r!(1));
+        assert_eq!(r!((1)), r!(1));
+        assert_eq!(r!((1,)), r!(list(1)));
+    }
+
+    #[test]
+    fn copy_on_write_single_bracket() {
+        r_expect! {{"
+            l1 = (1,)
+            l2 = l1
+            l1[1] = 2
+            l1[[1]] == 2 & l2[[1]] == 1
+        "}}
+    }
+    #[test]
+    fn copy_on_write_bracket_names() {
+        r_expect! {{r#"
+            l1 = (a = 1,)
+            l2 = l1
+            l1["a"] = 2
+            l1$a == 2 & l2$a == 1
+        "#}}
+    }
+    #[test]
+    fn copy_on_write_slice_names() {
+        r_expect! {{r#"
+            l = (a = 1, b = 2, c = 3)
+            l1 = l
+            l1[c("a", "b")] = c(10, 20)
+
+            l1$a == 10 && l1$b == 20 & l$a == 1 & l$b == 2
+        "#}}
+    }
+    #[test]
+    fn copy_on_write_slice_indices() {
+        r_expect! {{"
+            l = (1, 2)
+            l1 = l
+            l1[1:2] = [10, 20]
+            l1[[1]] == 10 && l1[[2]] == 20 & l[[1]] == 1 & l[[2]] == 2
+        "}}
+    }
+
+    #[test]
+    fn copy_on_write_index() {
+        r_expect! {{"
+            l = (1, 2)
+            l_cow = l  # at this point, a copy-on-write reference
+            l_cow[[2]] = 20
+            l_cow[[1]] == 1 && l_cow[[2]] == 20 && l[[1]] == 1 && l[[2]] == 2
+        "}}
+    }
+
+    #[test]
+    fn nested_double_bracket_index() {
+        r_expect! {{"
+            l = ((1,),)
+            l_cow = l
+            l_cow[[1]][[1]] = 20
+            l_cow[[1]][[1]] == 20 && l[[1]][[1]] == 1
+        "}}
+    }
+    #[test]
+    fn nested_double_bracket_names() {
+        r_expect! {{r#"
+            l = (a = (b = 1,),)
+            l_cow = l
+            l_cow[["a"]][["b"]] = 20
+            l_cow[["a"]][["b"]] == 20 && l[["a"]][["b"]] == 1
+        "#}}
+    }
+    #[test]
+    fn nested_double_bracket_mixed() {
+        r_expect! {{r#"
+            l = (a = (1,),)
+            l_cow = l
+            l_cow[["a"]][[1]] = 20
+            l_cow[["a"]][[1]] == 20 && l[["a"]][[1]] == 1
+        "#}}
     }
 }

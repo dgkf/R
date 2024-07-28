@@ -1,5 +1,5 @@
+use crate::object::CowObj;
 use hashbrown::HashMap;
-use std::{cell::RefCell, rc::Rc};
 
 use super::Subset;
 
@@ -8,7 +8,7 @@ pub struct Subsets(pub Vec<Subset>);
 
 pub struct NamedSubsets {
     subsets: Subsets,
-    names: Rc<RefCell<HashMap<String, Vec<usize>>>>,
+    names: CowObj<HashMap<String, Vec<usize>>>,
 }
 
 impl Subsets {
@@ -40,7 +40,7 @@ impl Subsets {
         v.push(subset.into());
     }
 
-    pub fn bind_names(self, names: Rc<RefCell<HashMap<String, Vec<usize>>>>) -> NamedSubsets {
+    pub fn bind_names(self, names: CowObj<HashMap<String, Vec<usize>>>) -> NamedSubsets {
         NamedSubsets {
             subsets: self,
             names,

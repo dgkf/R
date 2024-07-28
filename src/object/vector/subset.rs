@@ -3,7 +3,7 @@ use std::ops::Range;
 use std::rc::Rc;
 
 use crate::lang::Signal;
-use crate::object::VecData;
+use crate::object::CowObj;
 
 use super::{types::*, OptionNA, Vector};
 
@@ -14,9 +14,9 @@ use super::{types::*, OptionNA, Vector};
 ///
 #[derive(Debug, Clone, PartialEq)]
 pub enum Subset {
-    Indices(VecData<Integer>),
-    Mask(VecData<Logical>),
-    Names(VecData<Character>),
+    Indices(CowObj<Vec<Integer>>),
+    Mask(CowObj<Vec<Logical>>),
+    Names(CowObj<Vec<Character>>),
     Range(Range<usize>),
 }
 
@@ -52,10 +52,10 @@ impl Subset {
 
     pub fn len(&self) -> usize {
         match self {
-            Subset::Indices(i) => i.clone().borrow().len(),
+            Subset::Indices(i) => i.len(),
             Subset::Range(r) => r.end - r.start,
             Subset::Mask(_) => usize::MAX,
-            Subset::Names(n) => n.clone().borrow().len(),
+            Subset::Names(n) => n.len(),
         }
     }
 
@@ -201,7 +201,7 @@ impl From<Range<usize>> for Subset {
 
 impl From<Vec<usize>> for Subset {
     fn from(value: Vec<usize>) -> Self {
-        Subset::Indices(VecData::new(Rc::new(RefCell::new(Rc::new(
+        Subset::Indices(CowObj::new(Rc::new(RefCell::new(Rc::new(
             value
                 .iter()
                 .map(|i| OptionNA::Some(*i as i32))
@@ -224,7 +224,7 @@ impl TryFrom<Vector> for Subset {
                     })
                     .collect();
 
-                Ok(Subset::Indices(VecData::new(Rc::new(RefCell::new(
+                Ok(Subset::Indices(CowObj::new(Rc::new(RefCell::new(
                     Rc::new(y),
                 )))))
             }

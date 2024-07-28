@@ -43,7 +43,7 @@ pub trait Callable {
 
         // assign named args to corresponding formals
         let mut i: usize = 0;
-        'outer: while i < args.values.borrow().len() {
+        'outer: while i < args.values.len() {
             'inner: {
                 // check argname with immutable borrow, but drop scope. If
                 // found, drop borrow so we can mutably assign it
@@ -59,8 +59,7 @@ pub trait Callable {
 
             matched_args
                 .values
-                .borrow_mut()
-                .push(args.values.borrow_mut().remove(i));
+                .with_inner_mut(|v| v.push(args.values.with_inner_mut(|x| x.remove(i))))
         }
 
         // TODO(bug): need to evaluate trailing unassigned params that have
@@ -70,21 +69,27 @@ pub trait Callable {
         let remainder = formals.pop_trailing();
 
         // backfill unnamed args, populating ellipsis with overflow
-        let argsiter = args.values.borrow_mut().clone().into_iter();
+        let argsiter = args.values.into_iter();
         for (key, value) in argsiter {
             match key {
                 // named args go directly to ellipsis, they did not match a formal
                 Some(arg) => {
-                    ellipsis.values.borrow_mut().push((Some(arg), value));
+                    ellipsis
+                        .values
+                        .with_inner_mut(|v| v.push((Some(arg), value)));
                 }
 
                 // unnamed args populate next formal, or ellipsis if formals exhausted
                 None => {
                     let next_unassigned_formal = formals.remove(0);
                     if let Some((Some(param), _)) = next_unassigned_formal {
-                        matched_args.values.borrow_mut().push((Some(param), value));
+                        matched_args
+                            .values
+                            .with_inner_mut(|vals| vals.push((Some(param), value)));
                     } else {
-                        ellipsis.values.borrow_mut().push((None, value));
+                        ellipsis
+                            .values
+                            .with_inner_mut(|vals| vals.push((None, value)));
                     }
                 }
             }
@@ -92,22 +97,22 @@ pub trait Callable {
 
         // add back in parameter defaults that weren't filled with args
         for (param, default) in formals.into_iter() {
-            matched_args.values.borrow_mut().push((
-                param,
-                Obj::Promise(None, default, stack.last_frame().env().clone()),
-            ));
+            matched_args.values.with_inner_mut(|v| {
+                v.push((
+                    param,
+                    Obj::Promise(None, default, stack.last_frame().env().clone()),
+                ));
+            })
         }
 
         if let Some(Expr::Ellipsis(Some(name))) = remainder.get(0) {
             matched_args
                 .values
-                .borrow_mut()
-                .push((Some(name), Obj::List(ellipsis.clone())))
+                .with_inner_mut(|v| v.push((Some(name), Obj::List(ellipsis.clone()))))
         } else if !remainder.is_empty() {
             matched_args
                 .values
-                .borrow_mut()
-                .push((Some("...".to_string()), Obj::List(ellipsis.clone())))
+                .with_inner_mut(|v| v.push((Some("...".to_string()), Obj::List(ellipsis.clone()))))
         }
 
         Ok((matched_args, ellipsis))
@@ -128,7 +133,7 @@ pub trait Callable {
         self.call_matched(args, ellipsis, stack)
     }
 
-    fn call_mutable(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
+    fn call_mut(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
         self.call(args, stack)
     }
 
@@ -142,7 +147,7 @@ pub trait Callable {
     }
 
     fn call_assign(&self, value: Expr, args: ExprList, stack: &mut CallStack) -> EvalResult {
-        let what = self.call_mutable(args, stack)?;
+        let what = self.call_mut(args, stack)?;
         let value = stack.eval(value)?;
         what.assign(value)
     }
@@ -289,8 +294,6 @@ pub fn force_promises(
     // Force any closures that were created during call. This helps with using
     // variables as argument for sep and collapse parameters.
     vals.values
-        .borrow_mut()
-        .clone()
         .into_iter()
         .map(|(k, v)| match (k, v.force(stack)) {
             (k, Ok(v)) => Ok((k, v)),
