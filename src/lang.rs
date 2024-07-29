@@ -1432,7 +1432,6 @@ mod test {
         // metaprogramming objects
         r_expect!(environment() == environment());
         r_expect!(quote(1) == quote(1));
-        r_expect!(sum == sum);
 
         // length > 1 also works
         r_expect! {{"

@@ -133,7 +133,7 @@ impl Comparable for (&Obj, &Obj) {
                 | (Obj::Vector(_), Obj::Vector(_))
                 | (Obj::Expr(_), Obj::Expr(_))
                 | (Obj::Promise(..), Obj::Promise(..))
-                | (Obj::Function(..), Obj::Promise(..))
+                | (Obj::Function(..), Obj::Function(..))
                 | (Obj::List(..), Obj::List(..))
         )
     }
