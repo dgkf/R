@@ -453,6 +453,17 @@ impl std::ops::Neg for Obj {
     }
 }
 
+impl std::ops::Not for Obj {
+    type Output = EvalResult;
+
+    fn not(self) -> Self::Output {
+        match self.as_logical()? {
+            Obj::Vector(x) => Ok(Obj::Vector(!x)),
+            _ => internal_err!(),
+        }
+    }
+}
+
 impl std::ops::Mul for Obj {
     type Output = EvalResult;
 

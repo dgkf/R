@@ -482,6 +482,11 @@ where
                 Expr::new_primitive_call(PrefixSub, args)
             }
 
+            en::Rule::not => {
+                let args = ExprList::from(vec![result]);
+                Expr::new_primitive_call(PrefixNot, args)
+            }
+
             en::Rule::more => {
                 let is_ellipsis = result.to_string() == ".";
                 if config.experiments.contains(&Experiment::RestArgs) {

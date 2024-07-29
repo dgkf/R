@@ -107,8 +107,8 @@
             triplecolon = { ":::" }
             more = { ".." }
 
-        prefix = _{ subtract | negate | more }
-            negate = { "!" }
+        prefix = _{ subtract | not | more }
+            not = { "!" }
 
         postfix = _{ call | index | vector_index | more }
             call         = { "("  ~ pairs ~  ")" }

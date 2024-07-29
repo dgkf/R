@@ -573,6 +573,13 @@ impl std::ops::BitAnd<Logical> for Logical {
     }
 }
 
+impl std::ops::Not for Logical {
+    type Output = Logical;
+    fn not(self) -> Self::Output {
+        self.map(|x| !x)
+    }
+}
+
 impl std::ops::Neg for Vector {
     type Output = Vector;
     fn neg(self) -> Self::Output {
@@ -581,6 +588,17 @@ impl std::ops::Neg for Vector {
             Double(x) => Double(x.neg()),
             Integer(x) => Integer(x.neg()),
             Logical(x) => Integer(x.neg()),
+            _ => todo!(),
+        }
+    }
+}
+
+impl std::ops::Not for Vector {
+    type Output = Vector;
+    fn not(self) -> Self::Output {
+        use Vector::*;
+        match self {
+            Logical(x) => (!x).into(),
             _ => todo!(),
         }
     }

@@ -195,7 +195,7 @@ pub fn derive_translate(_input: TokenStream) -> TokenStream {
                     Rule::doublecolon => en::Rule::doublecolon,
                     Rule::triplecolon => en::Rule::triplecolon,
                     Rule::prefix => en::Rule::prefix,
-                    Rule::negate => en::Rule::negate,
+                    Rule::not => en::Rule::not,
                     Rule::postfix => en::Rule::postfix,
                     Rule::call => en::Rule::call,
                     Rule::index => en::Rule::index,

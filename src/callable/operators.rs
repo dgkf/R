@@ -48,6 +48,16 @@ impl Callable for PrefixSub {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+#[builtin(sym = "!", kind = Prefix)]
+pub struct PrefixNot;
+impl Callable for PrefixNot {
+    fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
+        let what = stack.eval(args.unnamed_unary_arg())?;
+        !what
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
 #[builtin(sym = "..", kind = Prefix)]
 pub struct PrefixPack;
 impl Callable for PrefixPack {
