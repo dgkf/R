@@ -552,6 +552,20 @@ where
     }
 }
 
+impl<L, O> std::ops::Not for Rep<L>
+where
+    L: AtomicMode + Default + Clone + CoercibleInto<Logical>,
+    Logical: std::ops::Not<Output = O>,
+    RepType<O>: From<Vec<O>>,
+    O: Clone,
+{
+    type Output = Rep<O>;
+    fn not(self) -> Self::Output {
+        let result: RepType<O> = !self.0.into_inner();
+        Rep(RefCell::new(result))
+    }
+}
+
 impl<L, R, C> VecPartialCmp<Rep<R>> for Rep<L>
 where
     L: AtomicMode + Default + Clone + CoercibleInto<C>,

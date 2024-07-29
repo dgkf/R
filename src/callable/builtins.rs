@@ -18,6 +18,7 @@ lazy_static! {
             ("+", Box::new(InfixAdd) as Box<dyn Builtin>),
             ("-", Box::new(InfixSub) as Box<dyn Builtin>),
             ("-", Box::new(PrefixSub) as Box<dyn Builtin>),
+            ("!", Box::new(PrefixNot) as Box<dyn Builtin>),
             ("..", Box::new(PrefixPack) as Box<dyn Builtin>),
             ("*", Box::new(InfixMul) as Box<dyn Builtin>),
             ("/", Box::new(InfixDiv) as Box<dyn Builtin>),

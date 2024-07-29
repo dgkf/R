@@ -631,6 +631,24 @@ where
     }
 }
 
+impl<L, O> std::ops::Not for RepType<L>
+where
+    L: AtomicMode + Default + Clone + CoercibleInto<Logical>,
+    Logical: std::ops::Not<Output = O>,
+    RepType<O>: From<Vec<O>>,
+    O: Clone,
+{
+    type Output = RepType<O>;
+    fn not(self) -> Self::Output {
+        RepType::from(
+            self.inner()
+                .iter()
+                .map(|l| CoercibleInto::<Logical>::coerce_into(l.clone()).not())
+                .collect::<Vec<O>>(),
+        )
+    }
+}
+
 impl<L, R, C> VecPartialCmp<RepType<R>> for RepType<L>
 where
     L: AtomicMode + Default + Clone + CoercibleInto<C>,
