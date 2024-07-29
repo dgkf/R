@@ -392,7 +392,7 @@ impl From<Vec<OptionNA<String>>> for RepType<Character> {
 
 impl From<Vec<String>> for RepType<Character> {
     fn from(value: Vec<String>) -> Self {
-        let value: Vec<_> = value.into_iter().map(|i| OptionNA::Some(i)).collect();
+        let value: Vec<_> = value.into_iter().map(OptionNA::Some).collect();
         RepType::Subset(value.into(), Subsets(Vec::new()))
     }
 }

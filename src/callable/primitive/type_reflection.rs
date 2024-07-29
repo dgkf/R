@@ -1,7 +1,6 @@
 use r_derive::*;
 
 use crate::callable::core::*;
-use crate::internal_err;
 use crate::lang::*;
 use crate::object::Vector;
 use crate::object::*;

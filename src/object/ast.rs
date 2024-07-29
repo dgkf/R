@@ -1,4 +1,3 @@
-use crate::object::List;
 use core::fmt;
 use std::{iter::Zip, slice::IterMut, vec::IntoIter};
 

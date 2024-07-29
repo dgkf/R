@@ -29,7 +29,7 @@ impl<T: Clone> From<T> for CowObj<T> {
 
 impl From<Vec<String>> for CowObj<Vec<Character>> {
     fn from(x: Vec<String>) -> Self {
-        let x: Vec<_> = x.into_iter().map(|x| OptionNA::Some(x)).collect();
+        let x: Vec<_> = x.into_iter().map(OptionNA::Some).collect();
         CowObj::from(x)
     }
 }

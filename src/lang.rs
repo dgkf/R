@@ -8,6 +8,7 @@ use crate::object::*;
 use crate::object::{CoercibleToNumeric, Comparable, InterpretableAsLogical};
 use crate::parser::LocalizedParser;
 use crate::parser::ParseResult;
+use crate::r_vec;
 use crate::session::{Session, SessionParserConfig};
 use std::collections::HashSet;
 
@@ -550,42 +551,42 @@ impl std::ops::BitAnd for Obj {
 impl VecPartialCmp<Obj> for Obj {
     type Output = EvalResult;
     fn vec_gt(self, rhs: Self) -> Self::Output {
-        if !(&self, &rhs).comparable() {
-            return Err(Signal::Error(Error::CannotBeOrdered));
+        if !(&self, &rhs).orderable() {
+            return Err(Signal::Error(Error::CannotBeCompared));
         }
         match (self, rhs) {
             (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector(l.vec_gt(r))),
-            _ => unreachable!("comparable call before already checks this"),
+            _ => unreachable!("orderable call before already checks this"),
         }
     }
 
     fn vec_gte(self, rhs: Self) -> Self::Output {
-        if !(&self, &rhs).comparable() {
-            return Err(Signal::Error(Error::CannotBeOrdered));
+        if !(&self, &rhs).orderable() {
+            return Err(Signal::Error(Error::CannotBeCompared));
         }
         match (self, rhs) {
             (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector(l.vec_gte(r))),
-            _ => unreachable!("comparable call before already checks this"),
+            _ => unreachable!("orderable call before already checks this"),
         }
     }
 
     fn vec_lt(self, rhs: Self) -> Self::Output {
-        if !(&self, &rhs).comparable() {
-            return Err(Signal::Error(Error::CannotBeOrdered));
+        if !(&self, &rhs).orderable() {
+            return Err(Signal::Error(Error::CannotBeCompared));
         }
         match (self, rhs) {
             (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector(l.vec_lt(r))),
-            _ => unreachable!("comparable call before already checks this"),
+            _ => unreachable!("orderable call before already checks this"),
         }
     }
 
     fn vec_lte(self, rhs: Self) -> Self::Output {
-        if !(&self, &rhs).comparable() {
-            return Err(Signal::Error(Error::CannotBeOrdered));
+        if !(&self, &rhs).orderable() {
+            return Err(Signal::Error(Error::CannotBeCompared));
         }
         match (self, rhs) {
             (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector(l.vec_lte(r))),
-            _ => unreachable!("comparable call before already checks this"),
+            _ => unreachable!("orderable call before already checks this"),
         }
     }
 
@@ -598,10 +599,14 @@ impl VecPartialCmp<Obj> for Obj {
             (lhs @ Obj::Promise(..), rhs @ Obj::Promise(..)) => Ok((lhs == rhs).into()),
             (lhs @ Obj::Function(..), rhs @ Obj::Function(..)) => Ok((lhs == rhs).into()),
             (lhs @ Obj::Environment(_), rhs @ Obj::Environment(_)) => Ok((lhs == rhs).into()),
-            (lhs, rhs) => match (lhs, rhs) {
-                (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector(l.vec_eq(r))),
-                _ => Err(Signal::Error(Error::CannotBeCompared)),
-            },
+            (lhs @ Obj::List(_), rhs @ Obj::List(_))
+            | (lhs @ Obj::Vector(_), rhs @ Obj::Vector(_)) => {
+                match (lhs.as_vector()?, rhs.as_vector()?) {
+                    (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector(l.vec_eq(r))),
+                    _ => Err(Signal::Error(Error::CannotBeCompared)),
+                }
+            }
+            _ => unreachable!(),
         }
     }
 
@@ -611,10 +616,15 @@ impl VecPartialCmp<Obj> for Obj {
             (lhs @ Obj::Promise(..), rhs @ Obj::Promise(..)) => Ok((lhs != rhs).into()),
             (lhs @ Obj::Function(..), rhs @ Obj::Function(..)) => Ok((lhs != rhs).into()),
             (lhs @ Obj::Environment(_), rhs @ Obj::Environment(_)) => Ok((lhs != rhs).into()),
-            (lhs, rhs) => match (lhs.as_vector()?, rhs.as_vector()?) {
-                (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector(l.vec_neq(r))),
-                _ => Err(Signal::Error(Error::CannotBeCompared)),
-            },
+            (Obj::Null, Obj::Null) => Ok(r_vec!(true)),
+            (lhs @ Obj::List(_), rhs @ Obj::List(_))
+            | (lhs @ Obj::Vector(_), rhs @ Obj::Vector(_)) => {
+                match (lhs.as_vector()?, rhs.as_vector()?) {
+                    (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector(l.vec_eq(r))),
+                    _ => Err(Signal::Error(Error::CannotBeCompared)),
+                }
+            }
+            _ => unreachable!(),
         }
     }
 }
@@ -1387,4 +1397,85 @@ mod test {
     //         add_two(1) == 3
     //      "}}
     // }
+
+    use crate::error::Error;
+
+    #[test]
+    fn comparison() {
+        // double
+        r_expect!(2 == 2);
+        r_expect!(2 == 2L);
+        r_expect!(1 == true);
+        r_expect!(2 != false);
+        r_expect!(2 != true);
+        r_expect!(0 == false);
+        // integer
+        r_expect!(2L == 2L);
+        r_expect!(2L == 2);
+        r_expect!(2L == true);
+        r_expect!(0L == false);
+        // logical
+        r_expect!(true == 1);
+        r_expect!(true == 1L);
+        r_expect!(false == 0L);
+        r_expect!(false == 0);
+        // character
+        r_expect!("a" == "a");
+        r_expect!("a" != "a");
+
+        r_expect!(null == null);
+        // length > 1 also works
+        r_expect! {
+            x = [1L, 2L]
+            y = [1L, 3L]
+            z = x == y
+            z[1] && !z[2]
+        }
+
+        assert_eq!(
+            r!(1 == "a"),
+            EvalResult::Err(Signal::Error(Error::CannotBeCompared))
+        );
+        assert_eq!(
+            r!(1 == true),
+            EvalResult::Err(Signal::Error(Error::CannotBeCompared))
+        );
+        assert_eq!(
+            r!(1L == "a"),
+            EvalResult::Err(Signal::Error(Error::CannotBeCompared))
+        );
+
+        r_expect!(list(1) == list(1));
+        r_expect!(list(1) != list(2));
+
+        // incomparability checks
+        assert_eq!(
+            r!(1 == null),
+            EvalResult::Err(Signal::Error(Error::CannotBeCompared))
+        );
+        assert_eq!(
+            r!(1L == true),
+            EvalResult::Err(Signal::Error(Error::CannotBeCompared))
+        );
+        assert_eq!(
+            r!("true" == true),
+            EvalResult::Err(Signal::Error(Error::CannotBeCompared))
+        );
+        assert_eq!(
+            r!(environment() == 1),
+            EvalResult::Err(Signal::Error(Error::CannotBeCompared))
+        );
+        assert_eq!(
+            r!(sum == 1),
+            EvalResult::Err(Signal::Error(Error::CannotBeCompared))
+        );
+        assert_eq!(
+            r!(quote(1) == 1),
+            EvalResult::Err(Signal::Error(Error::CannotBeCompared))
+        );
+        assert_eq!(
+            r!(list(1) == 1),
+            EvalResult::Err(Signal::Error(Error::CannotBeCompared))
+        );
+    }
 }

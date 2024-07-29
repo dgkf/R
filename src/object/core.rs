@@ -83,6 +83,77 @@ impl TryInto<i32> for Obj {
     }
 }
 
+pub trait CoercibleToNumeric {
+    fn coercible_to_numeric(&self) -> bool;
+}
+
+pub trait InterpretableAsLogical {
+    fn interpretable_as_logical(&self) -> bool;
+}
+
+pub trait Comparable {
+    fn comparable(&self) -> bool;
+}
+
+pub trait Orderable {
+    fn orderable(&self) -> bool;
+}
+
+impl Orderable for (&Obj, &Obj) {
+    fn orderable(&self) -> bool {
+        matches!(self, (Obj::Vector(_), Obj::Vector(_)))
+    }
+}
+
+impl CoercibleToNumeric for (&Obj, &Obj) {
+    fn coercible_to_numeric(&self) -> bool {
+        self.0.coercible_to_numeric() & self.1.coercible_to_numeric()
+    }
+}
+
+impl CoercibleToNumeric for &Obj {
+    fn coercible_to_numeric(&self) -> bool {
+        match self {
+            Obj::Vector(v) => match *v {
+                Vector::Character(_) => false,
+                Vector::Logical(_) => true,
+                Vector::Double(_) => true,
+                Vector::Integer(_) => true,
+            },
+            _ => false,
+        }
+    }
+}
+
+impl Comparable for (&Obj, &Obj) {
+    fn comparable(&self) -> bool {
+        matches!(
+            (self.0, self.1),
+            (Obj::Environment(_), Obj::Environment(_))
+                | (Obj::Vector(_), Obj::Vector(_))
+                | (Obj::Expr(_), Obj::Expr(_))
+                | (Obj::Promise(..), Obj::Promise(..))
+                | (Obj::Function(..), Obj::Promise(..))
+                | (Obj::List(..), Obj::List(..))
+        )
+    }
+}
+
+impl InterpretableAsLogical for &Obj {
+    fn interpretable_as_logical(&self) -> bool {
+        match self {
+            Obj::Vector(v) => !matches!(v, Vector::Character(_)),
+            _ => false,
+        }
+    }
+}
+
+impl InterpretableAsLogical for (&Obj, &Obj) {
+    fn interpretable_as_logical(&self) -> bool {
+        self.0.interpretable_as_logical() & self.1.interpretable_as_logical()
+    }
+}
+
 impl<T> From<T> for Obj
 where
     Vector: From<T>,
