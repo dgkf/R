@@ -620,7 +620,7 @@ impl VecPartialCmp<Obj> for Obj {
             (lhs @ Obj::List(_), rhs @ Obj::List(_))
             | (lhs @ Obj::Vector(_), rhs @ Obj::Vector(_)) => {
                 match (lhs.as_vector()?, rhs.as_vector()?) {
-                    (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector(l.vec_eq(r))),
+                    (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector(l.vec_neq(r))),
                     _ => Err(Signal::Error(Error::CannotBeCompared)),
                 }
             }
@@ -1412,53 +1412,43 @@ mod test {
         // integer
         r_expect!(2L == 2L);
         r_expect!(2L == 2);
-        r_expect!(2L == true);
+        r_expect!(2L != true);
         r_expect!(0L == false);
+        r_expect!(1L == true);
         // logical
         r_expect!(true == 1);
         r_expect!(true == 1L);
         r_expect!(false == 0L);
         r_expect!(false == 0);
+        r_expect! {{r#""true" == true"#}}
         // character
         r_expect!("a" == "a");
-        r_expect!("a" != "a");
+        r_expect!("a" != "b");
+        r_expect!("1" == 1);
+        r_expect!("1" == 1L);
+        r_expect!("1" != 2L);
+        r_expect!("1" != 2);
 
-        r_expect!(null == null);
+        // metaprogramming objects
+        r_expect!(environment() == environment());
+        r_expect!(quote(1) == quote(1));
+        r_expect!(sum == sum);
+
         // length > 1 also works
-        r_expect! {
+        r_expect! {{"
             x = [1L, 2L]
-            y = [1L, 3L]
+            y = [1L, 2L]
             z = x == y
-            z[1] && !z[2]
-        }
-
-        assert_eq!(
-            r!(1 == "a"),
-            EvalResult::Err(Signal::Error(Error::CannotBeCompared))
-        );
-        assert_eq!(
-            r!(1 == true),
-            EvalResult::Err(Signal::Error(Error::CannotBeCompared))
-        );
-        assert_eq!(
-            r!(1L == "a"),
-            EvalResult::Err(Signal::Error(Error::CannotBeCompared))
-        );
-
-        r_expect!(list(1) == list(1));
-        r_expect!(list(1) != list(2));
+            z[1] && z[2]
+        "}}
 
         // incomparability checks
         assert_eq!(
+            r!((1,) == 1),
+            EvalResult::Err(Signal::Error(Error::CannotBeCompared))
+        );
+        assert_eq!(
             r!(1 == null),
-            EvalResult::Err(Signal::Error(Error::CannotBeCompared))
-        );
-        assert_eq!(
-            r!(1L == true),
-            EvalResult::Err(Signal::Error(Error::CannotBeCompared))
-        );
-        assert_eq!(
-            r!("true" == true),
             EvalResult::Err(Signal::Error(Error::CannotBeCompared))
         );
         assert_eq!(
@@ -1471,10 +1461,6 @@ mod test {
         );
         assert_eq!(
             r!(quote(1) == 1),
-            EvalResult::Err(Signal::Error(Error::CannotBeCompared))
-        );
-        assert_eq!(
-            r!(list(1) == 1),
             EvalResult::Err(Signal::Error(Error::CannotBeCompared))
         );
     }
