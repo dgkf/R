@@ -1,3 +1,5 @@
+use crate::object::types::Character;
+use crate::object::OptionNA;
 use std::cell::{Ref, RefCell};
 use std::iter::Iterator;
 use std::rc::Rc;
@@ -22,6 +24,13 @@ impl<T: Clone> Clone for CowObj<T> {
 impl<T: Clone> From<T> for CowObj<T> {
     fn from(x: T) -> Self {
         CowObj::new(Rc::new(RefCell::new(Rc::new(x))))
+    }
+}
+
+impl From<Vec<String>> for CowObj<Vec<Character>> {
+    fn from(x: Vec<String>) -> Self {
+        let x: Vec<_> = x.into_iter().map(|x| OptionNA::Some(x)).collect();
+        CowObj::from(x)
     }
 }
 
@@ -106,7 +115,7 @@ mod tests {
 
     #[test]
     fn with_inner_mut() {
-        let x = CowObj::from(vec![]);
+        let x: CowObj<Vec<i32>> = CowObj::from(vec![]);
         let _x1 = x.clone();
         let _x2 = x.view_mut();
         x.with_inner_mut(|v| v.push(1));

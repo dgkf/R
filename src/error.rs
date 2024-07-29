@@ -35,8 +35,8 @@ pub enum Error {
     CannotBeCoercedToInteger,
     CannotBeCoercedToLogical,
     CannotBeCoercedTo(&'static str),
-    CannotBeCoercedToNumerics,
     CannotBeCoercedToNumeric,
+    CannotBeCoercedToNumerics,
     CannotBeOrdered,
     CannotBeCompared,
 
@@ -99,10 +99,18 @@ impl Error {
             Error::CannotBeCoercedTo(to) => {
                 format!("object cannot be coerced to type '{to}'")
             }
-            Error::CannotBeCoercedToNumeric => "object cannot be coerced to 'numeric'".to_string(),
-            Error::CannotBeCoercedToNumerics => "objects cannot all be coerced to 'numeric'".to_string(),
-            Error::CannotBeOrdered => "objects cannot be ordered".to_string(),
-            Error::CannotBeCompared => "objects cannot be compared".to_string(),
+            Error::CannotBeCoercedToNumeric => {
+                "object cannot be coerced to type 'numeric'".to_string()
+            },
+            Error::CannotBeCoercedToNumerics=> {
+                "objects cannot be coerced to type 'numeric'".to_string()
+            },
+            Error::CannotBeOrdered => {
+                "objects cannot be ordered".to_string()
+            },
+            Error::CannotBeCompared => {
+                "objects cannot be compared".to_string()
+            },
             Error::Other(s) => s.to_string(),
             Error::WithCallStack(e, c) => format!("{}\n{c}", e.as_str()),
             Error::ArgumentMissing(s) => format!("argument '{s}' is missing with no default"),

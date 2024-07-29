@@ -4,8 +4,8 @@ use crate::context::Context;
 use crate::error::*;
 use crate::internal_err;
 use crate::object::types::*;
-use crate::object::CoercibleToNumeric;
 use crate::object::*;
+use crate::object::{CoercibleToNumeric, Comparable, InterpretableAsLogical};
 use crate::parser::LocalizedParser;
 use crate::parser::ParseResult;
 use crate::session::{Session, SessionParserConfig};
@@ -523,12 +523,12 @@ impl std::ops::BitOr for Obj {
     type Output = EvalResult;
 
     fn bitor(self, rhs: Self) -> Self::Output {
-        if !(&self, &rhs).coercible_to_numeric() {
+        if !(&self, &rhs).interpretable_as_logical() {
             return Err(Signal::Error(Error::CannotBeCoercedToNumerics));
         }
         match (self, rhs) {
             (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector(l | r)),
-            _ => unreachable!("coercible_to_numeric call before already checks this"),
+            _ => unreachable!("interpretable_as_logical call before already checks this"),
         }
     }
 }
@@ -537,12 +537,12 @@ impl std::ops::BitAnd for Obj {
     type Output = EvalResult;
 
     fn bitand(self, rhs: Self) -> Self::Output {
-        if !(&self, &rhs).coercible_to_numeric() {
+        if !(&self, &rhs).interpretable_as_logical() {
             return Err(Signal::Error(Error::CannotBeCoercedToNumerics));
         }
         match (self, rhs) {
             (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector(l & r)),
-            _ => unreachable!("coercible_to_numeric call before already checks this"),
+            _ => unreachable!("interpretable_as_logical call before already checks this"),
         }
     }
 }
@@ -590,6 +590,9 @@ impl VecPartialCmp<Obj> for Obj {
     }
 
     fn vec_eq(self, rhs: Self) -> Self::Output {
+        if !(&self, &rhs).comparable() {
+            return Err(Signal::Error(Error::CannotBeCompared));
+        }
         match (self, rhs) {
             (lhs @ Obj::Expr(_), rhs @ Obj::Expr(_)) => Ok((lhs == rhs).into()),
             (lhs @ Obj::Promise(..), rhs @ Obj::Promise(..)) => Ok((lhs == rhs).into()),

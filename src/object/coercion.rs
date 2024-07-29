@@ -12,11 +12,6 @@ pub trait InterpretableAsLogical {
 pub trait Comparable {
     fn comparable(&self) -> bool;
 }
-
-pub trait Ordereable {
-    fn orderable(&self) -> bool;
-}
-
 impl CoercibleToNumeric for (&Obj, &Obj) {
     fn coercible_to_numeric(&self) -> bool {
         match self {
@@ -49,5 +44,23 @@ impl Comparable for (&Obj, &Obj) {
             (Obj::Vector(_), Obj::Vector(_)) => true,
             _ => false,
         }
+    }
+}
+
+impl InterpretableAsLogical for &Obj {
+    fn interpretable_as_logical(&self) -> bool {
+        match self {
+            Obj::Vector(v) => match v {
+                Vector::Character(_) => false,
+                _ => true,
+            },
+            _ => false,
+        }
+    }
+}
+
+impl InterpretableAsLogical for (&Obj, &Obj) {
+    fn interpretable_as_logical(&self) -> bool {
+        self.0.interpretable_as_logical() & self.1.interpretable_as_logical()
     }
 }
