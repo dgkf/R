@@ -36,7 +36,7 @@ You should have received a copy of the GNU General Public License
 along with this program. If not, see <https://www.gnu.org/licenses/>.");
 }
 
-pub const AVAILABLE_FUNCTIONS: &str = "You can list all implemented functions via names(parent()).";
+pub const AVAILABLE_FUNCTIONS: &str = "\nSee a list of implemented functions using `names(parent())`\n";
 
 #[allow(clippy::const_is_empty)]
 pub fn session_header(session: &Session) -> String {
