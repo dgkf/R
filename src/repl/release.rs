@@ -36,6 +36,9 @@ You should have received a copy of the GNU General Public License
 along with this program. If not, see <https://www.gnu.org/licenses/>.");
 }
 
+pub const AVAILABLE_FUNCTIONS: &str =
+    "\nSee a list of implemented functions using `names(parent())`\n";
+
 #[allow(clippy::const_is_empty)]
 pub fn session_header(session: &Session) -> String {
     let dev = if !GIT_HASH.is_empty() {
@@ -70,5 +73,5 @@ pub fn session_header(session: &Session) -> String {
         "R"
     };
 
-    format!("{langname} version {RELEASE_VERSION} -- \"{RELEASE_NAME}\"{dev}\n{license_info}\n{experiments}\n",)
+    format!("{langname} version {RELEASE_VERSION} -- \"{RELEASE_NAME}\"{dev}\n{license_info}\n{experiments}\n{AVAILABLE_FUNCTIONS\n}",)
 }
