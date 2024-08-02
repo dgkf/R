@@ -11,12 +11,20 @@ use crate::object::*;
 ///
 /// Create a vector of uniformly distributed random numbers.
 ///
-/// # Arguments
+/// # In-Language
+///
+/// ## Usage
+///
+/// ```
+/// runif(n = 1, min = 0, max = 1)
+/// ```
+///
+/// ## Arguments
 ///
 /// * `n`: The number of values to generate
 /// * `min`,`max`: The range in which values should be generated
 ///
-/// # Examples
+/// ## Examples
 ///
 /// Produce a vector of values between `0` and `1`:
 ///
@@ -37,7 +45,7 @@ pub struct PrimitiveRunif;
 impl Callable for PrimitiveRunif {
     fn formals(&self) -> ExprList {
         ExprList::from(vec![
-            (Some(String::from("n")), Expr::Null),
+            (Some(String::from("n")), Expr::Number(1.0)),
             (Some(String::from("min")), Expr::Number(0.0)),
             (Some(String::from("max")), Expr::Number(1.0)),
         ])
