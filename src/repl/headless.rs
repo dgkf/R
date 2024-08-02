@@ -93,7 +93,8 @@ pub fn wasm_parse_errors(args: JsValue, input: &str) -> Vec<ParseError> {
     use pest::error::InputLocation::*;
 
     let args = wasm_args(args);
-    let res = args.locale.parse_input(input);
+    let parser_config: SessionParserConfig = args.clone().into();
+    let res = parser_config.parse_input(input);
 
     match res {
         Ok(_) => vec![],
@@ -125,7 +126,8 @@ pub fn wasm_parse_errors(args: JsValue, input: &str) -> Vec<ParseError> {
 #[wasm_bindgen]
 pub fn wasm_highlight(args: JsValue, input: &str) -> Vec<JsValue> {
     let args = wasm_args(args);
-    args.locale
+    let parser_config: SessionParserConfig = args.clone().into();
+    parser_config
         .parse_highlight(input)
         .unwrap_or_default()
         .into_iter()

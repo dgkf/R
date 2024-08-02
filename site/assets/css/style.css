@@ -391,7 +391,7 @@
     .prompt-input {
       position: relative; 
       color: transparent !important;
-      caret-color: var(--fg) !important;
+      caret-color: var(--fg);
       background: transparent !important;
       border-color: transparent !important;
     }

@@ -1,0 +1,73 @@
+<!-- injected html -->
+<script id="promptjs" src="/assets/prompt/src.js"></script>
+<link rel="stylesheet" href="/assets/prompt/style.css">
+<style>
+.r-repl {
+  width: 100%;
+}
+
+.r-repl .prompt-highlight {
+  background: var(--code-block-background-color);
+}
+
+.r-repl .prompt-input, .r-repl .prompt-highlight, .r-repl .output {
+  border: none;
+  border-radius: 0;
+}
+
+.r-repl .prompt-input {
+  caret-color: var(--main-color);
+}
+
+.r-repl .prompt-run {
+  background: var(--main-color);
+}
+
+.r-repl .output {
+  opacity: 50%;
+  background: var(--code-block-background-color);
+  margin: 0;
+  padding: 0.5em;
+}
+
+.style-symbol { color: var(--code-highlight-kw-2-color); }
+.style-call { }
+.style-value { color: rgb(193, 82, 44); }
+.style-number { color: var(--code-highlight-number-color); }
+.style-string { color: var(--code-highlight-string-color); }
+.style-comment { color: var(--code-highlight-comment-color); }
+.style-function { color: var(--code-highlight-kw-color); }
+.style-signal { color: var(--code-highlight-prelude-color); }
+.style-control_flow { color: var(--code-highlight-kw-color); }
+.style-brackets, .style-operators, .style-infix { }
+
+.style-error {
+  text-decoration: underline red wavy 1px;
+}
+</style>
+<script type="module">
+  import initSync, * as r from "/assets/wasm/r/r.js";
+
+  // restructure rustdoc code into divs
+  document.querySelectorAll(".r-repl").forEach(elem => {
+    let content = elem.firstElementChild.innerText;
+    let div = document.createElement("div");
+    div.classList.add("r-repl");
+    div.setAttribute("data-initial-input", content);
+    div.setAttribute("data-output-mode", "single");
+    div.setAttribute("data-output-location", "below");
+    elem.replaceWith(div);
+  })
+
+  // attach repls to divs
+  initSync().then(() => {
+    window.prompts = Array.from(document.querySelectorAll(".r-repl"))
+      .map(elem => {
+        return (new Repl(elem))
+          .with_eval_callback(r.wasm_runtime({}))
+          .with_validate_callback(input => r.wasm_parse_errors({}, input))
+          .with_highlight_callback(input => r.wasm_highlight({}, input))
+          .run()
+      })
+  })
+</script>

@@ -1,0 +1,13 @@
+# rebuild wasm bundle & documentation with:
+#
+#   wasm-pack build --out-dir site/assets/wasm/r --target=web --no-default-features
+#   cargo rustdoc && cp target/doc site/docs
+#
+
+[build]
+rustdocflags = [
+  "--default-theme",
+  "ayu",
+  "--html-in-header",
+  "site/templates/rustdoc-header.html"
+]

@@ -1,3 +1,5 @@
 /target
 .vscode
 **/.DS_Store
+site/docs
+!site/docs/index.html

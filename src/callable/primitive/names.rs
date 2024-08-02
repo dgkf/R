@@ -4,6 +4,42 @@ use crate::callable::core::*;
 use crate::lang::*;
 use crate::object::*;
 
+/// Get Names of an Object
+///
+/// Returns the element names for vector-like objects, or names of
+/// symbols assigned in environments.
+///
+/// # Arguments
+///
+/// * `x`: An object from which to retrieve names
+///
+/// # Examples
+///
+/// Accessing the names of elements in a `list`
+///
+/// ```{.r-repl}
+/// names((a = 1, b = 2, c = 3))
+/// ```
+///
+/// <div class="warning">
+///
+/// Unlike R, `names()` will always return a `character` vector, even if
+/// no element is named.
+///
+/// </div>
+///
+/// ```{.r-repl}
+/// names((1, 2, 3))
+/// ```
+///
+/// Accessing names in an `environment`
+///
+/// ```{.r-repl}
+/// x <- 3; y <- 4
+/// names(environment())
+/// ```
+///
+#[doc(alias = "names")]
 #[derive(Debug, Clone, PartialEq)]
 #[builtin(sym = "names")]
 pub struct PrimitiveNames;

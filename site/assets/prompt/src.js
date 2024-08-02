@@ -7,7 +7,11 @@ class Repl {
   #timeouts = {};
 
   eval;  // (input: String) => output: String;
-  highlight = (input) => ["none", input];  // (input: String) => [String...]; // of style, text pairs
+
+  // highlight: (input: String) => [String...]:
+  //     Highlighting function, emitting an array of interlaced style classes
+  //     and text.
+  highlight = (input) => ["none", input];  
   validate = (elem) => true;  // (input: String) => bool;
   initial_input = "";         // String
   initial_header = "";        // String
@@ -80,12 +84,13 @@ class Repl {
 
   with_highlight_callback(fn) {
     this.highlight = fn;
+    this.set(this.#elem_input.value);
     return this
   }
 
   with_initial_input(input) {   
     this.initial_input = input;
-    if (this.#elem_input.value.length === 0) {
+    if (!this.#elem_input || this.#elem_input.value.length === 0) {
       this.set(input);
       this.focus();
       this.set_cursor_pos(Infinity);
@@ -111,12 +116,21 @@ class Repl {
 
     // load html elements from templates
     var templates = prompt_templates.content;
-    var output = templates.querySelector("#output").content.cloneNode(true);
+    var output;
+    if (this.output.mode === "history") {
+      output = templates.querySelector("#output").content.cloneNode(true);
+      this.#elem_output = output.querySelector(".output-container");
+    } else if (this.output.mode === "single") {
+      output = templates.querySelector("#output").content;
+      output = output.querySelector(".output-container").cloneNode(true);
+      this.#elem_output = output;
+    }
+
     this.#elem_container = templates.querySelector("#container").content.cloneNode(true);
     this.#elem_input = this.#elem_container.querySelector(".prompt-input");
     this.#elem_highlight = this.#elem_container.querySelector(".prompt-highlight")
     this.#elem_diagnostics = this.#elem_container.querySelector(".prompt-diagnostics")
-    this.#elem_output = output.querySelector(".output-container");
+    this.#elem_output.classList.add("output-mode-" + this.output.mode);
 
     // add output before, buttons after
     if (this.output.location === "above") {
@@ -159,19 +173,21 @@ class Repl {
 
     this.output.log.push(code);
 
-    var history_elem = this.#elem_output;
+    var output_elem = this.#elem_output;
     if (this.output.mode === "history") {
-      history_elem = this.#output_push("input", this.#markup_highlight(code));
       this.clear();
+      let input_elem = this.#output_push("input", this.#markup_highlight(code));
+      output_elem = this.#output_push("output", "", input_elem, false);
+    } else {
+      output_elem.textContent = "";
+      output_elem = this.#output_push("output", "")
     }
-  
+
     // get result and print to output
     try { 
-      let output_elem = this.#output_push("output", "", history_elem, false);
-      let result = this.eval(code, (x) => output_elem.innerText += x);
-      if (this.output.mode === "single") this.#elem_output.innerHTML = "";
+      let result = this.eval(code, x => output_elem.innerText += x);
       output_elem.innerText += result;
-      output_elem.scrollIntoView();
+      if (this.output.mode == "history") output_elem.scrollIntoView();
     } catch (error) {
       console.log(error);
       let node = this.#markup_unexpected_error();
@@ -473,7 +489,7 @@ class Repl {
 
     if (click instanceof Function) {
       content.onclick = click;
-
+      
       const share = document.createElement("div")
       share.classList.add("output-share")
       share.onclick = () => {
@@ -488,6 +504,9 @@ class Repl {
 
       content.appendChild(share);
     }
+
+    console.log('parent: ', parent);
+    console.log('content: ', content);
     
     parent.appendChild(content);
     return content;  
