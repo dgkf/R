@@ -287,7 +287,13 @@ impl Callable for InfixColon {
                 return Error::Other("Cannot increment by 0".to_string()).into();
             }
 
-            if (end - start) / by < 0.0 {
+            let range = end - start;
+
+            if range % by != 0.0 {
+                return Error::Other("Argument 'by' does not divide range.".to_string()).into();
+            }
+
+            if range / by < 0.0 {
                 return Ok(Obj::Vector(Vector::from(Vec::<Double>::new())));
             }
 
@@ -307,6 +313,13 @@ impl Callable for InfixColon {
         } else {
             let start: i32 = stack.eval(arg1)?.as_integer()?.try_into()?;
             let end: i32 = stack.eval(arg2)?.as_integer()?.try_into()?;
+            if start > end {
+                return Error::Other(
+                    "Colon operator requires end >= start, use a tertiary call instead (x:y:z)."
+                        .to_string(),
+                )
+                .into();
+            }
             return Ok(Obj::Vector(Vector::from(if start <= end {
                 (start..=end).map(|i| i as f64).collect::<Vec<f64>>()
             } else {
@@ -456,5 +469,31 @@ impl Format for PrimList {
 impl Callable for PrimList {
     fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
         super::primitive::PrimitiveList.call(args, stack)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::error::Error;
+    use crate::lang::{EvalResult, Signal};
+    use crate::r;
+    #[test]
+    fn colon_operator() {
+        assert_eq!(
+            EvalResult::Err(Signal::Error(Error::Other(
+                "Colon operator requires end >= start, use a tertiary call instead (x:y:z)."
+                    .to_string(),
+            ))),
+            r!(1:0)
+        );
+        assert_eq!(
+            EvalResult::Err(Signal::Error(Error::Other(
+                "Argument 'by' does not divide range.".to_string(),
+            ))),
+            r!(0:2:3)
+        );
+        assert_eq!(r!([1, 2]), r!(1:2));
+        assert_eq!(r!([1]), r!(1:1));
+        assert_eq!(r!(1:-2:-3), r!([1, -1, -3]));
     }
 }
