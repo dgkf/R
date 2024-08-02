@@ -1,7 +1,7 @@
 use r_derive::*;
 
 use crate::callable::core::*;
-use crate::err;
+use crate::error::Error;
 use crate::lang::*;
 use crate::object::*;
 
@@ -26,7 +26,7 @@ impl Callable for PrimitiveLength {
             },
             Obj::List(_) => todo!("Not implemented yet"),
             Obj::Environment(env) => env.len(),
-            _ => return err!("Argument 'x' does not have a length"),
+            _ => return Error::Other("Argument 'x' does not have a length".into()).into(),
         };
 
         EvalResult::Ok(Obj::Vector(Vector::from(vec![OptionNA::Some(

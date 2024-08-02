@@ -15,7 +15,7 @@ use crate::object::*;
 ///
 /// ## Usage
 ///
-/// ```
+/// ```custom,{class=r}
 /// runif(n = 1, min = 0, max = 1)
 /// ```
 ///
@@ -28,13 +28,13 @@ use crate::object::*;
 ///
 /// Produce a vector of values between `0` and `1`:
 ///
-/// ```{.r-repl}
+/// ```custom,{class=r-repl}
 /// runif(3)
 /// ```
 ///
 /// Modify range with a minimum and maximum:
 ///
-/// ```{.r-repl}
+/// ```custom,{class=r-repl}
 /// runif(10, min = 10, max = 20)
 /// ```
 ///

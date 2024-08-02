@@ -3,7 +3,7 @@ use r_derive::*;
 
 use crate::callable::core::*;
 use crate::context::Context;
-use crate::err;
+use crate::error::Error;
 use crate::lang::*;
 use crate::object::*;
 
@@ -33,11 +33,13 @@ impl Callable for PrimitiveEval {
         let mut args = Obj::List(args);
 
         let Obj::Expr(expr) = args.try_get_named("x")?.force(stack)? else {
-            return err!("Argument 'x' should be a quoted expression.");
+            let msg = "Argument 'x' should be a quoted expression.";
+            return Error::Other(msg.into()).into();
         };
 
         let Obj::Environment(envir) = args.try_get_named("envir")?.force(stack)? else {
-            return err!("Argument 'envir' should be an environment or data context.");
+            let msg = "Argument 'envir' should be an environment or data context.";
+            return Error::Other(msg.into()).into();
         };
 
         stack.add_frame(expr.clone(), envir);

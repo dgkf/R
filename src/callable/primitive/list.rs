@@ -12,19 +12,28 @@ use crate::object::*;
 /// to each element. Constructed using `list()`, or the syntactic
 /// shorthand, `(,)`.
 ///
-/// # Arguments
+/// # In-Language
+///
+/// ## Usage
+///
+/// ```custom,{class=r}
+/// list(...)
+/// (...,)
+/// ```
+///
+/// ## Arguments
 ///
 /// `...`: Arguments to collect into a `list`.
 ///
-/// # Examples
+/// ## Examples
 ///
-/// ```{.r-repl}
+/// ```custom,{class=r-repl}
 /// list(one = 1, two = "two", three = 3.0)
 /// ```
 ///
 /// or using the syntactic sugar, `( ,)`
 ///
-/// ```{.r-repl}
+/// ```custom,{class=r-repl}
 /// (1, "two", 3.0)
 /// ```
 ///
@@ -32,7 +41,7 @@ use crate::object::*;
 /// required to disambiguate it from parentheses used for establishing
 /// an order of operations.
 ///
-/// ```{.r-repl}
+/// ```custom,{class=r-repl}
 /// (1,)
 /// ```
 ///

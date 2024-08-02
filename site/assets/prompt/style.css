@@ -43,6 +43,10 @@
   color: var(--fg);
 }
 
+.output {
+  text-wrap-mode: wrap;
+}
+
 .error {
   background: color-mix(in lch, #D11 25%, var(--bg));
   color: color-mix(in lch, #D11 25%, var(--fg));

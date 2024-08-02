@@ -17,13 +17,6 @@ macro_rules! internal_err {
     };
 }
 
-#[macro_export]
-macro_rules! err {
-    ( $x:expr ) => {
-        $crate::error::Error::Other($x.to_string()).into()
-    };
-}
-
 #[derive(Debug, Clone, PartialEq)]
 pub enum Error {
     VariableNotFound(String),

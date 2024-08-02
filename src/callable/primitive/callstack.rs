@@ -8,13 +8,21 @@ use crate::object::*;
 ///
 /// Returns a list of frames in the call stack.
 ///
-/// # Arguments
+/// # In-Language
+///
+/// ## Usage
+///
+/// ```custom,{class=r}
+/// callstack()
+/// ```
+///
+/// ## Arguments
 ///
 /// _none_
 ///
-/// # Examples
+/// ## Examples
 ///
-/// ```{.r-repl}
+/// ```custom,{class=r-repl}
 /// h <- fn() callstack()
 /// g <- fn() h()
 /// f <- fn() g()
