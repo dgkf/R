@@ -907,13 +907,15 @@ impl Context for CallStack {
     }
 
     fn get_mut(&mut self, name: String) -> EvalResult {
-        let (obj, env) = self.find(name.clone())?;
+        let (obj, obj_source_env) = self.find(name.clone())?;
 
-        if self.env() == env {
-            return Ok(obj);
-        }
+        let objc = match (self.env() == obj_source_env, obj) {
+            // when accessed mutably, promises are always masked by materialized value
+            (_, Obj::Promise(Some(x), ..)) => *x.clone(),
+            (true, obj) => return Ok(obj),
+            (false, obj) => obj.clone(),
+        };
 
-        let objc = obj.clone();
         self.env().insert(name, objc.view_mut());
         Ok(objc)
     }
@@ -1318,6 +1320,7 @@ mod test {
             f()
             x == 10
         "}}
+
         r_expect! {{"
              f = fn(x) {
                x[1] <- -99
@@ -1326,7 +1329,7 @@ mod test {
              x1 = 10
              x2 = f(x1)
              (x1 == 10) && x2 == -99
-         "}}
+        "}}
     }
 
     #[test]
@@ -1338,21 +1341,15 @@ mod test {
             }
             x2 = f(c(1, 2))
             (x2[1] == -99) && (x2[2] == 2)
-         "}}
+        "}}
     }
 
-    // TODO: https://github.com/dgkf/R/issues/136
-    // #[test]
-    // fn nested_promises_can_be_mutated() {
-    //     r_expect! {{"
-    //         inc = fn(x) {
-    //           x[1] = x[1] + 1
-    //           x
-    //         }
-    //         add_two = fn(x) {
-    //           inc(inc(x))
-    //         }
-    //         add_two(1) == 3
-    //      "}}
-    // }
+    #[test]
+    fn nested_promises_can_be_mutated() {
+        r_expect! {{"
+            inc = fn(x) { x[1] = x[1] + 1; x }
+            add_two = fn(x) { inc(inc(x)) }
+            add_two(1) == 3
+        "}}
+    }
 }

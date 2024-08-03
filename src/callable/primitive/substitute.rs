@@ -107,6 +107,7 @@ impl Callable for PrimitiveSubstitute {
                                 expr.clone()
                             }
                         }
+                        // NOTE: In R, substitute will further replace with deparsed values
                         _ => Symbol(s),
                     }
                 }
