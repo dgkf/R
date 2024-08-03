@@ -287,6 +287,16 @@
       mask-image: url("../img/up-arrow.svg");
     }
 
+    .i-play {
+      -webkit-mask-image: url("../img/play.svg");
+      mask-image: url("../img/play.svg");
+    }
+
+    .i-book {
+      -webkit-mask-image: url("../img/book.svg");
+      mask-image: url("../img/book.svg");
+    }
+
     .i-github {
       -webkit-mask-image: url("../img/github.svg");
       mask-image: url("../img/github.svg");

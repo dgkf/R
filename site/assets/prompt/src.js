@@ -58,7 +58,7 @@ class Repl {
     this.initial_input = params.initial_input ||
       (data.initialInput && data.initialInput.replace(/\\n/g, "\n")) ||
       this.initial_input;
-    if (this.initial_input) this.with_initial_input(this.initial_input);
+    if (this.initial_input) this.with_initial_input(this.initial_input, false);
 
     this.initial_header = params.initial_header ||
       data.initialHeader ||
@@ -69,7 +69,7 @@ class Repl {
       data.initialRun ||
       this.initial_run;
 
-    if (this.initial_run) this.run();
+    if (this.initial_run) this.run(undefined, false);
   }
 
   with_eval_callback(fn) {
@@ -88,20 +88,25 @@ class Repl {
     return this
   }
 
-  with_initial_input(input) {   
+  with_initial_input(input, focus) {   
     this.initial_input = input;
     if (!this.#elem_input || this.#elem_input.value.length === 0) {
-      this.set(input);
-      this.focus();
-      this.set_cursor_pos(Infinity);
+      this.with_input(input, focus);
     }
+    return this
+  }
+
+  with_input(input, focus) {
+    this.set(input);
+    this.focus(focus);
+    this.set_cursor_pos(Infinity);    
     return this
   }
 
   with_initial_header(header) {
     this.initial_header = header;
     const node = this.#output_push("output", this.initial_header, null, false);
-    node.scrollIntoView();
+    this.show(node);
     return this
   }
 
@@ -167,7 +172,7 @@ class Repl {
     parent.appendChild(this.#elem_container);
   }
 
-  run(code) {
+  run(code, focus) {
     if (code === undefined) code = this.#elem_input.value;
     if (!code.trim()) { return this.clear(); }
 
@@ -187,16 +192,21 @@ class Repl {
     try { 
       let result = this.eval(code, x => output_elem.innerText += x);
       output_elem.innerText += result;
-      if (this.output.mode == "history") output_elem.scrollIntoView();
+      this.show(output_elem);
     } catch (error) {
       console.log(error);
       let node = this.#markup_unexpected_error();
-      output.appendChild(node);
-      node.scrollIntoView();
+      output_elem.appendChild(node);
+      this.show(node);
     }
 
     // restore prompt focus
-    this.focus();
+    this.focus(focus);
+    return this;
+  };
+
+  show(elem) {
+    if (this.output.mode == "history") elem.scrollIntoView();
   };
 
   set(input) {
@@ -206,8 +216,8 @@ class Repl {
     this.#recalculate_rows();
   };
 
-  focus() {
-    this.#elem_input.focus();  
+  focus(focus) {
+    if (focus !== false) this.#elem_input.focus();  
   };
 
   clear() {
@@ -505,9 +515,6 @@ class Repl {
       content.appendChild(share);
     }
 
-    console.log('parent: ', parent);
-    console.log('content: ', content);
-    
     parent.appendChild(content);
     return content;  
   }
