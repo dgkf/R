@@ -5,8 +5,30 @@ use crate::context::Context;
 use crate::lang::*;
 use crate::object::*;
 
-#[derive(Debug, Clone, PartialEq)]
+/// Get the Parent of an Object
+///
+/// # In-Language
+///
+/// ## Usage
+///
+/// ```custom,{class=r}
+/// parent(x)
+/// ```
+///
+/// ## Arguments
+///
+/// * `x`: An object for which to fetch a parent. When not provided,
+///     will return the parent of the current environment.
+///
+/// ## Examples
+///
+/// ```custom,{class=r-repl}
+/// parent()
+/// ```
+///
+#[doc(alias = "parent")]
 #[builtin(sym = "parent")]
+#[derive(Debug, Clone, PartialEq)]
 pub struct PrimitiveParent;
 impl Callable for PrimitiveParent {
     fn formals(&self) -> ExprList {

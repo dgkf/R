@@ -21,8 +21,39 @@ lazy_static! {
     ]);
 }
 
-#[derive(Debug, Clone, PartialEq)]
+/// Substitute Expressions
+///
+/// <div class="warning">
+///
+/// Under construction! There are known differences with R's `subsitute()`.
+/// Notably,  atomic values _will not_ yet be substituted.
+///
+/// </div>
+///
+/// # In-Language
+///
+/// ## Usage
+///
+/// ```custom,{class=r}
+/// substitute(expr, envir = environment())
+/// ```
+///
+/// ## Arguments
+///
+/// `expr`: Quoted code to evaluate.
+/// `envir`: An environment in which to substitute the expression, defaulting to the current
+///   environment.
+///
+/// ## Examples
+///
+/// ```custom,{class=r-repl}
+/// x <- quote(1 + 2)
+/// substitute(x * 10)
+/// ```
+///
+#[doc(alias = "substitute")]
 #[builtin(sym = "substitute")]
+#[derive(Debug, Clone, PartialEq)]
 pub struct PrimitiveSubstitute;
 impl Callable for PrimitiveSubstitute {
     fn formals(&self) -> ExprList {

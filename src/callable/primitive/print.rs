@@ -13,8 +13,29 @@ lazy_static! {
     ]);
 }
 
-#[derive(Debug, Clone, PartialEq)]
+/// Print to the Console
+///
+/// # In-Language
+///
+/// ## Usage
+///
+/// ```custom,{class=r}
+/// print(x)
+/// ```
+///
+/// ## Arguments
+///
+/// * `x`: An object to print.
+///
+/// ## Examples
+///
+/// ```custom,{class=r-repl}
+/// print("Hello, World!")
+/// ```
+///
+#[doc(alias = "print")]
 #[builtin(sym = "print")]
+#[derive(Debug, Clone, PartialEq)]
 pub struct PrimitivePrint;
 impl Callable for PrimitivePrint {
     fn formals(&self) -> ExprList {
