@@ -6,8 +6,8 @@
     <title>dgkf/R</title>
     <meta name="description" content="A reimagining of R"/>
     <meta name="application-name" content="R"/>
-    <link rel="manifest" href="./manifest.json"/>
-    <link rel="shortcut icon" type="image/svg+xml" href="./assets/img/favicon.svg">
+    <link rel="manifest" href="manifest.json"/>
+    <link rel="shortcut icon" type="image/svg+xml" href="assets/img/favicon.svg">
 
     <meta name="viewport" content="viewport-fit=cover width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0"/>
     <meta name="theme-color" content="#111">
@@ -16,20 +16,20 @@
     <meta name="apple-mobile-web-app-capable" content="yes"/>
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 
-    <link rel="icon" type="image/svg+xml" size="any" href="./assets/img/favicon.svg"/>
-    <link rel="apple-touch-icon" type="image/png" sizes="256x256" href="./assets/img/favicon.svg"/>
+    <link rel="icon" type="image/svg+xml" size="any" href="assets/img/favicon.svg"/>
+    <link rel="apple-touch-icon" type="image/png" sizes="256x256" href="assets/img/favicon.svg"/>
     <meta name="msapplication-TileColor" content="#111"/>
-    <meta name="msapplication-TileImage" content="./assets/img/favicon.svg"/>
+    <meta name="msapplication-TileImage" content="assets/img/favicon.svg"/>
 
-    <link rel="stylesheet" href="./assets/css/style.css">
-    <link rel="stylesheet" href="./assets/css/theme.css">
+    <link rel="stylesheet" href="assets/css/style.css">
+    <link rel="stylesheet" href="assets/css/theme.css">
 
-    <script id="promptjs" src="./assets/prompt/src.js"></script>
-    <link rel="stylesheet" href="./assets/prompt/style.css">
+    <script id="promptjs" src="assets/prompt/src.js"></script>
+    <link rel="stylesheet" href="assets/prompt/style.css">
   </head>
   <body>
     <script type="module">
-    import init, * as r from "./assets/wasm/r/r.js";
+    import init, * as r from "assets/wasm/r/r.js";
 
     const params = new URLSearchParams(window.location.search);
     const locale = params.get("locale") || "en";

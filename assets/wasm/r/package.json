@@ -1,0 +1,25 @@
+{
+  "name": "r",
+  "type": "module",
+  "collaborators": [
+    "Doug Kelkhoff",
+    "Sebastian Fischer"
+  ],
+  "description": "An experimental reimaginging of R",
+  "version": "0.3.3",
+  "license": "SEE LICENSE IN LICENSE.md",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dgkf/R/"
+  },
+  "files": [
+    "r_bg.wasm",
+    "r.js",
+    "r.d.ts"
+  ],
+  "main": "r.js",
+  "types": "r.d.ts",
+  "sideEffects": [
+    "./snippets/*"
+  ]
+}
