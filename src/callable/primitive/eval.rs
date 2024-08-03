@@ -13,7 +13,7 @@ lazy_static! {
         (
             Some("envir".to_string()),
             Expr::Call(
-                Box::new(Expr::Symbol("parent".to_string())),
+                Box::new(Expr::Symbol("environment".to_string())),
                 ExprList::new()
             )
         )
