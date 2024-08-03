@@ -1,0 +1,3 @@
+(function() {var implementors = {
+"r":[["impl <a class=\"trait\" href=\"https://doc.rust-lang.org/1.80.0/core/ops/deref/trait.Deref.html\" title=\"trait core::ops::deref::Deref\">Deref</a> for <a class=\"struct\" href=\"r/callable/builtins/struct.BUILTIN.html\" title=\"struct r::callable::builtins::BUILTIN\">BUILTIN</a>"]]
+};if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

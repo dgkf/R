@@ -1,0 +1,424 @@
+<!doctype html>
+ <html lang="en-US" class="dark">
+  <head>
+    <meta charset="utf-8" />
+
+    <title>r v0.4.0</title>
+    <meta name="description" content="A reimagining of R"/>
+    <link rel="icon" type="image/svg+xml" size="any" href="/assets/img/favicon.svg"/>
+
+    <link rel="stylesheet" href="/assets/css/style.css">
+    <link rel="stylesheet" href="/assets/css/theme.css">
+
+    <script id="promptjs" src="/assets/prompt/src.js"></script>
+    <link rel="stylesheet" href="/assets/prompt/style.css">
+
+    <style>
+      body {
+        padding: 0;
+        margin: 0;
+      }
+
+      h1, h2, h3 {
+        margin-bottom: 0;
+      }
+
+      a {
+        color: inherit;
+        text-decoration: none;
+      }
+
+      hr {
+        margin: 4em 0;
+        opacity: 50%;
+      }
+
+      .main {
+        margin: 6em 0;
+      }
+
+      .main p {
+        text-align: justify;
+      }
+
+      .header {
+        font-weight: bold;
+        padding: 0;
+        position: fixed;
+        top: 0;
+      }
+
+      .main, .header-main {
+        width: 80%;
+        max-width: 1200px;
+        margin-left: auto;
+        margin-right: auto;
+      }
+
+      .btn {
+        font-size: 1em;
+      }
+
+      .btn-group {
+        padding: 1.2em 1em;
+      }
+
+      .btn-solo {
+        margin: 0.6em 0.5em;
+      }
+
+      .btn-group:hover {
+        background: rgba(var(--fg-rgb), 0.2);
+      }
+
+      .float-left {
+        float: left;
+      }
+
+      .float-right {
+        float: right;
+      }
+
+      .prompt-group {
+        background: #FFFFFF10;
+        border-radius: 1em;
+        padding: 2em;
+      }
+
+      .faint {
+        opacity: 60%;
+      }
+
+      .radio-container {
+        display: block;
+        text-align: right;
+      }
+    </style>
+
+    <script>
+    </script>
+
+    <script type="module">
+     import initSync, * as r from "/assets/wasm/r/r.js";
+let localized_prompts = {
+zh: `
+和 <- 0
+取 (i 自 1:10) {
+  假使 (i %% 3 == 0) {
+    繼續
+  } 否則 假使 (i %% 5 == 0) {
+    中斷
+  }
+  和 <- 和 + i
+}
+和
+`,
+es: `
+suma <- 0
+para (i en 1:10) {
+  si (i %% 3 == 0) {
+    continuar
+  } sino si (i %% 5 == 0) {
+    interrumpir
+  }
+  suma <- suma + i
+}
+suma
+`,
+de: `
+summe <- 0
+für (i in 1:10) {
+  falls (i %% 3 == 0) {
+    weiter
+  } sonst falls (i %% 5 == 0) {
+    abbruch
+  }
+  summe <- summe + i
+}
+summe
+`,
+en: `
+sum <- 0
+for (i in 1:10) {
+  if (i %% 3 == 0) {
+    continue
+  } else if (i %% 5 == 0) {
+    break
+  }
+  sum <- sum + i
+}
+sum
+`,
+emoji: `
+👛 <- 0
+🫡 (🪙 👈 1:10) {
+  🤔 (🪙 %% 3 == 0) {
+    💫
+  } 🤷 🤔 (🪙 %% 5 == 0) {
+    💔
+  }
+  👛 <- 👛 + 🪙
+}
+👛
+`,
+pirate: `
+booty <- 0
+thar (i be 1:10) {
+  ho (i %% 3 == 0) {
+    ahead!
+  } heave ho (i %% 5 == 0) {
+    mutiny!
+  }
+  booty <- booty + i
+}
+booty
+`
+}
+
+      initSync().then(() => {
+        window.prompts = Array.from(document.querySelectorAll(".r-repl"))
+          .map(elem => {
+            // add callback on radio button click for localization prompt
+            if (elem.id === "locale-r-repl") {
+              var args = { "warranty": false, "locale": "en", "experiments": [] };
+              let repl = (new Repl(elem))
+                .with_eval_callback(r.wasm_runtime(args))
+                .with_validate_callback(input => r.wasm_parse_errors(args, input))
+                .with_highlight_callback(input => r.wasm_highlight(args, input))
+                .with_input(localized_prompts[args.locale].trim(), false);
+
+              document.querySelectorAll("input.locale-button").forEach(btn => {
+                btn.addEventListener('click', () => {
+                  args.locale = btn.value;
+                  repl
+                    .with_eval_callback(r.wasm_runtime(args))
+                    .with_validate_callback(input => r.wasm_parse_errors(args, input))
+                    .with_highlight_callback(input => r.wasm_highlight(args, input))
+                    .with_input(localized_prompts[args.locale].trim(), false);
+                })
+              })
+            } else {
+              (new Repl(elem, {
+                "eval": r.wasm_runtime({}),
+                "validate": input => r.wasm_parse_errors({}, input),
+                "highlight": input => r.wasm_highlight({}, input)
+              }))
+            }
+          })
+      })
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <div class="header-main">
+        <a href="/" alt="Live">
+          <div class="btn-group float-left">
+            <div class="btn icon i-play"></div>Live
+          </div>
+        </a>
+        <a href="/docs/r" alt="Docs">
+          <div class="btn-group float-left">
+            <div class="btn icon i-book"></div>Docs
+          </div>
+        </a>
+
+        <div class="float-right">
+          <a href="https://github.com/dgkf/R" target="_blank">
+            <div class="btn-group btn-solo btn float-right icon i-github" alt="GitHub"></div>
+          </a>
+          <div class="btn-group btn-solo btn float-right icon i-mode" onclick="theme_toggle()" alt="switch darkness mode"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="main"> 
+      <h1>
+        <code style="font-size: 2em;">r v0.4.0</code>
+        <br>
+        <span class="faint" style="font-style: italic;">"Wonder Where We Land"<span>
+      </h1>
+
+      <p>
+      This release brings a multitude of fresh language features, supercharging
+      internal vector management and bringing R's metaprogramming facilities
+      to life. Read on to dig into each new feature below. Though this project
+      still bears the name "R", it is slowly aquiring a life of its own.
+      </p>
+
+      <h2>Powerful Internals</h2>
+      <span class="attribution faint">by <strong><a href="https://github.com/sebffischer">@sebfisscher</a></strong></span>
+
+      <p>
+      In 2018, R introduced a concept called 
+      <span style="font-style: italic;">altreps</span> - alternative
+      representations for vectors to avoid costly computation until it was 
+      absolutely necessary. R has a few of these tricks up its sleeve, primarily
+      designed to improve calculations on ranges without the need to fill out a
+      full vector; or to speed up a few calculations based on some characteristics
+      of the vectors themselves like whether they include missing 
+      (<code>NA</code>) values.
+      </p>
+      <p>
+      This release adopts this feature, but with the benefit of hindsight, allows
+      us to embed this idea more foundationally in the language. Currently only
+      a single <span style="font-style: italic;">altrep</span> is implemented --
+      a subset of a vector. This single representation comes in to play
+      frequently and lets us avoid constant data copies!
+      </p>
+      <p>
+      Let's imagine we have a block of structured data. In this example it's
+      buried in a list:
+      </p>
+
+      <div class="prompt-group">
+        <div class="r-repl" 
+          data-output-mode="single" 
+          data-output-location="below"
+          data-initial-input="l <- (1, (2, (3,)))"
+          data-initial-run=true
+        ></div>
+      </div>
+
+      <p>
+      In R, modifying this interior data comes at a steep cost since each view
+      is copied for modification and then a new copy of the original data is
+      created prior to insertion of newly modified contents.
+      </p>
+      <p>
+      With a subset representation, we can delay modification until we know
+      exactly which elements will be updated, and modify them in-place. If
+      in-place modification doesn't sound like R to you, you're right, and that
+      takes us to our next huge feature!
+      </p>
+
+      <h2>Mutable Views</h2>
+      <span class="attribution faint">by <strong><a href="https://github.com/sebffischer">@sebfisscher</a></strong></span>
+      <p>
+      This is an odd feature to showcase. If it's working as intended,
+      you'll never know that it's even there. Don't let that detract from its
+      significance, though. There are a few new tricks that are easy to miss.
+      </p>
+      <p>
+      When assigning from one R object to another, both objects will point to
+      the same underlying data. This goes for the R objects themselves, as well
+      as references to those objects in our subset representation. They'll remain
+      identical until one of them is modified, at which point they both get unique
+      identities. By waiting until absolutely necessary, we save on the
+      initial copy when creating an object, but we also leverage this to avoid
+      intermediate copies when assigning to subsets.
+      </p>
+
+      <div class="prompt-group">
+        <div class="r-repl" 
+          data-output-mode="single" 
+          data-output-location="below"
+          data-initial-input="x <- 1:10\ny <- x  # at this point, both y and x share data\nz <- y[3:4]  # even z knows it doesn't need to copy yet\ny[3:4] <- 100  # upon modification, y creates a copy\nprint(x)\ny"
+          data-initial-run=true
+        ></div>
+      </div>
+
+      <h2>Language Localizations</h2>
+      <span class="attribution faint">with the help of <strong><a href="https://github.com/sebffischer">@sebfisscher</a></strong>, <strong><a href="https://github.com/Lornebradia">@Lornebradia</a></strong></span>
+      <p>
+      Programming is for everyone, and that means making concepts more intuitive
+      and expressive. Whether a beginner or an expert, having the ability to code
+      in one's native tongue makes programming a more welcoming experience.
+      </p>
+      <p>
+      This is one step along that path. If this work proves valuable, future work
+      could include automatic translation of localized code and facilities for
+      localizing function names.
+      </p>
+
+      <div class="prompt-group" style="display: flex;">
+        <div style="padding: 0 1em;">
+          <label class="radio-container">English 🇺🇸
+            <input class="locale-button" type="radio" checked="checked" name="radio" value="en">
+          </label>
+          <label class="radio-container">Español 🇲🇽
+            <input class="locale-button" type="radio" name="radio" value="es">
+          </label>
+          <label class="radio-container">Deutsch 🇩🇪
+            <input class="locale-button" type="radio" name="radio" value="de">
+          </label>
+          <label class="radio-container">中文 🇨🇳
+            <input class="locale-button" type="radio" name="radio" value="zh">
+          </label>
+          <hr style="margin: 0.5em">
+          <label class="radio-container">Pirate 🏴‍☠️
+            <input class="locale-button" type="radio" name="radio" value="pirate">
+          </label>
+          <label class="radio-container">Emoji 🤣
+            <input class="locale-button" type="radio" name="radio" value="emoji">
+          </label>
+        </div>
+
+        <div style="flex-grow: 1;">
+          <div id="locale-r-repl" class="r-repl" data-output-mode="single" data-output-location="below">
+          </div>
+        </div>
+      </div>
+
+      <h2>Metaprogramming Updates</h2>
+      <p>
+      R, and Lisp before it, are renowned for their metaprogramming. In fact,
+      R gives an unparalleled capacity for evaluation in environments, regardless
+      of where they live in the call stack. This unique feature is what makes R a
+      wildly expressive language for building domain-specific languages.
+      </p>
+      <p>
+      This update brings many metaprogramming primitives. The ability to 
+      <code>quote()</code> and <code>eval()</code> code - the building blocks
+      of R's expressiveness.
+      </p>
+
+      <div class="prompt-group">
+        <div class="r-repl" 
+          data-output-mode="single" 
+          data-output-location="below"
+          data-initial-input="f <- fn() { x <- 3; y <- 10; environment() }
+eval(quote(x + y), f())"
+          data-initial-run=true
+        ></div>
+      </div>
+
+      <hr>
+
+      <h2>Rapid-fire Updates</h2>
+      <p>
+      And a handful of quality-of-life changes that deserve special 
+      recognition
+      </p>
+      <ul>
+        <li>Numerics now permit underscore separators for readability (<code>1_000_000</code>) by <strong><a href="https://github.com/sebffischer">@sebfisscher</a></strong></li>
+        <li>Environment symbol look-up will be faster due to a faster hashing function by <strong><a href="https://github.com/sebffischer">@sebfisscher</a></strong></li>
+        <li>The <code>..rest</code> syntax has been generalized to cover ellipses, closing the gap for stabilization</li>
+        <li>Developers will appreciate that printing environment debug output will no longer infinitely recurse <strong><a href="https://github.com/sebffischer">@sebfisscher</a></strong></li>
+        <li>The "not" operator (<code>!</code>) finally got an implementation after being initially overlooked</li>
+        <li>The live browser repl now does syntax highlighting and input validation, and will print output as it is emitted to the console during long-running code.</li>
+        <li>Experiments are now toggleable by command line flags (using <code>--experiments=</code>), avoiding the need for recompilation to test experimental features.</li>
+      </ul>
+
+      <hr>
+
+      <h2>Thanks to all Contributors!</h2>
+      <ul>
+        <li><a href="https://github.com/sebffischer">@sebfisscher</a></li>
+        <li><a href="https://github.com/Lornebradia">@Lornebradia</a></li>
+        <li><a href="https://github.com/armenic">@armenic</a></li>
+      </ul>
+
+      With an especially big thank you going out to 
+      <strong><a href="https://github.com/sebffischer">@sebfisscher</a></strong>
+      who dove deep into the internals in order to improve some
+      central behaviors of the language.
+
+      <h2 class="float-right" style="text-align: right; margin: 4em;">
+        until the next release!
+        <br>
+        @dgkf
+      </h2>
+
+    </div>
+  </body>
+</html>

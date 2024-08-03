@@ -1,0 +1,30 @@
+<!-- injected html -->
+<script id="promptjs" src="/assets/prompt/src.js"></script>
+<link rel="stylesheet" href="/assets/prompt/style.css">
+<link rel="stylesheet" href="/assets/css/rustdoc-prompt-theme.css">
+<script type="module">
+  import initSync, * as r from "/assets/wasm/r/r.js";
+
+  // restructure rustdoc code into divs
+  document.querySelectorAll(".r-repl").forEach(elem => {
+    let content = elem.firstElementChild.innerText.replace(/^\n*|\n*$/g, "");
+    let div = document.createElement("div");
+    div.classList.add("r-repl");
+    div.setAttribute("data-initial-input", content);
+    div.setAttribute("data-output-mode", "single");
+    div.setAttribute("data-output-location", "below");
+    elem.replaceWith(div);
+  })
+
+  // attach repls to divs
+  initSync().then(() => {
+    window.prompts = Array.from(document.querySelectorAll(".r-repl"))
+      .map(elem => {
+        return (new Repl(elem))
+          .with_eval_callback(r.wasm_runtime({}))
+          .with_validate_callback(input => r.wasm_parse_errors({}, input))
+          .with_highlight_callback(input => r.wasm_highlight({}, input))
+          .run()
+      })
+  })
+</script>

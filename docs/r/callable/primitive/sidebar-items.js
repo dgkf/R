@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":["PrimitiveC","PrimitiveCallstack","PrimitiveEnvironment","PrimitiveEval","PrimitiveLength","PrimitiveList","PrimitiveNames","PrimitiveParent","PrimitivePaste","PrimitivePrint","PrimitiveQ","PrimitiveQuote","PrimitiveRnorm","PrimitiveRunif","PrimitiveSubstitute","PrimitiveSum"]};

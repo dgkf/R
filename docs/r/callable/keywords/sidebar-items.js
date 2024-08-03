@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":["KeywordBlock","KeywordFor","KeywordIf","KeywordParen","KeywordRepeat","KeywordReturn","KeywordWhile"]};

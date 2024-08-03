@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["Localization","Style"],"fn":["parse_expr"],"mod":["de","emoji","en","es","pirate","zh"],"trait":["LocalizedParser"],"type":["HighlightResult","ParseListResult","ParseResult"]};

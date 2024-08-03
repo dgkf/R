@@ -7,7 +7,11 @@ class Repl {
   #timeouts = {};
 
   eval;  // (input: String) => output: String;
-  highlight = (input) => ["none", input];  // (input: String) => [String...]; // of style, text pairs
+
+  // highlight: (input: String) => [String...]:
+  //     Highlighting function, emitting an array of interlaced style classes
+  //     and text.
+  highlight = (input) => ["none", input];  
   validate = (elem) => true;  // (input: String) => bool;
   initial_input = "";         // String
   initial_header = "";        // String
@@ -54,7 +58,7 @@ class Repl {
     this.initial_input = params.initial_input ||
       (data.initialInput && data.initialInput.replace(/\\n/g, "\n")) ||
       this.initial_input;
-    if (this.initial_input) this.with_initial_input(this.initial_input);
+    if (this.initial_input) this.with_initial_input(this.initial_input, false);
 
     this.initial_header = params.initial_header ||
       data.initialHeader ||
@@ -65,7 +69,7 @@ class Repl {
       data.initialRun ||
       this.initial_run;
 
-    if (this.initial_run) this.run();
+    if (this.initial_run) this.run(undefined, false);
   }
 
   with_eval_callback(fn) {
@@ -80,23 +84,29 @@ class Repl {
 
   with_highlight_callback(fn) {
     this.highlight = fn;
+    this.set(this.#elem_input.value);
     return this
   }
 
-  with_initial_input(input) {   
+  with_initial_input(input, focus) {   
     this.initial_input = input;
-    if (this.#elem_input.value.length === 0) {
-      this.set(input);
-      this.focus();
-      this.set_cursor_pos(Infinity);
+    if (!this.#elem_input || this.#elem_input.value.length === 0) {
+      this.with_input(input, focus);
     }
+    return this
+  }
+
+  with_input(input, focus) {
+    this.set(input);
+    this.focus(focus);
+    this.set_cursor_pos(Infinity);    
     return this
   }
 
   with_initial_header(header) {
     this.initial_header = header;
     const node = this.#output_push("output", this.initial_header, null, false);
-    node.scrollIntoView();
+    this.show(node);
     return this
   }
 
@@ -111,12 +121,21 @@ class Repl {
 
     // load html elements from templates
     var templates = prompt_templates.content;
-    var output = templates.querySelector("#output").content.cloneNode(true);
+    var output;
+    if (this.output.mode === "history") {
+      output = templates.querySelector("#output").content.cloneNode(true);
+      this.#elem_output = output.querySelector(".output-container");
+    } else if (this.output.mode === "single") {
+      output = templates.querySelector("#output").content;
+      output = output.querySelector(".output-container").cloneNode(true);
+      this.#elem_output = output;
+    }
+
     this.#elem_container = templates.querySelector("#container").content.cloneNode(true);
     this.#elem_input = this.#elem_container.querySelector(".prompt-input");
     this.#elem_highlight = this.#elem_container.querySelector(".prompt-highlight")
     this.#elem_diagnostics = this.#elem_container.querySelector(".prompt-diagnostics")
-    this.#elem_output = output.querySelector(".output-container");
+    this.#elem_output.classList.add("output-mode-" + this.output.mode);
 
     // add output before, buttons after
     if (this.output.location === "above") {
@@ -153,34 +172,41 @@ class Repl {
     parent.appendChild(this.#elem_container);
   }
 
-  run(code) {
+  run(code, focus) {
     if (code === undefined) code = this.#elem_input.value;
     if (!code.trim()) { return this.clear(); }
 
     this.output.log.push(code);
 
-    var history_elem = this.#elem_output;
+    var output_elem = this.#elem_output;
     if (this.output.mode === "history") {
-      history_elem = this.#output_push("input", this.#markup_highlight(code));
       this.clear();
+      let input_elem = this.#output_push("input", this.#markup_highlight(code));
+      output_elem = this.#output_push("output", "", input_elem, false);
+    } else {
+      output_elem.textContent = "";
+      output_elem = this.#output_push("output", "")
     }
-  
+
     // get result and print to output
     try { 
-      let output_elem = this.#output_push("output", "", history_elem, false);
-      let result = this.eval(code, (x) => output_elem.innerText += x);
-      if (this.output.mode === "single") this.#elem_output.innerHTML = "";
+      let result = this.eval(code, x => output_elem.innerText += x);
       output_elem.innerText += result;
-      output_elem.scrollIntoView();
+      this.show(output_elem);
     } catch (error) {
       console.log(error);
       let node = this.#markup_unexpected_error();
-      output.appendChild(node);
-      node.scrollIntoView();
+      output_elem.appendChild(node);
+      this.show(node);
     }
 
     // restore prompt focus
-    this.focus();
+    this.focus(focus);
+    return this;
+  };
+
+  show(elem) {
+    if (this.output.mode == "history") elem.scrollIntoView();
   };
 
   set(input) {
@@ -190,8 +216,8 @@ class Repl {
     this.#recalculate_rows();
   };
 
-  focus() {
-    this.#elem_input.focus();  
+  focus(focus) {
+    if (focus !== false) this.#elem_input.focus();  
   };
 
   clear() {
@@ -473,7 +499,7 @@ class Repl {
 
     if (click instanceof Function) {
       content.onclick = click;
-
+      
       const share = document.createElement("div")
       share.classList.add("output-share")
       share.onclick = () => {
@@ -488,7 +514,7 @@ class Repl {
 
       content.appendChild(share);
     }
-    
+
     parent.appendChild(content);
     return content;  
   }

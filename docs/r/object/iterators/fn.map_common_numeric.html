@@ -1,0 +1,50 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Map an iterator of pairs into a pair of common numeric types"><title>map_common_numeric in r::object::iterators - Rust</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-46f98efaafac5295.ttf.woff2,FiraSans-Regular-018c141bf0843ffd.woff2,FiraSans-Medium-8f9a781e4970d388.woff2,SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2,SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-dd39b87e5fcfba68.css"><script id="default-settings" 
+data-theme="ayu"
+data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="r" data-themes="" data-resource-suffix="" data-rustdoc-version="1.80.0 (051478957 2024-07-21)" data-channel="1.80.0" data-search-js="search-d52510db62a78183.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-118b08c4c78b968e.js"></script><script defer src="sidebar-items.js"></script><script defer src="../../../static.files/main-20a3ad099b048cf2.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-df360f571f6edeae.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"><!-- injected html -->
+<script id="promptjs" src="/assets/prompt/src.js"></script>
+<link rel="stylesheet" href="/assets/prompt/style.css">
+<link rel="stylesheet" href="/assets/css/rustdoc-prompt-theme.css">
+<script type="module">
+  import initSync, * as r from "/assets/wasm/r/r.js";
+
+  // restructure rustdoc code into divs
+  document.querySelectorAll(".r-repl").forEach(elem => {
+    let content = elem.firstElementChild.innerText.replace(/^\n*|\n*$/g, "");
+    let div = document.createElement("div");
+    div.classList.add("r-repl");
+    div.setAttribute("data-initial-input", content);
+    div.setAttribute("data-output-mode", "single");
+    div.setAttribute("data-output-location", "below");
+    elem.replaceWith(div);
+  })
+
+  // attach repls to divs
+  initSync().then(() => {
+    window.prompts = Array.from(document.querySelectorAll(".r-repl"))
+      .map(elem => {
+        return (new Repl(elem))
+          .with_eval_callback(r.wasm_runtime({}))
+          .with_validate_callback(input => r.wasm_parse_errors({}, input))
+          .with_highlight_callback(input => r.wasm_highlight({}, input))
+          .run()
+      })
+  })
+</script>
+
+</head><body class="rustdoc fn"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle" title="show sidebar"></button></nav><nav class="sidebar"><div class="sidebar-crate"><h2><a href="../../../r/index.html">r</a><span class="version">0.3.3</span></h2></div><div class="sidebar-elems"><h2><a href="index.html">In r::object::iterators</a></h2></div></nav><div class="sidebar-resizer"></div><main><div class="width-limiter"><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="main-heading"><h1>Function <a href="../../index.html">r</a>::<wbr><a href="../index.html">object</a>::<wbr><a href="index.html">iterators</a>::<wbr><a class="fn" href="#">map_common_numeric</a><button id="copy-path" title="Copy item path to clipboard">Copy item path</button></h1><span class="out-of-band"><a class="src" href="../../../src/r/object/vector/iterators.rs.html#39-60">source</a> · <button id="toggle-all-docs" title="collapse all docs">[<span>&#x2212;</span>]</button></span></div><pre class="rust item-decl"><code>pub fn map_common_numeric&lt;I, LItem, RItem, DLItem, DRItem, LNum, RNum, Output&gt;(
+    i: I,
+) -&gt; impl <a class="trait" href="https://doc.rust-lang.org/1.80.0/core/iter/traits/iterator/trait.Iterator.html" title="trait core::iter::traits::iterator::Iterator">Iterator</a>&lt;Item = <a class="primitive" href="https://doc.rust-lang.org/1.80.0/std/primitive.tuple.html">(Output, Output)</a>&gt;<div class="where">where
+    I: <a class="trait" href="https://doc.rust-lang.org/1.80.0/core/iter/traits/collect/trait.IntoIterator.html" title="trait core::iter::traits::collect::IntoIterator">IntoIterator</a>&lt;Item = <a class="primitive" href="https://doc.rust-lang.org/1.80.0/std/primitive.tuple.html">(LItem, RItem)</a>&gt;,
+    LItem: <a class="trait" href="../coercion/trait.MinimallyNumeric.html" title="trait r::object::coercion::MinimallyNumeric">MinimallyNumeric</a>&lt;As = LNum&gt; + <a class="trait" href="https://doc.rust-lang.org/1.80.0/core/ops/deref/trait.Deref.html" title="trait core::ops::deref::Deref">Deref</a>&lt;Target = DLItem&gt;,
+    RItem: <a class="trait" href="../coercion/trait.MinimallyNumeric.html" title="trait r::object::coercion::MinimallyNumeric">MinimallyNumeric</a>&lt;As = RNum&gt; + <a class="trait" href="https://doc.rust-lang.org/1.80.0/core/ops/deref/trait.Deref.html" title="trait core::ops::deref::Deref">Deref</a>&lt;Target = DRItem&gt;,
+    DLItem: <a class="trait" href="../coercion/trait.CoercibleInto.html" title="trait r::object::coercion::CoercibleInto">CoercibleInto</a>&lt;LNum&gt; + <a class="trait" href="https://doc.rust-lang.org/1.80.0/core/clone/trait.Clone.html" title="trait core::clone::Clone">Clone</a>,
+    DRItem: <a class="trait" href="../coercion/trait.CoercibleInto.html" title="trait r::object::coercion::CoercibleInto">CoercibleInto</a>&lt;RNum&gt; + <a class="trait" href="https://doc.rust-lang.org/1.80.0/core/clone/trait.Clone.html" title="trait core::clone::Clone">Clone</a>,
+    <a class="primitive" href="https://doc.rust-lang.org/1.80.0/std/primitive.tuple.html">(LNum, RNum)</a>: <a class="trait" href="../coercion/trait.CommonNum.html" title="trait r::object::coercion::CommonNum">CommonNum</a>&lt;Common = Output&gt;,</div></code></pre><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>Map an iterator of pairs into a pair of common numeric types</p>
+<p>Accept an iterator of pairs of numeric (or numeric-coercible) values and
+returns an iterator of pairs of numerics coerced to the least greater common
+type, assuming a hierarchy of representations.</p>
+<h2 id="arguments"><a class="doc-anchor" href="#arguments">§</a>Arguments</h2>
+<ul>
+<li><code>i</code> - An iterator over pairs of numeric (or numeric-coercible) values</li>
+</ul>
+</div></details></section></div></main></body></html>

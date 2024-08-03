@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"macro":["register"],"trait":["AtomicMode","CoercibleInto","CommonCmp","CommonNum","IntoLogical","MinimallyNumeric"]};

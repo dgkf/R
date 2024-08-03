@@ -1,0 +1,42 @@
+.r-repl {
+  width: 100%;
+}
+
+.r-repl .prompt-highlight {
+  background: var(--code-block-background-color);
+}
+
+.r-repl .prompt-input, .r-repl .prompt-highlight, .r-repl .output {
+  border: none;
+  border-radius: 0;
+}
+
+.r-repl .prompt-input {
+  caret-color: var(--main-color);
+}
+
+.r-repl .prompt-run {
+  background: var(--main-color);
+}
+
+.r-repl .output {
+  opacity: 50%;
+  background: var(--code-block-background-color);
+  margin: 0;
+  padding: 0.5em;
+}
+
+.style-symbol { color: var(--code-highlight-kw-2-color); }
+.style-call { }
+.style-value { color: rgb(193, 82, 44); }
+.style-number { color: var(--code-highlight-number-color); }
+.style-string { color: var(--code-highlight-string-color); }
+.style-comment { color: var(--code-highlight-comment-color); }
+.style-function { color: var(--code-highlight-kw-color); }
+.style-signal { color: var(--code-highlight-prelude-color); }
+.style-control_flow { color: var(--code-highlight-kw-color); }
+.style-brackets, .style-operators, .style-infix { }
+
+.style-error {
+  text-decoration: underline red wavy 1px;
+}

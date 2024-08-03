@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"mod":["builtins","core","dyncompare","keywords","operators","primitive"]};
