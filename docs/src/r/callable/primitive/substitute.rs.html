@@ -238,6 +238,7 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
 <a href="#205" id="205">205</a>
 <a href="#206" id="206">206</a>
 <a href="#207" id="207">207</a>
+<a href="#208" id="208">208</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>lazy_static::lazy_static;
 <span class="kw">use </span>r_derive::<span class="kw-2">*</span>;
 
@@ -347,7 +348,8 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
                                 expr.clone()
                             }
                         }
-                        <span class="kw">_ </span>=&gt; Symbol(s),
+                        <span class="comment">// NOTE: In R, substitute will further replace with deparsed values
+                        </span><span class="kw">_ </span>=&gt; Symbol(s),
                     }
                 }
                 List(exprs) =&gt; List(recurse(exprs, env, <span class="bool-val">false</span>)),

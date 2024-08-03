@@ -1386,9 +1386,6 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
 <a href="#1353" id="1353">1353</a>
 <a href="#1354" id="1354">1354</a>
 <a href="#1355" id="1355">1355</a>
-<a href="#1356" id="1356">1356</a>
-<a href="#1357" id="1357">1357</a>
-<a href="#1358" id="1358">1358</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::callable::core::{builtin, Callable};
 <span class="kw">use </span><span class="kw">crate</span>::cli::Experiment;
 <span class="kw">use </span><span class="kw">crate</span>::context::Context;
@@ -2298,13 +2295,15 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
     }
 
     <span class="kw">fn </span>get_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>, name: String) -&gt; EvalResult {
-        <span class="kw">let </span>(obj, env) = <span class="self">self</span>.find(name.clone())<span class="question-mark">?</span>;
+        <span class="kw">let </span>(obj, obj_source_env) = <span class="self">self</span>.find(name.clone())<span class="question-mark">?</span>;
 
-        <span class="kw">if </span><span class="self">self</span>.env() == env {
-            <span class="kw">return </span><span class="prelude-val">Ok</span>(obj);
-        }
+        <span class="kw">let </span>objc = <span class="kw">match </span>(<span class="self">self</span>.env() == obj_source_env, obj) {
+            <span class="comment">// when accessed mutably, promises are always masked by materialized value
+            </span>(<span class="kw">_</span>, Obj::Promise(<span class="prelude-val">Some</span>(x), ..)) =&gt; <span class="kw-2">*</span>x.clone(),
+            (<span class="bool-val">true</span>, obj) =&gt; <span class="kw">return </span><span class="prelude-val">Ok</span>(obj),
+            (<span class="bool-val">false</span>, obj) =&gt; obj.clone(),
+        };
 
-        <span class="kw">let </span>objc = obj.clone();
         <span class="self">self</span>.env().insert(name, objc.view_mut());
         <span class="prelude-val">Ok</span>(objc)
     }
@@ -2709,6 +2708,7 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
             f()
             x == 10
         "</span>}}
+
         <span class="macro">r_expect!</span> {{<span class="string">"
              f = fn(x) {
                x[1] &lt;- -99
@@ -2717,7 +2717,7 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
              x1 = 10
              x2 = f(x1)
              (x1 == 10) &amp;&amp; x2 == -99
-         "</span>}}
+        "</span>}}
     }
 
     <span class="attr">#[test]
@@ -2729,22 +2729,16 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
             }
             x2 = f(c(1, 2))
             (x2[1] == -99) &amp;&amp; (x2[2] == 2)
-         "</span>}}
+        "</span>}}
     }
 
-    <span class="comment">// TODO: https://github.com/dgkf/R/issues/136
-    // #[test]
-    // fn nested_promises_can_be_mutated() {
-    //     r_expect! {{"
-    //         inc = fn(x) {
-    //           x[1] = x[1] + 1
-    //           x
-    //         }
-    //         add_two = fn(x) {
-    //           inc(inc(x))
-    //         }
-    //         add_two(1) == 3
-    //      "}}
-    // }
-</span>}
+    <span class="attr">#[test]
+    </span><span class="kw">fn </span>nested_promises_can_be_mutated() {
+        <span class="macro">r_expect!</span> {{<span class="string">"
+            inc = fn(x) { x[1] = x[1] + 1; x }
+            add_two = fn(x) { inc(inc(x)) }
+            add_two(1) == 3
+        "</span>}}
+    }
+}
 </code></pre></div></section></main></body></html>
