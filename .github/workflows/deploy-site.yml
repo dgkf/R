@@ -31,8 +31,8 @@ jobs:
 
       - name: build wasm runtime
         run: |
-          wasm-pack build --target web --out-dir docs/assets/wasm/r --no-default-features
-          rm docs/assets/wasm/r/.gitignore
+          wasm-pack build --target web --out-dir site/assets/wasm/r --no-default-features
+          rm site/assets/wasm/r/.gitignore
 
       - name: Deploy to GitHub pages 🚀
         if: github.event_name != 'pull_request'
