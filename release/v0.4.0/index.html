@@ -2,11 +2,15 @@
  <html lang="en-US" class="dark">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="viewport-fit=cover width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0"/>
-
     <title>r v0.4.0</title>
     <meta name="description" content="A reimagining of R"/>
     <link rel="icon" type="image/svg+xml" size="any" href="/R/assets/img/favicon.svg"/>
+
+    <meta name="viewport" content="viewport-fit=cover width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0"/>
+    <meta name="mobile-web-app-capable" content="yes"/>
+    <meta name="apply-mobile-web-app-title" content="R"/>
+    <meta name="apple-mobile-web-app-capable" content="yes"/>
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 
     <link rel="stylesheet" href="/R/assets/css/style.css">
     <link rel="stylesheet" href="/R/assets/css/theme.css">
@@ -26,7 +30,7 @@
 
       a {
         color: inherit;
-        text-decoration: none;
+        text-decoration-color: rgba(var(--fg-rgb), 0.35);
       }
 
       hr {
@@ -423,10 +427,18 @@ eval(quote(x + y), f())"
         <li><a href="https://github.com/armenic">@armenic</a></li>
       </ul>
 
+      <p>
       With an especially big thank you going out to 
       <strong><a href="https://github.com/sebffischer">@sebffischer</a></strong>
       who dove deep into the internals in order to improve some
       central behaviors of the language.
+      </p>
+
+      <p>
+      If you're interested in getting involved, there are plenty of discussions
+      on <a href="https://github.com/dgkf/R/issues?q=is%3Aissue+is%3Aopen+label%3Ameta-proposal">language features</a>,
+      and plenty of <a href="https://github.com/dgkf/R/labels/meta-good%20first%20issue">good first issues</a>!
+      </p>
 
       <h2 class="float-right" style="text-align: right; margin: 4em;">
         until the next release!
