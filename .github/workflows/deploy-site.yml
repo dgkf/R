@@ -16,19 +16,8 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      # The rust-toolchain action ignores rust-toolchain.toml files.
-      # Removing this before building with cargo ensures that the rust-toolchain
-      # is considered the same between installation and usage.
-      - name: Remove the rust-toolchain.toml file
-        run: |
-          touch rust-toolchain.toml  # create if it doesn't exist
-          rm rust-toolchain.toml
-
       - name: install rust toolchain
         uses: dtolnay/rust-toolchain@stable
-        with:
-          toolchain: stable
-          target: x86_64-linux
 
       - name: build rustdoc
         run: |
