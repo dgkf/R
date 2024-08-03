@@ -2,8 +2,8 @@
 #
 #   wasm-pack build --out-dir site/assets/wasm/r --target=web --no-default-features
 #   cargo rustdoc
-#   cp target/doc site/docs
-#   cp site/templates/docs-redirect.html site/docs/index.html
+#   cp -r target/doc site/docs
+  cp site/templates/docs-redirect.html site/docs/index.html
 #
 
 [build]

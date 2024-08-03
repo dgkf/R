@@ -1,6 +1,8 @@
 class Repl {
   #elem_container;
   #elem_input;
+  // #elem_input_render;
+  // #elem_input_scroll;
   #elem_highlight;
   #elem_diagnostics;
   #elem_output;
@@ -131,11 +133,20 @@ class Repl {
       this.#elem_output = output;
     }
 
+    console.log("here");
+
     this.#elem_container = templates.querySelector("#container").content.cloneNode(true);
     this.#elem_input = this.#elem_container.querySelector(".prompt-input-textarea");
-    this.#elem_highlight = this.#elem_container.querySelector(".prompt-highlight")
-    this.#elem_diagnostics = this.#elem_container.querySelector(".prompt-diagnostics")
+    // this.#elem_input_scroll = this.#elem_container.querySelector(".prompt-input-scroll");
+    this.#elem_highlight = this.#elem_container.querySelector(".prompt-highlight");
+    this.#elem_diagnostics = this.#elem_container.querySelector(".prompt-diagnostics");
     this.#elem_output.classList.add("output-mode-" + this.output.mode);
+
+    // // synchronize scroll position of textarea
+    // this.#elem_input.addEventListener("scroll", () => {
+    //   this.#elem_input_scroll.scrollLeft = this.#elem_input.scrollLeft;
+    //   this.#elem_input_scroll.scrollTop = this.#elem_input.scrollTop;
+    // });
 
     // add output before, buttons after
     if (this.output.location === "above") {
