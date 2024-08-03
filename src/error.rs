@@ -35,6 +35,7 @@ pub enum Error {
     CannotBeCoercedToInteger,
     CannotBeCoercedToLogical,
     CannotBeCoercedTo(&'static str),
+    InvalidRange,
 
     // function parsing
     InvalidFunctionParameter(Expr),
@@ -94,6 +95,9 @@ impl Error {
             }
             Error::CannotBeCoercedTo(to) => {
                 format!("object cannot be coerced to type '{to}'")
+            }
+            Error::InvalidRange => {
+                "Ranges without a `by` should have an end >= start. Provide a negative `by` for the range using `start:by:end`".to_string()
             }
             Error::Other(s) => s.to_string(),
             Error::WithCallStack(e, c) => format!("{}\n{c}", e.as_str()),
