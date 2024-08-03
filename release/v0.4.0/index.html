@@ -2,6 +2,7 @@
  <html lang="en-US" class="dark">
   <head>
     <meta charset="utf-8" />
+    <meta name="viewport" content="viewport-fit=cover width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0"/>
 
     <title>r v0.4.0</title>
     <meta name="description" content="A reimagining of R"/>
@@ -34,7 +35,8 @@
       }
 
       .main {
-        margin: 6em 0;
+        margin-top: 6em;
+        margin-bottom: 6em;
       }
 
       .main p {
@@ -42,17 +44,23 @@
       }
 
       .header {
+        position: fixed;
         font-weight: bold;
         padding: 0;
-        position: fixed;
         top: 0;
       }
 
-      .main, .header-main {
-        width: 80%;
-        max-width: 1200px;
-        margin-left: auto;
-        margin-right: auto;
+      .flex-grow {
+        flex-grow: 1;
+      }
+
+      .header .column {
+        position: relative;
+        width: 100%;
+      }
+
+      .navbar {
+        display: flex;
       }
 
       .btn {
@@ -210,28 +218,28 @@ booty
   </head>
   <body>
     <div class="header">
-      <div class="header-main">
-        <a href="/" alt="Live">
-          <div class="btn-group float-left">
-            <div class="btn icon i-play"></div>Live
-          </div>
-        </a>
-        <a href="/docs/r" alt="Docs">
-          <div class="btn-group float-left">
-            <div class="btn icon i-book"></div>Docs
-          </div>
-        </a>
-
-        <div class="float-right">
-          <a href="https://github.com/dgkf/R" target="_blank">
-            <div class="btn-group btn-solo btn float-right icon i-github" alt="GitHub"></div>
+      <div class="column">
+        <div class="navbar">
+          <a href="/" alt="Live">
+            <div class="btn-group ">
+              <div class="btn icon i-play"></div>Live
+            </div>
           </a>
-          <div class="btn-group btn-solo btn float-right icon i-mode" onclick="theme_toggle()" alt="switch darkness mode"></div>
+          <a href="/docs/r" alt="Docs">
+            <div class="btn-group ">
+              <div class="btn icon i-book"></div>Docs
+            </div>
+          </a>
+          <div class="flex-grow"></div>
+          <div class="btn-group btn-solo btn icon i-mode" onclick="theme_toggle()" alt="switch darkness mode"></div>
+          <a href="https://github.com/dgkf/R" target="_blank">
+            <div class="btn-group btn-solo btn  icon i-github" alt="GitHub"></div>
+          </a>
         </div>
       </div>
     </div>
 
-    <div class="main"> 
+    <div class="main column"> 
       <h1>
         <code style="font-size: 2em;">r v0.4.0</code>
         <br>
@@ -312,7 +320,7 @@ booty
         <div class="r-repl" 
           data-output-mode="single" 
           data-output-location="below"
-          data-initial-input="x <- 1:10\ny <- x  # at this point, both y and x share data\nz <- y[3:4]  # even z knows it doesn't need to copy yet\ny[3:4] <- 100  # upon modification, y creates a copy\nprint(x)\ny"
+          data-initial-input="x <- 1:10\ny <- x  # y and x share data\nz <- y[3:4]  # z is still hasn't copied y\ny[3:4] <- 100  # upon edit, y copies x\nprint(x)\ny"
           data-initial-run=true
         ></div>
       </div>
