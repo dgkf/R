@@ -907,12 +907,13 @@ impl Context for CallStack {
     }
 
     fn get_mut(&mut self, name: String) -> EvalResult {
-        let (obj, _env) = self.find(name.clone())?;
+        let (obj, obj_source_env) = self.find(name.clone())?;
 
-        let objc = match obj {
-            // when accessed mutably, promises are masked by materialized value
-            Obj::Promise(Some(x), ..) => *x.clone(),
-            _ => obj.clone(),
+        let objc = match (self.env() == obj_source_env, obj) {
+            // when accessed mutably, promises are always masked by materialized value
+            (_, Obj::Promise(Some(x), ..)) => *x.clone(),
+            (true, obj) => return Ok(obj),
+            (false, obj) => obj.clone(),
         };
 
         self.env().insert(name, objc.view_mut());
