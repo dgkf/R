@@ -368,15 +368,16 @@ booty
       </p>
       <p>
       This update brings many metaprogramming primitives. The ability to 
-      <code>quote()</code>, <code>substitute()</code> and <code>eval()</code>
-      code - the building blocks of R's expressiveness.
+      <code>quote()</code> and <code>eval()</code> code - the building blocks
+      of R's expressiveness.
       </p>
 
       <div class="prompt-group">
         <div class="r-repl" 
           data-output-mode="single" 
           data-output-location="below"
-          data-initial-input="x <- 3\ny <- 4\neval(substitute(sum(x + y)), environment())"
+          data-initial-input="f <- fn() { x <- 3; y <- 10; environment() }
+eval(quote(x + y), f())"
           data-initial-run=true
         ></div>
       </div>

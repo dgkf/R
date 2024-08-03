@@ -20,8 +20,43 @@ lazy_static! {
     ]);
 }
 
-#[derive(Debug, Clone, PartialEq)]
+/// Evaluate Code in an Environment
+///
+/// Evaluates a language object in a specified environment.
+///
+/// # In-Language
+///
+/// ## Usage
+///
+/// ```custom,{class=r}
+/// eval(x, envir)
+/// ```
+///
+/// ## Arguments
+///
+/// `x`: Quoted code to evaluate.
+/// `envir`: An environment in which to evaluate the expression.
+///
+/// ## Examples
+///
+/// Evaluate code as though it were executed in the current environment.
+///
+/// ```custom,{class=r-repl}
+/// x <- 1; y <- 2
+/// eval(quote(x + y))
+/// ```
+///
+/// Or specify another environment in which to search for symbols during
+/// evaluation.
+///
+/// ```custom,{class=r-repl}
+/// f <- fn() { x <- 10; y <- 2; environment() }
+/// eval(quote(x * y), f())
+/// ```
+///
+#[doc(alias = "eval")]
 #[builtin(sym = "eval")]
+#[derive(Debug, Clone, PartialEq)]
 pub struct PrimitiveEval;
 impl Callable for PrimitiveEval {
     fn formals(&self) -> ExprList {
