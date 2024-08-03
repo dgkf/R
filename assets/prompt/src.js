@@ -124,15 +124,15 @@ class Repl {
     var output;
     if (this.output.mode === "history") {
       output = templates.querySelector("#output").content.cloneNode(true);
-      this.#elem_output = output.querySelector(".output-container");
+      this.#elem_output = output.querySelector(".prompt-output-container");
     } else if (this.output.mode === "single") {
       output = templates.querySelector("#output").content;
-      output = output.querySelector(".output-container").cloneNode(true);
+      output = output.querySelector(".prompt-output-container").cloneNode(true);
       this.#elem_output = output;
     }
 
     this.#elem_container = templates.querySelector("#container").content.cloneNode(true);
-    this.#elem_input = this.#elem_container.querySelector(".prompt-input");
+    this.#elem_input = this.#elem_container.querySelector(".prompt-input-textarea");
     this.#elem_highlight = this.#elem_container.querySelector(".prompt-highlight")
     this.#elem_diagnostics = this.#elem_container.querySelector(".prompt-diagnostics")
     this.#elem_output.classList.add("output-mode-" + this.output.mode);
@@ -447,7 +447,7 @@ class Repl {
 
   #markup_unexpected_error() {
     let node = document.createElement("div");
-    node.className = "output-cell error";
+    node.className = "prompt-output-cell prompt-error-cell";
 
     var text = document.createElement("pre");
     text.textContent = "Error: An unexpected error was encountered!";
@@ -486,8 +486,8 @@ class Repl {
 
     let text_content = content.textContent;
 
-    content.classList.add("output-cell");
-    content.classList.add(type);
+    content.classList.add("prompt-output-cell");
+    content.classList.add("prompt-" + type + "-cell");
 
     if (click === undefined) click = (event) => {
       // ignore in case where a text selection was made
@@ -501,7 +501,7 @@ class Repl {
       content.onclick = click;
       
       const share = document.createElement("div")
-      share.classList.add("output-share")
+      share.classList.add("prompt-share")
       share.onclick = () => {
         const loc = window.location;
         var params = new URLSearchParams(loc.search);
@@ -610,7 +610,7 @@ class Repl {
   #templates = `
     <template id="container">
       <div class="prompt-input-container">
-        <textarea class="prompt-input" name="prompt" rows="1" spellcheck="false" autocomplete="off" autocapitalize="none"></textarea>
+        <textarea class="prompt-input-textarea" name="prompt" rows="1" spellcheck="false" autocomplete="off" autocapitalize="none"></textarea>
         <div class="prompt-highlight"></div>
         <div class="prompt-diagnostics"></div>
         <div class="prompt-run" title="Meta + Enter"></div>
@@ -618,9 +618,9 @@ class Repl {
     </template>
 
     <template id="output">
-      <div class="output-scroll">
-        <div class="output-scroll-pad"></div>
-        <div class="output-container"></div>
+      <div class="prompt-output-scroll">
+        <div class="prompt-output-scroll-pad"></div>
+        <div class="prompt-output-container"></div>
       </div>
     </template>
   `

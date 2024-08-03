@@ -89,8 +89,15 @@
 
       .prompt-group {
         background: #FFFFFF10;
-        border-radius: 1em;
-        padding: 2em;
+        border-radius: 0em;
+        padding: 1em 0.2em;
+      }
+
+      @media only screen and (min-width: 768px) {
+        .prompt-group {
+          border-radius: 1em;
+          padding: 2em;
+        }
       }
 
       .faint {
@@ -220,12 +227,12 @@ booty
     <div class="header">
       <div class="column">
         <div class="navbar">
-          <a href="/" alt="Live">
+          <a href="/R" alt="Live">
             <div class="btn-group ">
               <div class="btn icon i-play"></div>Live
             </div>
           </a>
-          <a href="/docs/r" alt="Docs">
+          <a href="/R/docs/r" alt="Docs">
             <div class="btn-group ">
               <div class="btn icon i-book"></div>Docs
             </div>
