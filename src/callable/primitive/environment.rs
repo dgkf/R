@@ -6,8 +6,40 @@ use crate::error::Error;
 use crate::lang::*;
 use crate::object::*;
 
-#[derive(Debug, Clone, PartialEq)]
+/// Get an Environment
+///
+/// Fetches an object's environment.
+///
+/// # In-Language
+///
+/// ## Usage
+///
+/// ```custom,{class=r}
+/// environment(fun)
+/// ```
+///
+/// ## Arguments
+///
+/// `fun`: An object for which to fetch a relevant environment. When missing,
+///   return the current execution environment. Although `fun` may imply that
+///   this only operates on `function`s, `environment`s can be fetched from
+///   other objects with meaningful associated `environment`s such as
+///   `environment`s (returning their parent), or `promise`s (returning their
+///   expression's originating environment).
+///
+/// ## Examples
+///
+/// ```custom,{class=r-repl}
+/// environment()
+/// ```
+///
+/// ```custom,{class=r-repl}
+/// environment(parent())
+/// ```
+///
+#[doc(alias = "environment")]
 #[builtin(sym = "environment")]
+#[derive(Debug, Clone, PartialEq)]
 pub struct PrimitiveEnvironment;
 impl Callable for PrimitiveEnvironment {
     fn formals(&self) -> ExprList {

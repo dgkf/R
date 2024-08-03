@@ -4,8 +4,52 @@ use crate::callable::core::*;
 use crate::lang::*;
 use crate::object::*;
 
-#[derive(Debug, Clone, PartialEq)]
+/// Get Names of an Object
+///
+/// Returns the element names for vector-like objects, or names of
+/// symbols assigned in environments.
+///
+/// # In-Language
+///
+/// ## Usage
+///
+/// ```custom,{class=rust}
+/// names(x)
+/// ```
+///
+/// ## Arguments
+///
+/// * `x`: An object from which to retrieve names
+///
+/// ## Examples
+///
+/// Accessing the names of elements in a `list`
+///
+/// ```custom,{class=r-repl}
+/// names((a = 1, b = 2, c = 3))
+/// ```
+///
+/// <div class="warning">
+///
+/// Unlike R, `names()` will always return a `character` vector, even if
+/// no element is named.
+///
+/// </div>
+///
+/// ```custom,{class=r-repl}
+/// names((1, 2, 3))
+/// ```
+///
+/// Accessing names in an `environment`
+///
+/// ```custom,{class=r-repl}
+/// x <- 3; y <- 4
+/// names(environment())
+/// ```
+///
+#[doc(alias = "names")]
 #[builtin(sym = "names")]
+#[derive(Debug, Clone, PartialEq)]
 pub struct PrimitiveNames;
 impl Callable for PrimitiveNames {
     fn formals(&self) -> ExprList {

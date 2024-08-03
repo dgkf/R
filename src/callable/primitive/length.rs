@@ -1,12 +1,35 @@
 use r_derive::*;
 
 use crate::callable::core::*;
-use crate::err;
+use crate::error::Error;
 use crate::lang::*;
 use crate::object::*;
 
-#[derive(Debug, Clone, PartialEq)]
+/// Get an Object's Length
+///
+/// Calculate the length of an object.
+///
+/// # In-Language
+///
+/// ## Usage
+///
+/// ```custom,{class=r}
+/// length(x)
+/// ```
+///
+/// ## Arguments
+///
+/// `x`: An object whose length to calculate.
+///
+/// ## Examples
+///
+/// ```custom,{class=r-repl}
+/// length([1, 2, 3])
+/// ```
+///
+#[doc(alias = "length")]
 #[builtin(sym = "length")]
+#[derive(Debug, Clone, PartialEq)]
 pub struct PrimitiveLength;
 
 impl Callable for PrimitiveLength {
@@ -26,7 +49,7 @@ impl Callable for PrimitiveLength {
             },
             Obj::List(_) => todo!("Not implemented yet"),
             Obj::Environment(env) => env.len(),
-            _ => return err!("Argument 'x' does not have a length"),
+            _ => return Error::Other("Argument 'x' does not have a length".into()).into(),
         };
 
         EvalResult::Ok(Obj::Vector(Vector::from(vec![OptionNA::Some(

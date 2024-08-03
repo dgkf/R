@@ -7,13 +7,45 @@ use crate::error::Error;
 use crate::lang::*;
 use crate::object::*;
 
-#[derive(Debug, Clone, PartialEq)]
+/// Uniform Random Number Generation
+///
+/// Create a vector of uniformly distributed random numbers.
+///
+/// # In-Language
+///
+/// ## Usage
+///
+/// ```custom,{class=r}
+/// runif(n = 1, min = 0, max = 1)
+/// ```
+///
+/// ## Arguments
+///
+/// * `n`: The number of values to generate
+/// * `min`,`max`: The range in which values should be generated
+///
+/// ## Examples
+///
+/// Produce a vector of values between `0` and `1`:
+///
+/// ```custom,{class=r-repl}
+/// runif(3)
+/// ```
+///
+/// Modify range with a minimum and maximum:
+///
+/// ```custom,{class=r-repl}
+/// runif(10, min = 10, max = 20)
+/// ```
+///
+#[doc(alias = "runif")]
 #[builtin(sym = "runif")]
+#[derive(Debug, Clone, PartialEq)]
 pub struct PrimitiveRunif;
 impl Callable for PrimitiveRunif {
     fn formals(&self) -> ExprList {
         ExprList::from(vec![
-            (Some(String::from("n")), Expr::Null),
+            (Some(String::from("n")), Expr::Number(1.0)),
             (Some(String::from("min")), Expr::Number(0.0)),
             (Some(String::from("max")), Expr::Number(1.0)),
         ])

@@ -5,8 +5,44 @@ use crate::error::*;
 use crate::lang::*;
 use crate::object::*;
 
-#[derive(Debug, Clone, PartialEq)]
+/// Paste Objects into Strings
+///
+/// Construct strings out of objects, producing a `character` `vector`
+/// from element-wise inputs and optionally collapsing results into
+/// a single `string`
+///
+/// # In-Language
+///
+/// ## Usage
+///
+/// ```custom,{class=r}
+/// paste(..., sep = " ", collapse = NULL)
+/// ```
+///
+/// ## Arguments
+///
+/// `...`: Objects to paste into strings.
+/// `sep`: A separator to insert when pasting.
+/// `collapse`: An optional string used to concatenate all elements
+///   of the pasted `character` `vector`.
+///
+/// ## Examples
+///
+/// ```custom,{class=r-repl}
+/// paste(1:3, 4:6)
+/// ```
+///
+/// ```custom,{class=r-repl}
+/// paste(1:3, 4:6, sep = "-")
+/// ```
+///
+/// ```custom,{class=r-repl}
+/// paste(1:3, 4:6, sep = "-", collapse = ":")
+/// ```
+///
+#[doc(alias = "paste")]
 #[builtin(sym = "paste")]
+#[derive(Debug, Clone, PartialEq)]
 pub struct PrimitivePaste;
 impl Callable for PrimitivePaste {
     fn formals(&self) -> ExprList {

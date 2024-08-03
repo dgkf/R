@@ -7,8 +7,29 @@ use crate::lang::*;
 use crate::object::reptype::RepType;
 use crate::object::*;
 
-#[derive(Debug, Clone, PartialEq)]
+/// Calculate a Sum of Elements
+///
+/// # In-Language
+///
+/// ## Usage
+///
+/// ```custom,{class=r}
+/// sum(...)
+/// ```
+///
+/// ## Arguments
+///
+/// `...`: Objects that can be coerced into numerics.
+///
+/// ## Examples
+///
+/// ```custom,{class=r-repl}
+/// sum(true, 1, 2, [3, 4, 5])
+/// ```
+///
+#[doc(alias = "sum")]
 #[builtin(sym = "sum")]
+#[derive(Debug, Clone, PartialEq)]
 pub struct PrimitiveSum;
 
 impl Callable for PrimitiveSum {

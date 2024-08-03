@@ -6,13 +6,45 @@ use crate::error::Error;
 use crate::lang::*;
 use crate::object::*;
 
-#[derive(Debug, Clone, PartialEq)]
+/// Normally Distributed Random Number Generation
+///
+/// Create a vector of normally distributed random numbers.
+///
+/// # In-Language
+///
+/// ## Usage
+///
+/// ```custom,{class=r}
+/// rnorm(n = 1, mean = 0, std = 1)
+/// ```
+///
+/// ## Arguments
+///
+/// * `n`: The number of values to generate
+/// * `mean`,`std`: Characteristics of the normal distribution to sample.
+///
+/// ## Examples
+///
+/// Produce a vector of values between `0` and `1`:
+///
+/// ```custom,{class=r-repl}
+/// rnorm(3)
+/// ```
+///
+/// Modify range with a minimum and maximum:
+///
+/// ```custom,{class=r-repl}
+/// rnorm(10, mean = 10, std = 5)
+/// ```
+///
+#[doc(alias = "rnorm")]
 #[builtin(sym = "rnorm")]
+#[derive(Debug, Clone, PartialEq)]
 pub struct PrimitiveRnorm;
 impl Callable for PrimitiveRnorm {
     fn formals(&self) -> ExprList {
         ExprList::from(vec![
-            (Some(String::from("n")), Expr::Null),
+            (Some(String::from("n")), Expr::Number(1.0)),
             (Some(String::from("mean")), Expr::Number(0.0)),
             (Some(String::from("std")), Expr::Number(1.0)),
         ])

@@ -6,8 +6,40 @@ use crate::lang::*;
 use crate::object::types::*;
 use crate::object::*;
 
-#[derive(Debug, Clone, PartialEq)]
+/// Concatenate Values
+///
+/// Construct a vector of values. Heterogeneous values will be coerced
+/// into a common type.
+///
+/// <div class="warning">
+///
+/// Note that `c()` is provided for familiarity, but there are better,
+/// more explicit ways of constructing homogeneous vectors using the
+/// `[...]` and `(...,)` syntax.
+///
+/// </div>
+///
+/// # In-Language
+///
+/// ## Usage
+///
+/// ```custom,{class=r}
+/// c(...)
+/// ```
+///
+/// ## Arguments
+///
+/// `...`: Arguments to collect into a `vector`.
+///
+/// ## Examples
+///
+/// ```custom,{class=r-repl}
+/// c(false, 1, "two")
+/// ```
+///
+#[doc(alias = "c")]
 #[builtin(sym = "c")]
+#[derive(Debug, Clone, PartialEq)]
 pub struct PrimitiveC;
 impl Callable for PrimitiveC {
     fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
