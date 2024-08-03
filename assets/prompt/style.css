@@ -77,10 +77,13 @@
   position: relative;  
 }
 
-.prompt-input-textarea, .prompt-highlight, .prompt-diagnostics {
-  -webkit-text-size-adjust: 100%;
+.prompt-input-container * {
+  font-size: calc(1rem * var(--font-scale));
+}
 
+.prompt-input-textarea, .prompt-highlight, .prompt-diagnostics {
   box-sizing: border-box;
+
   font-family: monospace, mono;
   white-space: pre;
   line-height: 1.4em;
@@ -95,6 +98,7 @@
   border-style: solid;
   border-color: var(--gray2);
   padding: 1em;
+  padding-bottom: 0.5em;
 }
 
 .prompt-highlight, .prompt-diagnostics {
@@ -131,8 +135,8 @@
 }
 
 .prompt-run {
-  top: 1em;
   right: 1em;  
+  bottom: 0.75em;
   padding: 1em;
 }
 
