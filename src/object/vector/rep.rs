@@ -315,6 +315,12 @@ impl From<Vec<OptionNA<String>>> for Rep<Character> {
     }
 }
 
+impl From<Vec<&str>> for Rep<Character> {
+    fn from(value: Vec<&str>) -> Self {
+        Rep(RefCell::new(value.into()))
+    }
+}
+
 impl From<Vec<String>> for Rep<Character> {
     fn from(value: Vec<String>) -> Self {
         Rep(RefCell::new(value.into()))
