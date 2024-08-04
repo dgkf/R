@@ -8,8 +8,7 @@ use super::reptype::RepTypeIter;
 use super::subset::Subset;
 use super::types::*;
 use super::{OptionNA, Pow, VecPartialCmp};
-use crate::object::CowObj;
-use crate::object::ViewMut;
+use crate::object::{CowObj, Obj, ViewMut};
 
 /// Vector Representation
 ///
@@ -18,7 +17,7 @@ use crate::object::ViewMut;
 #[derive(Debug, PartialEq)]
 pub struct Rep<T: Clone>(pub RefCell<RepType<T>>);
 
-impl<T: Clone + AtomicMode + Default> Clone for Rep<T> {
+impl<T: Clone + Default> Clone for Rep<T> {
     fn clone(&self) -> Self {
         match self.borrow().clone() {
             RepType::Subset(v, s) => Rep(RefCell::new(RepType::Subset(v.clone(), s.clone()))),
@@ -26,17 +25,23 @@ impl<T: Clone + AtomicMode + Default> Clone for Rep<T> {
     }
 }
 
-impl<T: Clone + AtomicMode + Default> ViewMut for Rep<T> {
+impl<T: Clone + Default> ViewMut for Rep<T> {
     fn view_mut(&self) -> Self {
         Self(RefCell::new(self.borrow().view_mut()))
     }
 }
 
+impl<T: ViewMut + Default + Clone> Rep<T> {
+    pub fn try_get_inner_mut(&self, index: T) -> Result<T, crate::error::Error> {
+        todo!()
+    }
+}
+
 impl<T> Rep<T>
 where
-    T: AtomicMode + Clone + Default,
+    T: Clone + Default,
 {
-    fn borrow(&self) -> Ref<RepType<T>> {
+    pub fn borrow(&self) -> Ref<RepType<T>> {
         self.0.borrow()
     }
     fn materialize_inplace(&self) -> &Self {
@@ -45,6 +50,17 @@ where
         self.0.replace(new_repr);
 
         self
+    }
+
+    /// Try to get mutable access to the internal vector through the passed closure.
+    /// This requires the vector to be in materialized form, otherwise None is returned.
+    /// None is returned if this is not the case.
+    pub fn with_inner_mut<F, R>(&self, f: F) -> R
+    where
+        F: FnOnce(&mut Vec<T>) -> R,
+    {
+        self.materialize_inplace();
+        self.0.borrow().try_with_inner_mut(f).unwrap()
     }
 
     pub fn materialize(&self) -> Self {
@@ -101,6 +117,10 @@ where
         x.map(|x| x.into())
     }
 
+    pub fn get_inner(&self, index: usize) -> Option<T> {
+        self.borrow().get_inner(index)
+    }
+
     pub fn assign(&mut self, value: Self) -> Self {
         self.0.borrow_mut().assign(value.0.into_inner()).into()
     }
@@ -109,19 +129,31 @@ where
     /// Internally, this is defined by the [crate::object::coercion::AtomicMode]
     /// implementation of the vector's element type.
     ///
-    pub fn is_double(&self) -> bool {
+    pub fn is_double(&self) -> bool
+    where
+        T: AtomicMode,
+    {
         T::is_double()
     }
     /// See [Self::is_double] for more information
-    pub fn is_logical(&self) -> bool {
+    pub fn is_logical(&self) -> bool
+    where
+        T: AtomicMode,
+    {
         T::is_logical()
     }
     /// See [Self::is_double] for more information
-    pub fn is_integer(&self) -> bool {
+    pub fn is_integer(&self) -> bool
+    where
+        T: AtomicMode,
+    {
         T::is_integer()
     }
     /// See [Self::is_double] for more information
-    pub fn is_character(&self) -> bool {
+    pub fn is_character(&self) -> bool
+    where
+        T: AtomicMode,
+    {
         T::is_character()
     }
 
@@ -151,7 +183,7 @@ where
     ///
     pub fn as_mode<Mode>(&self) -> Rep<Mode>
     where
-        T: CoercibleInto<Mode>,
+        T: CoercibleInto<Mode> + AtomicMode,
         Mode: Clone,
     {
         Rep(RefCell::new(self.borrow().as_mode()))
@@ -160,7 +192,7 @@ where
     /// See [Self::as_mode] for more information
     pub fn as_logical(&self) -> Rep<Logical>
     where
-        T: CoercibleInto<Logical>,
+        T: CoercibleInto<Logical> + AtomicMode,
     {
         self.as_mode::<Logical>()
     }
@@ -168,7 +200,7 @@ where
     /// See [Self::as_mode] for more information
     pub fn as_integer(&self) -> Rep<Integer>
     where
-        T: CoercibleInto<Integer>,
+        T: CoercibleInto<Integer> + AtomicMode,
     {
         self.as_mode::<Integer>()
     }
@@ -176,7 +208,7 @@ where
     /// See [Self::as_mode] for more information
     pub fn as_double(&self) -> Rep<Double>
     where
-        T: CoercibleInto<Double>,
+        T: CoercibleInto<Double> + AtomicMode,
     {
         self.as_mode::<Double>()
     }
@@ -184,7 +216,7 @@ where
     /// See [Self::as_mode] for more information
     pub fn as_character(&self) -> Rep<Character>
     where
-        T: CoercibleInto<Character>,
+        T: CoercibleInto<Character> + AtomicMode,
     {
         self.as_mode::<Character>()
     }
@@ -213,11 +245,15 @@ where
     fn get_inner(&self, index: usize) -> Option<T> {
         self.borrow().get_inner(index)
     }
+
+    pub fn iter(&self) -> RepIter<T> {
+        self.clone().into_iter()
+    }
 }
 
 impl<T> Default for Rep<T>
 where
-    T: AtomicMode + Clone + Default,
+    T: Clone + Default,
 {
     fn default() -> Self {
         Rep(RefCell::new(RepType::default()))
@@ -228,7 +264,7 @@ pub struct RepIter<T: Clone>(RepTypeIter<T>);
 
 impl<T> IntoIterator for Rep<T>
 where
-    T: AtomicMode + Clone + Default,
+    T: Clone + Default,
 {
     type Item = T;
     type IntoIter = RepIter<T>;
@@ -240,7 +276,7 @@ where
 
 impl<T> Iterator for RepIter<T>
 where
-    T: AtomicMode + Clone + Default,
+    T: Clone + Default,
 {
     type Item = T;
     fn next(&mut self) -> Option<Self::Item> {
@@ -250,7 +286,7 @@ where
 
 impl<T> From<RepType<T>> for Rep<T>
 where
-    T: AtomicMode + Clone + Default,
+    T: Clone + Default,
 {
     fn from(rep: RepType<T>) -> Self {
         Rep(RefCell::new(rep))
@@ -270,6 +306,12 @@ where
                 OptionNA::NA => Err(()),
             },
         )
+    }
+}
+
+impl From<Vec<(Option<String>, Obj)>> for Rep<(Option<String>, Obj)> {
+    fn from(value: Vec<(Option<String>, Obj)>) -> Self {
+        Rep(RefCell::new(value.into()))
     }
 }
 

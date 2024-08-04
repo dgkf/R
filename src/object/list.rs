@@ -2,22 +2,26 @@ use hashbrown::HashMap;
 
 use crate::error::Error;
 use crate::lang::EvalResult;
+use crate::object::vector::rep::Rep;
 
 use super::*;
 
 type ListNameMap = HashMap<String, Vec<usize>>;
 
+struct ListVals(Rep<Obj>);
+
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct List {
     pub names: CowObj<ListNameMap>,
-    pub values: CowObj<Vec<(Option<String>, Obj)>>,
-    pub subsets: Subsets,
+    pub values: Rep<(Option<String>, Obj)>,
+    // pub values: CowObj<Vec<(Option<String>, Obj)>>,
+    // pub subsets: Subsets,
 }
 
 impl From<Vec<(Option<String>, Obj)>> for List {
     fn from(value: Vec<(Option<String>, Obj)>) -> Self {
         let mut result = List {
-            values: CowObj::from(value),
+            values: Rep::from(value),
             ..Default::default()
         };
 
@@ -31,7 +35,7 @@ impl List {
         self.names.with_inner_mut(|names| {
             names.drain();
 
-            for (i, (k, _)) in self.values.borrow().iter().enumerate() {
+            for (i, (k, _)) in self.values.iter().enumerate() {
                 if let Some(name) = k {
                     let indices = names.entry(name.clone()).or_default();
                     if !indices.contains(&i) {
@@ -43,12 +47,9 @@ impl List {
     }
 
     pub fn subset(&self, by: Subset) -> List {
-        let Subsets(mut inner) = self.subsets.clone();
-        inner.push(by);
         List {
             names: self.names.clone(),
-            values: self.values.view_mut(),
-            subsets: Subsets(inner),
+            values: self.values.subset(by),
         }
     }
 
@@ -210,6 +211,8 @@ impl List {
 
         match index.as_vector()? {
             Obj::Vector(v) if v.len() == 1 => {
+                self.values.subset(v.try_into()?);
+                self.values.get_inner(i)
                 let Subsets(mut subsets) = self.subsets.clone();
                 subsets.push(v.try_into()?);
 
@@ -265,11 +268,7 @@ impl List {
     }
 
     pub fn len(&self) -> usize {
-        let Subsets(inner) = &self.subsets;
-        match inner.as_slice() {
-            [] => self.values.borrow().len(),
-            [.., last] => std::cmp::min(self.values.borrow().len(), last.len()),
-        }
+        self.values.len()
     }
 
     #[must_use]
