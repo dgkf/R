@@ -159,6 +159,7 @@ impl List {
     }
 
     pub fn try_get(&self, index: Obj) -> EvalResult {
+        println!("HIIIII");
         let err = Error::Other("Cannot use object for indexing".to_string());
         match index.as_vector()? {
             Obj::Vector(v) => Ok(Obj::List(self.subset(v.try_into()?))),
@@ -172,10 +173,10 @@ impl List {
 
         match index.as_vector()? {
             Obj::Vector(v) if v.len() == 1 => {
-                self.values.subset(v.try_into()?);
+                let values = self.values.subset(v.try_into()?);
                 // self.values.get_inner(i)
 
-                let subsets = match &*self.values.borrow() {
+                let subsets = match &*values.borrow() {
                     RepType::Subset(_, Subsets(v)) => v.clone(),
                 };
 
