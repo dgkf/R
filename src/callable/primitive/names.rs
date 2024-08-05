@@ -68,7 +68,6 @@ impl Callable for PrimitiveNames {
             Function(..) => Ok(Null), // return formals?
             List(x) => {
                 Ok(x.values
-                    .borrow()
                     .iter()
                     .map(|(k, _)| match k {
                         Some(name) => OptionNA::Some(name.clone()),

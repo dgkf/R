@@ -32,8 +32,8 @@ impl<T: Clone + Default> ViewMut for Rep<T> {
 }
 
 impl<T: ViewMut + Default + Clone> Rep<T> {
-    pub fn try_get_inner_mut(&self, index: T) -> Result<T, crate::error::Error> {
-        todo!()
+    pub fn get_inner_mut(&self, index: usize) -> Option<T> {
+        self.0.borrow().get_inner_mut(index)
     }
 }
 
@@ -53,14 +53,11 @@ where
     }
 
     /// Try to get mutable access to the internal vector through the passed closure.
-    /// This requires the vector to be in materialized form, otherwise None is returned.
-    /// None is returned if this is not the case.
     pub fn with_inner_mut<F, R>(&self, f: F) -> R
     where
         F: FnOnce(&mut Vec<T>) -> R,
     {
-        self.materialize_inplace();
-        self.0.borrow().try_with_inner_mut(f).unwrap()
+        self.0.borrow().with_inner_mut(f)
     }
 
     pub fn materialize(&self) -> Self {
@@ -240,10 +237,6 @@ where
         self.0
             .into_inner()
             .vectorized_partial_cmp(other.0.into_inner())
-    }
-
-    fn get_inner(&self, index: usize) -> Option<T> {
-        self.borrow().get_inner(index)
     }
 
     pub fn iter(&self) -> RepIter<T> {

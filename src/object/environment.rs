@@ -55,7 +55,7 @@ impl Environment {
     }
 
     pub fn append(&self, l: List) {
-        for (key, value) in l.values.borrow().iter() {
+        for (key, value) in l.values.iter() {
             if let Some(name) = key {
                 self.values.borrow_mut().insert(name.clone(), value.clone());
             }

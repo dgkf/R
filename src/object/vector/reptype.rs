@@ -34,6 +34,7 @@ impl<T: Clone + Default> Default for RepType<T> {
 }
 
 impl<T: Clone + Default + ViewMut> RepType<T> {
+    /// Retrieve the internal data as a mutable view.
     pub fn get_inner_mut(&self, index: usize) -> Option<T> {
         match self {
             RepType::Subset(v, subsets) => {
@@ -122,15 +123,12 @@ impl<T: Clone + Default> RepType<T> {
     /// Try to get mutable access to the internal vector through the passed closure.
     /// This requires the vector to be in materialized form, otherwise None is returned.
     /// None is returned if this is not the case.
-    pub fn try_with_inner_mut<F, R>(&self, f: F) -> Result<R, Error>
+    pub fn with_inner_mut<F, R>(&self, f: F) -> R
     where
         F: FnOnce(&mut Vec<T>) -> R,
     {
         match self {
-            RepType::Subset(v, Subsets(s)) => match s.as_slice() {
-                [] => Ok(v.with_inner_mut(f)),
-                _ => Err(internal_err!()),
-            },
+            RepType::Subset(v, Subsets(s)) => v.with_inner_mut(f),
         }
     }
 
@@ -175,16 +173,6 @@ impl<T: Clone + Default> RepType<T> {
                 let index = subsets.get_index_at(index)?;
                 let elem = vb.get(index)?;
                 Some(RepType::Subset(vec![elem.clone()].into(), Subsets::new()))
-            }
-        }
-    }
-
-    pub fn get_inner(&self, index: usize) -> Option<T> {
-        match self {
-            RepType::Subset(v, subsets) => {
-                let vb = v.borrow();
-                let index = subsets.get_index_at(index).unwrap();
-                vb.get(index).cloned()
             }
         }
     }

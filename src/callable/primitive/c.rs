@@ -53,7 +53,6 @@ impl Callable for PrimitiveC {
         // lets first see what we're aiming to build.
         let ty: u8 = vals
             .values
-            .borrow()
             .iter()
             .map(|(_, v)| match v {
                 Obj::Null => 0,
@@ -76,7 +75,6 @@ impl Callable for PrimitiveC {
         // otherwise, try to collapse vectors into same type
         let ret = vals
             .values
-            .borrow()
             .iter()
             .map(|(_, r)| match r {
                 Obj::Vector(Vector::Logical(_)) => Vector::from(Vec::<Logical>::new()),
