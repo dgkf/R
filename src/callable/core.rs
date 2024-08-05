@@ -47,7 +47,7 @@ pub trait Callable {
             'inner: {
                 // check argname with immutable borrow, but drop scope. If
                 // found, drop borrow so we can mutably assign it
-                if let (Some(argname), _) = &args.values.borrow()[i] {
+                if let (Some(argname), _) = &args.values.get_inner(i).unwrap() {
                     if let Some((Some(_), _)) = formals.remove_named(argname) {
                         break 'inner;
                     }

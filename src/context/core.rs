@@ -1,6 +1,7 @@
 use std::rc::Rc;
 
 use crate::lang::{EvalResult, Signal};
+use crate::object::rep::Rep;
 use crate::object::*;
 use crate::{error::*, internal_err};
 
@@ -77,7 +78,7 @@ pub trait Context: std::fmt::Debug + std::fmt::Display {
                         if let Ok(Obj::List(ellipsis)) = self.get_ellipsis() {
                             Ok(ellipsis.values.into_iter())
                         } else {
-                            Ok(CowObj::from(vec![]).into_iter())
+                            Ok(Rep::from(vec![]).into_iter())
                         }
                     }
                     (_, Expr::Ellipsis(Some(name))) => {
@@ -89,8 +90,8 @@ pub trait Context: std::fmt::Debug + std::fmt::Display {
                     }
                     // Avoid creating a new closure just to point to another, just reuse it
                     (k, Expr::Symbol(s)) => match self.env().get(s.clone()) {
-                        Ok(c @ Obj::Promise(..)) => Ok(CowObj::from(vec![(k, c)]).into_iter()),
-                        _ => Ok(CowObj::from(vec![(
+                        Ok(c @ Obj::Promise(..)) => Ok(Rep::from(vec![(k, c)]).into_iter()),
+                        _ => Ok(Rep::from(vec![(
                             k,
                             Obj::Promise(None, Expr::Symbol(s), self.env()),
                         )])
@@ -98,11 +99,11 @@ pub trait Context: std::fmt::Debug + std::fmt::Display {
                     },
                     (k, c @ Expr::Call(..)) => {
                         let elem = vec![(k, Obj::Promise(None, c, self.env()))];
-                        Ok(CowObj::from(elem).into_iter())
+                        Ok(Rep::from(elem).into_iter())
                     }
                     (k, v) => {
                         if let Ok(elem) = self.eval(v) {
-                            Ok(CowObj::from(vec![(k, elem)]).into_iter())
+                            Ok(Rep::from(vec![(k, elem)]).into_iter())
                         } else {
                             internal_err!()
                         }
@@ -123,18 +124,18 @@ pub trait Context: std::fmt::Debug + std::fmt::Display {
                         if let Ok(Obj::List(ellipsis)) = self.get_ellipsis() {
                             Ok(ellipsis.values.into_iter())
                         } else {
-                            Ok(CowObj::from(vec![]).into_iter())
+                            Ok(Rep::from(vec![]).into_iter())
                         }
                     }
                     (_, Expr::Ellipsis(Some(name))) => {
                         if let Ok(Obj::List(more)) = self.get(name) {
                             Ok(more.values.into_iter())
                         } else {
-                            Ok(CowObj::from(vec![]).into_iter())
+                            Ok(Rep::from(vec![]).into_iter())
                         }
                     }
                     (k, v) => match self.eval_and_finalize(v) {
-                        Ok(elem) => Ok(CowObj::from(vec![(k, elem)]).into_iter()),
+                        Ok(elem) => Ok(Rep::from(vec![(k, elem)]).into_iter()),
                         Err(e) => Err(e),
                     },
                 })

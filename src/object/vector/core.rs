@@ -54,7 +54,12 @@ pub enum Vector {
 
 impl Clone for Vector {
     fn clone(&self) -> Self {
-        self.lazy_copy()
+        match self {
+            Vector::Double(v) => Vector::Double(v.clone()),
+            Vector::Character(v) => Vector::Character(v.clone()),
+            Vector::Integer(v) => Vector::Integer(v.clone()),
+            Vector::Logical(v) => Vector::Logical(v.clone()),
+        }
     }
 }
 
@@ -66,18 +71,6 @@ impl Vector {
             Integer(x) => x.get(index).map(Integer),
             Logical(x) => x.get(index).map(Logical),
             Character(x) => x.get(index).map(Character),
-        }
-    }
-
-    /// Create a lazy copy of the vector.
-    /// When mutating vectors, the internal data only needs to be copied when there is more than
-    /// one such lazy copy.
-    pub fn lazy_copy(&self) -> Self {
-        match self {
-            Vector::Double(v) => Vector::Double(v.clone()),
-            Vector::Character(v) => Vector::Character(v.clone()),
-            Vector::Integer(v) => Vector::Integer(v.clone()),
-            Vector::Logical(v) => Vector::Logical(v.clone()),
         }
     }
 

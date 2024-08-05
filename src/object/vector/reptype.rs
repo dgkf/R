@@ -6,7 +6,9 @@ use super::subset::Subset;
 use super::subsets::Subsets;
 use super::types::*;
 use super::{OptionNA, Pow, VecPartialCmp};
-use crate::object::{CowObj, ViewMut};
+use crate::error::Error;
+use crate::internal_err;
+use crate::object::{CowObj, Obj, ViewMut};
 
 /// Vector
 #[derive(Debug, PartialEq)]
@@ -25,15 +27,28 @@ impl<T: Clone> Clone for RepType<T> {
     }
 }
 
-impl<T: AtomicMode + Clone + Default> Default for RepType<T> {
+impl<T: Clone + Default> Default for RepType<T> {
     fn default() -> Self {
         Self::new()
     }
 }
 
+impl<T: Clone + Default + ViewMut> RepType<T> {
+    /// Retrieve the internal data as a mutable view.
+    pub fn get_inner_mut(&self, index: usize) -> Option<T> {
+        match self {
+            RepType::Subset(v, subsets) => {
+                let vb = v.borrow();
+                let index = subsets.get_index_at(index).unwrap();
+                vb.get(index).map(|i| i.view_mut())
+            }
+        }
+    }
+}
+
 impl<T> IntoIterator for RepType<T>
 where
-    T: AtomicMode + Clone + Default,
+    T: Clone + Default,
 {
     type Item = T;
     type IntoIter = RepTypeIter<T>;
@@ -50,13 +65,13 @@ pub enum RepTypeIter<T: Clone> {
     SubsetIter(RepType<T>, usize, usize),
 }
 
-impl<T: AtomicMode + Clone + Default> Iterator for RepTypeIter<T> {
+impl<T: Clone + Default> Iterator for RepTypeIter<T> {
     type Item = T;
     fn next(&mut self) -> Option<Self::Item> {
         match self {
             RepTypeIter::SubsetIter(rep, i, len) => {
                 if i < len {
-                    let x = Some(rep.get_atom(*i));
+                    let x = rep.get_inner(*i);
                     *i += 1;
                     x
                 } else {
@@ -75,7 +90,7 @@ impl<T: Clone> ViewMut for RepType<T> {
     }
 }
 
-impl<T: AtomicMode + Clone + Default> RepType<T> {
+impl<T: Clone + Default> RepType<T> {
     /// Create an empty vector
     ///
     /// The primary use case for this function is to support testing, and there
@@ -105,6 +120,18 @@ impl<T: AtomicMode + Clone + Default> RepType<T> {
         }
     }
 
+    /// Try to get mutable access to the internal vector through the passed closure.
+    /// This requires the vector to be in materialized form, otherwise None is returned.
+    /// None is returned if this is not the case.
+    pub fn with_inner_mut<F, R>(&self, f: F) -> R
+    where
+        F: FnOnce(&mut Vec<T>) -> R,
+    {
+        match self {
+            RepType::Subset(v, Subsets(s)) => v.with_inner_mut(f),
+        }
+    }
+
     /// Subsetting a Vector
     ///
     /// Introduce a new subset into the aggregate list of subset indices.
@@ -123,11 +150,11 @@ impl<T: AtomicMode + Clone + Default> RepType<T> {
         match self {
             RepType::Subset(v, Subsets(s)) => match s.as_slice() {
                 [] => v.borrow().len(),
-                _ => unimplemented!(),
+                // FIXME: This can be wrong
+                [.., last] => std::cmp::min(v.len(), last.len()),
             },
         }
     }
-
     #[must_use]
     pub fn is_empty(&self) -> bool {
         self.len() == 0
@@ -147,16 +174,6 @@ impl<T: AtomicMode + Clone + Default> RepType<T> {
                 let index = subsets.get_index_at(index)?;
                 let elem = vb.get(index)?;
                 Some(RepType::Subset(vec![elem.clone()].into(), Subsets::new()))
-            }
-        }
-    }
-
-    pub fn get_atom(&self, index: usize) -> T {
-        match self {
-            RepType::Subset(v, subsets) => {
-                let vb = v.borrow();
-                let index = subsets.get_index_at(index).unwrap();
-                vb[index].clone()
             }
         }
     }
@@ -197,13 +214,20 @@ impl<T: AtomicMode + Clone + Default> RepType<T> {
     /// Materialize a Vector
     ///
     /// Apply subsets and clone values into a new vector.
-    ///
     pub fn materialize(&self) -> Self
     where
         T: Clone,
     {
         match self {
             RepType::Subset(v, subsets) => {
+                // early exit when there is nothing to do
+                match subsets {
+                    Subsets(s) => match s.as_slice() {
+                        [] => return self.clone(),
+                        _ => (),
+                    },
+                }
+
                 let vc = v.clone();
                 let vb = vc.borrow();
                 let mut res: Vec<T> = vec![];
@@ -222,19 +246,31 @@ impl<T: AtomicMode + Clone + Default> RepType<T> {
         }
     }
 
-    pub fn is_double(&self) -> bool {
+    pub fn is_double(&self) -> bool
+    where
+        T: AtomicMode,
+    {
         T::is_double()
     }
 
-    pub fn is_logical(&self) -> bool {
+    pub fn is_logical(&self) -> bool
+    where
+        T: AtomicMode,
+    {
         T::is_logical()
     }
 
-    pub fn is_integer(&self) -> bool {
+    pub fn is_integer(&self) -> bool
+    where
+        T: AtomicMode,
+    {
         T::is_integer()
     }
 
-    pub fn is_character(&self) -> bool {
+    pub fn is_character(&self) -> bool
+    where
+        T: AtomicMode,
+    {
         T::is_character()
     }
 
@@ -331,6 +367,12 @@ where
                 OptionNA::NA => Err(()),
             },
         )
+    }
+}
+
+impl From<Vec<(Option<String>, Obj)>> for RepType<(Option<String>, Obj)> {
+    fn from(value: Vec<(Option<String>, Obj)>) -> Self {
+        RepType::Subset(value.into(), Subsets::default())
     }
 }
 
