@@ -69,11 +69,7 @@ impl ViewMut for Obj {
                 Vector::Logical(v) => Vector::Logical(v.view_mut()),
             }),
 
-            Obj::List(List {
-                names,
-                values,
-                subsets,
-            }) => Obj::List(List {
+            Obj::List(List { names, values, subsets }) => Obj::List(List {
                 names: (*names).view_mut(),
                 values: (*values).view_mut(),
                 subsets: (*subsets).clone(),
@@ -709,10 +705,7 @@ impl CallStack {
     }
 
     pub fn add_child_frame(&mut self, call: Expr, env: Rc<Environment>) -> usize {
-        let local_env = Rc::new(Environment {
-            parent: Some(env.clone()),
-            ..Default::default()
-        });
+        let local_env = Rc::new(Environment { parent: Some(env.clone()), ..Default::default() });
 
         self.add_frame(call, local_env)
     }

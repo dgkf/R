@@ -98,22 +98,12 @@ pub fn wasm_parse_errors(args: JsValue, input: &str) -> Vec<ParseError> {
 
     match res {
         Ok(_) => vec![],
-        Err(Signal::Error(ParseUnexpected(r, (start, end)))) => vec![ParseError {
-            start,
-            end,
-            message: format!("Unexpected {r:?}"),
-        }],
+        Err(Signal::Error(ParseUnexpected(r, (start, end)))) => {
+            vec![ParseError { start, end, message: format!("Unexpected {r:?}") }]
+        }
         Err(Signal::Error(ParseFailure(e))) => match e.location {
-            Pos(p) => vec![ParseError {
-                start: p,
-                end: p,
-                message: format!("{e:?}"),
-            }],
-            Span((start, end)) => vec![ParseError {
-                start,
-                end,
-                message: format!("{e:?}"),
-            }],
+            Pos(p) => vec![ParseError { start: p, end: p, message: format!("{e:?}") }],
+            Span((start, end)) => vec![ParseError { start, end, message: format!("{e:?}") }],
         },
         Err(e) => {
             log(&format!("{e:?}"));

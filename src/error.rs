@@ -132,10 +132,7 @@ impl Error {
         use pest::error::InputLocation;
         use pest::{Position, Span};
         let variant = match error.variant {
-            ParsingError {
-                positives: p,
-                negatives: n,
-            } => ParsingError {
+            ParsingError { positives: p, negatives: n } => ParsingError {
                 positives: p.into_iter().map(|i| i.into()).collect(),
                 negatives: n.into_iter().map(|i| i.into()).collect(),
             },
