@@ -1,5 +1,4 @@
 use hashbrown::{HashMap, HashSet};
-use std::borrow::Borrow;
 
 use crate::error::Error;
 use crate::lang::EvalResult;
@@ -10,14 +9,10 @@ use super::*;
 
 type ListNameMap = HashMap<String, Vec<usize>>;
 
-struct ListVals(Rep<Obj>);
-
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct List {
     pub names: CowObj<ListNameMap>,
     pub values: Rep<(Option<String>, Obj)>,
-    // pub values: CowObj<Vec<(Option<String>, Obj)>>,
-    // pub subsets: Subsets,
 }
 
 impl From<Vec<(Option<String>, Obj)>> for List {
@@ -49,9 +44,11 @@ impl List {
     }
 
     pub fn subset(&self, by: Subset) -> List {
+        let values = self.values.view_mut();
+        values.subset(by);
         List {
             names: self.names.clone(),
-            values: self.values.subset(by),
+            values,
         }
     }
 
