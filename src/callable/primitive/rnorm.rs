@@ -3,6 +3,7 @@ use rand_distr::{Distribution, Normal};
 
 use crate::callable::core::*;
 use crate::error::Error;
+use crate::formals;
 use crate::lang::*;
 use crate::object::*;
 
@@ -41,15 +42,10 @@ use crate::object::*;
 #[builtin(sym = "rnorm")]
 #[derive(Debug, Clone, PartialEq)]
 pub struct PrimitiveRnorm;
-impl Callable for PrimitiveRnorm {
-    fn formals(&self) -> ExprList {
-        ExprList::from(vec![
-            (Some(String::from("n")), Expr::Number(1.0)),
-            (Some(String::from("mean")), Expr::Number(0.0)),
-            (Some(String::from("std")), Expr::Number(1.0)),
-        ])
-    }
 
+formals!(PrimitiveRnorm, "(n = 1, mean = 0, std = 1)");
+
+impl Callable for PrimitiveRnorm {
     fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
         use Error::ArgumentInvalid;
         let (vals, _) = self.match_arg_exprs(args, stack)?;

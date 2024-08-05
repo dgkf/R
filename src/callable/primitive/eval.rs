@@ -1,24 +1,11 @@
-use lazy_static::lazy_static;
 use r_derive::*;
 
 use crate::callable::core::*;
 use crate::context::Context;
 use crate::error::Error;
+use crate::formals;
 use crate::lang::*;
 use crate::object::*;
-
-lazy_static! {
-    pub static ref FORMALS: ExprList = ExprList::from(vec![
-        (Some("x".to_string()), Expr::Missing),
-        (
-            Some("envir".to_string()),
-            Expr::Call(
-                Box::new(Expr::Symbol("environment".to_string())),
-                ExprList::new()
-            )
-        )
-    ]);
-}
 
 /// Evaluate Code in an Environment
 ///
@@ -58,11 +45,10 @@ lazy_static! {
 #[builtin(sym = "eval")]
 #[derive(Debug, Clone, PartialEq)]
 pub struct PrimitiveEval;
-impl Callable for PrimitiveEval {
-    fn formals(&self) -> ExprList {
-        FORMALS.clone()
-    }
 
+formals!(PrimitiveEval, "(x, envir = environment())");
+
+impl Callable for PrimitiveEval {
     fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
         let (args, _ellipsis) = self.match_arg_exprs(args, stack)?;
         let mut args = Obj::List(args);

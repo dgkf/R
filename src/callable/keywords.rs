@@ -21,6 +21,8 @@ impl Format for KeywordReturn {
     }
 }
 
+impl CallableFormals for KeywordReturn {}
+
 impl Callable for KeywordReturn {
     fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
         let mut args = args.values.into_iter();
@@ -50,6 +52,8 @@ impl Format for KeywordIf {
     }
 }
 
+impl CallableFormals for KeywordIf {}
+
 impl Callable for KeywordIf {
     fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
         let mut args = args.values.into_iter();
@@ -69,6 +73,8 @@ impl Callable for KeywordIf {
 #[derive(Debug, Clone, PartialEq)]
 #[builtin]
 pub struct KeywordFor;
+
+impl CallableFormals for KeywordFor {}
 
 impl Format for KeywordFor {
     fn rfmt_call_with(&self, _state: FormatState, args: &ExprList) -> String {
@@ -126,6 +132,8 @@ impl Callable for KeywordFor {
 #[builtin]
 pub struct KeywordWhile;
 
+impl CallableFormals for KeywordWhile {}
+
 impl Format for KeywordWhile {
     fn rfmt_call_with(&self, _state: FormatState, args: &ExprList) -> String {
         format!("while ({}) {}", args.values[0], args.values[1])
@@ -181,6 +189,8 @@ impl Format for KeywordRepeat {
     }
 }
 
+impl CallableFormals for KeywordRepeat {}
+
 impl Callable for KeywordRepeat {
     fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
         let mut args = args.values.into_iter();
@@ -213,6 +223,8 @@ impl Callable for KeywordRepeat {
 #[builtin]
 pub struct KeywordParen;
 
+impl CallableFormals for KeywordParen {}
+
 impl Format for KeywordParen {
     fn rfmt_call_with(&self, _state: FormatState, args: &ExprList) -> String {
         format!("({})", args.values.first().unwrap())
@@ -233,6 +245,8 @@ impl Callable for KeywordParen {
 #[derive(Debug, Clone, PartialEq)]
 #[builtin]
 pub struct KeywordBlock;
+
+impl CallableFormals for KeywordBlock {}
 
 impl Format for KeywordBlock {
     fn rfmt_call_with(&self, _state: FormatState, args: &ExprList) -> String {
@@ -264,6 +278,44 @@ impl Callable for KeywordBlock {
         }
 
         Ok(value)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+#[builtin]
+pub struct KeywordVec;
+
+impl Format for KeywordVec {
+    fn rfmt_call_with(&self, _state: FormatState, args: &ExprList) -> String {
+        format!("[{}]", args)
+    }
+}
+
+impl CallableFormals for KeywordVec {}
+
+impl Callable for KeywordVec {
+    fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
+        // for now just use c()
+        super::primitive::PrimitiveC.call(args, stack)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+#[builtin]
+pub struct KeywordList;
+
+impl Format for KeywordList {
+    fn rfmt_call_with(&self, _state: FormatState, args: &ExprList) -> String {
+        let trailing_comma = if args.len() > 1 { "" } else { "," };
+        format!("({}{})", args, trailing_comma)
+    }
+}
+
+impl CallableFormals for KeywordList {}
+
+impl Callable for KeywordList {
+    fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
+        super::primitive::PrimitiveList.call(args, stack)
     }
 }
 

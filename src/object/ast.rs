@@ -151,18 +151,13 @@ impl FromIterator<Expr> for ExprList {
         T: IntoIterator<Item = Expr>,
     {
         let values: Vec<Expr> = iter.into_iter().collect();
-        ExprList {
-            keys: vec![None; values.len()],
-            values,
-        }
+        ExprList { keys: vec![None; values.len()], values }
     }
 }
 
 impl ExprList {
     pub fn new() -> ExprList {
-        ExprList {
-            ..Default::default()
-        }
+        ExprList { ..Default::default() }
     }
 
     pub fn get_named(&self, key: &String) -> Option<Expr> {
@@ -220,10 +215,7 @@ impl ExprList {
             let keys_trailing = self.keys.drain(index..self.keys.len()).collect();
             let vals_trailing = self.values.drain(index..self.values.len()).collect();
 
-            ExprList {
-                keys: keys_trailing,
-                values: vals_trailing,
-            }
+            ExprList { keys: keys_trailing, values: vals_trailing }
         } else {
             ExprList::new()
         }
@@ -328,19 +320,13 @@ impl ExprList {
 
 impl From<Vec<Expr>> for ExprList {
     fn from(values: Vec<Expr>) -> Self {
-        ExprList {
-            keys: vec![None; values.len()],
-            values,
-        }
+        ExprList { keys: vec![None; values.len()], values }
     }
 }
 
 impl From<Expr> for ExprList {
     fn from(value: Expr) -> Self {
-        ExprList {
-            keys: vec![None],
-            values: vec![value],
-        }
+        ExprList { keys: vec![None], values: vec![value] }
     }
 }
 

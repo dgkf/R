@@ -1,6 +1,7 @@
 use r_derive::*;
 
 use crate::callable::core::*;
+use crate::formals;
 use crate::lang::*;
 use crate::object::*;
 
@@ -51,11 +52,10 @@ use crate::object::*;
 #[builtin(sym = "names")]
 #[derive(Debug, Clone, PartialEq)]
 pub struct PrimitiveNames;
-impl Callable for PrimitiveNames {
-    fn formals(&self) -> ExprList {
-        ExprList::from(vec![(Some(String::from("x")), Expr::Missing)])
-    }
 
+formals!(PrimitiveNames, "(x,)");
+
+impl Callable for PrimitiveNames {
     fn call_matched(&self, args: List, mut _ellipsis: List, stack: &mut CallStack) -> EvalResult {
         let x = Obj::List(args).try_get_named("x")?.force(stack)?;
 

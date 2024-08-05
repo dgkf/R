@@ -30,15 +30,16 @@ pub enum Error {
     CannotBeCoercedTo(&'static str),
     InvalidRange,
 
+    // destructuring
+    CannotBeDestructuredIntoList,
+
     // function parsing
     InvalidFunctionParameter(Expr),
     DuplicatedParameter(String),
     DuplicatedMoreParameter(),
-
     Missing,
     ArgumentMissing(String),
     ArgumentInvalid(String),
-    Other(String),
 
     // parsing errors
     ParseFailureVerbose(pest::error::Error<en::Rule>),
@@ -55,6 +56,8 @@ pub enum Error {
 
     // features
     FeatureDisabledRestArgs,
+
+    Other(String),
 }
 
 impl Error {
@@ -116,6 +119,7 @@ impl Error {
             Error::InvalidFunctionParameter(expr) => format!("invalid function parameter: {}", expr),
             Error::DuplicatedParameter(name) => format!("duplicated parameter name: {}", name),
             Error::DuplicatedMoreParameter() => "duplicated '..<more>' parameters".to_string(),
+            Error::CannotBeDestructuredIntoList => "object cannot be coerced into a list for destructuring".to_string(),
         }
     }
 

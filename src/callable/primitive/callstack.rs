@@ -2,7 +2,7 @@ use r_derive::builtin;
 
 use crate::callable::core::*;
 use crate::lang::{CallStack, EvalResult};
-use crate::object::*;
+use crate::{formals, object::*};
 
 /// Get the Current Call Stack
 ///
@@ -33,6 +33,9 @@ use crate::object::*;
 #[builtin(sym = "callstack")]
 #[derive(Debug, Clone, PartialEq)]
 pub struct PrimitiveCallstack;
+
+formals!(PrimitiveCallstack, "()");
+
 impl Callable for PrimitiveCallstack {
     fn call(&self, _args: ExprList, stack: &mut CallStack) -> EvalResult {
         Ok(Obj::List(List::from(

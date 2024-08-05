@@ -4,6 +4,7 @@ use rand::Rng;
 
 use crate::callable::core::*;
 use crate::error::Error;
+use crate::formals;
 use crate::lang::*;
 use crate::object::*;
 
@@ -42,15 +43,10 @@ use crate::object::*;
 #[builtin(sym = "runif")]
 #[derive(Debug, Clone, PartialEq)]
 pub struct PrimitiveRunif;
-impl Callable for PrimitiveRunif {
-    fn formals(&self) -> ExprList {
-        ExprList::from(vec![
-            (Some(String::from("n")), Expr::Number(1.0)),
-            (Some(String::from("min")), Expr::Number(0.0)),
-            (Some(String::from("max")), Expr::Number(1.0)),
-        ])
-    }
 
+formals!(PrimitiveRunif, "(n = 1, min = 0, max = 1)");
+
+impl Callable for PrimitiveRunif {
     fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
         use Error::ArgumentInvalid;
 

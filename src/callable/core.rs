@@ -31,11 +31,13 @@ pub trait CallableClone: Callable {
     fn callable_clone(&self) -> Box<dyn Builtin>;
 }
 
-pub trait Callable {
+pub trait CallableFormals {
     fn formals(&self) -> ExprList {
-        ExprList::new()
+        ExprList::default()
     }
+}
 
+pub trait Callable: CallableFormals {
     fn match_args(&self, args: List, stack: &mut CallStack) -> Result<(List, List), Signal> {
         let mut formals = self.formals();
         let ellipsis: List = vec![].into();
@@ -273,6 +275,7 @@ where
     }
 }
 
+impl CallableFormals for String {}
 impl Builtin for String {}
 
 pub fn builtin(s: &str) -> Result<Box<dyn Builtin>, Signal> {
@@ -316,6 +319,15 @@ impl Callable for String {
 
 impl Format for Obj {}
 
+impl CallableFormals for Obj {
+    fn formals(&self) -> ExprList {
+        match self {
+            Obj::Function(formals, _, _) => formals.clone(),
+            _ => ExprList::new(),
+        }
+    }
+}
+
 impl Callable for Obj {
     fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
         let Obj::Function(_, body, _) = self else {
@@ -343,13 +355,6 @@ impl Callable for Obj {
 
         stack.env().append(args);
         stack.eval(body.clone())
-    }
-
-    fn formals(&self) -> ExprList {
-        match self {
-            Obj::Function(formals, _, _) => formals.clone(),
-            _ => ExprList::new(),
-        }
     }
 }
 
