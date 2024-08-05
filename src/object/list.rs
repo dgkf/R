@@ -44,8 +44,8 @@ impl List {
     }
 
     pub fn subset(&self, by: Subset) -> List {
-        let values = self.values.view_mut();
-        values.subset(by);
+        println!("subsettt");
+        let values = self.values.view_mut().subset(by);
         List {
             names: self.names.clone(),
             values,
