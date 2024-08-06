@@ -148,6 +148,7 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
 </pre></div><pre class="rust"><code><span class="kw">use </span>r_derive::<span class="kw-2">*</span>;
 
 <span class="kw">use </span><span class="kw">crate</span>::callable::core::<span class="kw-2">*</span>;
+<span class="kw">use </span><span class="kw">crate</span>::formals;
 <span class="kw">use </span><span class="kw">crate</span>::lang::<span class="kw-2">*</span>;
 <span class="kw">use </span><span class="kw">crate</span>::object::<span class="kw-2">*</span>;
 
@@ -198,11 +199,10 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
 #[builtin(sym = <span class="string">"names"</span>)]
 #[derive(Debug, Clone, PartialEq)]
 </span><span class="kw">pub struct </span>PrimitiveNames;
-<span class="kw">impl </span>Callable <span class="kw">for </span>PrimitiveNames {
-    <span class="kw">fn </span>formals(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; ExprList {
-        ExprList::from(<span class="macro">vec!</span>[(<span class="prelude-val">Some</span>(String::from(<span class="string">"x"</span>)), Expr::Missing)])
-    }
 
+<span class="macro">formals!</span>(PrimitiveNames, <span class="string">"(x,)"</span>);
+
+<span class="kw">impl </span>Callable <span class="kw">for </span>PrimitiveNames {
     <span class="kw">fn </span>call_matched(<span class="kw-2">&amp;</span><span class="self">self</span>, args: List, <span class="kw-2">mut </span>_ellipsis: List, stack: <span class="kw-2">&amp;mut </span>CallStack) -&gt; EvalResult {
         <span class="kw">let </span>x = Obj::List(args).try_get_named(<span class="string">"x"</span>)<span class="question-mark">?</span>.force(stack)<span class="question-mark">?</span>;
 

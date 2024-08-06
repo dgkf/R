@@ -451,22 +451,11 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
 <a href="#418" id="418">418</a>
 <a href="#419" id="419">419</a>
 <a href="#420" id="420">420</a>
-<a href="#421" id="421">421</a>
-<a href="#422" id="422">422</a>
-<a href="#423" id="423">423</a>
-<a href="#424" id="424">424</a>
-<a href="#425" id="425">425</a>
-<a href="#426" id="426">426</a>
-<a href="#427" id="427">427</a>
-<a href="#428" id="428">428</a>
-<a href="#429" id="429">429</a>
 </pre></div><pre class="rust"><code><span class="kw">extern crate </span>r_derive;
 
-<span class="kw">use </span><span class="kw">crate</span>::callable::builtins::BUILTIN;
 <span class="kw">use </span><span class="kw">crate</span>::callable::dyncompare::<span class="kw-2">*</span>;
 <span class="kw">use </span><span class="kw">crate</span>::cli::Experiment;
 <span class="kw">use </span><span class="kw">crate</span>::context::Context;
-<span class="kw">use </span><span class="kw">crate</span>::error::Error;
 <span class="kw">use </span><span class="kw">crate</span>::object::List;
 <span class="kw">use </span><span class="kw">crate</span>::object::{Expr, ExprList, Obj};
 <span class="kw">use crate</span>::{internal_err, lang::<span class="kw-2">*</span>};
@@ -493,11 +482,13 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
     <span class="kw">fn </span>callable_clone(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Box&lt;<span class="kw">dyn </span>Builtin&gt;;
 }
 
-<span class="kw">pub trait </span>Callable {
+<span class="kw">pub trait </span>CallableFormals {
     <span class="kw">fn </span>formals(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; ExprList {
-        ExprList::new()
+        ExprList::default()
     }
+}
 
+<span class="kw">pub trait </span>Callable: CallableFormals {
     <span class="kw">fn </span>match_args(<span class="kw-2">&amp;</span><span class="self">self</span>, args: List, stack: <span class="kw-2">&amp;mut </span>CallStack) -&gt; <span class="prelude-ty">Result</span>&lt;(List, List), Signal&gt; {
         <span class="kw">let </span><span class="kw-2">mut </span>formals = <span class="self">self</span>.formals();
         <span class="kw">let </span>ellipsis: List = <span class="macro">vec!</span>[].into();
@@ -662,7 +653,7 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
     }
 }
 
-<span class="kw">pub trait </span>Builtin: Callable + CallableClone + Format + DynCompare + Sync {
+<span class="kw">pub trait </span>Builtin: Callable + CallableClone + Format + DynCompare + Sync + Send {
     <span class="kw">fn </span>is_transparent(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
         <span class="bool-val">false
     </span>}
@@ -735,19 +726,8 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
     }
 }
 
+<span class="kw">impl </span>CallableFormals <span class="kw">for </span>String {}
 <span class="kw">impl </span>Builtin <span class="kw">for </span>String {}
-
-<span class="kw">pub fn </span>builtin(s: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;Box&lt;<span class="kw">dyn </span>Builtin&gt;, Signal&gt; {
-    <span class="kw">let </span>err = Error::VariableNotFound(s.to_string());
-    &lt;Box&lt;<span class="kw">dyn </span>Builtin&gt;&gt;::try_from(s).or(<span class="prelude-val">Err</span>(err.into()))
-}
-
-<span class="kw">impl </span>TryFrom&lt;<span class="kw-2">&amp;</span>str&gt; <span class="kw">for </span>Box&lt;<span class="kw">dyn </span>Builtin&gt; {
-    <span class="kw">type </span>Error = ();
-    <span class="kw">fn </span>try_from(s: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="self">Self</span>::Error&gt; {
-        BUILTIN.get(s).map_or(<span class="prelude-val">Err</span>(()), |b| <span class="prelude-val">Ok</span>(b.clone()))
-    }
-}
 
 <span class="kw">pub fn </span>force_promises(
     vals: List,
@@ -778,6 +758,15 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
 
 <span class="kw">impl </span>Format <span class="kw">for </span>Obj {}
 
+<span class="kw">impl </span>CallableFormals <span class="kw">for </span>Obj {
+    <span class="kw">fn </span>formals(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; ExprList {
+        <span class="kw">match </span><span class="self">self </span>{
+            Obj::Function(formals, <span class="kw">_</span>, <span class="kw">_</span>) =&gt; formals.clone(),
+            <span class="kw">_ </span>=&gt; ExprList::new(),
+        }
+    }
+}
+
 <span class="kw">impl </span>Callable <span class="kw">for </span>Obj {
     <span class="kw">fn </span>call(<span class="kw-2">&amp;</span><span class="self">self</span>, args: ExprList, stack: <span class="kw-2">&amp;mut </span>CallStack) -&gt; EvalResult {
         <span class="kw">let </span>Obj::Function(<span class="kw">_</span>, body, <span class="kw">_</span>) = <span class="self">self </span><span class="kw">else </span>{
@@ -805,13 +794,6 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
 
         stack.env().append(args);
         stack.eval(body.clone())
-    }
-
-    <span class="kw">fn </span>formals(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; ExprList {
-        <span class="kw">match </span><span class="self">self </span>{
-            Obj::Function(formals, <span class="kw">_</span>, <span class="kw">_</span>) =&gt; formals.clone(),
-            <span class="kw">_ </span>=&gt; ExprList::new(),
-        }
     }
 }
 

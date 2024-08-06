@@ -99,6 +99,28 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
 <a href="#66" id="66">66</a>
 <a href="#67" id="67">67</a>
 <a href="#68" id="68">68</a>
+<a href="#69" id="69">69</a>
+<a href="#70" id="70">70</a>
+<a href="#71" id="71">71</a>
+<a href="#72" id="72">72</a>
+<a href="#73" id="73">73</a>
+<a href="#74" id="74">74</a>
+<a href="#75" id="75">75</a>
+<a href="#76" id="76">76</a>
+<a href="#77" id="77">77</a>
+<a href="#78" id="78">78</a>
+<a href="#79" id="79">79</a>
+<a href="#80" id="80">80</a>
+<a href="#81" id="81">81</a>
+<a href="#82" id="82">82</a>
+<a href="#83" id="83">83</a>
+<a href="#84" id="84">84</a>
+<a href="#85" id="85">85</a>
+<a href="#86" id="86">86</a>
+<a href="#87" id="87">87</a>
+<a href="#88" id="88">88</a>
+<a href="#89" id="89">89</a>
+<a href="#90" id="90">90</a>
 </pre></div><pre class="rust"><code><span class="kw">pub trait </span>SameType&lt;T&gt;: Sized {
     <span class="kw">fn </span>is_same_type_as(<span class="kw-2">&amp;</span><span class="self">self</span>, _other: <span class="kw-2">&amp;</span>T) -&gt; bool {
         <span class="bool-val">false
@@ -112,18 +134,17 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
 }
 
 <span class="attr">#[macro_export]
-</span><span class="macro">macro_rules!</span> r {
+</span><span class="macro">macro_rules!</span> r_macro_stringify {
     <span class="comment">// evaluate a single token directly
     </span>{{ <span class="macro-nonterminal">$expr</span>:literal }} =&gt; {{
         {
             <span class="comment">// test if token is a string literal and evaluate directly
             </span><span class="kw">if let </span><span class="prelude-val">Some</span>(s) = (<span class="kw-2">&amp;</span><span class="macro-nonterminal">$expr </span><span class="kw">as </span><span class="kw-2">&amp;</span><span class="kw">dyn </span>std::any::Any).downcast_ref::&lt;<span class="kw-2">&amp;</span>str&gt;() {
-                <span class="macro-nonterminal">$crate::lang::CallStack::default</span>().parse_and_eval(s)
+                s
 
             <span class="comment">// otherwise stringify token before evaluating
             </span>} <span class="kw">else </span>{
-                <span class="kw">let </span>expr = <span class="macro">stringify!</span>(<span class="macro-nonterminal">$expr</span>);
-                <span class="macro-nonterminal">$crate::lang::CallStack::default</span>().parse_and_eval(expr)
+                <span class="macro">stringify!</span>(<span class="macro-nonterminal">$expr</span>)
             }
         }
     }};
@@ -132,39 +153,62 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
     // so consider using `r!{{" .. "}}` syntax when whitespace is meaningful
     </span>{ $(<span class="macro-nonterminal">$expr</span>:tt)+ } =&gt; {{
         {
-            <span class="kw">let </span>expr = <span class="macro">stringify!</span>($(<span class="macro-nonterminal">$expr</span>)+);
-            <span class="macro-nonterminal">$crate::lang::CallStack::default</span>().parse_and_eval(expr)
+            <span class="macro">stringify!</span>($(<span class="macro-nonterminal">$expr</span>)+)
         }
     }};
 }
 
 <span class="attr">#[macro_export]
-</span><span class="macro">macro_rules!</span> r_expect {
-    <span class="comment">// evaluate a single token directly
-    </span>{{ <span class="macro-nonterminal">$expr</span>:tt }} =&gt; {{
-        {
-            <span class="comment">// test if token is a string literal and evaluate directly
-            </span><span class="kw">if let </span><span class="prelude-val">Some</span>(s) = (<span class="kw-2">&amp;</span><span class="macro-nonterminal">$expr </span><span class="kw">as </span><span class="kw-2">&amp;</span><span class="kw">dyn </span>std::any::Any).downcast_ref::&lt;<span class="kw-2">&amp;</span>str&gt;() {
-                <span class="kw">let </span>res  = <span class="macro-nonterminal">$crate::lang::CallStack::default</span>().parse_and_eval(s);
-                <span class="macro">assert_eq!</span>(res, <span class="macro">r!</span>{ <span class="bool-val">true </span>})
+</span><span class="macro">macro_rules!</span> formals {
+    ( <span class="macro-nonterminal">$what</span>:ident, <span class="macro-nonterminal">$args</span>:literal ) =&gt; {
+        <span class="kw">impl </span>CallableFormals <span class="kw">for </span><span class="macro-nonterminal">$what </span>{
+            <span class="kw">fn </span>formals(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; ExprList {
+                <span class="kw">static </span>FORMALS: std::sync::LazyLock&lt;ExprList&gt; = std::sync::LazyLock::new(|| {
+                    <span class="kw">use </span><span class="macro-nonterminal">$crate::object</span>::{Expr, ExprList};
 
-            <span class="comment">// otherwise stringify token before evaluating
-            </span>} <span class="kw">else </span>{
-                <span class="kw">let </span>expr = <span class="macro">stringify!</span>(<span class="macro-nonterminal">$expr</span>);
-                <span class="kw">let </span>res  = <span class="macro-nonterminal">$crate::lang::CallStack::default</span>().parse_and_eval(expr);
-                <span class="macro">assert_eq!</span>(res, <span class="macro">r!</span>{ <span class="bool-val">true </span>})
+                    <span class="kw">let </span>signature = <span class="macro-nonterminal">$</span><span class="macro">crate::r_parse!</span> {{ <span class="macro-nonterminal">$args </span>}};
+                    <span class="kw">let </span><span class="prelude-val">Ok</span>(<span class="macro-nonterminal">$crate::object::Expr::Call</span>(<span class="kw">_</span>, signature)) = signature <span class="kw">else </span>{
+                        <span class="macro">panic!</span>(<span class="string">"unexpected formal definition"</span>)
+                    };
+
+                    signature
+                        .into_iter()
+                        .map(|pair| <span class="kw">match </span>pair {
+                            (<span class="prelude-val">None</span>, Expr::Symbol(name)) =&gt; (<span class="prelude-val">Some</span>(name), Expr::Missing),
+                            pair =&gt; pair,
+                        })
+                        .collect::&lt;ExprList&gt;()
+                });
+
+                (<span class="kw-2">*</span>FORMALS).clone()
             }
         }
-    }};
+    };
+}
 
-    <span class="comment">// evaluate a token stream by first stringifying. This can affect whitespace,
-    // so consider using `r!{{" .. "}}` syntax when whitespace is meaningful
-    </span>{ $(<span class="macro-nonterminal">$expr</span>:tt)+ } =&gt; {{
-        {
-            <span class="kw">let </span>expr = <span class="macro">stringify!</span>($(<span class="macro-nonterminal">$expr</span>)+);
-            <span class="kw">let </span>res  = <span class="macro-nonterminal">$crate::lang::CallStack::default</span>().parse_and_eval(expr);
-            <span class="macro">assert_eq!</span>(res, <span class="macro">r!</span>{ <span class="bool-val">true </span>})
-        }
+<span class="attr">#[macro_export]
+</span><span class="macro">macro_rules!</span> r_parse {
+    { $(<span class="macro-nonterminal">$expr</span>:tt)+ } =&gt; {{
+        <span class="kw">let </span>expr = <span class="macro-nonterminal">$</span><span class="macro">crate::r_macro_stringify!</span>($(<span class="macro-nonterminal">$expr</span>)+);
+        <span class="macro-nonterminal">$crate::lang::CallStack::default</span>().parse(expr)
+    }};
+}
+
+<span class="attr">#[macro_export]
+</span><span class="macro">macro_rules!</span> r {
+    { $(<span class="macro-nonterminal">$expr</span>:tt)+ } =&gt; {{
+        <span class="kw">use </span><span class="macro-nonterminal">$crate::context::Context</span>;
+        (<span class="macro-nonterminal">$</span><span class="macro">crate::r_parse!</span> { $(<span class="macro-nonterminal">$expr</span>)+ })
+            .and_then(|x| <span class="macro-nonterminal">$crate::lang::CallStack::default</span>().eval_and_finalize(x))
+
+    }};
+}
+
+<span class="attr">#[macro_export]
+</span><span class="macro">macro_rules!</span> r_expect {
+    { $(<span class="macro-nonterminal">$expr</span>:tt)+ } =&gt; {{
+        <span class="kw">let </span>res = <span class="macro-nonterminal">$</span><span class="macro">crate::r!</span> { $(<span class="macro-nonterminal">$expr</span>)+ };
+        <span class="macro">assert_eq!</span>(res, <span class="macro">r!</span> { <span class="bool-val">true </span>})
     }};
 }
 </code></pre></div></section></main></body></html>

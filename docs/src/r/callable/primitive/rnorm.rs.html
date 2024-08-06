@@ -125,15 +125,12 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
 <a href="#92" id="92">92</a>
 <a href="#93" id="93">93</a>
 <a href="#94" id="94">94</a>
-<a href="#95" id="95">95</a>
-<a href="#96" id="96">96</a>
-<a href="#97" id="97">97</a>
-<a href="#98" id="98">98</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>r_derive::builtin;
 <span class="kw">use </span>rand_distr::{Distribution, Normal};
 
 <span class="kw">use </span><span class="kw">crate</span>::callable::core::<span class="kw-2">*</span>;
 <span class="kw">use </span><span class="kw">crate</span>::error::Error;
+<span class="kw">use </span><span class="kw">crate</span>::formals;
 <span class="kw">use </span><span class="kw">crate</span>::lang::<span class="kw-2">*</span>;
 <span class="kw">use </span><span class="kw">crate</span>::object::<span class="kw-2">*</span>;
 
@@ -172,15 +169,10 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
 #[builtin(sym = <span class="string">"rnorm"</span>)]
 #[derive(Debug, Clone, PartialEq)]
 </span><span class="kw">pub struct </span>PrimitiveRnorm;
-<span class="kw">impl </span>Callable <span class="kw">for </span>PrimitiveRnorm {
-    <span class="kw">fn </span>formals(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; ExprList {
-        ExprList::from(<span class="macro">vec!</span>[
-            (<span class="prelude-val">Some</span>(String::from(<span class="string">"n"</span>)), Expr::Number(<span class="number">1.0</span>)),
-            (<span class="prelude-val">Some</span>(String::from(<span class="string">"mean"</span>)), Expr::Number(<span class="number">0.0</span>)),
-            (<span class="prelude-val">Some</span>(String::from(<span class="string">"std"</span>)), Expr::Number(<span class="number">1.0</span>)),
-        ])
-    }
 
+<span class="macro">formals!</span>(PrimitiveRnorm, <span class="string">"(n = 1, mean = 0, std = 1)"</span>);
+
+<span class="kw">impl </span>Callable <span class="kw">for </span>PrimitiveRnorm {
     <span class="kw">fn </span>call(<span class="kw-2">&amp;</span><span class="self">self</span>, args: ExprList, stack: <span class="kw-2">&amp;mut </span>CallStack) -&gt; EvalResult {
         <span class="kw">use </span>Error::ArgumentInvalid;
         <span class="kw">let </span>(vals, <span class="kw">_</span>) = <span class="self">self</span>.match_arg_exprs(args, stack)<span class="question-mark">?</span>;

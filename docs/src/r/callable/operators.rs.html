@@ -502,14 +502,6 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
 <a href="#469" id="469">469</a>
 <a href="#470" id="470">470</a>
 <a href="#471" id="471">471</a>
-<a href="#472" id="472">472</a>
-<a href="#473" id="473">473</a>
-<a href="#474" id="474">474</a>
-<a href="#475" id="475">475</a>
-<a href="#476" id="476">476</a>
-<a href="#477" id="477">477</a>
-<a href="#478" id="478">478</a>
-<a href="#479" id="479">479</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>r_derive::<span class="kw-2">*</span>;
 
 <span class="kw">use </span><span class="kw">super</span>::core::<span class="kw-2">*</span>;
@@ -522,6 +514,7 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
 <span class="attr">#[derive(Debug, Clone, PartialEq)]
 #[builtin(sym = <span class="string">"&lt;-"</span>, kind = Infix)]
 </span><span class="kw">pub struct </span>InfixAssign;
+<span class="kw">impl </span>CallableFormals <span class="kw">for </span>InfixAssign {}
 <span class="kw">impl </span>Callable <span class="kw">for </span>InfixAssign {
     <span class="kw">fn </span>call(<span class="kw-2">&amp;</span><span class="self">self</span>, args: ExprList, stack: <span class="kw-2">&amp;mut </span>CallStack) -&gt; EvalResult {
         <span class="kw">let </span>(lhs, rhs) = args.unnamed_binary_args();
@@ -532,6 +525,7 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
 <span class="attr">#[derive(Debug, Clone, PartialEq)]
 #[builtin(sym = <span class="string">"+"</span>, kind = Infix)]
 </span><span class="kw">pub struct </span>InfixAdd;
+<span class="kw">impl </span>CallableFormals <span class="kw">for </span>InfixAdd {}
 <span class="kw">impl </span>Callable <span class="kw">for </span>InfixAdd {
     <span class="kw">fn </span>call(<span class="kw-2">&amp;</span><span class="self">self</span>, args: ExprList, stack: <span class="kw-2">&amp;mut </span>CallStack) -&gt; EvalResult {
         <span class="kw">let </span>(lhs, rhs) = stack.eval_binary(args.unnamed_binary_args())<span class="question-mark">?</span>;
@@ -542,6 +536,7 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
 <span class="attr">#[derive(Debug, Clone, PartialEq)]
 #[builtin(sym = <span class="string">"-"</span>, kind = Infix)]
 </span><span class="kw">pub struct </span>InfixSub;
+<span class="kw">impl </span>CallableFormals <span class="kw">for </span>InfixSub {}
 <span class="kw">impl </span>Callable <span class="kw">for </span>InfixSub {
     <span class="kw">fn </span>call(<span class="kw-2">&amp;</span><span class="self">self</span>, args: ExprList, stack: <span class="kw-2">&amp;mut </span>CallStack) -&gt; EvalResult {
         <span class="kw">let </span>(lhs, rhs) = stack.eval_binary(args.unnamed_binary_args())<span class="question-mark">?</span>;
@@ -552,6 +547,7 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
 <span class="attr">#[derive(Debug, Clone, PartialEq)]
 #[builtin(sym = <span class="string">"-"</span>, kind = Prefix)]
 </span><span class="kw">pub struct </span>PrefixSub;
+<span class="kw">impl </span>CallableFormals <span class="kw">for </span>PrefixSub {}
 <span class="kw">impl </span>Callable <span class="kw">for </span>PrefixSub {
     <span class="kw">fn </span>call(<span class="kw-2">&amp;</span><span class="self">self</span>, args: ExprList, stack: <span class="kw-2">&amp;mut </span>CallStack) -&gt; EvalResult {
         <span class="kw">let </span>what = stack.eval(args.unnamed_unary_arg())<span class="question-mark">?</span>;
@@ -562,6 +558,7 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
 <span class="attr">#[derive(Debug, Clone, PartialEq)]
 #[builtin(sym = <span class="string">"!"</span>, kind = Prefix)]
 </span><span class="kw">pub struct </span>PrefixNot;
+<span class="kw">impl </span>CallableFormals <span class="kw">for </span>PrefixNot {}
 <span class="kw">impl </span>Callable <span class="kw">for </span>PrefixNot {
     <span class="kw">fn </span>call(<span class="kw-2">&amp;</span><span class="self">self</span>, args: ExprList, stack: <span class="kw-2">&amp;mut </span>CallStack) -&gt; EvalResult {
         <span class="kw">let </span>what = stack.eval(args.unnamed_unary_arg())<span class="question-mark">?</span>;
@@ -572,6 +569,7 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
 <span class="attr">#[derive(Debug, Clone, PartialEq)]
 #[builtin(sym = <span class="string">".."</span>, kind = Prefix)]
 </span><span class="kw">pub struct </span>PrefixPack;
+<span class="kw">impl </span>CallableFormals <span class="kw">for </span>PrefixPack {}
 <span class="kw">impl </span>Callable <span class="kw">for </span>PrefixPack {
     <span class="kw">fn </span>call(<span class="kw-2">&amp;</span><span class="self">self</span>, _args: ExprList, _stack: <span class="kw-2">&amp;mut </span>CallStack) -&gt; EvalResult {
         Error::IncorrectContext(<span class="string">".."</span>.to_string()).into()
@@ -581,6 +579,7 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
 <span class="attr">#[derive(Debug, Clone, PartialEq)]
 #[builtin(sym = <span class="string">"*"</span>, kind = Infix)]
 </span><span class="kw">pub struct </span>InfixMul;
+<span class="kw">impl </span>CallableFormals <span class="kw">for </span>InfixMul {}
 <span class="kw">impl </span>Callable <span class="kw">for </span>InfixMul {
     <span class="kw">fn </span>call(<span class="kw-2">&amp;</span><span class="self">self</span>, args: ExprList, stack: <span class="kw-2">&amp;mut </span>CallStack) -&gt; EvalResult {
         <span class="kw">let </span>(lhs, rhs) = stack.eval_binary(args.unnamed_binary_args())<span class="question-mark">?</span>;
@@ -591,6 +590,7 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
 <span class="attr">#[derive(Debug, Clone, PartialEq)]
 #[builtin(sym = <span class="string">"/"</span>, kind = Infix)]
 </span><span class="kw">pub struct </span>InfixDiv;
+<span class="kw">impl </span>CallableFormals <span class="kw">for </span>InfixDiv {}
 <span class="kw">impl </span>Callable <span class="kw">for </span>InfixDiv {
     <span class="kw">fn </span>call(<span class="kw-2">&amp;</span><span class="self">self</span>, args: ExprList, stack: <span class="kw-2">&amp;mut </span>CallStack) -&gt; EvalResult {
         <span class="kw">let </span>(lhs, rhs) = stack.eval_binary(args.unnamed_binary_args())<span class="question-mark">?</span>;
@@ -601,6 +601,7 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
 <span class="attr">#[derive(Debug, Clone, PartialEq)]
 #[builtin(sym = <span class="string">"^"</span>)]
 </span><span class="kw">pub struct </span>InfixPow;
+<span class="kw">impl </span>CallableFormals <span class="kw">for </span>InfixPow {}
 <span class="kw">impl </span>Callable <span class="kw">for </span>InfixPow {
     <span class="kw">fn </span>call(<span class="kw-2">&amp;</span><span class="self">self</span>, args: ExprList, stack: <span class="kw-2">&amp;mut </span>CallStack) -&gt; EvalResult {
         <span class="kw">let </span>(lhs, rhs) = stack.eval_binary(args.unnamed_binary_args())<span class="question-mark">?</span>;
@@ -611,6 +612,7 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
 <span class="attr">#[derive(Debug, Clone, PartialEq)]
 #[builtin(sym = <span class="string">"%"</span>, kind = Infix)]
 </span><span class="kw">pub struct </span>InfixMod;
+<span class="kw">impl </span>CallableFormals <span class="kw">for </span>InfixMod {}
 <span class="kw">impl </span>Callable <span class="kw">for </span>InfixMod {
     <span class="kw">fn </span>call(<span class="kw-2">&amp;</span><span class="self">self</span>, args: ExprList, stack: <span class="kw-2">&amp;mut </span>CallStack) -&gt; EvalResult {
         <span class="kw">let </span>(lhs, rhs) = stack.eval_binary(args.unnamed_binary_args())<span class="question-mark">?</span>;
@@ -621,6 +623,7 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
 <span class="attr">#[derive(Debug, Clone, PartialEq)]
 #[builtin(sym = <span class="string">"||"</span>, kind = Infix)]
 </span><span class="kw">pub struct </span>InfixOr;
+<span class="kw">impl </span>CallableFormals <span class="kw">for </span>InfixOr {}
 <span class="kw">impl </span>Callable <span class="kw">for </span>InfixOr {
     <span class="kw">fn </span>call(<span class="kw-2">&amp;</span><span class="self">self</span>, args: ExprList, stack: <span class="kw-2">&amp;mut </span>CallStack) -&gt; EvalResult {
         <span class="kw">let </span>(lhs, rhs) = stack.eval_binary(args.unnamed_binary_args())<span class="question-mark">?</span>;
@@ -640,6 +643,7 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
 <span class="attr">#[derive(Debug, Clone, PartialEq)]
 #[builtin(sym = <span class="string">"&amp;&amp;"</span>, kind = Infix)]
 </span><span class="kw">pub struct </span>InfixAnd;
+<span class="kw">impl </span>CallableFormals <span class="kw">for </span>InfixAnd {}
 <span class="kw">impl </span>Callable <span class="kw">for </span>InfixAnd {
     <span class="kw">fn </span>call(<span class="kw-2">&amp;</span><span class="self">self</span>, args: ExprList, stack: <span class="kw-2">&amp;mut </span>CallStack) -&gt; EvalResult {
         <span class="kw">let </span>(lhs, rhs) = stack.eval_binary(args.unnamed_binary_args())<span class="question-mark">?</span>;
@@ -659,6 +663,7 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
 <span class="attr">#[derive(Debug, Clone, PartialEq)]
 #[builtin(sym = <span class="string">"|"</span>, kind = Infix)]
 </span><span class="kw">pub struct </span>InfixVectorOr;
+<span class="kw">impl </span>CallableFormals <span class="kw">for </span>InfixVectorOr {}
 <span class="kw">impl </span>Callable <span class="kw">for </span>InfixVectorOr {
     <span class="kw">fn </span>call(<span class="kw-2">&amp;</span><span class="self">self</span>, args: ExprList, stack: <span class="kw-2">&amp;mut </span>CallStack) -&gt; EvalResult {
         <span class="kw">let </span>(lhs, rhs) = stack.eval_binary(args.unnamed_binary_args())<span class="question-mark">?</span>;
@@ -669,6 +674,7 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
 <span class="attr">#[derive(Debug, Clone, PartialEq)]
 #[builtin(sym = <span class="string">"&amp;"</span>, kind = Infix)]
 </span><span class="kw">pub struct </span>InfixVectorAnd;
+<span class="kw">impl </span>CallableFormals <span class="kw">for </span>InfixVectorAnd {}
 <span class="kw">impl </span>Callable <span class="kw">for </span>InfixVectorAnd {
     <span class="kw">fn </span>call(<span class="kw-2">&amp;</span><span class="self">self</span>, args: ExprList, stack: <span class="kw-2">&amp;mut </span>CallStack) -&gt; EvalResult {
         <span class="kw">let </span>(lhs, rhs) = stack.eval_binary(args.unnamed_binary_args())<span class="question-mark">?</span>;
@@ -679,6 +685,7 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
 <span class="attr">#[derive(Debug, Clone, PartialEq)]
 #[builtin(sym = <span class="string">"&gt;"</span>, kind = Infix)]
 </span><span class="kw">pub struct </span>InfixGreater;
+<span class="kw">impl </span>CallableFormals <span class="kw">for </span>InfixGreater {}
 <span class="kw">impl </span>Callable <span class="kw">for </span>InfixGreater {
     <span class="kw">fn </span>call(<span class="kw-2">&amp;</span><span class="self">self</span>, args: ExprList, stack: <span class="kw-2">&amp;mut </span>CallStack) -&gt; EvalResult {
         <span class="kw">let </span>(lhs, rhs) = stack.eval_binary(args.unnamed_binary_args())<span class="question-mark">?</span>;
@@ -689,6 +696,7 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
 <span class="attr">#[derive(Debug, Clone, PartialEq)]
 #[builtin(sym = <span class="string">"&gt;="</span>, kind = Infix)]
 </span><span class="kw">pub struct </span>InfixGreaterEqual;
+<span class="kw">impl </span>CallableFormals <span class="kw">for </span>InfixGreaterEqual {}
 <span class="kw">impl </span>Callable <span class="kw">for </span>InfixGreaterEqual {
     <span class="kw">fn </span>call(<span class="kw-2">&amp;</span><span class="self">self</span>, args: ExprList, stack: <span class="kw-2">&amp;mut </span>CallStack) -&gt; EvalResult {
         <span class="kw">let </span>(lhs, rhs) = stack.eval_binary(args.unnamed_binary_args())<span class="question-mark">?</span>;
@@ -699,6 +707,7 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
 <span class="attr">#[derive(Debug, Clone, PartialEq)]
 #[builtin(sym = <span class="string">"&lt;"</span>, kind = Infix)]
 </span><span class="kw">pub struct </span>InfixLess;
+<span class="kw">impl </span>CallableFormals <span class="kw">for </span>InfixLess {}
 <span class="kw">impl </span>Callable <span class="kw">for </span>InfixLess {
     <span class="kw">fn </span>call(<span class="kw-2">&amp;</span><span class="self">self</span>, args: ExprList, stack: <span class="kw-2">&amp;mut </span>CallStack) -&gt; EvalResult {
         <span class="kw">let </span>(lhs, rhs) = stack.eval_binary(args.unnamed_binary_args())<span class="question-mark">?</span>;
@@ -709,6 +718,7 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
 <span class="attr">#[derive(Debug, Clone, PartialEq)]
 #[builtin(sym = <span class="string">"&lt;="</span>, kind = Infix)]
 </span><span class="kw">pub struct </span>InfixLessEqual;
+<span class="kw">impl </span>CallableFormals <span class="kw">for </span>InfixLessEqual {}
 <span class="kw">impl </span>Callable <span class="kw">for </span>InfixLessEqual {
     <span class="kw">fn </span>call(<span class="kw-2">&amp;</span><span class="self">self</span>, args: ExprList, stack: <span class="kw-2">&amp;mut </span>CallStack) -&gt; EvalResult {
         <span class="kw">let </span>(lhs, rhs) = stack.eval_binary(args.unnamed_binary_args())<span class="question-mark">?</span>;
@@ -719,6 +729,7 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
 <span class="attr">#[derive(Debug, Clone, PartialEq)]
 #[builtin(sym = <span class="string">"=="</span>, kind = Infix)]
 </span><span class="kw">pub struct </span>InfixEqual;
+<span class="kw">impl </span>CallableFormals <span class="kw">for </span>InfixEqual {}
 <span class="kw">impl </span>Callable <span class="kw">for </span>InfixEqual {
     <span class="kw">fn </span>call(<span class="kw-2">&amp;</span><span class="self">self</span>, args: ExprList, stack: <span class="kw-2">&amp;mut </span>CallStack) -&gt; EvalResult {
         <span class="kw">let </span>(lhs, rhs) = stack.eval_binary(args.unnamed_binary_args())<span class="question-mark">?</span>;
@@ -729,6 +740,7 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
 <span class="attr">#[derive(Debug, Clone, PartialEq)]
 #[builtin(sym = <span class="string">"!="</span>, kind = Infix)]
 </span><span class="kw">pub struct </span>InfixNotEqual;
+<span class="kw">impl </span>CallableFormals <span class="kw">for </span>InfixNotEqual {}
 <span class="kw">impl </span>Callable <span class="kw">for </span>InfixNotEqual {
     <span class="kw">fn </span>call(<span class="kw-2">&amp;</span><span class="self">self</span>, args: ExprList, stack: <span class="kw-2">&amp;mut </span>CallStack) -&gt; EvalResult {
         <span class="kw">let </span>(lhs, rhs) = stack.eval_binary(args.unnamed_binary_args())<span class="question-mark">?</span>;
@@ -739,6 +751,7 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
 <span class="attr">#[derive(Debug, Clone, PartialEq)]
 #[builtin(sym = <span class="string">"|&gt;"</span>, kind = Infix)]
 </span><span class="kw">pub struct </span>InfixPipe;
+<span class="kw">impl </span>CallableFormals <span class="kw">for </span>InfixPipe {}
 <span class="kw">impl </span>Callable <span class="kw">for </span>InfixPipe {
     <span class="kw">fn </span>call(<span class="kw-2">&amp;</span><span class="self">self</span>, args: ExprList, stack: <span class="kw-2">&amp;mut </span>CallStack) -&gt; EvalResult {
         <span class="comment">// TODO: reduce call stack nesting here
@@ -764,6 +777,7 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
 <span class="attr">#[derive(Debug, Clone, PartialEq)]
 #[builtin(sym = <span class="string">":"</span>, kind = Infix)]
 </span><span class="kw">pub struct </span>InfixColon;
+<span class="kw">impl </span>CallableFormals <span class="kw">for </span>InfixColon {}
 <span class="kw">impl </span>Callable <span class="kw">for </span>InfixColon {
     <span class="kw">fn </span>call(<span class="kw-2">&amp;</span><span class="self">self</span>, args: ExprList, stack: <span class="kw-2">&amp;mut </span>CallStack) -&gt; EvalResult {
         <span class="kw">let </span><span class="kw-2">mut </span>argstream = args.into_iter();
@@ -836,6 +850,7 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
 <span class="attr">#[derive(Debug, Clone, PartialEq)]
 #[builtin(sym = <span class="string">"$"</span>, kind = Infix)]
 </span><span class="kw">pub struct </span>InfixDollar;
+<span class="kw">impl </span>CallableFormals <span class="kw">for </span>InfixDollar {}
 <span class="kw">impl </span>Callable <span class="kw">for </span>InfixDollar {
     <span class="kw">fn </span>call(<span class="kw-2">&amp;</span><span class="self">self</span>, args: ExprList, stack: <span class="kw-2">&amp;mut </span>CallStack) -&gt; EvalResult {
         <span class="kw">let </span><span class="kw-2">mut </span>argstream = args.into_iter();
@@ -902,6 +917,7 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
 <span class="attr">#[derive(Debug, Clone, PartialEq)]
 #[builtin(sym = <span class="string">".."</span>, kind = Postfix)]
 </span><span class="kw">pub struct </span>PostfixPack;
+<span class="kw">impl </span>CallableFormals <span class="kw">for </span>PostfixPack {}
 <span class="kw">impl </span>Callable <span class="kw">for </span>PostfixPack {
     <span class="kw">fn </span>call(<span class="kw-2">&amp;</span><span class="self">self</span>, _args: ExprList, _stack: <span class="kw-2">&amp;mut </span>CallStack) -&gt; EvalResult {
         Error::IncorrectContext(<span class="string">".."</span>.to_string()).into()
@@ -911,6 +927,7 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
 <span class="attr">#[derive(Debug, Clone, PartialEq)]
 #[builtin(sym = <span class="string">"[["</span>, kind = PostfixCall(<span class="string">"[["</span>, <span class="string">"]]"</span>))]
 </span><span class="kw">pub struct </span>PostfixIndex;
+<span class="kw">impl </span>CallableFormals <span class="kw">for </span>PostfixIndex {}
 <span class="kw">impl </span>Callable <span class="kw">for </span>PostfixIndex {
     <span class="kw">fn </span>call(<span class="kw-2">&amp;</span><span class="self">self</span>, args: ExprList, stack: <span class="kw-2">&amp;mut </span>CallStack) -&gt; EvalResult {
         <span class="kw">let </span>(what, index) = stack.eval_binary(args.unnamed_binary_args())<span class="question-mark">?</span>;
@@ -928,6 +945,7 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
 <span class="attr">#[derive(Debug, Clone, PartialEq)]
 #[builtin(sym = <span class="string">"["</span>, kind = PostfixCall(<span class="string">"["</span>, <span class="string">"]"</span>))]
 </span><span class="kw">pub struct </span>PostfixVecIndex;
+<span class="kw">impl </span>CallableFormals <span class="kw">for </span>PostfixVecIndex {}
 <span class="kw">impl </span>Callable <span class="kw">for </span>PostfixVecIndex {
     <span class="kw">fn </span>call(<span class="kw-2">&amp;</span><span class="self">self</span>, args: ExprList, stack: <span class="kw-2">&amp;mut </span>CallStack) -&gt; EvalResult {
         <span class="kw">let </span>(what, index) = stack.eval_binary(args.unnamed_binary_args())<span class="question-mark">?</span>;
@@ -939,40 +957,6 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
         <span class="kw">let </span>what = stack.eval_mut(x.<span class="number">0</span>)<span class="question-mark">?</span>;
         <span class="kw">let </span>index = stack.eval(x.<span class="number">1</span>)<span class="question-mark">?</span>;
         what.try_get(index)
-    }
-}
-
-<span class="attr">#[derive(Debug, Clone, PartialEq)]
-#[builtin]
-</span><span class="kw">pub struct </span>PrimVec;
-
-<span class="kw">impl </span>Format <span class="kw">for </span>PrimVec {
-    <span class="kw">fn </span>rfmt_call_with(<span class="kw-2">&amp;</span><span class="self">self</span>, _state: FormatState, args: <span class="kw-2">&amp;</span>ExprList) -&gt; String {
-        <span class="macro">format!</span>(<span class="string">"[{}]"</span>, args)
-    }
-}
-
-<span class="kw">impl </span>Callable <span class="kw">for </span>PrimVec {
-    <span class="kw">fn </span>call(<span class="kw-2">&amp;</span><span class="self">self</span>, args: ExprList, stack: <span class="kw-2">&amp;mut </span>CallStack) -&gt; EvalResult {
-        <span class="comment">// for now just use c()
-        </span><span class="kw">super</span>::primitive::PrimitiveC.call(args, stack)
-    }
-}
-
-<span class="attr">#[derive(Debug, Clone, PartialEq)]
-#[builtin]
-</span><span class="kw">pub struct </span>PrimList;
-
-<span class="kw">impl </span>Format <span class="kw">for </span>PrimList {
-    <span class="kw">fn </span>rfmt_call_with(<span class="kw-2">&amp;</span><span class="self">self</span>, _state: FormatState, args: <span class="kw-2">&amp;</span>ExprList) -&gt; String {
-        <span class="kw">let </span>trailing_comma = <span class="kw">if </span>args.len() &gt; <span class="number">1 </span>{ <span class="string">"" </span>} <span class="kw">else </span>{ <span class="string">"," </span>};
-        <span class="macro">format!</span>(<span class="string">"({}{})"</span>, args, trailing_comma)
-    }
-}
-
-<span class="kw">impl </span>Callable <span class="kw">for </span>PrimList {
-    <span class="kw">fn </span>call(<span class="kw-2">&amp;</span><span class="self">self</span>, args: ExprList, stack: <span class="kw-2">&amp;mut </span>CallStack) -&gt; EvalResult {
-        <span class="kw">super</span>::primitive::PrimitiveList.call(args, stack)
     }
 }
 

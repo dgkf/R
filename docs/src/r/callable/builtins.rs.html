@@ -90,69 +90,63 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
 <a href="#57" id="57">57</a>
 <a href="#58" id="58">58</a>
 <a href="#59" id="59">59</a>
-<a href="#60" id="60">60</a>
-<a href="#61" id="61">61</a>
-<a href="#62" id="62">62</a>
 </pre></div><pre class="rust"><code><span class="doccomment">/// Do not edit directly!
 ///
 /// The contents of this file are built by build.rs
 ///
-</span><span class="kw">use </span>hashbrown::HashMap;
-
-<span class="kw">use </span>::lazy_static::lazy_static;
-
-<span class="kw">use </span><span class="kw">crate</span>::callable::core::Builtin;
+</span><span class="kw">use </span><span class="kw">crate</span>::callable::core::Builtin;
 <span class="kw">use </span><span class="kw">crate</span>::callable::operators::<span class="kw-2">*</span>;
 <span class="kw">use </span><span class="kw">crate</span>::callable::primitive::<span class="kw-2">*</span>;
+<span class="kw">use </span>hashbrown::HashMap;
+<span class="kw">use </span>std::sync::LazyLock;
 
-<span class="macro">lazy_static!</span> {
-    <span class="kw">pub static </span><span class="kw-2">ref </span>BUILTIN: HashMap&lt;<span class="kw-2">&amp;</span><span class="lifetime">'static </span>str, Box&lt;<span class="kw">dyn </span>Builtin&gt;&gt; = {
-        HashMap::from([
-            <span class="comment">// automatically populated on build. see build.rs // builtins start
-            </span>(<span class="string">"&lt;-"</span>, Box::new(InfixAssign) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>Builtin&gt;),
-            (<span class="string">"+"</span>, Box::new(InfixAdd) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>Builtin&gt;),
-            (<span class="string">"-"</span>, Box::new(InfixSub) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>Builtin&gt;),
-            (<span class="string">"-"</span>, Box::new(PrefixSub) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>Builtin&gt;),
-            (<span class="string">"!"</span>, Box::new(PrefixNot) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>Builtin&gt;),
-            (<span class="string">".."</span>, Box::new(PrefixPack) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>Builtin&gt;),
-            (<span class="string">"*"</span>, Box::new(InfixMul) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>Builtin&gt;),
-            (<span class="string">"/"</span>, Box::new(InfixDiv) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>Builtin&gt;),
-            (<span class="string">"^"</span>, Box::new(InfixPow) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>Builtin&gt;),
-            (<span class="string">"%"</span>, Box::new(InfixMod) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>Builtin&gt;),
-            (<span class="string">"||"</span>, Box::new(InfixOr) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>Builtin&gt;),
-            (<span class="string">"&amp;&amp;"</span>, Box::new(InfixAnd) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>Builtin&gt;),
-            (<span class="string">"|"</span>, Box::new(InfixVectorOr) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>Builtin&gt;),
-            (<span class="string">"&amp;"</span>, Box::new(InfixVectorAnd) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>Builtin&gt;),
-            (<span class="string">"&gt;"</span>, Box::new(InfixGreater) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>Builtin&gt;),
-            (<span class="string">"&gt;="</span>, Box::new(InfixGreaterEqual) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>Builtin&gt;),
-            (<span class="string">"&lt;"</span>, Box::new(InfixLess) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>Builtin&gt;),
-            (<span class="string">"&lt;="</span>, Box::new(InfixLessEqual) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>Builtin&gt;),
-            (<span class="string">"=="</span>, Box::new(InfixEqual) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>Builtin&gt;),
-            (<span class="string">"!="</span>, Box::new(InfixNotEqual) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>Builtin&gt;),
-            (<span class="string">"|&gt;"</span>, Box::new(InfixPipe) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>Builtin&gt;),
-            (<span class="string">":"</span>, Box::new(InfixColon) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>Builtin&gt;),
-            (<span class="string">"$"</span>, Box::new(InfixDollar) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>Builtin&gt;),
-            (<span class="string">".."</span>, Box::new(PostfixPack) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>Builtin&gt;),
-            (<span class="string">"[["</span>, Box::new(PostfixIndex) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>Builtin&gt;),
-            (<span class="string">"["</span>, Box::new(PostfixVecIndex) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>Builtin&gt;),
-            (<span class="string">"c"</span>, Box::new(PrimitiveC) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>Builtin&gt;),
-            (<span class="string">"callstack"</span>, Box::new(PrimitiveCallstack) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>Builtin&gt;),
-            (<span class="string">"environment"</span>, Box::new(PrimitiveEnvironment) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>Builtin&gt;),
-            (<span class="string">"eval"</span>, Box::new(PrimitiveEval) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>Builtin&gt;),
-            (<span class="string">"length"</span>, Box::new(PrimitiveLength) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>Builtin&gt;),
-            (<span class="string">"list"</span>, Box::new(PrimitiveList) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>Builtin&gt;),
-            (<span class="string">"names"</span>, Box::new(PrimitiveNames) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>Builtin&gt;),
-            (<span class="string">"parent"</span>, Box::new(PrimitiveParent) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>Builtin&gt;),
-            (<span class="string">"paste"</span>, Box::new(PrimitivePaste) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>Builtin&gt;),
-            (<span class="string">"print"</span>, Box::new(PrimitivePrint) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>Builtin&gt;),
-            (<span class="string">"q"</span>, Box::new(PrimitiveQ) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>Builtin&gt;),
-            (<span class="string">"quote"</span>, Box::new(PrimitiveQuote) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>Builtin&gt;),
-            (<span class="string">"rnorm"</span>, Box::new(PrimitiveRnorm) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>Builtin&gt;),
-            (<span class="string">"runif"</span>, Box::new(PrimitiveRunif) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>Builtin&gt;),
-            (<span class="string">"substitute"</span>, Box::new(PrimitiveSubstitute) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>Builtin&gt;),
-            (<span class="string">"sum"</span>, Box::new(PrimitiveSum) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>Builtin&gt;),
-            <span class="comment">// builtins end
-        </span>])
-    };
-}
+<span class="attr">#[rustfmt::skip]
+</span><span class="kw">pub static </span>BUILTIN: LazyLock&lt;HashMap&lt;<span class="kw-2">&amp;</span><span class="lifetime">'static </span>str, Box&lt;<span class="kw">dyn </span>Builtin&gt;&gt;&gt; = LazyLock::new(|| {
+    HashMap::from([
+        <span class="comment">// automatically populated on build. see build.rs // builtins start
+        </span>(<span class="string">"&lt;-"</span>, Box::new(InfixAssign) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>Builtin&gt;),
+        (<span class="string">"+"</span>, Box::new(InfixAdd) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>Builtin&gt;),
+        (<span class="string">"-"</span>, Box::new(InfixSub) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>Builtin&gt;),
+        (<span class="string">"-"</span>, Box::new(PrefixSub) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>Builtin&gt;),
+        (<span class="string">"!"</span>, Box::new(PrefixNot) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>Builtin&gt;),
+        (<span class="string">".."</span>, Box::new(PrefixPack) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>Builtin&gt;),
+        (<span class="string">"*"</span>, Box::new(InfixMul) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>Builtin&gt;),
+        (<span class="string">"/"</span>, Box::new(InfixDiv) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>Builtin&gt;),
+        (<span class="string">"^"</span>, Box::new(InfixPow) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>Builtin&gt;),
+        (<span class="string">"%"</span>, Box::new(InfixMod) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>Builtin&gt;),
+        (<span class="string">"||"</span>, Box::new(InfixOr) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>Builtin&gt;),
+        (<span class="string">"&amp;&amp;"</span>, Box::new(InfixAnd) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>Builtin&gt;),
+        (<span class="string">"|"</span>, Box::new(InfixVectorOr) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>Builtin&gt;),
+        (<span class="string">"&amp;"</span>, Box::new(InfixVectorAnd) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>Builtin&gt;),
+        (<span class="string">"&gt;"</span>, Box::new(InfixGreater) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>Builtin&gt;),
+        (<span class="string">"&gt;="</span>, Box::new(InfixGreaterEqual) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>Builtin&gt;),
+        (<span class="string">"&lt;"</span>, Box::new(InfixLess) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>Builtin&gt;),
+        (<span class="string">"&lt;="</span>, Box::new(InfixLessEqual) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>Builtin&gt;),
+        (<span class="string">"=="</span>, Box::new(InfixEqual) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>Builtin&gt;),
+        (<span class="string">"!="</span>, Box::new(InfixNotEqual) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>Builtin&gt;),
+        (<span class="string">"|&gt;"</span>, Box::new(InfixPipe) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>Builtin&gt;),
+        (<span class="string">":"</span>, Box::new(InfixColon) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>Builtin&gt;),
+        (<span class="string">"$"</span>, Box::new(InfixDollar) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>Builtin&gt;),
+        (<span class="string">".."</span>, Box::new(PostfixPack) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>Builtin&gt;),
+        (<span class="string">"[["</span>, Box::new(PostfixIndex) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>Builtin&gt;),
+        (<span class="string">"["</span>, Box::new(PostfixVecIndex) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>Builtin&gt;),
+        (<span class="string">"c"</span>, Box::new(PrimitiveC) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>Builtin&gt;),
+        (<span class="string">"callstack"</span>, Box::new(PrimitiveCallstack) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>Builtin&gt;),
+        (<span class="string">"environment"</span>, Box::new(PrimitiveEnvironment) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>Builtin&gt;),
+        (<span class="string">"eval"</span>, Box::new(PrimitiveEval) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>Builtin&gt;),
+        (<span class="string">"length"</span>, Box::new(PrimitiveLength) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>Builtin&gt;),
+        (<span class="string">"list"</span>, Box::new(PrimitiveList) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>Builtin&gt;),
+        (<span class="string">"names"</span>, Box::new(PrimitiveNames) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>Builtin&gt;),
+        (<span class="string">"parent"</span>, Box::new(PrimitiveParent) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>Builtin&gt;),
+        (<span class="string">"paste"</span>, Box::new(PrimitivePaste) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>Builtin&gt;),
+        (<span class="string">"print"</span>, Box::new(PrimitivePrint) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>Builtin&gt;),
+        (<span class="string">"q"</span>, Box::new(PrimitiveQ) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>Builtin&gt;),
+        (<span class="string">"quote"</span>, Box::new(PrimitiveQuote) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>Builtin&gt;),
+        (<span class="string">"rnorm"</span>, Box::new(PrimitiveRnorm) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>Builtin&gt;),
+        (<span class="string">"runif"</span>, Box::new(PrimitiveRunif) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>Builtin&gt;),
+        (<span class="string">"substitute"</span>, Box::new(PrimitiveSubstitute) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>Builtin&gt;),
+        (<span class="string">"sum"</span>, Box::new(PrimitiveSum) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>Builtin&gt;),
+        <span class="comment">// builtins end
+    </span>])
+});
 </code></pre></div></section></main></body></html>

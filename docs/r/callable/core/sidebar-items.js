@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":["SymKind"],"fn":["builtin","force_promises"],"struct":["FormatState"],"trait":["Builtin","Callable","CallableClone","Format","Sym"]};
+window.SIDEBAR_ITEMS = {"enum":["SymKind"],"fn":["force_promises"],"struct":["FormatState"],"trait":["Builtin","Callable","CallableClone","CallableFormals","Format","Sym"]};

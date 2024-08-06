@@ -185,13 +185,16 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
 <a href="#152" id="152">152</a>
 <a href="#153" id="153">153</a>
 <a href="#154" id="154">154</a>
+<a href="#155" id="155">155</a>
+<a href="#156" id="156">156</a>
+<a href="#157" id="157">157</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>r_derive::<span class="kw-2">*</span>;
 
 <span class="kw">use </span><span class="kw">crate</span>::callable::core::<span class="kw-2">*</span>;
 <span class="kw">use </span><span class="kw">crate</span>::context::Context;
-<span class="kw">use </span><span class="kw">crate</span>::lang::<span class="kw-2">*</span>;
 <span class="kw">use </span><span class="kw">crate</span>::object::types::<span class="kw-2">*</span>;
 <span class="kw">use </span><span class="kw">crate</span>::object::<span class="kw-2">*</span>;
+<span class="kw">use crate</span>::{formals, lang::<span class="kw-2">*</span>};
 
 <span class="doccomment">/// Concatenate Values
 ///
@@ -228,6 +231,9 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
 #[builtin(sym = <span class="string">"c"</span>)]
 #[derive(Debug, Clone, PartialEq)]
 </span><span class="kw">pub struct </span>PrimitiveC;
+
+<span class="macro">formals!</span>(PrimitiveC, <span class="string">"(...)"</span>);
+
 <span class="kw">impl </span>Callable <span class="kw">for </span>PrimitiveC {
     <span class="kw">fn </span>call(<span class="kw-2">&amp;</span><span class="self">self</span>, args: ExprList, stack: <span class="kw-2">&amp;mut </span>CallStack) -&gt; EvalResult {
         <span class="comment">// this can be cleaned up quite a bit, but I just need it working with

@@ -148,6 +148,7 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
 
 <span class="kw">use </span><span class="kw">crate</span>::callable::core::<span class="kw-2">*</span>;
 <span class="kw">use </span><span class="kw">crate</span>::error::Error;
+<span class="kw">use </span><span class="kw">crate</span>::formals;
 <span class="kw">use </span><span class="kw">crate</span>::lang::<span class="kw-2">*</span>;
 <span class="kw">use </span><span class="kw">crate</span>::object::<span class="kw-2">*</span>;
 
@@ -178,10 +179,9 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
 #[derive(Debug, Clone, PartialEq)]
 </span><span class="kw">pub struct </span>PrimitiveLength;
 
+<span class="macro">formals!</span>(PrimitiveLength, <span class="string">"(x,)"</span>);
+
 <span class="kw">impl </span>Callable <span class="kw">for </span>PrimitiveLength {
-    <span class="kw">fn </span>formals(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; ExprList {
-        ExprList::from(<span class="macro">vec!</span>[(<span class="prelude-val">Some</span>(<span class="string">"x"</span>.to_string()), Expr::Missing)])
-    }
     <span class="kw">fn </span>call_matched(<span class="kw-2">&amp;</span><span class="self">self</span>, args: List, _ellipsis: List, stack: <span class="kw-2">&amp;mut </span>CallStack) -&gt; EvalResult {
         <span class="kw">let </span><span class="kw-2">mut </span>args = Obj::List(args);
         <span class="kw">let </span>x = args.try_get_named(<span class="string">"x"</span>)<span class="question-mark">?</span>.force(stack)<span class="question-mark">?</span>;

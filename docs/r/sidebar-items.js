@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"macro":["internal_err","r","r_expect","register"],"mod":["callable","cli","context","error","lang","object","parser","repl","session","utils"]};
+window.SIDEBAR_ITEMS = {"macro":["formals","internal_err","r","r_expect","r_macro_stringify","r_parse","register"],"mod":["callable","cli","context","error","lang","object","parser","repl","session","utils"]};

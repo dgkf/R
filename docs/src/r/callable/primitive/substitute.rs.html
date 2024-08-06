@@ -225,42 +225,15 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
 <a href="#192" id="192">192</a>
 <a href="#193" id="193">193</a>
 <a href="#194" id="194">194</a>
-<a href="#195" id="195">195</a>
-<a href="#196" id="196">196</a>
-<a href="#197" id="197">197</a>
-<a href="#198" id="198">198</a>
-<a href="#199" id="199">199</a>
-<a href="#200" id="200">200</a>
-<a href="#201" id="201">201</a>
-<a href="#202" id="202">202</a>
-<a href="#203" id="203">203</a>
-<a href="#204" id="204">204</a>
-<a href="#205" id="205">205</a>
-<a href="#206" id="206">206</a>
-<a href="#207" id="207">207</a>
-<a href="#208" id="208">208</a>
-</pre></div><pre class="rust"><code><span class="kw">use </span>lazy_static::lazy_static;
-<span class="kw">use </span>r_derive::<span class="kw-2">*</span>;
+</pre></div><pre class="rust"><code><span class="kw">use </span>r_derive::<span class="kw-2">*</span>;
 
 <span class="kw">use </span><span class="kw">crate</span>::callable::core::<span class="kw-2">*</span>;
 <span class="kw">use </span><span class="kw">crate</span>::callable::keywords::KeywordParen;
 <span class="kw">use </span><span class="kw">crate</span>::context::Context;
+<span class="kw">use </span><span class="kw">crate</span>::formals;
 <span class="kw">use </span><span class="kw">crate</span>::internal_err;
 <span class="kw">use </span><span class="kw">crate</span>::lang::<span class="kw-2">*</span>;
 <span class="kw">use </span><span class="kw">crate</span>::object::<span class="kw-2">*</span>;
-
-<span class="macro">lazy_static!</span> {
-    <span class="kw">pub static </span><span class="kw-2">ref </span>FORMALS: ExprList = ExprList::from(<span class="macro">vec!</span>[
-        (<span class="prelude-val">Some</span>(<span class="string">"expr"</span>.to_string()), Expr::Missing),
-        (
-            <span class="prelude-val">Some</span>(<span class="string">"envir"</span>.to_string()),
-            Expr::Call(
-                Box::new(Expr::Symbol(<span class="string">"environment"</span>.to_string())),
-                ExprList::new()
-            )
-        )
-    ]);
-}
 
 <span class="doccomment">/// Substitute Expressions
 ///
@@ -296,11 +269,10 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
 #[builtin(sym = <span class="string">"substitute"</span>)]
 #[derive(Debug, Clone, PartialEq)]
 </span><span class="kw">pub struct </span>PrimitiveSubstitute;
-<span class="kw">impl </span>Callable <span class="kw">for </span>PrimitiveSubstitute {
-    <span class="kw">fn </span>formals(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; ExprList {
-        FORMALS.clone()
-    }
 
+<span class="macro">formals!</span>(PrimitiveSubstitute, <span class="string">"(expr, envir = environment())"</span>);
+
+<span class="kw">impl </span>Callable <span class="kw">for </span>PrimitiveSubstitute {
     <span class="kw">fn </span>call(<span class="kw-2">&amp;</span><span class="self">self</span>, args: ExprList, stack: <span class="kw-2">&amp;mut </span>CallStack) -&gt; EvalResult {
         <span class="kw">use </span>Expr::<span class="kw-2">*</span>;
         <span class="kw">let </span>(args, _ellipsis) = <span class="self">self</span>.match_arg_exprs(args, stack)<span class="question-mark">?</span>;

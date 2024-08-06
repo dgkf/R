@@ -1382,11 +1382,8 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
 <a href="#1349" id="1349">1349</a>
 <a href="#1350" id="1350">1350</a>
 <a href="#1351" id="1351">1351</a>
-<a href="#1352" id="1352">1352</a>
-<a href="#1353" id="1353">1353</a>
-<a href="#1354" id="1354">1354</a>
-<a href="#1355" id="1355">1355</a>
-</pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::callable::core::{builtin, Callable};
+</pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::callable::builtins::BUILTIN;
+<span class="kw">use </span><span class="kw">crate</span>::callable::core::Callable;
 <span class="kw">use </span><span class="kw">crate</span>::cli::Experiment;
 <span class="kw">use </span><span class="kw">crate</span>::context::Context;
 <span class="kw">use </span><span class="kw">crate</span>::error::<span class="kw-2">*</span>;
@@ -1457,11 +1454,7 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
                 Vector::Logical(v) =&gt; Vector::Logical(v.view_mut()),
             }),
 
-            Obj::List(List {
-                names,
-                values,
-                subsets,
-            }) =&gt; Obj::List(List {
+            Obj::List(List { names, values, subsets }) =&gt; Obj::List(List {
                 names: (<span class="kw-2">*</span>names).view_mut(),
                 values: (<span class="kw-2">*</span>values).view_mut(),
                 subsets: (<span class="kw-2">*</span>subsets).clone(),
@@ -2081,9 +2074,9 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
             };
         }
 
-        <span class="kw">if let </span><span class="prelude-val">Ok</span>(prim) = builtin(name.as_str()) {
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(prim) = BUILTIN.get(name.as_str()) {
             Result::Ok((
-                Obj::Function(ExprList::new(), Expr::Primitive(prim), <span class="self">self</span>.env()),
+                Obj::Function(ExprList::new(), Expr::Primitive(prim.clone()), <span class="self">self</span>.env()),
                 env,
             ))
         } <span class="kw">else </span>{
@@ -2097,10 +2090,7 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
     }
 
     <span class="kw">pub fn </span>add_child_frame(<span class="kw-2">&amp;mut </span><span class="self">self</span>, call: Expr, env: Rc&lt;Environment&gt;) -&gt; usize {
-        <span class="kw">let </span>local_env = Rc::new(Environment {
-            parent: <span class="prelude-val">Some</span>(env.clone()),
-            ..Default::default()
-        });
+        <span class="kw">let </span>local_env = Rc::new(Environment { parent: <span class="prelude-val">Some</span>(env.clone()), ..Default::default() });
 
         <span class="self">self</span>.add_frame(call, local_env)
     }
@@ -2338,8 +2328,10 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
             };
             callstack.pop_frame_and_return(result)
         }
-        Expr::String(name) | Expr::Symbol(name) <span class="kw">if </span>builtin(<span class="kw-2">&amp;</span>name).is_ok() =&gt; {
-            <span class="kw">let </span>f = builtin(<span class="kw-2">&amp;</span>name)<span class="question-mark">?</span>;
+        Expr::String(name) | Expr::Symbol(name) <span class="kw">if </span>BUILTIN.contains_key(name.as_str()) =&gt; {
+            <span class="kw">let </span>f = BUILTIN
+                .get(name.as_str())
+                .ok_or(Error::VariableNotFound(name))<span class="question-mark">?</span>;
             callstack.add_frame(expr, callstack.last_frame().env().clone());
             <span class="kw">let </span>result = <span class="kw">if </span>mutable {
                 f.call_mut(args, callstack)

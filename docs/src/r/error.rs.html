@@ -215,6 +215,7 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
 <a href="#182" id="182">182</a>
 <a href="#183" id="183">183</a>
 <a href="#184" id="184">184</a>
+<a href="#185" id="185">185</a>
 </pre></div><pre class="rust"><code><span class="kw">use crate</span>::{
     lang::{CallStack, Signal},
     object::Expr,
@@ -247,15 +248,16 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
     CannotBeCoercedTo(<span class="kw-2">&amp;</span><span class="lifetime">'static </span>str),
     InvalidRange,
 
+    <span class="comment">// destructuring
+    </span>CannotBeDestructuredIntoList,
+
     <span class="comment">// function parsing
     </span>InvalidFunctionParameter(Expr),
     DuplicatedParameter(String),
     DuplicatedMoreParameter(),
-
     Missing,
     ArgumentMissing(String),
     ArgumentInvalid(String),
-    Other(String),
 
     <span class="comment">// parsing errors
     </span>ParseFailureVerbose(pest::error::Error&lt;en::Rule&gt;),
@@ -272,6 +274,8 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
 
     <span class="comment">// features
     </span>FeatureDisabledRestArgs,
+
+    Other(String),
 }
 
 <span class="kw">impl </span>Error {
@@ -333,6 +337,7 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
             Error::InvalidFunctionParameter(expr) =&gt; <span class="macro">format!</span>(<span class="string">"invalid function parameter: {}"</span>, expr),
             Error::DuplicatedParameter(name) =&gt; <span class="macro">format!</span>(<span class="string">"duplicated parameter name: {}"</span>, name),
             Error::DuplicatedMoreParameter() =&gt; <span class="string">"duplicated '..&lt;more&gt;' parameters"</span>.to_string(),
+            Error::CannotBeDestructuredIntoList =&gt; <span class="string">"object cannot be coerced into a list for destructuring"</span>.to_string(),
         }
     }
 
@@ -345,10 +350,7 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
         <span class="kw">use </span>pest::error::InputLocation;
         <span class="kw">use </span>pest::{Position, Span};
         <span class="kw">let </span>variant = <span class="kw">match </span>error.variant {
-            ParsingError {
-                positives: p,
-                negatives: n,
-            } =&gt; ParsingError {
+            ParsingError { positives: p, negatives: n } =&gt; ParsingError {
                 positives: p.into_iter().map(|i| i.into()).collect(),
                 negatives: n.into_iter().map(|i| i.into()).collect(),
             },

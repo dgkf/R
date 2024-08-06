@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":["BUILTIN"]};
+window.SIDEBAR_ITEMS = {"static":["BUILTIN"]};

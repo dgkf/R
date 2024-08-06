@@ -269,10 +269,10 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
                 <span class="kw">continue</span>;
 
             <span class="comment">// if we're at the top level, fall back to primitives if available
-            </span>} <span class="kw">else if let </span><span class="prelude-val">Ok</span>(prim) = name.as_str().try_into() {
+            </span>} <span class="kw">else if let </span><span class="prelude-val">Some</span>(prim) = BUILTIN.get(name.as_str()) {
                 <span class="kw">let </span>x = Obj::Function(
                     ExprList::new(),
-                    Expr::Primitive(prim),
+                    Expr::Primitive(prim.clone()),
                     Rc::new(<span class="self">self</span>.clone()), <span class="comment">// TODO(bug): will this retain shared ref?
                 </span>);
 

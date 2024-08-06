@@ -1140,7 +1140,7 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
     R: RuleType + Into&lt;en::Rule&gt;,
 {
     <span class="kw">let </span>args = parse_list_elements(config, parser, pratt, pair)<span class="question-mark">?</span>;
-    <span class="prelude-val">Ok</span>(Expr::new_primitive_call(PrimVec, args))
+    <span class="prelude-val">Ok</span>(Expr::new_primitive_call(KeywordVec, args))
 }
 
 <span class="kw">fn </span>parse_list&lt;P, R&gt;(
@@ -1154,7 +1154,7 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
     R: RuleType + Into&lt;en::Rule&gt;,
 {
     <span class="kw">let </span>args = parse_list_elements(config, parser, pratt, pair)<span class="question-mark">?</span>;
-    <span class="prelude-val">Ok</span>(Expr::new_primitive_call(PrimList, args))
+    <span class="prelude-val">Ok</span>(Expr::new_primitive_call(KeywordList, args))
 }
 
 <span class="attr">#[cfg(test)]

@@ -68,9 +68,14 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
 <a href="#35" id="35">35</a>
 <a href="#36" id="36">36</a>
 <a href="#37" id="37">37</a>
+<a href="#38" id="38">38</a>
+<a href="#39" id="39">39</a>
+<a href="#40" id="40">40</a>
+<a href="#41" id="41">41</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>r_derive::<span class="kw-2">*</span>;
 
 <span class="kw">use </span><span class="kw">crate</span>::callable::core::<span class="kw-2">*</span>;
+<span class="kw">use </span><span class="kw">crate</span>::formals;
 <span class="kw">use </span><span class="kw">crate</span>::lang::<span class="kw-2">*</span>;
 <span class="kw">use </span><span class="kw">crate</span>::object::<span class="kw-2">*</span>;
 
@@ -100,6 +105,9 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
 #[builtin(sym = <span class="string">"quote"</span>)]
 #[derive(Debug, Clone, PartialEq)]
 </span><span class="kw">pub struct </span>PrimitiveQuote;
+
+<span class="macro">formals!</span>(PrimitiveQuote, <span class="string">"(x)"</span>);
+
 <span class="kw">impl </span>Callable <span class="kw">for </span>PrimitiveQuote {
     <span class="kw">fn </span>call(<span class="kw-2">&amp;</span><span class="self">self</span>, args: ExprList, _stack: <span class="kw-2">&amp;mut </span>CallStack) -&gt; EvalResult {
         <span class="prelude-val">Ok</span>(Obj::Expr(args.get(<span class="number">0</span>).unwrap_or(Expr::Null)))

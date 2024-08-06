@@ -272,11 +272,11 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
 <a href="#239" id="239">239</a>
 <a href="#240" id="240">240</a>
 <a href="#241" id="241">241</a>
-<a href="#242" id="242">242</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>r_derive::<span class="kw-2">*</span>;
 
 <span class="kw">use </span><span class="kw">crate</span>::callable::core::<span class="kw-2">*</span>;
 <span class="kw">use </span><span class="kw">crate</span>::error::<span class="kw-2">*</span>;
+<span class="kw">use </span><span class="kw">crate</span>::formals;
 <span class="kw">use </span><span class="kw">crate</span>::internal_err;
 <span class="kw">use </span><span class="kw">crate</span>::lang::<span class="kw-2">*</span>;
 <span class="kw">use </span><span class="kw">crate</span>::object::reptype::RepType;
@@ -307,11 +307,9 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
 #[derive(Debug, Clone, PartialEq)]
 </span><span class="kw">pub struct </span>PrimitiveSum;
 
-<span class="kw">impl </span>Callable <span class="kw">for </span>PrimitiveSum {
-    <span class="kw">fn </span>formals(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; ExprList {
-        ExprList::from(<span class="macro">vec!</span>[(<span class="prelude-val">None</span>, Expr::Ellipsis(<span class="prelude-val">None</span>))])
-    }
+<span class="macro">formals!</span>(PrimitiveSum, <span class="string">"(...)"</span>);
 
+<span class="kw">impl </span>Callable <span class="kw">for </span>PrimitiveSum {
     <span class="kw">fn </span>call(<span class="kw-2">&amp;</span><span class="self">self</span>, args: ExprList, stack: <span class="kw-2">&amp;mut </span>CallStack) -&gt; EvalResult {
         <span class="kw">let </span>(<span class="kw">_</span>, ellipsis) = <span class="self">self</span>.match_arg_exprs(args, stack)<span class="question-mark">?</span>;
 

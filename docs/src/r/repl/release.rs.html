@@ -108,29 +108,34 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
 <a href="#75" id="75">75</a>
 <a href="#76" id="76">76</a>
 <a href="#77" id="77">77</a>
-</pre></div><pre class="rust"><code><span class="kw">use crate</span>::{cli::Experiment, parser::Localization, session::Session};
+<a href="#78" id="78">78</a>
+<a href="#79" id="79">79</a>
+<a href="#80" id="80">80</a>
+</pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::cli::Experiment;
+<span class="kw">use </span><span class="kw">crate</span>::parser::Localization;
+<span class="kw">use </span><span class="kw">crate</span>::session::Session;
+<span class="kw">use </span>std::sync::LazyLock;
 <span class="kw">use </span>strum::IntoEnumIterator;
 
 <span class="kw">pub const </span>RELEASE_NAME: <span class="kw-2">&amp;</span>str = <span class="string">"Beautiful You"</span>;
-
 <span class="kw">pub const </span>GIT_HASH: <span class="kw-2">&amp;</span>str = <span class="macro">env!</span>(<span class="string">"GIT_HASH"</span>);
 <span class="kw">pub const </span>RELEASE_VERSION: <span class="kw-2">&amp;</span>str = <span class="macro">env!</span>(<span class="string">"CARGO_PKG_VERSION"</span>);
-
 <span class="kw">pub const </span>YEAR: <span class="kw-2">&amp;</span>str = <span class="string">"2024"</span>;
 
-<span class="kw">pub const </span>COPYRIGHT_LONG_INST: <span class="kw-2">&amp;</span>str = <span class="string">"--warranty"</span>;
-<span class="macro">lazy_static::lazy_static!</span> {
-    <span class="kw">static </span><span class="kw-2">ref </span>COPYRIGHT: String = <span class="macro">format!</span>(
-<span class="string">"Copyright (C) {YEAR} R Authors
+<span class="kw">pub const </span>COPYRIGHT_LONG_FLAG: <span class="kw-2">&amp;</span>str = <span class="string">"--warranty"</span>;
+<span class="kw">static </span>COPYRIGHT: LazyLock&lt;String&gt; = LazyLock::new(|| {
+    <span class="macro">format!</span>(
+        <span class="string">"Copyright (C) {YEAR} R Authors
   
 This program comes with ABSOLUTELY NO WARRANTY. This is free software, 
 and you are welcome to redistribute it under certain conditions. For more
-information, restart with `{COPYRIGHT_LONG_INST}`."</span>);
-}
+information, restart with `{COPYRIGHT_LONG_FLAG}`."
+    </span>)
+});
 
-<span class="macro">lazy_static::lazy_static!</span> {
-    <span class="kw">static </span><span class="kw-2">ref </span>COPYRIGHT_LONG: String = <span class="macro">format!</span>(
-<span class="string">"Copyright (C) {YEAR} R Authors
+<span class="kw">static </span>COPYRIGHT_LONG: LazyLock&lt;String&gt; = LazyLock::new(|| {
+    <span class="macro">format!</span>(
+        <span class="string">"Copyright (C) {YEAR} R Authors
   
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -143,8 +148,9 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 GNU General Public License for more details.  
   
 You should have received a copy of the GNU General Public License
-along with this program. If not, see &lt;https://www.gnu.org/licenses/&gt;."</span>);
-}
+along with this program. If not, see &lt;https://www.gnu.org/licenses/&gt;."
+    </span>)
+});
 
 <span class="kw">pub const </span>AVAILABLE_FUNCTIONS: <span class="kw-2">&amp;</span>str =
     <span class="string">"\nSee a list of implemented functions using `names(parent())`\n"</span>;
