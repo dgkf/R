@@ -8,8 +8,8 @@ use crate::callable::primitive::*;
 use hashbrown::HashMap;
 use std::sync::LazyLock;
 
+#[rustfmt::skip]
 pub static BUILTIN: LazyLock<HashMap<&'static str, Box<dyn Builtin>>> = LazyLock::new(|| {
-    #[rustfmt::skip]
     HashMap::from([
         // automatically populated on build. see build.rs // builtins start
         ("<-", Box::new(InfixAssign) as Box<dyn Builtin>),
