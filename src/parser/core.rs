@@ -519,7 +519,7 @@ where
     R: RuleType + Into<en::Rule>,
 {
     let args = parse_list_elements(config, parser, pratt, pair)?;
-    Ok(Expr::new_primitive_call(PrimVec, args))
+    Ok(Expr::new_primitive_call(KeywordVec, args))
 }
 
 fn parse_list<P, R>(
@@ -533,7 +533,7 @@ where
     R: RuleType + Into<en::Rule>,
 {
     let args = parse_list_elements(config, parser, pratt, pair)?;
-    Ok(Expr::new_primitive_call(PrimList, args))
+    Ok(Expr::new_primitive_call(KeywordList, args))
 }
 
 #[cfg(test)]

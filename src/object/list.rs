@@ -16,10 +16,7 @@ pub struct List {
 
 impl From<Vec<(Option<String>, Obj)>> for List {
     fn from(value: Vec<(Option<String>, Obj)>) -> Self {
-        let mut result = List {
-            values: CowObj::from(value),
-            ..Default::default()
-        };
+        let mut result = List { values: CowObj::from(value), ..Default::default() };
 
         result.reindex();
         result

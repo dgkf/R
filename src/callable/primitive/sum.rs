@@ -2,6 +2,7 @@ use r_derive::*;
 
 use crate::callable::core::*;
 use crate::error::*;
+use crate::formals;
 use crate::internal_err;
 use crate::lang::*;
 use crate::object::reptype::RepType;
@@ -32,11 +33,9 @@ use crate::object::*;
 #[derive(Debug, Clone, PartialEq)]
 pub struct PrimitiveSum;
 
-impl Callable for PrimitiveSum {
-    fn formals(&self) -> ExprList {
-        ExprList::from(vec![(None, Expr::Ellipsis(None))])
-    }
+formals!(PrimitiveSum, "(...)");
 
+impl Callable for PrimitiveSum {
     fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
         let (_, ellipsis) = self.match_arg_exprs(args, stack)?;
 

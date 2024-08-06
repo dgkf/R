@@ -27,12 +27,7 @@ impl Parse for Builtin {
 
         for var in vars {
             match (var.path, var.value) {
-                (
-                    k,
-                    Expr::Lit(ExprLit {
-                        lit: Lit::Str(s), ..
-                    }),
-                ) => match k {
+                (k, Expr::Lit(ExprLit { lit: Lit::Str(s), .. })) => match k {
                     sym if sym.is_ident("sym") => symbol = Some(s),
                     _ => (),
                 },

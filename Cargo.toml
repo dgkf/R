@@ -33,7 +33,6 @@ r_derive = { path = "r_derive" }
 # parser
 pest = "2.7.10"
 pest_derive = "2.7.10"
-lazy_static = "1.4.0"
 
 # rng
 rand = "0.8.5"

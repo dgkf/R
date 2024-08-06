@@ -1,10 +1,8 @@
 extern crate r_derive;
 
-use crate::callable::builtins::BUILTIN;
 use crate::callable::dyncompare::*;
 use crate::cli::Experiment;
 use crate::context::Context;
-use crate::error::Error;
 use crate::object::List;
 use crate::object::{Expr, ExprList, Obj};
 use crate::{internal_err, lang::*};
@@ -31,11 +29,13 @@ pub trait CallableClone: Callable {
     fn callable_clone(&self) -> Box<dyn Builtin>;
 }
 
-pub trait Callable {
+pub trait CallableFormals {
     fn formals(&self) -> ExprList {
-        ExprList::new()
+        ExprList::default()
     }
+}
 
+pub trait Callable: CallableFormals {
     fn match_args(&self, args: List, stack: &mut CallStack) -> Result<(List, List), Signal> {
         let mut formals = self.formals();
         let ellipsis: List = vec![].into();
@@ -200,7 +200,7 @@ pub trait Format {
     }
 }
 
-pub trait Builtin: Callable + CallableClone + Format + DynCompare + Sync {
+pub trait Builtin: Callable + CallableClone + Format + DynCompare + Sync + Send {
     fn is_transparent(&self) -> bool {
         false
     }
@@ -273,19 +273,8 @@ where
     }
 }
 
+impl CallableFormals for String {}
 impl Builtin for String {}
-
-pub fn builtin(s: &str) -> Result<Box<dyn Builtin>, Signal> {
-    let err = Error::VariableNotFound(s.to_string());
-    <Box<dyn Builtin>>::try_from(s).or(Err(err.into()))
-}
-
-impl TryFrom<&str> for Box<dyn Builtin> {
-    type Error = ();
-    fn try_from(s: &str) -> Result<Self, Self::Error> {
-        BUILTIN.get(s).map_or(Err(()), |b| Ok(b.clone()))
-    }
-}
 
 pub fn force_promises(
     vals: List,
@@ -316,6 +305,15 @@ impl Callable for String {
 
 impl Format for Obj {}
 
+impl CallableFormals for Obj {
+    fn formals(&self) -> ExprList {
+        match self {
+            Obj::Function(formals, _, _) => formals.clone(),
+            _ => ExprList::new(),
+        }
+    }
+}
+
 impl Callable for Obj {
     fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
         let Obj::Function(_, body, _) = self else {
@@ -343,13 +341,6 @@ impl Callable for Obj {
 
         stack.env().append(args);
         stack.eval(body.clone())
-    }
-
-    fn formals(&self) -> ExprList {
-        match self {
-            Obj::Function(formals, _, _) => formals.clone(),
-            _ => ExprList::new(),
-        }
     }
 }
 

@@ -41,10 +41,7 @@ impl Subsets {
     }
 
     pub fn bind_names(self, names: CowObj<HashMap<String, Vec<usize>>>) -> NamedSubsets {
-        NamedSubsets {
-            subsets: self,
-            names,
-        }
+        NamedSubsets { subsets: self, names }
     }
 }
 
