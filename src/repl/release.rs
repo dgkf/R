@@ -4,7 +4,7 @@ use crate::session::Session;
 use std::sync::LazyLock;
 use strum::IntoEnumIterator;
 
-pub const RELEASE_NAME: &str = "Beautiful You";
+pub const RELEASE_NAME: &str = "Wonder Where We Land";
 pub const GIT_HASH: &str = env!("GIT_HASH");
 pub const RELEASE_VERSION: &str = env!("CARGO_PKG_VERSION");
 pub const YEAR: &str = "2024";
