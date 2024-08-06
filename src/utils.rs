@@ -38,27 +38,26 @@ macro_rules! r_macro_stringify {
 #[macro_export]
 macro_rules! formals {
     ( $what:ident, $args:literal ) => {
-        lazy_static::lazy_static! {
-            pub static ref FORMALS: ExprList = {
-                use $crate::object::{Expr, ExprList};
-
-                let signature = $crate::r_parse! {{ $args }};
-                let Ok($crate::object::Expr::Call(_, signature)) = signature else {
-                    panic!("unexpected formal definition")
-                };
-
-                signature.into_iter()
-                    .map(|pair| match pair {
-                        (None, Expr::Symbol(name)) => (Some(name), Expr::Missing),
-                        pair => pair,
-                    })
-                    .collect::<ExprList>()
-            };
-        }
-
         impl CallableFormals for $what {
             fn formals(&self) -> ExprList {
-                FORMALS.clone()
+                static FORMALS: std::sync::LazyLock<ExprList> = std::sync::LazyLock::new(|| {
+                    use $crate::object::{Expr, ExprList};
+
+                    let signature = $crate::r_parse! {{ $args }};
+                    let Ok($crate::object::Expr::Call(_, signature)) = signature else {
+                        panic!("unexpected formal definition")
+                    };
+
+                    signature
+                        .into_iter()
+                        .map(|pair| match pair {
+                            (None, Expr::Symbol(name)) => (Some(name), Expr::Missing),
+                            pair => pair,
+                        })
+                        .collect::<ExprList>()
+                });
+
+                (*FORMALS).clone()
             }
         }
     };

@@ -1,10 +1,8 @@
 extern crate r_derive;
 
-use crate::callable::builtins::BUILTIN;
 use crate::callable::dyncompare::*;
 use crate::cli::Experiment;
 use crate::context::Context;
-use crate::error::Error;
 use crate::object::List;
 use crate::object::{Expr, ExprList, Obj};
 use crate::{internal_err, lang::*};
@@ -202,7 +200,7 @@ pub trait Format {
     }
 }
 
-pub trait Builtin: Callable + CallableClone + Format + DynCompare + Sync {
+pub trait Builtin: Callable + CallableClone + Format + DynCompare + Sync + Send {
     fn is_transparent(&self) -> bool {
         false
     }
@@ -277,18 +275,6 @@ where
 
 impl CallableFormals for String {}
 impl Builtin for String {}
-
-pub fn builtin(s: &str) -> Result<Box<dyn Builtin>, Signal> {
-    let err = Error::VariableNotFound(s.to_string());
-    <Box<dyn Builtin>>::try_from(s).or(Err(err.into()))
-}
-
-impl TryFrom<&str> for Box<dyn Builtin> {
-    type Error = ();
-    fn try_from(s: &str) -> Result<Self, Self::Error> {
-        BUILTIN.get(s).map_or(Err(()), |b| Ok(b.clone()))
-    }
-}
 
 pub fn force_promises(
     vals: List,
