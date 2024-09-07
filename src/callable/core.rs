@@ -320,10 +320,10 @@ impl Callable for Obj {
             return internal_err!();
         };
 
-        // body is a primitive, call directly
-        if let Expr::Primitive(f) = body {
-            return f.call(args, stack);
-        };
+        // // body is a primitive, call directly
+        // if let body {
+        //     return f.call(args, stack);
+        // };
 
         // match arguments against function signature
         let (args, ellipsis) = self.match_arg_exprs(args, stack)?;

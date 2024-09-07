@@ -44,7 +44,7 @@ macro_rules! formals {
                     use $crate::object::{Expr, ExprList};
 
                     let signature = $crate::r_parse! {{ $args }};
-                    let Ok($crate::object::Expr::Call(_, signature)) = signature else {
+                    let Ok($crate::object::Expr::Call(_, _, signature)) = signature else {
                         panic!("unexpected formal definition")
                     };
 

@@ -69,14 +69,11 @@ impl Callable for PrimitiveSubstitute {
         // add parenthesis around ambigous expressions, namely anonymous functions and infix calls
         fn paren_if_infix(expr: Expr) -> Expr {
             match expr {
-                Function(..) => Expr::new_primitive_call(KeywordParen, ExprList::from(vec![expr])),
-                Call(what, exprs) => match *what {
-                    Primitive(p) if p.is_infix() => {
-                        let expr = Call(Box::new(Primitive(p)), exprs);
-                        Expr::new_primitive_call(KeywordParen, ExprList::from(vec![expr]))
-                    }
-                    _ => Call(what, exprs),
-                },
+                Function(..) | Call(CallKind::Infix, ..) => Expr::Call(
+                    CallKind::Keyword,
+                    Box::new(Expr::Symbol("(".to_string())),
+                    ExprList::from(vec![expr]),
+                ),
                 _ => expr,
             }
         }
@@ -102,23 +99,20 @@ impl Callable for PrimitiveSubstitute {
                     recurse(params, env, false),
                     Box::new(substitute(*body, env, false)),
                 ),
-                Call(what, exprs) => match *what {
-                    Primitive(p) if p.is_infix() => {
-                        Call(Box::new(Primitive(p)), recurse(exprs, env, true))
-                    }
-                    _ => Call(
-                        Box::new(substitute(*what, env, true)),
-                        recurse(exprs, env, false),
-                    ),
-                },
+                Call(CallKind::Infix, what, exprs) => {
+                    Call(CallKind::Infix, what, recurse(exprs, env, true))
+                }
+                Call(kind, what, exprs) => Call(
+                    kind,
+                    Box::new(substitute(*what, env, true)),
+                    recurse(exprs, env, false),
+                ),
                 other => other,
             }
         }
 
         match substitute(expr, env.as_ref(), false) {
-            e @ (Symbol(_) | List(..) | Function(..) | Call(..) | Primitive(..)) => {
-                Ok(Obj::Expr(e))
-            }
+            e @ (Symbol(_) | List(..) | Function(..) | Call(..)) => Ok(Obj::Expr(e)),
             other => stack.eval(other),
         }
     }

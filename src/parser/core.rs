@@ -11,7 +11,7 @@ use crate::cli::Experiment;
 use crate::error::Error;
 use crate::internal_err;
 use crate::lang::Signal;
-use crate::object::{Expr, ExprList};
+use crate::object::{CallKind, Expr, ExprList};
 use crate::parser::*;
 use crate::session::SessionParserConfig;
 use pest::iterators::{Pair, Pairs};
@@ -158,7 +158,11 @@ where
         .collect::<Result<_, _>>()?;
 
     // build call from symbol and list
-    Ok(Expr::new_primitive_call(KeywordParen, exprs))
+    Ok(Expr::Call(
+        CallKind::Keyword,
+        Box::new(Expr::Symbol("(".to_string())),
+        exprs,
+    ))
 }
 
 fn parse_block<P, R>(
@@ -178,7 +182,11 @@ where
         .collect::<Result<_, _>>()?;
 
     // build call from symbol and list
-    Ok(Expr::new_primitive_call(KeywordBlock, exprs))
+    Ok(Expr::Call(
+        CallKind::Keyword,
+        Box::new(Expr::Symbol("{".to_string())),
+        exprs,
+    ))
 }
 
 fn parse_named<P, R>(
@@ -238,7 +246,11 @@ where
 
     match name {
         "list" => Ok(Expr::List(pairs)),
-        name => Ok(Expr::Call(Box::new(Expr::String(name.to_string())), pairs)),
+        name => Ok(Expr::Call(
+            CallKind::Function,
+            Box::new(Expr::String(name.to_string())),
+            pairs,
+        )),
     }
 }
 
@@ -289,7 +301,12 @@ where
     };
 
     let args = ExprList::from(vec![cond, true_expr, false_expr]);
-    Ok(Expr::new_primitive_call(KeywordIf, args))
+
+    Ok(Expr::Call(
+        CallKind::Keyword,
+        Box::new(Expr::Symbol("if".to_string())),
+        args,
+    ))
 }
 
 fn parse_return<P, R>(
@@ -306,7 +323,12 @@ where
     let inner_expr = inner.next().map_or(internal_err!(), Ok)?.into_inner();
     let expr = parse_expr(config, parser, pratt, inner_expr)?;
     let args = ExprList::from(vec![expr]);
-    Ok(Expr::new_primitive_call(KeywordReturn, args))
+
+    Ok(Expr::Call(
+        CallKind::Keyword,
+        Box::new(Expr::Symbol("return".to_string())),
+        args,
+    ))
 }
 
 fn parse_symbol<P, R>(
@@ -447,12 +469,12 @@ where
         result = match what {
             // Null used here has a magic value to dispatch on `x(...)` calls
             // if postfix is parenthesized pairlist, it's a call to result
-            Expr::Null => Expr::Call(Box::new(result), args),
+            Expr::Null => Expr::Call(CallKind::Function, Box::new(result), args),
 
             // otherwise call to a postfix operator with result as the first arg
             _ => {
                 args.insert(0, result);
-                Expr::Call(Box::new(what), args)
+                Expr::Call(CallKind::Function, Box::new(what), args)
             }
         };
     }
@@ -479,12 +501,20 @@ where
         result = match prev.as_rule().into() {
             en::Rule::subtract => {
                 let args = ExprList::from(vec![result]);
-                Expr::new_primitive_call(PrefixSub, args)
+                Expr::Call(
+                    CallKind::Prefix,
+                    Box::new(Expr::Symbol("-".to_string())),
+                    args,
+                )
             }
 
             en::Rule::not => {
                 let args = ExprList::from(vec![result]);
-                Expr::new_primitive_call(PrefixNot, args)
+                Expr::Call(
+                    CallKind::Prefix,
+                    Box::new(Expr::Symbol("!".to_string())),
+                    args,
+                )
             }
 
             en::Rule::more => {
@@ -519,7 +549,11 @@ where
     R: RuleType + Into<en::Rule>,
 {
     let args = parse_list_elements(config, parser, pratt, pair)?;
-    Ok(Expr::new_primitive_call(KeywordVec, args))
+    Ok(Expr::Call(
+        CallKind::Function,
+        Box::new(Expr::Symbol("[".to_string())),
+        args,
+    ))
 }
 
 fn parse_list<P, R>(
@@ -533,7 +567,11 @@ where
     R: RuleType + Into<en::Rule>,
 {
     let args = parse_list_elements(config, parser, pratt, pair)?;
-    Ok(Expr::new_primitive_call(KeywordList, args))
+    Ok(Expr::Call(
+        CallKind::Function,
+        Box::new(Expr::Symbol("(".to_string())),
+        args,
+    ))
 }
 
 #[cfg(test)]

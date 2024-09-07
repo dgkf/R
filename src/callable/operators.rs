@@ -255,14 +255,14 @@ impl Callable for InfixPipe {
 
         use Expr::*;
         match rhs {
-            Call(what, mut args) => {
+            Call(kind, what, mut args) => {
                 args.insert(0, lhs);
-                let new_expr = Call(what, args);
+                let new_expr = Call(kind, what, args);
                 stack.eval(new_expr)
             }
             s @ Symbol(..) | s @ String(..) => {
                 let args = ExprList::from(vec![(None, lhs)]);
-                let new_expr = Call(Box::new(s), args);
+                let new_expr = Call(CallKind::Function, Box::new(s), args);
                 stack.eval(new_expr)
             }
             _ => unreachable!(),
@@ -276,21 +276,25 @@ pub struct InfixColon;
 impl CallableFormals for InfixColon {}
 impl Callable for InfixColon {
     fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
+        use crate::callable::core::Sym;
+
         let mut argstream = args.into_iter();
         let arg1 = argstream.next().map(|(_, v)| v).unwrap_or(Expr::Null);
         let arg2 = argstream.next().map(|(_, v)| v).unwrap_or(Expr::Null);
 
-        fn colon_args(arg: &Expr) -> Option<(Expr, Expr)> {
-            if let Expr::Call(what, largs) = arg.clone() {
-                if let Expr::Primitive(p) = *what {
-                    if p == (Box::new(InfixColon) as Box<dyn Builtin>) {
-                        return Some(largs.clone().unnamed_binary_args());
+        let colon_args = |arg: &Expr| -> Option<(Expr, Expr)> {
+            if let Expr::Call(_, lhs_what, lhs_args) = arg.clone() {
+                if let Expr::Call(_, rhs_what, _) = *lhs_what {
+                    if let Expr::Symbol(rhs_sym) = *rhs_what {
+                        if rhs_sym.as_str() == InfixColon::SYM {
+                            return Some(lhs_args.clone().unnamed_binary_args());
+                        }
                     }
                 }
             }
 
             None
-        }
+        };
 
         // handle special case of chained colon ops: `x:y:z`
         if let Some((llhs, lrhs)) = colon_args(&arg1) {

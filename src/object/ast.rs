@@ -1,8 +1,6 @@
 use core::fmt;
 use std::{iter::Zip, slice::IterMut, vec::IntoIter};
 
-use crate::callable::core::Builtin;
-
 #[derive(Debug, Clone)]
 pub enum Expr {
     Null,
@@ -20,8 +18,23 @@ pub enum Expr {
     Symbol(String),
     List(ExprList),
     Function(ExprList, Box<Expr>),
-    Call(Box<Expr>, ExprList),
-    Primitive(Box<dyn Builtin>),
+    Call(CallKind, Box<Expr>, ExprList),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum CallKind {
+    // A language control flow or keyword, while (true) { ... }, ( ... ), { ... }
+    Keyword,
+    // A typical function call, fn(args)
+    Function,
+    // An infix call, 1 + 2
+    Infix,
+    // A prefix call, -3
+    Prefix,
+    // A postfix call, throws_error()?
+    Postfix,
+    // A postfix expression, x[[1]]
+    PostfixSurround(String), // stores terminating delimeter, `]]`
 }
 
 impl PartialEq for Expr {
@@ -41,54 +54,49 @@ impl PartialEq for Expr {
             (String(l), String(r)) => l == r,
             (Symbol(l), Symbol(r)) => l == r,
             (List(l), List(r)) => l == r,
-            (Primitive(l), Primitive(r)) => l == r,
             (Function(largs, lbody), Function(rargs, rbody)) => largs == rargs && lbody == rbody,
-            (Call(lwhat, largs), Call(rwhat, rargs)) => lwhat == rwhat && largs == rargs,
+            (Call(lkind, lwhat, largs), Call(rkind, rwhat, rargs)) => {
+                lkind == rkind && lwhat == rwhat && largs == rargs
+            }
             _ => false,
         }
     }
 }
 
-impl Expr {
-    pub fn as_primitive<T>(x: T) -> Self
-    where
-        T: Builtin + 'static,
-    {
-        Self::Primitive(Box::new(x))
-    }
-
-    pub fn new_primitive_call<T>(x: T, args: ExprList) -> Self
-    where
-        T: Builtin + 'static,
-    {
-        let p = Self::as_primitive(x);
-        Self::Call(Box::new(p), args)
-    }
-}
-
 impl fmt::Display for Expr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        use CallKind::*;
+        use Expr::*;
         match self {
-            Expr::Null => write!(f, "NULL"),
-            Expr::Missing => write!(f, ""),
-            Expr::Break => write!(f, "break"),
-            Expr::Continue => write!(f, "continue"),
-            Expr::Bool(true) => write!(f, "TRUE"),
-            Expr::Bool(false) => write!(f, "FALSE"),
-            Expr::Number(x) => write!(f, "{}", x),
-            Expr::Integer(x) => write!(f, "{}L", x),
-            Expr::String(x) => write!(f, "\"{}\"", x),
-            Expr::Symbol(x) => write!(f, "{}", x),
-            Expr::List(x) => write!(f, "{}", x),
-            Expr::Ellipsis(None) => write!(f, "..."),
-            Expr::Ellipsis(Some(s)) => write!(f, "..{s}"),
-            Expr::Call(what, args) => match &**what {
-                Expr::Primitive(p) => write!(f, "{}", p.rfmt_call(args)),
-                Expr::String(s) | Expr::Symbol(s) => write!(f, "{}({})", s, args),
-                rexpr => write!(f, "{}({})", rexpr, args),
-            },
+            Null => write!(f, "NULL"),
+            Missing => write!(f, ""),
+            Break => write!(f, "break"),
+            Continue => write!(f, "continue"),
+            Bool(true) => write!(f, "TRUE"),
+            Bool(false) => write!(f, "FALSE"),
+            Number(x) => write!(f, "{}", x),
+            Integer(x) => write!(f, "{}L", x),
+            String(x) => write!(f, "\"{}\"", x),
+            Symbol(x) => write!(f, "{}", x),
+            List(x) => write!(f, "{}", x),
+            Ellipsis(None) => write!(f, "..."),
+            Ellipsis(Some(s)) => write!(f, "..{s}"),
             Expr::Function(head, body) => write!(f, "function({}) {}", head, body),
-            Expr::Primitive(p) => write!(f, "Primitive(\"{}\")", p.rfmt()),
+            Call(Keyword, what, args) if KEYWORDS.contains_key(*what) => {
+                KEYWORDS.get(*what).rfmt_call(args)
+            }
+            Call(CallKind::Function, what, args) => write!(f, "{}({})", what, args),
+            Call(Infix, what, args) => {
+                let args = args.clone().unnamed_binary_args();
+                write!(f, "{} {} {}", args.0, what, args.1)
+            }
+            Call(Postfix, what, args) => {
+                let arg = args.clone().unnamed_unary_arg();
+                write!(f, "{}{}", arg, what)
+            }
+            Call(PostfixSurround(tail), what, args) => {
+                write!(f, "{}{}{}", what, args, tail)
+            }
             x => write!(f, "{:?}", x),
         }
     }

@@ -129,7 +129,7 @@ impl Obj {
                         .collect::<Vec<_>>(),
                 ))),
                 Expr::Function(_, _) => internal_err!(),
-                Expr::Call(what, args) => Ok(Obj::List(List::from(
+                Expr::Call(_, what, args) => Ok(Obj::List(List::from(
                     vec![(None, (**what).clone())]
                         .into_iter()
                         .chain((*args).clone())
@@ -351,14 +351,6 @@ impl Display for Obj {
             Obj::Vector(v) => write!(f, "{}", v),
             Obj::Null => write!(f, "NULL"),
             Obj::Environment(x) => write!(f, "<environment {:?}>", x.values.as_ptr()),
-            Obj::Function(formals, Expr::Primitive(primitive), _) => {
-                write!(
-                    f,
-                    "function({}) .Primitive(\"{}\")",
-                    formals,
-                    primitive.rfmt()
-                )
-            }
             Obj::Function(formals, body, parent_env) => {
                 let parent_env = Obj::Environment(Rc::clone(parent_env));
                 write!(f, "function({}) {}\n{}", formals, body, parent_env)
@@ -597,7 +589,7 @@ pub struct Frame {
 impl Frame {
     pub fn new(call: Expr, mut env: Rc<Environment>) -> Frame {
         let to = match call.clone() {
-            Expr::Call(what, _) => env.eval(*what).unwrap_or_default(),
+            Expr::Call(_, what, _) => env.eval(*what).unwrap_or_default(),
             _ => Obj::Null,
         };
 
@@ -690,9 +682,17 @@ impl CallStack {
             };
         }
 
-        if let Some(prim) = BUILTIN.get(name.as_str()) {
+        if BUILTIN.contains_key(name.as_str()) {
             Result::Ok((
-                Obj::Function(ExprList::new(), Expr::Primitive(prim.clone()), self.env()),
+                Obj::Function(
+                    ExprList::new(),
+                    Expr::Call(
+                        CallKind::Function,
+                        Box::new(Expr::Symbol(".Primitive".to_string())),
+                        ExprList::from(vec![Expr::String(name)]),
+                    ),
+                    self.env(),
+                ),
                 env,
             ))
         } else {
@@ -793,8 +793,14 @@ impl Context for CallStack {
         const LIST: &str = "list";
         let err = Err(Signal::Error(Error::IncorrectContext("<-".to_string())));
 
-        if let Expr::Call(what, mut args) = to {
+        if let Expr::Call(_, what, mut args) = to {
             match *what {
+                Expr::String(s) | Expr::Symbol(s) if BUILTIN.contains_key(s.as_str()) => {
+                    let Some(p) = BUILTIN.get(s.as_str()) else {
+                        return internal_err!();
+                    };
+                    return p.call_assign(from, args, self);
+                }
                 // special case for list() calls
                 Expr::String(s) | Expr::Symbol(s) if s == LIST => {
                     let result = self.eval_and_finalize(from)?;
@@ -803,9 +809,12 @@ impl Context for CallStack {
                 Expr::String(s) | Expr::Symbol(s) => {
                     args.insert(0, from);
                     let s = format!("{}<-", s);
-                    return self.eval(Expr::Call(Box::new(Expr::Symbol(s)), args));
+                    return self.eval(Expr::Call(
+                        CallKind::Function,
+                        Box::new(Expr::Symbol(s)),
+                        args,
+                    ));
                 }
-                Expr::Primitive(p) => return p.call_assign(from, args, self),
                 _ => return err,
             }
         }
@@ -923,36 +932,28 @@ impl Context for CallStack {
 }
 
 fn eval_call(callstack: &mut CallStack, expr: Expr, mutable: bool) -> EvalResult {
-    let Expr::Call(what, args) = expr.clone() else {
+    let Expr::Call(_, what, args) = expr.clone() else {
         return internal_err!();
     };
 
     match *what {
-        Expr::Primitive(f) if f.is_transparent() => {
-            if mutable {
-                f.call_mut(args, callstack)
-            } else {
-                f.call(args, callstack)
-            }
-        }
-        Expr::Primitive(f) => {
-            callstack.add_frame(expr, callstack.last_frame().env().clone());
-            let result = if mutable {
-                f.call_mut(args, callstack)
-            } else {
-                f.call(args, callstack)
-            };
-            callstack.pop_frame_and_return(result)
-        }
         Expr::String(name) | Expr::Symbol(name) if BUILTIN.contains_key(name.as_str()) => {
             let f = BUILTIN
                 .get(name.as_str())
                 .ok_or(Error::VariableNotFound(name))?;
+
+            // immediately call without introducing new frame
+            if f.is_transparent() {
+                match mutable {
+                    true => return f.call_mut(args, callstack),
+                    false => return f.call(args, callstack),
+                }
+            };
+
             callstack.add_frame(expr, callstack.last_frame().env().clone());
-            let result = if mutable {
-                f.call_mut(args, callstack)
-            } else {
-                f.call(args, callstack)
+            let result = match mutable {
+                true => f.call_mut(args, callstack),
+                false => f.call(args, callstack),
             };
             callstack.pop_frame_and_return(result)
         }
@@ -983,8 +984,8 @@ fn eval_call(callstack: &mut CallStack, expr: Expr, mutable: bool) -> EvalResult
                 .experiments
                 .contains(&Experiment::TailCalls)
             {
-                while let Err(Tail(Expr::Call(what, args), _vis)) = result {
-                    let tail = Expr::Call(what.clone(), args.clone());
+                while let Err(Tail(Expr::Call(kind, what, args), _vis)) = result {
+                    let tail = Expr::Call(kind, what.clone(), args.clone());
 
                     // tail is recursive call if it calls out to same object
                     // that was called to enter current frame
@@ -1057,11 +1058,6 @@ impl Context for Obj {
             Expr::Symbol(name) => self.get(name),
             Expr::Break => Err(Signal::Condition(Cond::Break)),
             Expr::Continue => Err(Signal::Condition(Cond::Continue)),
-            Expr::Primitive(p) => Ok(Obj::Function(
-                p.formals(),
-                Expr::Primitive(p),
-                self.environment().unwrap(),
-            )),
             Expr::More => Ok(Obj::Null),
 
             // bubbles up to where a symbol can be attached for context
@@ -1113,7 +1109,6 @@ impl Context for Rc<Environment> {
             Expr::Symbol(name) => self.get(name),
             Expr::Break => Err(Signal::Condition(Cond::Break)),
             Expr::Continue => Err(Signal::Condition(Cond::Continue)),
-            Expr::Primitive(p) => Ok(Obj::Function(p.formals(), Expr::Primitive(p), self.clone())),
             Expr::More => Ok(Obj::Null),
 
             // bubbles up to where a symbol can be attached for context

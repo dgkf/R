@@ -55,9 +55,13 @@
 
 // expression basics
 
-    expr = { atomic ~ ( WS* ~ infix ~ WS* ~ atomic )* }
+    expr = { atomic ~ ( sep ~ infix ~ sep ~ atomic )* }
 
         comment = _{ "#" ~ ( !NEWLINE ~ !eoi ~ ANY )* }
+
+        sep = _{ WS+ | jux }
+
+        jux = { "" }
 
         atomic = _{ prefixed | standalone }
             prefixed = { prefix* ~ WS* ~ postfixed }
