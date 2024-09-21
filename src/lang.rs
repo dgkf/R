@@ -3,7 +3,6 @@ use crate::cli::Experiment;
 use crate::context::Context;
 use crate::error::*;
 use crate::internal_err;
-use crate::object::reptype::RepType;
 use crate::object::types::*;
 use crate::object::*;
 use crate::parser::LocalizedParser;
@@ -70,9 +69,14 @@ impl ViewMut for Obj {
                 Vector::Logical(v) => Vector::Logical(v.view_mut()),
             }),
 
-            Obj::List(List { names, values }) => Obj::List(List {
+            Obj::List(List {
+                names,
+                values,
+                subsets,
+            }) => Obj::List(List {
                 names: (*names).view_mut(),
                 values: (*values).view_mut(),
+                subsets: (*subsets).clone(),
             }),
             // FIXME: this needs to be implemented for all objects that can be mutated
             x => x.clone(),
@@ -213,7 +217,7 @@ impl Obj {
         match self {
             Obj::Vector(v) => v.get(index).map(Obj::Vector),
             Obj::Null => None,
-            Obj::List(l) => l.values.get_inner(index).map(|x| x.1.clone()),
+            Obj::List(l) => l.values.borrow().get(index).map(|x| x.1.clone()),
             Obj::Expr(..) => None,
             Obj::Promise(..) => None,
             Obj::Function(..) => None,
@@ -371,9 +375,7 @@ impl Display for Obj {
 
 fn display_list(x: &List, f: &mut fmt::Formatter<'_>, bc: Option<String>) -> fmt::Result {
     let v = x.values.borrow();
-    let s = match &*x.values.borrow() {
-        RepType::Subset(_, s) => s.clone(),
-    };
+    let s = x.subsets.clone();
 
     for (i, (_, si)) in s
         .bind_names(x.names.clone())
@@ -385,7 +387,7 @@ fn display_list(x: &List, f: &mut fmt::Formatter<'_>, bc: Option<String>) -> fmt
         let value;
 
         if let Some(i) = si {
-            (name, value) = v.get_inner(i).unwrap().clone();
+            (name, value) = v[i].clone();
         } else {
             return write!(f, "{}", Obj::Null);
         }

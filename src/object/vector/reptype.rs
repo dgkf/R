@@ -6,8 +6,6 @@ use super::subset::Subset;
 use super::subsets::Subsets;
 use super::types::*;
 use super::{OptionNA, Pow, VecPartialCmp};
-use crate::error::Error;
-use crate::internal_err;
 use crate::object::{CowObj, Obj, ViewMut};
 
 /// Vector
@@ -121,21 +119,18 @@ impl<T: Clone + Default> RepType<T> {
     }
 
     /// Try to get mutable access to the internal vector through the passed closure.
-    /// This requires the vector to be in materialized form, otherwise None is returned.
-    /// None is returned if this is not the case.
     pub fn with_inner_mut<F, R>(&self, f: F) -> R
     where
         F: FnOnce(&mut Vec<T>) -> R,
     {
         match self {
-            RepType::Subset(v, Subsets(s)) => v.with_inner_mut(f),
+            RepType::Subset(v, _) => v.with_inner_mut(f),
         }
     }
 
     /// Subsetting a Vector
     ///
     /// Introduce a new subset into the aggregate list of subset indices.
-    ///
     pub fn subset(&self, subset: Subset) -> Self {
         match self {
             RepType::Subset(v, Subsets(subsets)) => {
