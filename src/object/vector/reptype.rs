@@ -216,10 +216,11 @@ impl<T: Clone + Default> RepType<T> {
             RepType::Subset(v, subsets) => {
                 // early exit when there is nothing to do
                 match subsets {
-                    Subsets(s) => match s.as_slice() {
-                        [] => return self.clone(),
-                        _ => (),
-                    },
+                    Subsets(s) => {
+                        if s.as_slice().is_empty() {
+                            return self.clone();
+                        }
+                    }
                 }
 
                 let vc = v.clone();
