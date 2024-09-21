@@ -145,8 +145,7 @@ impl<T: Clone + Default> RepType<T> {
         match self {
             RepType::Subset(v, Subsets(s)) => match s.as_slice() {
                 [] => v.borrow().len(),
-                // FIXME: This can be wrong
-                [.., last] => std::cmp::min(v.len(), last.len()),
+                _ => unimplemented!(),
             },
         }
     }
