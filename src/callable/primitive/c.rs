@@ -62,17 +62,62 @@ impl Callable for PrimitiveC {
             })
             .fold(0, std::cmp::max);
 
+        // if the output will have names
+        let named = vals.values.borrow().iter().any(|(n, o)| {
+            if n.is_some() {
+                return true;
+            }
+            match o {
+                Obj::Vector(v) => v.has_names(),
+                Obj::List(l) => l.names.borrow().len() > 0,
+                _ => todo!(),
+            }
+        });
+
         // most complex type was NULL
         if ty == 0 {
             return Ok(Obj::Null);
         }
 
         // most complex type was List
+        // FIXME: handle names
         if ty == 2 {
             return Ok(Obj::List(vals));
         }
 
-        // otherwise, try to collapse vectors into same type
+        let names: Option<Vec<Character>> = if named {
+            let nms = vals.values.iter().flat_map(|(name, obj)| {
+                let maybe_prefix = name.as_ref().and_then(|n| Option::Some(n.clone()));
+
+                if let Obj::Vector(v) = obj {
+                    let maybe_names_iter = v.iter_names();
+
+                    let x: Vec<Character> = match (maybe_prefix, maybe_names_iter) {
+                        (None, None) => std::iter::repeat(Character::NA).take(v.len()).collect(),
+                        (Some(prefix), None) => std::iter::repeat(Character::Some(prefix.clone()))
+                            .take(v.len())
+                            .collect(),
+                        (None, Some(names_iter)) => names_iter.collect(),
+                        (Some(prefix), Some(names_iter)) => names_iter
+                            .map(|maybe_name| {
+                                if let OptionNA::Some(name) = maybe_name {
+                                    Character::Some(format!("{}.{}", prefix, name))
+                                } else {
+                                    Character::Some(prefix.clone())
+                                }
+                            })
+                            .collect(),
+                    };
+                    x
+                } else {
+                    unimplemented!()
+                }
+            });
+            Some(nms.collect())
+        } else {
+            None
+        };
+
         let ret = vals
             .values
             .iter()
@@ -94,8 +139,8 @@ impl Callable for PrimitiveC {
             });
 
         // consume values and merge into a new collection
-        match ret {
-            Vector::Character(_) => Ok(Obj::Vector(Vector::from(
+        let v = match ret {
+            Vector::Character(_) => Vector::from(
                 Vec::<OptionNA<String>>::new()
                     .into_iter()
                     .chain(
@@ -107,8 +152,8 @@ impl Callable for PrimitiveC {
                             }),
                     )
                     .collect::<Vec<Character>>(),
-            ))),
-            Vector::Double(_) => Ok(Obj::Vector(Vector::from(
+            ),
+            Vector::Double(_) => Vector::from(
                 Vec::<OptionNA<f64>>::new()
                     .into_iter()
                     .chain(
@@ -120,8 +165,8 @@ impl Callable for PrimitiveC {
                             }),
                     )
                     .collect::<Vec<Double>>(),
-            ))),
-            Vector::Integer(_) => Ok(Obj::Vector(Vector::from(
+            ),
+            Vector::Integer(_) => Vector::from(
                 Vec::<OptionNA<i32>>::new()
                     .into_iter()
                     .chain(
@@ -133,8 +178,8 @@ impl Callable for PrimitiveC {
                             }),
                     )
                     .collect::<Vec<Integer>>(),
-            ))),
-            Vector::Logical(_) => Ok(Obj::Vector(Vector::from(
+            ),
+            Vector::Logical(_) => Vector::from(
                 Vec::<OptionNA<bool>>::new()
                     .into_iter()
                     .chain(
@@ -146,7 +191,12 @@ impl Callable for PrimitiveC {
                             }),
                     )
                     .collect::<Vec<Logical>>(),
-            ))),
+            ),
+        };
+
+        if let Some(names) = names {
+            v.set_names_(names.into())
         }
+        Ok(Obj::Vector(v))
     }
 }

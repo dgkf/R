@@ -63,8 +63,11 @@ impl Callable for PrimitiveNames {
         match x {
             Null => Ok(Null),
             Promise(..) => Ok(Null),
-            Vector(..) => Ok(Null), // named vectors currently not supported...
-            Expr(..) => Ok(Null),   // handle arg lists?
+            Vector(v) => match v.names() {
+                Some(n) => Ok(Obj::Vector(n)),
+                None => Ok(Null),
+            },
+            Expr(..) => Ok(Null),     // handle arg lists?
             Function(..) => Ok(Null), // return formals?
             List(x) => {
                 Ok(x.values

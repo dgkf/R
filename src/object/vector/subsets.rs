@@ -32,6 +32,15 @@ impl Subsets {
         Some(index)
     }
 
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
+
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
     pub fn push<T>(self, subset: T)
     where
         T: Into<Subset>,

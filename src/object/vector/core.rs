@@ -3,6 +3,7 @@ use std::fmt::Display;
 
 use crate::error::Error;
 use crate::lang::EvalResult;
+use crate::object::CowObj;
 use crate::object::Obj;
 
 use super::coercion::CoercibleInto;
@@ -72,6 +73,43 @@ impl Vector {
             Logical(x) => x.get(index).map(Logical),
             Character(x) => x.get(index).map(Character),
         }
+    }
+
+    pub fn has_names(&self) -> bool {
+        self.iter_names().is_some()
+    }
+
+    /// Iterate over the names of the vector.
+    pub fn iter_names(&self) -> Option<Box<dyn Iterator<Item = OptionNA<String>>>> {
+        use Vector::*;
+        let names = match self {
+            Double(x) => x.names(),
+            Integer(x) => x.names(),
+            Logical(x) => x.names(),
+            Character(x) => x.names(),
+        };
+
+        if let Some(n) = names {
+            Some(Box::new(n.iter()))
+        } else {
+            None
+        }
+    }
+
+    /// Get the names of the vector.
+    pub fn names(&self) -> Option<Self> {
+        let i = self.iter_names()?;
+        let x: Option<Self> = Some(i.collect::<Vec<OptionNA<String>>>().into());
+        x
+    }
+
+    pub fn set_names_(&self, names: CowObj<Vec<Character>>) {
+        match self {
+            Vector::Character(x) => x.set_names_(names),
+            Vector::Logical(x) => x.set_names_(names),
+            Vector::Integer(x) => x.set_names_(names),
+            Vector::Double(x) => x.set_names_(names),
+        };
     }
 
     pub fn try_get(&self, index: Obj) -> EvalResult {

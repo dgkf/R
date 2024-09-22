@@ -8,6 +8,8 @@ use super::reptype::RepTypeIter;
 use super::subset::Subset;
 use super::types::*;
 use super::{OptionNA, Pow, VecPartialCmp};
+use crate::object::reptype::Naming;
+use crate::object::vector::*;
 use crate::object::{CowObj, Obj, ViewMut};
 
 /// Vector Representation
@@ -20,7 +22,11 @@ pub struct Rep<T: Clone>(pub RefCell<RepType<T>>);
 impl<T: Clone + Default> Clone for Rep<T> {
     fn clone(&self) -> Self {
         match self.borrow().clone() {
-            RepType::Subset(v, s) => Rep(RefCell::new(RepType::Subset(v.clone(), s.clone()))),
+            RepType::Subset(v, s, n) => Rep(RefCell::new(RepType::Subset(
+                v.clone(),
+                s.clone(),
+                n.clone(),
+            ))),
         }
     }
 }
@@ -44,12 +50,35 @@ where
     pub fn borrow(&self) -> Ref<RepType<T>> {
         self.0.borrow()
     }
+
     fn materialize_inplace(&self) -> &Self {
         // TODO: Rewrite this to avoid copying unnecessarily
         let new_repr = { self.borrow().materialize() };
         self.0.replace(new_repr);
 
         self
+    }
+
+    ///
+    pub fn set_names_(&self, names: CowObj<Vec<OptionNA<String>>>) {
+        let mut new_repr = self.borrow().materialize().set_names(names);
+        self.0.replace(new_repr);
+    }
+
+    pub fn names(&self) -> Option<CowObj<Vec<Character>>> {
+        match self.borrow().clone() {
+            RepType::Subset(_, s, n) => {
+                if s.is_empty() {
+                    if let Option::Some(n) = n {
+                        Option::Some(n.clone().names)
+                    } else {
+                        Option::None
+                    }
+                } else {
+                    unimplemented!()
+                }
+            }
+        }
     }
 
     /// Try to get mutable access to the internal vector through the passed closure.

@@ -7,12 +7,58 @@ use super::subsets::Subsets;
 use super::types::*;
 use super::{OptionNA, Pow, VecPartialCmp};
 use crate::object::{CowObj, Obj, ViewMut};
+use hashbrown::HashMap;
+
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct Naming {
+    // TODO: change this to usize and not Vec<usize> (after making names unique)
+    pub map: CowObj<HashMap<String, Vec<usize>>>,
+    pub names: CowObj<Vec<OptionNA<String>>>,
+}
+
+impl Naming {
+    pub fn new() -> Self {
+        Naming::default()
+    }
+    pub fn push_name(&self, name: OptionNA<String>) {
+        self.names.with_inner_mut(|v| v.push(name.clone()));
+        if let OptionNA::Some(name) = name {
+            let n = self.names.len();
+            self.map.with_inner_mut(|map| {
+                let indices = map.entry(name.clone()).or_default();
+                if !indices.contains(&n) {
+                    indices.push(n);
+                };
+            });
+        };
+    }
+}
+
+impl From<CowObj<Vec<Character>>> for Naming {
+    fn from(value: CowObj<Vec<Character>>) -> Self {
+        let mut map: HashMap<String, Vec<usize>> = HashMap::new();
+
+        value.iter().enumerate().map(|(i, maybe_name)| {
+            if let OptionNA::Some(name) = maybe_name {
+                let indices = map.entry(name.clone()).or_default();
+                if !indices.contains(&i) {
+                    indices.push(i);
+                };
+            };
+        });
+
+        Self {
+            map: map.into(),
+            names: value,
+        }
+    }
+}
 
 /// Vector
 #[derive(Debug, PartialEq)]
 pub enum RepType<T: Clone> {
     // Vector::Subset encompasses a "raw" vector (no subsetting)
-    Subset(CowObj<Vec<T>>, Subsets),
+    Subset(CowObj<Vec<T>>, Subsets, Option<Naming>),
     // Iterator includes things like ranges 1:Inf, and lazily computed values
     // Iter(Box<dyn Iterator<Item = &T>>)
 }
@@ -20,7 +66,8 @@ pub enum RepType<T: Clone> {
 impl<T: Clone> Clone for RepType<T> {
     fn clone(&self) -> Self {
         match self {
-            RepType::Subset(v, s) => RepType::Subset(v.view_mut(), s.clone()),
+            // FIXME: should this reall call .view_mut()? should add comment
+            RepType::Subset(v, s, n) => RepType::Subset(v.view_mut(), s.clone(), n.clone()),
         }
     }
 }
@@ -35,7 +82,7 @@ impl<T: Clone + Default + ViewMut> RepType<T> {
     /// Retrieve the internal data as a mutable view.
     pub fn get_inner_mut(&self, index: usize) -> Option<T> {
         match self {
-            RepType::Subset(v, subsets) => {
+            RepType::Subset(v, subsets, _) => {
                 let vb = v.borrow();
                 let index = subsets.get_index_at(index).unwrap();
                 vb.get(index).map(|i| i.view_mut())
@@ -83,7 +130,7 @@ impl<T: Clone + Default> Iterator for RepTypeIter<T> {
 impl<T: Clone> ViewMut for RepType<T> {
     fn view_mut(&self) -> Self {
         match self {
-            RepType::Subset(v, s) => RepType::Subset(v.view_mut(), s.clone()),
+            RepType::Subset(v, s, n) => RepType::Subset(v.view_mut(), s.clone(), n.clone()),
         }
     }
 }
@@ -108,13 +155,21 @@ impl<T: Clone + Default> RepType<T> {
     /// ```
     ///
     pub fn new() -> Self {
-        RepType::Subset(Vec::new().into(), Subsets(Vec::new()))
+        RepType::Subset(Vec::new().into(), Subsets(Vec::new()), Option::None)
+    }
+
+    pub fn set_names(&self, names: CowObj<Vec<Character>>) -> Self {
+        match self {
+            RepType::Subset(v, s, _) => {
+                RepType::Subset(v.clone(), s.clone(), Option::Some(names.into()))
+            }
+        }
     }
 
     /// Access a lazy copy of the internal vector data
     pub fn inner(&self) -> CowObj<Vec<T>> {
         match self.materialize() {
-            RepType::Subset(v, _) => v.clone(),
+            RepType::Subset(v, ..) => v.clone(),
         }
     }
 
@@ -124,7 +179,7 @@ impl<T: Clone + Default> RepType<T> {
         F: FnOnce(&mut Vec<T>) -> R,
     {
         match self {
-            RepType::Subset(v, _) => v.with_inner_mut(f),
+            RepType::Subset(v, ..) => v.with_inner_mut(f),
         }
     }
 
@@ -133,17 +188,17 @@ impl<T: Clone + Default> RepType<T> {
     /// Introduce a new subset into the aggregate list of subset indices.
     pub fn subset(&self, subset: Subset) -> Self {
         match self {
-            RepType::Subset(v, Subsets(subsets)) => {
+            RepType::Subset(v, Subsets(subsets), n) => {
                 let mut subsets = subsets.clone();
                 subsets.push(subset);
-                RepType::Subset(v.view_mut(), Subsets(subsets))
+                RepType::Subset(v.view_mut(), Subsets(subsets), n.clone())
             }
         }
     }
 
     pub fn len(&self) -> usize {
         match self {
-            RepType::Subset(v, Subsets(s)) => match s.as_slice() {
+            RepType::Subset(v, Subsets(s), _) => match s.as_slice() {
                 [] => v.borrow().len(),
                 _ => unimplemented!(),
             },
@@ -163,11 +218,15 @@ impl<T: Clone + Default> RepType<T> {
         T: Clone,
     {
         match self {
-            RepType::Subset(v, subsets) => {
+            RepType::Subset(v, subsets, _) => {
                 let vb = v.borrow();
                 let index = subsets.get_index_at(index)?;
                 let elem = vb.get(index)?;
-                Some(RepType::Subset(vec![elem.clone()].into(), Subsets::new()))
+                Some(RepType::Subset(
+                    vec![elem.clone()].into(),
+                    Subsets::new(),
+                    Option::Some(Naming::new()),
+                ))
             }
         }
     }
@@ -182,7 +241,7 @@ impl<T: Clone + Default> RepType<T> {
         T: Clone + Default,
     {
         match (self, value) {
-            (RepType::Subset(lv, ls), RepType::Subset(rv, rs)) => {
+            (RepType::Subset(lv, ls, ln), RepType::Subset(rv, rs, _)) => {
                 lv.with_inner_mut(|lvb| {
                     let rvc = rv.clone();
                     let rvb = rvc.borrow();
@@ -200,7 +259,7 @@ impl<T: Clone + Default> RepType<T> {
                     }
                 });
 
-                RepType::Subset(lv.clone(), ls.clone())
+                RepType::Subset(lv.clone(), ls.clone(), ln.clone())
             }
         }
     }
@@ -213,7 +272,7 @@ impl<T: Clone + Default> RepType<T> {
         T: Clone,
     {
         match self {
-            RepType::Subset(v, subsets) => {
+            RepType::Subset(v, subsets, naming) => {
                 // early exit when there is nothing to do
                 match subsets {
                     Subsets(s) => {
@@ -228,15 +287,28 @@ impl<T: Clone + Default> RepType<T> {
                 let mut res: Vec<T> = vec![];
                 let vb_len = vb.len();
 
+                let new_naming = Naming::new();
+
                 let iter = subsets.clone().into_iter().take_while(|(i, _)| i < &vb_len);
+
                 for (_, i) in iter {
                     match i {
-                        Some(i) => res.push(vb[i].clone()),
-                        None => res.push(T::default()),
+                        Some(i) => {
+                            res.push(vb[i].clone());
+                            if let Option::Some(n) = naming {
+                                new_naming.push_name(n.names.borrow()[i].clone())
+                            };
+                        }
+                        // default is NA
+                        None => {
+                            res.push(T::default());
+                            // When we subset with NA, there is no name for this entry;
+                            new_naming.push_name(OptionNA::NA);
+                        }
                     }
                 }
 
-                RepType::Subset(res.into(), Subsets(vec![]))
+                RepType::Subset(res.into(), Subsets(vec![]), Option::None)
             }
         }
     }
@@ -275,13 +347,13 @@ impl<T: Clone + Default> RepType<T> {
         Mode: Clone,
     {
         match self {
-            RepType::Subset(v, subsets) => {
+            RepType::Subset(v, subsets, naming) => {
                 let vc = v.clone();
                 let vb = vc.borrow();
 
                 let num_vec: Vec<Mode> = vb.iter().map(|i| (*i).clone().coerce_into()).collect();
 
-                RepType::Subset(num_vec.into(), subsets.clone())
+                RepType::Subset(num_vec.into(), subsets.clone(), naming.clone())
             }
         }
     }
@@ -340,7 +412,10 @@ impl<T: Clone + Default> RepType<T> {
 
     pub fn get_inner(&self, index: usize) -> Option<T> {
         match self {
-            RepType::Subset(v, subsets) => {
+            RepType::Subset(v, subsets, n) => {
+                if n.is_some() {
+                    unimplemented!()
+                }
                 let vb = v.borrow();
                 let index = subsets.get_index_at(index)?;
                 vb.get(index).cloned()
@@ -367,63 +442,64 @@ where
 
 impl From<Vec<(Option<String>, Obj)>> for RepType<(Option<String>, Obj)> {
     fn from(value: Vec<(Option<String>, Obj)>) -> Self {
-        RepType::Subset(value.into(), Subsets::default())
+        // FIXME: How to handle names?
+        RepType::Subset(value.into(), Subsets::default(), Option::None)
     }
 }
 
 impl From<Vec<OptionNA<f64>>> for RepType<Double> {
     fn from(value: Vec<OptionNA<f64>>) -> Self {
         let value: Vec<_> = value.into_iter().map(|i| i.coerce_into()).collect();
-        RepType::Subset(value.into(), Subsets(Vec::new()))
+        RepType::Subset(value.into(), Subsets(Vec::new()), Option::None)
     }
 }
 
 impl From<Vec<f64>> for RepType<Double> {
     fn from(value: Vec<f64>) -> Self {
         let value: Vec<_> = value.into_iter().map(|i| i.coerce_into()).collect();
-        RepType::Subset(value.into(), Subsets(Vec::new()))
+        RepType::Subset(value.into(), Subsets(Vec::new()), Option::None)
     }
 }
 
 impl From<Vec<OptionNA<i32>>> for RepType<Integer> {
     fn from(value: Vec<OptionNA<i32>>) -> Self {
         let value: Vec<_> = value.into_iter().map(|i| i.coerce_into()).collect();
-        RepType::Subset(value.into(), Subsets(Vec::new()))
+        RepType::Subset(value.into(), Subsets(Vec::new()), Option::None)
     }
 }
 
 impl From<Vec<i32>> for RepType<Integer> {
     fn from(value: Vec<i32>) -> Self {
         let value: Vec<_> = value.into_iter().map(|i| i.coerce_into()).collect();
-        RepType::Subset(value.into(), Subsets(Vec::new()))
+        RepType::Subset(value.into(), Subsets(Vec::new()), Option::None)
     }
 }
 
 impl From<Vec<OptionNA<bool>>> for RepType<Logical> {
     fn from(value: Vec<OptionNA<bool>>) -> Self {
         let value: Vec<_> = value.into_iter().map(|i| i.coerce_into()).collect();
-        RepType::Subset(value.into(), Subsets(Vec::new()))
+        RepType::Subset(value.into(), Subsets(Vec::new()), Option::None)
     }
 }
 
 impl From<Vec<bool>> for RepType<Logical> {
     fn from(value: Vec<bool>) -> Self {
         let value: Vec<_> = value.into_iter().map(|i| i.coerce_into()).collect();
-        RepType::Subset(value.into(), Subsets(Vec::new()))
+        RepType::Subset(value.into(), Subsets(Vec::new()), Option::None)
     }
 }
 
 impl From<Vec<OptionNA<String>>> for RepType<Character> {
     fn from(value: Vec<OptionNA<String>>) -> Self {
         let value: Vec<_> = value.into_iter().map(|i| i.coerce_into()).collect();
-        RepType::Subset(value.into(), Subsets(Vec::new()))
+        RepType::Subset(value.into(), Subsets(Vec::new()), Option::None)
     }
 }
 
 impl From<Vec<String>> for RepType<Character> {
     fn from(value: Vec<String>) -> Self {
         let value: Vec<_> = value.into_iter().map(|i| i.coerce_into()).collect();
-        RepType::Subset(value.into(), Subsets(Vec::new()))
+        RepType::Subset(value.into(), Subsets(Vec::new()), Option::None)
     }
 }
 
@@ -434,7 +510,7 @@ where
 {
     fn from(value: (Vec<F>, Subsets)) -> Self {
         match Self::from(value.0) {
-            RepType::Subset(v, _) => RepType::Subset(v, value.1),
+            RepType::Subset(v, ..) => RepType::Subset(v, value.1, Option::None),
         }
     }
 }
