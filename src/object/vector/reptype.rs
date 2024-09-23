@@ -158,6 +158,25 @@ impl<T: Clone + Default> RepType<T> {
         RepType::Subset(Vec::new().into(), Subsets(Vec::new()), Option::None)
     }
 
+    /// Reindex the mapping from names to indices.
+    pub fn reindex(&mut self) {
+        match self {
+            RepType::Subset(.., Some(naming)) => naming.map.with_inner_mut(|map| {
+                map.drain();
+
+                for (i, maybe_name) in naming.names.borrow().iter().enumerate() {
+                    if let OptionNA::Some(name) = maybe_name {
+                        let indices = map.entry(name.clone()).or_default();
+                        if !indices.contains(&i) {
+                            indices.push(i)
+                        }
+                    }
+                }
+            }),
+            _ => (),
+        }
+    }
+
     pub fn set_names(&self, names: CowObj<Vec<Character>>) -> Self {
         match self {
             RepType::Subset(v, s, _) => {
@@ -173,7 +192,7 @@ impl<T: Clone + Default> RepType<T> {
         }
     }
 
-    /// Try to get mutable access to the internal vector through the passed closure.
+    /// Get mutable access to the internal vector through the passed closure.
     pub fn with_inner_mut<F, R>(&self, f: F) -> R
     where
         F: FnOnce(&mut Vec<T>) -> R,
@@ -437,6 +456,12 @@ where
                 OptionNA::NA => Err(()),
             },
         )
+    }
+}
+
+impl<T: Clone> From<CowObj<Vec<T>>> for RepType<T> {
+    fn from(value: CowObj<Vec<T>>) -> Self {
+        RepType::Subset(value, Subsets::default(), Option::None)
     }
 }
 

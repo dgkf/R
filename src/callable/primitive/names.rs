@@ -64,7 +64,7 @@ impl Callable for PrimitiveNames {
             Null => Ok(Null),
             Promise(..) => Ok(Null),
             Vector(v) => match v.names() {
-                Some(n) => Ok(Obj::Vector(n)),
+                Some(n) => Ok(Obj::Vector(n.into())),
                 None => Ok(Null),
             },
             Expr(..) => Ok(Null),     // handle arg lists?

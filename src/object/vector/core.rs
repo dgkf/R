@@ -75,32 +75,26 @@ impl Vector {
         }
     }
 
-    pub fn has_names(&self) -> bool {
-        self.iter_names().is_some()
-    }
-
     /// Iterate over the names of the vector.
     pub fn iter_names(&self) -> Option<Box<dyn Iterator<Item = OptionNA<String>>>> {
         use Vector::*;
-        let names = match self {
-            Double(x) => x.names(),
-            Integer(x) => x.names(),
-            Logical(x) => x.names(),
-            Character(x) => x.names(),
-        };
-
-        if let Some(n) = names {
-            Some(Box::new(n.iter()))
-        } else {
-            None
+        match self {
+            Double(x) => x.iter_names(),
+            Integer(x) => x.iter_names(),
+            Logical(x) => x.iter_names(),
+            Character(x) => x.iter_names(),
         }
     }
 
     /// Get the names of the vector.
-    pub fn names(&self) -> Option<Self> {
-        let i = self.iter_names()?;
-        let x: Option<Self> = Some(i.collect::<Vec<OptionNA<String>>>().into());
-        x
+    pub fn names(&self) -> Option<CowObj<Vec<Character>>> {
+        use Vector::*;
+        match self {
+            Double(x) => x.names(),
+            Integer(x) => x.names(),
+            Logical(x) => x.names(),
+            Character(x) => x.names(),
+        }
     }
 
     pub fn set_names_(&self, names: CowObj<Vec<Character>>) {
@@ -130,6 +124,17 @@ impl Vector {
             }
             _ => Err(err.into()),
         }
+    }
+
+    pub fn try_get_inner_mut(&self, index: Obj) -> EvalResult {
+        // This method will be needed when we have scalars
+        todo!()
+    }
+
+    pub fn try_get_inner(&self, index: Obj) -> EvalResult {
+        // This method will be needed when we have scalars
+        #[allow(clippy::map_clone)]
+        self.try_get_inner_mut(index).map(|v| v.clone())
     }
 
     pub fn subset(&self, subset: Subset) -> Self {
@@ -272,6 +277,12 @@ impl TryInto<bool> for Vector {
             Logical(i) => i.try_into(),
             Character(i) => i.try_into(),
         }
+    }
+}
+
+impl From<CowObj<Vec<Character>>> for Vector {
+    fn from(x: CowObj<Vec<Character>>) -> Self {
+        Vector::Character(x.into())
     }
 }
 

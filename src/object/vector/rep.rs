@@ -1,4 +1,4 @@
-use std::cell::{Ref, RefCell};
+use std::cell::{Ref, RefCell, RefMut};
 use std::fmt::{Debug, Display};
 
 use super::coercion::{AtomicMode, CoercibleInto, CommonCmp, CommonNum, MinimallyNumeric};
@@ -41,6 +41,14 @@ impl<T: ViewMut + Default + Clone> Rep<T> {
     pub fn get_inner_mut(&self, index: usize) -> Option<T> {
         self.0.borrow().get_inner_mut(index)
     }
+
+    pub fn try_get_inner_mut(&self, subset: Subset) -> Option<T> {
+        
+    }
+
+    pub fn try_get_inner(&self, subset: Subset) -> T {
+        
+    }
 }
 
 impl<T> Rep<T>
@@ -51,6 +59,22 @@ where
         self.0.borrow()
     }
 
+    pub fn try_get(&self, subset: Subset) -> T {
+        
+    }
+
+    pub fn iter_names(&self) -> Option<Box<dyn Iterator<Item = OptionNA<String>>>> {
+        if let Some(names) = self.names() {
+            Some(Box::new(names.iter()))
+        } else {
+            None
+        }
+    }
+
+    pub fn borrow_mut(&mut self) -> RefMut<RepType<T>> {
+        self.0.borrow_mut()
+    }
+
     fn materialize_inplace(&self) -> &Self {
         // TODO: Rewrite this to avoid copying unnecessarily
         let new_repr = { self.borrow().materialize() };
@@ -59,9 +83,14 @@ where
         self
     }
 
-    ///
+    /// Reindex the mapping from names to indices.
+    pub fn reindex(&mut self) {
+        self.borrow_mut().reindex()
+    }
+
+    /// Set the names of the vector.
     pub fn set_names_(&self, names: CowObj<Vec<OptionNA<String>>>) {
-        let mut new_repr = self.borrow().materialize().set_names(names);
+        let new_repr = self.borrow().materialize().set_names(names);
         self.0.replace(new_repr);
     }
 
@@ -79,6 +108,40 @@ where
                 }
             }
         }
+    }
+
+    pub fn dedup_last(self) -> Self {
+        todo!()
+        // Note: We need to ensure here that we duplicate the names and the values.
+        // Previously this was stored in one vector with tuples but now this is split up
+        if let RepType::Subset(values)
+
+        self.names.with_inner_mut(|names| {
+            let mut dups: Vec<usize> = names
+                .iter()
+                .flat_map(|(_, indices)| {
+                    indices
+                        .split_last()
+                        .map_or(vec![], |(_, leading_dups)| leading_dups.to_vec())
+                })
+                .collect();
+
+            dups.sort();
+
+            self.values.with_inner_mut(|vs| {
+                for i in dups.into_iter().rev() {
+                    vs.remove(i);
+                }
+            });
+        });
+
+        self.names.with_inner_mut(|names| {
+            for (_, indices) in names.iter_mut() {
+                indices.drain(0..indices.len());
+            }
+        });
+
+        self
     }
 
     /// Try to get mutable access to the internal vector through the passed closure.
@@ -303,6 +366,15 @@ where
     type Item = T;
     fn next(&mut self) -> Option<Self::Item> {
         self.0.next()
+    }
+}
+
+impl<T> From<CowObj<Vec<T>>> for Rep<T>
+where
+    T: Clone + Default,
+{
+    fn from(rep: CowObj<Vec<T>>) -> Self {
+        Rep(RefCell::new(rep.into()))
     }
 }
 

@@ -68,7 +68,7 @@ impl Callable for PrimitiveC {
                 return true;
             }
             match o {
-                Obj::Vector(v) => v.has_names(),
+                Obj::Vector(v) => v.names().is_none(),
                 Obj::List(l) => l.names.borrow().len() > 0,
                 _ => todo!(),
             }
