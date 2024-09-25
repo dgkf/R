@@ -32,6 +32,15 @@ impl Naming {
             });
         };
     }
+
+    /// Get mutable access to the internal vector through the passed closure.
+    pub fn with_inner_mut<F, R>(&self, f: F) -> R
+    where
+        F: FnOnce(&mut HashMap<String, Vec<usize>>, &mut Vec<OptionNA<String>>) -> R,
+    {
+        self.map
+            .with_inner_mut(|map| self.names.with_inner_mut(|names| f(map, names)))
+    }
 }
 
 impl From<CowObj<Vec<Character>>> for Naming {
@@ -80,7 +89,7 @@ impl<T: Clone + Default> Default for RepType<T> {
 
 impl<T: Clone + Default + ViewMut> RepType<T> {
     /// Retrieve the internal data as a mutable view.
-    pub fn get_inner_mut(&self, index: usize) -> Option<T> {
+    pub fn try_get_inner_mut(&self, index: usize) -> Option<T> {
         match self {
             RepType::Subset(v, subsets, _) => {
                 let vb = v.borrow();
@@ -177,6 +186,53 @@ impl<T: Clone + Default> RepType<T> {
         }
     }
 
+    pub fn iter_indices(&self) -> Box<dyn Iterator<Item = (usize, Option<usize>)>> {
+        match self.clone() {
+            RepType::Subset(_, subsets, Some(naming)) => {
+                Box::new(subsets.bind_names(naming.map).into_iter())
+            }
+            RepType::Subset(_, subsets, None) => Box::new(subsets.into_iter()),
+        }
+    }
+
+    pub fn with_iter_mut<F, R>(&self, f: F)
+    where
+        F: FnOnce(Box<dyn Iterator<Item = &mut T>>),
+    {
+    }
+
+    pub fn dedup_last(self) -> Self {
+        match self {
+            RepType::Subset(values, subsets, Some(naming)) => {
+                naming.with_inner_mut(|map, names| {
+                    let mut dups: Vec<usize> = map
+                        .iter()
+                        .flat_map(|(_, indices)| {
+                            indices
+                                .split_last()
+                                .map_or(vec![], |(_, leading_dups)| leading_dups.to_vec())
+                        })
+                        .collect();
+
+                    dups.sort();
+
+                    values.with_inner_mut(|vs| {
+                        for i in dups.into_iter().rev() {
+                            vs.remove(i);
+                            names.remove(i);
+                        }
+                    });
+
+                    for (_, indices) in map.iter_mut() {
+                        indices.drain(0..indices.len());
+                    }
+                });
+                RepType::Subset(values, subsets, Some(naming))
+            }
+            RepType::Subset(.., None) => return self,
+        }
+    }
+
     pub fn set_names(&self, names: CowObj<Vec<Character>>) -> Self {
         match self {
             RepType::Subset(v, s, _) => {
@@ -259,6 +315,8 @@ impl<T: Clone + Default> RepType<T> {
     where
         T: Clone + Default,
     {
+        let l_indices = self.iter_indices();
+        let r_indices = value.iter_indices();
         match (self, value) {
             (RepType::Subset(lv, ls, ln), RepType::Subset(rv, rs, _)) => {
                 lv.with_inner_mut(|lvb| {
@@ -266,8 +324,6 @@ impl<T: Clone + Default> RepType<T> {
                     let rvb = rvc.borrow();
 
                     let lv_len = lvb.len();
-                    let l_indices = ls.clone().into_iter().take_while(|(i, _)| i < &lv_len);
-                    let r_indices = rs.clone().into_iter().take_while(|(i, _)| i < &lv_len);
 
                     for ((_, li), (_, ri)) in l_indices.zip(r_indices) {
                         match (li, ri) {

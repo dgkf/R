@@ -8,8 +8,7 @@ use super::reptype::RepTypeIter;
 use super::subset::Subset;
 use super::types::*;
 use super::{OptionNA, Pow, VecPartialCmp};
-use crate::object::reptype::Naming;
-use crate::object::vector::*;
+use crate::error::Error;
 use crate::object::{CowObj, Obj, ViewMut};
 
 /// Vector Representation
@@ -38,16 +37,41 @@ impl<T: Clone + Default> ViewMut for Rep<T> {
 }
 
 impl<T: ViewMut + Default + Clone> Rep<T> {
-    pub fn get_inner_mut(&self, index: usize) -> Option<T> {
-        self.0.borrow().get_inner_mut(index)
+    /// Get the inner value mutably.
+    /// This is used for assignments like `list(1)[[1]] = 10`.
+    pub fn try_get_inner_mut(&self, subset: Subset) -> Result<T, Error> {
+        match self.borrow().clone() {
+            RepType::Subset(values, mut subsets, maybe_naming) => {
+                subsets.push(subset);
+                if let Some(naming) = maybe_naming {
+                    let mut iter = subsets.bind_names(naming.map).into_iter();
+
+                    // Here, the subset must produce exactly one index, i.e. we call next() twice and the second
+                    // yielded element must be None
+                    if let Some((i, _)) = iter.next() {
+                        if let None = iter.next() {
+                            values.with_inner_mut(|v| {
+                                v.get_mut(i)
+                                    .map_or(Err(Error::Other("todo".to_string())), |x| {
+                                        Ok(x.view_mut())
+                                    })
+                            })
+                        } else {
+                            Err(Error::Other("todo".to_string()))
+                        }
+                    } else {
+                        Err(Error::Other("todo".to_string()))
+                    }
+                } else {
+                    // TODO
+                    Err(Error::Other("todo".to_string()))
+                }
+            }
+        }
     }
 
-    pub fn try_get_inner_mut(&self, subset: Subset) -> Option<T> {
-        
-    }
-
-    pub fn try_get_inner(&self, subset: Subset) -> T {
-        
+    pub fn try_get_inner(&self, subset: Subset) -> Result<T, Error> {
+        self.try_get_inner_mut(subset).map(|v| v.clone())
     }
 }
 
@@ -59,8 +83,8 @@ where
         self.0.borrow()
     }
 
-    pub fn try_get(&self, subset: Subset) -> T {
-        
+    pub fn borrow_mut(&mut self) -> RefMut<RepType<T>> {
+        self.0.borrow_mut()
     }
 
     pub fn iter_names(&self) -> Option<Box<dyn Iterator<Item = OptionNA<String>>>> {
@@ -69,10 +93,6 @@ where
         } else {
             None
         }
-    }
-
-    pub fn borrow_mut(&mut self) -> RefMut<RepType<T>> {
-        self.0.borrow_mut()
     }
 
     fn materialize_inplace(&self) -> &Self {
@@ -111,37 +131,7 @@ where
     }
 
     pub fn dedup_last(self) -> Self {
-        todo!()
-        // Note: We need to ensure here that we duplicate the names and the values.
-        // Previously this was stored in one vector with tuples but now this is split up
-        if let RepType::Subset(values)
-
-        self.names.with_inner_mut(|names| {
-            let mut dups: Vec<usize> = names
-                .iter()
-                .flat_map(|(_, indices)| {
-                    indices
-                        .split_last()
-                        .map_or(vec![], |(_, leading_dups)| leading_dups.to_vec())
-                })
-                .collect();
-
-            dups.sort();
-
-            self.values.with_inner_mut(|vs| {
-                for i in dups.into_iter().rev() {
-                    vs.remove(i);
-                }
-            });
-        });
-
-        self.names.with_inner_mut(|names| {
-            for (_, indices) in names.iter_mut() {
-                indices.drain(0..indices.len());
-            }
-        });
-
-        self
+        self.0.into_inner().dedup_last().into()
     }
 
     /// Try to get mutable access to the internal vector through the passed closure.
@@ -211,6 +201,7 @@ where
     }
 
     pub fn assign(&mut self, value: Self) -> Self {
+        // TODO: Handle names here
         self.0.borrow_mut().assign(value.0.into_inner()).into()
     }
     /// Test the mode of the internal vector type

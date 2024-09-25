@@ -41,12 +41,11 @@ impl Subsets {
         self.len() == 0
     }
 
-    pub fn push<T>(self, subset: T)
+    pub fn push<T>(&mut self, subset: T)
     where
         T: Into<Subset>,
     {
-        let Subsets(mut v) = self;
-        v.push(subset.into());
+        self.0.push(subset.into());
     }
 
     pub fn bind_names(self, names: CowObj<HashMap<String, Vec<usize>>>) -> NamedSubsets {
