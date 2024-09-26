@@ -55,11 +55,18 @@ impl Environment {
     }
 
     pub fn append(&self, l: List) {
-        for (key, value) in l.values.iter() {
-            if let Some(name) = key {
-                self.values.borrow_mut().insert(name.clone(), value.clone());
+        let iter = l.iter_pairs();
+
+        if let Some(iter) {
+            for (key, value) in l.iter_paier {
+                if let Some(name) = key {
+                    self.values.borrow_mut().insert(name.clone(), value.clone());
+                }
             }
+        
         }
+
+
     }
 
     pub fn get(&self, name: String) -> EvalResult {

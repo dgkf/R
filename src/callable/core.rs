@@ -5,6 +5,7 @@ use crate::callable::dyncompare::*;
 use crate::cli::Experiment;
 use crate::context::Context;
 use crate::error::Error;
+use crate::object::types::Character;
 use crate::object::List;
 use crate::object::{Expr, ExprList, Obj};
 use crate::{internal_err, lang::*};
@@ -38,17 +39,26 @@ pub trait Callable {
 
     fn match_args(&self, args: List, stack: &mut CallStack) -> Result<(List, List), Signal> {
         let mut formals = self.formals();
-        let ellipsis: List = vec![].into();
-        let matched_args: List = vec![].into();
+        let ellipsis: List = List::new();
+        let matched_args: List = List::new();
 
         // assign named args to corresponding formals
+
+        // What we do here:
+        // 1. We iterate over the args values, check whether the value is named.
+        // 2. If this is also a formal, we add it to the matched list.
+        // 3. Otherwise we keep iterating.
+        // We need the special 'inner context because we are acessing args.values mutable and immutably.
+
+        // How else can we implement this?
+
         let mut i: usize = 0;
-        'outer: while i < args.values.len() {
+        'outer: while i < args.len() {
             'inner: {
                 // check argname with immutable borrow, but drop scope. If
                 // found, drop borrow so we can mutably assign it
-                if let (Some(argname), _) = &args.values.borrow()[i] {
-                    if let Some((Some(_), _)) = formals.remove_named(argname) {
+                if let (Character::Some(argname), _) = args.get_inner_named(i).unwrap() {
+                    if let Some((Some(_), _)) = formals.remove_named(&argname) {
                         break 'inner;
                     }
                 }
@@ -57,9 +67,12 @@ pub trait Callable {
                 continue 'outer;
             }
 
-            matched_args
-                .values
-                .with_inner_mut(|v| v.push(args.values.with_inner_mut(|x| x.remove(i))))
+            // 1. Remove the name and value from args
+            // 2. Push them to matched args
+
+            let (name, obj) = args.remove(i);
+
+            matched_args.push_named(name, obj)
         }
 
         // TODO(bug): need to evaluate trailing unassigned params that have
@@ -69,50 +82,43 @@ pub trait Callable {
         let remainder = formals.pop_trailing();
 
         // backfill unnamed args, populating ellipsis with overflow
-        let argsiter = args.values.into_iter();
-        for (key, value) in argsiter {
+        args.with_pairs(|key, value| {
             match key {
                 // named args go directly to ellipsis, they did not match a formal
-                Some(arg) => {
-                    ellipsis
-                        .values
-                        .with_inner_mut(|v| v.push((Some(arg), value)));
-                }
+                Character::Some(arg) => ellipsis.push_named(Character::Some(arg), value),
 
                 // unnamed args populate next formal, or ellipsis if formals exhausted
-                None => {
+                Character::NA => {
                     let next_unassigned_formal = formals.remove(0);
                     if let Some((Some(param), _)) = next_unassigned_formal {
-                        matched_args
-                            .values
-                            .with_inner_mut(|vals| vals.push((Some(param), value)));
+                        matched_args.push_named(Character::Some(param), value);
                     } else {
-                        ellipsis
-                            .values
-                            .with_inner_mut(|vals| vals.push((None, value)));
+                        ellipsis.push_named(Character::NA, value);
                     }
                 }
             }
-        }
+        });
 
         // add back in parameter defaults that weren't filled with args
         for (param, default) in formals.into_iter() {
-            matched_args.values.with_inner_mut(|v| {
-                v.push((
-                    param,
-                    Obj::Promise(None, default, stack.last_frame().env().clone()),
-                ));
-            })
+            let param = if let Some(param) = param {
+                Character::Some(param)
+            } else {
+                Character::NA
+            };
+            matched_args.push_named(
+                param,
+                Obj::Promise(None, default, stack.last_frame().env().clone()),
+            )
         }
 
         if let Some(Expr::Ellipsis(Some(name))) = remainder.get(0) {
-            matched_args
-                .values
-                .with_inner_mut(|v| v.push((Some(name), Obj::List(ellipsis.clone()))))
+            matched_args.push_named(Character::Some(name), Obj::List(ellipsis.clone()));
         } else if !remainder.is_empty() {
-            matched_args
-                .values
-                .with_inner_mut(|v| v.push((Some("...".to_string()), Obj::List(ellipsis.clone()))))
+            matched_args.push_named(
+                Character::Some("...".to_string()),
+                Obj::List(ellipsis.clone()),
+            );
         }
 
         Ok((matched_args, ellipsis))
@@ -293,13 +299,22 @@ pub fn force_promises(
 ) -> Result<Vec<(Option<String>, Obj)>, Signal> {
     // Force any closures that were created during call. This helps with using
     // variables as argument for sep and collapse parameters.
-    vals.values
-        .into_iter()
-        .map(|(k, v)| match (k, v.force(stack)) {
+    let x = vals.with_iter_pairs(|iter| {
+        iter.map(|(k, v)| match (k, v.force(stack)) {
             (k, Ok(v)) => Ok((k, v)),
             (_, Err(e)) => Err(e),
         })
         .collect()
+    });
+    // vals.with_iter_pairs(|k, v| {
+    //     (k, Ok(v)) => Ok((k, v)),
+    //     (_, Err(e)) => Err(e),
+    // })
+    // vals.values
+    //     .into_iter()
+    //     .map(|(k, v)| match (k, v.force(stack)) {
+    //     })
+    //     .collect()
 }
 
 impl Format for String {

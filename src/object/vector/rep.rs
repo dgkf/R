@@ -87,13 +87,21 @@ where
         self.0.borrow_mut()
     }
 
-    pub fn iter_names(&self) -> Option<Box<dyn Iterator<Item = OptionNA<String>>>> {
-        if let Some(names) = self.names() {
-            Some(Box::new(names.iter()))
-        } else {
-            None
-        }
-    }
+    /// Iterate over the (owned) values of the vector.
+    // pub fn iter_values(&self) -> Box<dyn Iterator<Item = T> + '_> {
+    //     let x = self.0.borrow().clone();
+    //     x.into_iter()
+    // }
+
+    // /// Iterate over the names of the vector (if they exist).
+    // pub fn iter_names(&self) -> Option<Box<dyn Iterator<Item = Character>>> {
+    //     self.0.borrow().iter_names()
+    // }
+
+    // /// Iterate over the names and values of the vector (if the names exist).
+    // pub fn iter_pairs(&self) -> Option<Box<dyn Iterator<Item = (Character, T)>>> {
+    //     self.0.borrow().iter_named()
+    // }
 
     fn materialize_inplace(&self) -> &Self {
         // TODO: Rewrite this to avoid copying unnecessarily
@@ -101,6 +109,10 @@ where
         self.0.replace(new_repr);
 
         self
+    }
+
+    pub fn remove(&self, index: usize) -> (Character, T) {
+        self.borrow().remove(index)
     }
 
     /// Reindex the mapping from names to indices.
@@ -134,12 +146,36 @@ where
         self.0.into_inner().dedup_last().into()
     }
 
-    /// Try to get mutable access to the internal vector through the passed closure.
+    /// Get mutable access to the internal vector through the passed closure.
     pub fn with_inner_mut<F, R>(&self, f: F) -> R
     where
         F: FnOnce(&mut Vec<T>) -> R,
     {
         self.0.borrow().with_inner_mut(f)
+    }
+
+    /// Iterates over owned (name, value) tuples.
+    pub fn with_pairs<F, R>(&self, f: F)
+    where
+        F: FnMut(Character, T) -> R,
+    {
+        self.borrow().with_pairs(f)
+    }
+
+    /// Iterates over owned (name, value) tuples.
+    pub fn with_iter_pairs<F, R>(&self, f: F)
+    where
+        F: FnMut(Box<dyn Iterator<Item = (Character, T)>>) -> R,
+    {
+        todo!()
+    }
+
+    /// Get immutable access to the internal vector through the passed closure.
+    pub fn with_inner<F, R>(&self, f: F) -> R
+    where
+        F: FnOnce(&Vec<T>) -> R,
+    {
+        self.0.borrow().with_inner(f)
     }
 
     pub fn materialize(&self) -> Self {
@@ -198,6 +234,18 @@ where
 
     pub fn get_inner(&self, index: usize) -> Option<T> {
         self.borrow().get_inner(index)
+    }
+
+    pub fn get_inner_named(&self, index: usize) -> Option<(Character, T)> {
+        self.borrow().get_inner_named(index)
+    }
+
+    pub fn push(&self, value: T) {
+        self.borrow().push(value)
+    }
+
+    pub fn push_named(&self, name: OptionNA<String>, value: T) {
+        self.borrow().push_named(name, value)
     }
 
     pub fn assign(&mut self, value: Self) -> Self {

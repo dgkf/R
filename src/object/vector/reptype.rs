@@ -6,6 +6,7 @@ use super::subset::Subset;
 use super::subsets::Subsets;
 use super::types::*;
 use super::{OptionNA, Pow, VecPartialCmp};
+use crate::callable::dyncompare::AsDynCompare;
 use crate::object::{CowObj, Obj, ViewMut};
 use hashbrown::HashMap;
 
@@ -20,6 +21,18 @@ impl Naming {
     pub fn new() -> Self {
         Naming::default()
     }
+
+    pub fn remove(&self, index: usize) -> Character {
+        // FIXME: Already assumes names are unique
+        let maybe_name = self.names.with_inner_mut(|names| names.remove(index));
+        if let OptionNA::Some(name) = maybe_name {
+            self.map.with_inner_mut(|map| map.remove(&name));
+            OptionNA::Some(name)
+        } else {
+            OptionNA::NA
+        }
+    }
+
     pub fn push_name(&self, name: OptionNA<String>) {
         self.names.with_inner_mut(|v| v.push(name.clone()));
         if let OptionNA::Some(name) = name {
@@ -164,7 +177,164 @@ impl<T: Clone + Default> RepType<T> {
     /// ```
     ///
     pub fn new() -> Self {
-        RepType::Subset(Vec::new().into(), Subsets(Vec::new()), Option::None)
+        RepType::Subset(
+            Vec::new().into(),
+            Subsets(Vec::new()),
+            Some(Naming::default()),
+        )
+    }
+
+    /// Preallocates a RepType with the given capacity.
+    pub fn with_capacity(n: usize) {
+        todo!()
+    }
+
+    pub fn ensure_named(&self) {
+        todo!()
+    }
+
+    pub fn with_iter_pairs<F, R>(&self, f: F)
+    where
+        F: FnMut(Box<dyn Iterator<Item = (Character, T)>>) -> R,
+    {
+        todo!()
+    }
+
+    /// Iterates over owned (name, value) tuples.
+    pub fn with_pairs<F, R>(&self, f: F)
+    where
+        F: FnMut(Character, T) -> R,
+    {
+        todo!()
+    }
+
+    /// Iterates over owned (name, value) tuples.
+    pub fn with_iter_pairs_mut<F, R>(&self, f: F)
+    where
+        F: Fn(&mut Character, &mut T) -> R,
+    {
+        todo!()
+    }
+
+    /// Iterates over name, value pairs
+    pub fn with_iter_values<F, R>(&self, f: F)
+    where
+        F: Fn(&T) -> R,
+    {
+        todo!()
+    }
+
+    /// Iterates over name, value pairs
+    pub fn with_iter_values_mut<F, R>(&self, f: F)
+    where
+        F: Fn(&T) -> R,
+    {
+        todo!()
+    }
+
+    /// Iterates over name, value pairs
+    pub fn with_iter_names<F, R>(&self, f: F)
+    where
+        F: Fn(&Character) -> R,
+    {
+        todo!()
+    }
+
+    /// Iterates over name, value pairs
+    pub fn with_iter_names<F, R>(&self, f: F)
+    where
+        F: Fn(&Character) -> R,
+    {
+        todo!()
+    }
+
+    pub fn with_iter_ref<F, R>(&self, f: F)
+    where
+        F: FnOnce(&T) -> R,
+    {
+        todo!()
+    }
+
+    pub fn with_iter_ref_mut<F, R>(&self, f: F)
+    where
+        F: FnOnce(&T) -> R,
+    {
+        todo!()
+    }
+
+    pub fn push_value(&self, value: T) {
+        self.push_named(Character::NA, value);
+    }
+
+    pub fn remove(&self, index: usize) -> (Character, T) {
+        match self {
+            RepType::Subset(values, Subsets(subsets), maybe_naming) => {
+                if let [] = subsets.as_slice() {
+                    let value = values.with_inner_mut(|values| values.remove(index));
+
+                    let name = if let Some(naming) = maybe_naming {
+                        naming.remove(index)
+                    } else {
+                        OptionNA::NA
+                    };
+                    return (name, value);
+                } else {
+                    unimplemented!()
+                }
+            }
+        }
+    }
+
+    pub fn push_named(&self, name: OptionNA<String>, value: T) {
+        match self {
+            RepType::Subset(values, Subsets(subsets), maybe_naming) => match subsets.as_slice() {
+                [] => {
+                    values.with_inner_mut(|values| values.push(value));
+                    if let Some(naming) = maybe_naming {
+                        naming.push_name(name)
+                    }
+                }
+                _ => unimplemented!(),
+            },
+        }
+    }
+
+    pub fn iter_values<'a>(&'a self) -> Box<dyn Iterator<Item = T> + 'a> {
+        let iter = self.iter_subset_indices();
+        match self.clone() {
+            RepType::Subset(values, ..) => Box::new(iter.map(move |(_, i)| {
+                let i = i.unwrap();
+                let vb = values.borrow();
+                (&vb[i]).clone()
+            })),
+        }
+    }
+
+    pub fn iter_names(&self) -> Option<Box<dyn Iterator<Item = Character>>> {
+        let iter = self.iter_subset_indices();
+        match self.clone() {
+            RepType::Subset(.., None) => None,
+            RepType::Subset(.., Some(naming)) => Some(Box::new(iter.map(move |(_, i)| {
+                let i = i.unwrap();
+                let vb = naming.names.borrow();
+                (&vb[i]).clone()
+            }))),
+        }
+    }
+
+    pub fn iter_named<'a>(&'a self) -> Option<Box<dyn Iterator<Item = (Character, T)> + 'a>> {
+        let iter_names = self.iter_names()?;
+        Some(Box::new(iter_names.zip(self.iter_values())))
+    }
+
+    // TODO(refactor): This is internal implementation detail and should not be exposed via the API.
+    pub fn iter_subset_indices(&self) -> Box<dyn Iterator<Item = (usize, Option<usize>)>> {
+        match self.clone() {
+            RepType::Subset(_, subsets, Some(naming)) => {
+                Box::new(subsets.bind_names(naming.map).into_iter())
+            }
+            RepType::Subset(_, subsets, None) => Box::new(subsets.into_iter()),
+        }
     }
 
     /// Reindex the mapping from names to indices.
@@ -186,22 +356,8 @@ impl<T: Clone + Default> RepType<T> {
         }
     }
 
-    pub fn iter_indices(&self) -> Box<dyn Iterator<Item = (usize, Option<usize>)>> {
-        match self.clone() {
-            RepType::Subset(_, subsets, Some(naming)) => {
-                Box::new(subsets.bind_names(naming.map).into_iter())
-            }
-            RepType::Subset(_, subsets, None) => Box::new(subsets.into_iter()),
-        }
-    }
-
-    pub fn with_iter_mut<F, R>(&self, f: F)
-    where
-        F: FnOnce(Box<dyn Iterator<Item = &mut T>>),
-    {
-    }
-
     pub fn dedup_last(self) -> Self {
+        // TODO(docu): What exactly does this? I think there might still be a bug here because we drain ALL indices (?)
         match self {
             RepType::Subset(values, subsets, Some(naming)) => {
                 naming.with_inner_mut(|map, names| {
@@ -255,6 +411,16 @@ impl<T: Clone + Default> RepType<T> {
     {
         match self {
             RepType::Subset(v, ..) => v.with_inner_mut(f),
+        }
+    }
+
+    /// Get mutable access to the internal vector through the passed closure.
+    pub fn with_inner<F, R>(&self, f: F) -> R
+    where
+        F: FnOnce(&Vec<T>) -> R,
+    {
+        match self {
+            RepType::Subset(v, ..) => v.with_inner(f),
         }
     }
 
@@ -315,8 +481,11 @@ impl<T: Clone + Default> RepType<T> {
     where
         T: Clone + Default,
     {
-        let l_indices = self.iter_indices();
-        let r_indices = value.iter_indices();
+        // TODO(feature): here we should also throw an error if the recycling rules are violated.
+        // TODO(refactor): I don't think we should ever iterate over the indices.
+        // Instead the API of RepType should conveniently, i.e. offer Iterators that yield mutable / immutable references to the Ts.
+        let l_indices = self.iter_subset_indices();
+        let r_indices = value.iter_subset_indices();
         match (self, value) {
             (RepType::Subset(lv, ls, ln), RepType::Subset(rv, rs, _)) => {
                 lv.with_inner_mut(|lvb| {
@@ -494,6 +663,21 @@ impl<T: Clone + Default> RepType<T> {
                 let vb = v.borrow();
                 let index = subsets.get_index_at(index)?;
                 vb.get(index).cloned()
+            }
+        }
+    }
+    pub fn get_inner_named(&self, index: usize) -> Option<(OptionNA<String>, T)> {
+        match &self {
+            RepType::Subset(.., maybe_naming) => {
+                let x = self.get_inner(index)?;
+                if let Some(naming) = maybe_naming {
+                    Some((
+                        OptionNA::Some(naming.names.borrow().get(index).unwrap().to_string()),
+                        x,
+                    ))
+                } else {
+                    Some((OptionNA::NA, x))
+                }
             }
         }
     }
