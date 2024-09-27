@@ -261,6 +261,8 @@ where
 
     pub fn assign(&mut self, value: Self) -> Self {
         // TODO: Handle names here
+        // The assign method from List had a lot more code,
+        // check that everything is covered here.
         self.0.borrow_mut().assign(value.0.into_inner()).into()
     }
     /// Test the mode of the internal vector type

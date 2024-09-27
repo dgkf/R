@@ -94,6 +94,13 @@ impl Obj {
         }
     }
 
+    // For [[-assignment.
+    // e.g. list(list(1, 2))[[1]] = list(2) should not be vectorized.
+
+    pub fn replace(&self, value: Obj) -> EvalResult {
+        todo!()
+    }
+
     pub fn assign(self, value: Obj) -> EvalResult {
         // TODO(ERROR) cleanup
         let err = Error::Other("Invalid target for assignment".to_string());
@@ -104,8 +111,13 @@ impl Obj {
                 Ok(value)
             }
             Obj::List(mut l) => {
-                l.assign(value.clone())?;
-                Ok(value)
+                //
+                if let Obj::List(x) = value.clone() {
+                    l.assign(x);
+                    Ok(value)
+                } else {
+                    Err(err.into())
+                }
             }
             _ => Err(err.into()),
         }

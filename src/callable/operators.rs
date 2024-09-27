@@ -411,6 +411,29 @@ impl Callable for PostfixIndex {
         let index = stack.eval(x.1)?;
         what.try_get_inner_mut(index)
     }
+
+    fn call_assign(&self, value: Expr, args: ExprList, stack: &mut CallStack) -> EvalResult {
+        let mut argstream = args.into_iter();
+
+        let Some((_, what)) = argstream.next() else {
+            unreachable!();
+        };
+
+        let Some((_, name)) = argstream.next() else {
+            unreachable!();
+        };
+
+        let value = stack.eval(value)?;
+        let mut what = stack.eval_mut(what)?;
+
+        match name {
+            Expr::String(s) | Expr::Symbol(s) => {
+                what.set_named(s.as_str(), value)?;
+                Ok(what)
+            }
+            _ => unimplemented!(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
