@@ -59,6 +59,10 @@ impl<T: Clone> CowObj<T> {
         CowObj(x)
     }
 
+    pub fn inner_rc(&self) -> Rc<T> {
+        self.borrow().clone()
+    }
+
     /// Get mutable access to the internal vector.
     /// In case more than one reference to the internal data exists,
     /// the vector is cloned.

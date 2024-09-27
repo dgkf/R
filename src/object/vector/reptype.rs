@@ -146,30 +146,54 @@ where
     }
 }
 
+pub struct RepTypeSubsetIterPairs<T: Clone> {
+    pub values: Rc<Vec<T>>,
+    pub names: Option<Rc<Vec<Character>>>,
+    pub iter: Box<dyn Iterator<Item = Option<usize>>>,
+}
+
+pub struct RepTypeSubsetIterPairsRef<'a, T: Clone> {
+    values: &'a Rc<Vec<T>>,
+    names: &'a Rc<Vec<Character>>,
+    na: &'a T,
+    iter: Box<dyn Iterator<Item = Option<usize>>>,
+}
+
+impl<T: Clone + Default> Iterator for RepTypeSubsetIterPairs<T> {
+    type Item = (Character, T);
+    fn next(&mut self) -> Option<Self::Item> {
+        let maybe_index = self.iter.next()?;
+        if let Some(index) = maybe_index {
+            println!("hiii: {}", index);
+            let value = self.values[index].clone();
+            // Option::Some((self.names[index].clone(), self.values[index].clone()))
+            if let Some(names) = &self.names {
+                Option::Some((names[index].clone(), value))
+            } else {
+                Option::Some((Character::NA, value))
+            }
+        } else {
+            Option::Some((Character::NA, T::default()))
+        }
+    }
+}
+
+impl<'a, T: Clone + Default> Iterator for RepTypeSubsetIterPairsRef<'a, T> {
+    type Item = (&'a OptionNA<String>, &'a T);
+    fn next(&mut self) -> Option<Self::Item> {
+        let maybe_index = self.iter.next()?;
+        if let Some(index) = maybe_index {
+            Option::Some((&self.names[index], &self.values[index]))
+        } else {
+            Option::Some((&OptionNA::NA, self.na))
+        }
+    }
+}
+
 // FIXME: Don't make this an enum but simply different structs for eah reptype.
 // We yield Box<dyn Iterators> anyway.
 pub enum RepTypeIter<T: Clone> {
     SubsetIter(RepType<T>, usize, usize),
-}
-
-pub struct RepTypeIterPairs<T: Clone> {
-    x: RepType<T>,
-    index: usize,
-    length: usize,
-}
-
-// FIXME: This will be extremely inefficient for Named subsets so optimize this.
-impl<T: Clone + Default> Iterator for RepTypeIterPairs<T> {
-    type Item = (Character, T);
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.index < self.length {
-            let x = self.x.get_inner_named(self.index);
-            self.index += 1;
-            x
-        } else {
-            None
-        }
-    }
 }
 
 impl<T: Clone + Default> Iterator for RepTypeIter<T> {
@@ -360,14 +384,26 @@ impl<T: Clone + Default> RepType<T> {
         Some(Box::new(iter_names.zip(self.iter_values())))
     }
 
-    pub fn iter_pairs<'a>(&'a self) -> Option<Box<dyn Iterator<Item = (Character, T)> + 'a>> {
-        todo!()
+    // TODO: this should not be used so much. Instead we should iterate over references.
+    pub fn iter_pairs<'a>(&'a self) -> Box<dyn Iterator<Item = (Character, T)> + 'a> {
+        match self.clone() {
+            RepType::Subset(values, _, maybe_naming) => {
+                let index_iter = self.iter_subset_indices().map(|(_, i)| i);
+                let names = maybe_naming.map(|x| x.names.inner_rc());
+
+                Box::new(RepTypeSubsetIterPairs {
+                    values: values.inner_rc(),
+                    names,
+                    iter: Box::new(index_iter),
+                })
+            }
+        }
     }
 
-    // TODO(refactor): This is internal implementation detail and should not be exposed via the API.
     pub fn iter_subset_indices(&self) -> Box<dyn Iterator<Item = (usize, Option<usize>)>> {
         match self.clone() {
             RepType::Subset(_, subsets, Some(naming)) => {
+                println!("du");
                 Box::new(subsets.bind_names(naming.map).into_iter())
             }
             RepType::Subset(_, subsets, None) => Box::new(subsets.into_iter()),

@@ -11,6 +11,8 @@ use super::{OptionNA, Pow, VecPartialCmp};
 use crate::error::Error;
 use crate::object::{CowObj, Obj, ViewMut};
 
+use crate::object::reptype::RepTypeSubsetIterPairs;
+
 /// Vector Representation
 ///
 /// The ref-cell is used so vectors can change there internal representation,
@@ -186,9 +188,28 @@ where
         todo!()
     }
 
-    pub fn iter_pairs(&self) -> Box<dyn Iterator<Item = (Character, T)>> {
-        // FIXME: This should probably return an Option where None is returned in case there are no names.
-        todo!()
+    // pub fn into_iter_pairs(self) -> Box<dyn Iterator<Item = (Character, T)> + '_> {
+    //     self.clone().iter_pairs()
+    // }
+
+    pub fn iter_pairs(&self) -> RepTypeSubsetIterPairs<T> {
+        let x = self.borrow().clone();
+
+        match x.clone() {
+            RepType::Subset(values, _, maybe_naming) => {
+                let index_iter = x.iter_subset_indices().map(|(_, i)| i);
+                let names = maybe_naming.map(|x| x.names.inner_rc());
+
+                RepTypeSubsetIterPairs {
+                    values: values.inner_rc(),
+                    names,
+                    iter: Box::new(index_iter),
+                }
+            }
+        }
+        // // FIXME: This should probably return an Option where None is returned in case there are no names.
+        // let x = self.borrow().clone();
+        // x.iter_pairs()
     }
 
     /// Get immutable access to the internal vector through the passed closure.
