@@ -2,6 +2,7 @@ use r_derive::*;
 
 use crate::callable::core::*;
 use crate::lang::*;
+use crate::object::types::Character;
 use crate::object::*;
 
 /// Get Names of an Object
@@ -70,11 +71,10 @@ impl Callable for PrimitiveNames {
             Expr(..) => Ok(Null),     // handle arg lists?
             Function(..) => Ok(Null), // return formals?
             List(x) => {
-                Ok(x.values
-                    .iter()
+                Ok(x.iter_pairs()
                     .map(|(k, _)| match k {
-                        Some(name) => OptionNA::Some(name.clone()),
-                        None => OptionNA::NA, // unlike R, unnamed elements are NAs
+                        Character::Some(name) => OptionNA::Some(name.clone()),
+                        OptionNA::NA => OptionNA::NA, // unlike R, unnamed elements are NAs
                     })
                     .collect::<Vec<OptionNA<String>>>()
                     .into())

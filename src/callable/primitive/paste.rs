@@ -3,6 +3,7 @@ use r_derive::*;
 use crate::callable::core::*;
 use crate::error::*;
 use crate::lang::*;
+use crate::object::types::Character;
 use crate::object::*;
 
 /// Paste Objects into Strings
@@ -65,7 +66,7 @@ impl Callable for PrimitivePaste {
 
         // remove named sep and collapse args from our arguments and populate values
         for (k, v) in args.iter().rev() {
-            let Some(k) = k else { continue };
+            let Character::Some(k) = k else { continue };
 
             match (k.as_str(), v) {
                 ("sep", Obj::Vector(v)) => {

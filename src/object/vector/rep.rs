@@ -126,6 +126,13 @@ where
         self.0.replace(new_repr);
     }
 
+    pub fn is_named(&self) -> bool {
+        match self.borrow() {
+            RepType::Subsets(.., Some(naming)) => true,
+            _ => false,
+        }
+    }
+
     pub fn names(&self) -> Option<CowObj<Vec<Character>>> {
         match self.borrow().clone() {
             RepType::Subset(_, s, n) => {
@@ -163,10 +170,14 @@ where
     }
 
     /// Iterates over owned (name, value) tuples.
-    pub fn with_iter_pairs<F, R>(&self, f: F)
+    pub fn with_iter_pairs<F, R>(&self, f: F) -> R
     where
         F: FnMut(Box<dyn Iterator<Item = (Character, T)>>) -> R,
     {
+        todo!()
+    }
+
+    pub fn iter_pairs(&self) -> Box<dyn Iterator<Item = (Character, T)>> {
         todo!()
     }
 
@@ -417,6 +428,15 @@ where
     }
 }
 
+impl<T> From<CowObj<Vec<(Option<String>, T)>>> for Rep<T>
+where
+    T: Clone + Default,
+{
+    fn from(rep: CowObj<Vec<(Option<String>, T)>>) -> Self {
+        Rep(RefCell::new(rep.into()))
+    }
+}
+
 impl<T> From<RepType<T>> for Rep<T>
 where
     T: Clone + Default,
@@ -442,8 +462,8 @@ where
     }
 }
 
-impl From<Vec<(Option<String>, Obj)>> for Rep<(Option<String>, Obj)> {
-    fn from(value: Vec<(Option<String>, Obj)>) -> Self {
+impl From<Vec<(Character, Obj)>> for Rep<Obj> {
+    fn from(value: Vec<(Character, Obj)>) -> Self {
         Rep(RefCell::new(value.into()))
     }
 }

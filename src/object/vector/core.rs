@@ -41,6 +41,13 @@ impl<T> OptionNA<T> {
             OptionNA::NA => OptionNA::NA,
         }
     }
+
+    pub fn as_option(self) -> Option<T> {
+        match self {
+            OptionNA::Some(x) => Option::Some(x),
+            OptionNA::NA => Option::None,
+        }
+    }
 }
 
 #[derive(Debug, PartialEq)]
@@ -77,12 +84,23 @@ impl Vector {
 
     /// Iterate over the names of the vector.
     pub fn iter_names(&self) -> Option<Box<dyn Iterator<Item = OptionNA<String>>>> {
+        todo!()
+        // use Vector::*;
+        // match self {
+        //     Double(x) => x.iter_names(),
+        //     Integer(x) => x.iter_names(),
+        //     Logical(x) => x.iter_names(),
+        //     Character(x) => x.iter_names(),
+        // }
+    }
+
+    pub fn is_named(&self) -> bool {
         use Vector::*;
         match self {
-            Double(x) => x.iter_names(),
-            Integer(x) => x.iter_names(),
-            Logical(x) => x.iter_names(),
-            Character(x) => x.iter_names(),
+            Double(x) => x.is_named(),
+            Integer(x) => x.is_named(),
+            Logical(x) => x.is_named(),
+            Character(x) => x.is_named(),
         }
     }
 

@@ -4,6 +4,7 @@ use crate::context::Context;
 use crate::error::*;
 use crate::internal_err;
 use crate::object::types::*;
+use crate::object::List;
 use crate::object::*;
 use crate::parser::LocalizedParser;
 use crate::parser::ParseResult;
@@ -69,15 +70,7 @@ impl ViewMut for Obj {
                 Vector::Logical(v) => Vector::Logical(v.view_mut()),
             }),
 
-            Obj::List(List {
-                names,
-                values,
-                subsets,
-            }) => Obj::List(List {
-                names: (*names).view_mut(),
-                values: (*values).view_mut(),
-                subsets: (*subsets).clone(),
-            }),
+            Obj::List(l) => Obj::List(l.view_mut()),
             // FIXME: this needs to be implemented for all objects that can be mutated
             x => x.clone(),
         }

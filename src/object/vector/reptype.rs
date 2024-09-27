@@ -6,9 +6,10 @@ use super::subset::Subset;
 use super::subsets::Subsets;
 use super::types::*;
 use super::{OptionNA, Pow, VecPartialCmp};
-use crate::callable::dyncompare::AsDynCompare;
 use crate::object::{CowObj, Obj, ViewMut};
 use hashbrown::HashMap;
+use std::cell::RefCell;
+use std::rc::Rc;
 
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct Naming {
@@ -53,6 +54,23 @@ impl Naming {
     {
         self.map
             .with_inner_mut(|map| self.names.with_inner_mut(|names| f(map, names)))
+    }
+}
+
+impl<T: Clone + Default> From<Vec<(Character, T)>> for RepType<T> {
+    fn from(value: Vec<(Character, T)>) -> Self {
+        let mut names = Vec::with_capacity(value.len());
+        let mut values = Vec::with_capacity(value.len());
+        for (k, v) in value {
+            names.push(k);
+            values.push(v);
+        }
+
+        RepType::Subset(
+            CowObj::new(Rc::new(RefCell::new(Rc::new(values)))),
+            Subsets::default(),
+            Option::Some(Naming::from(names)),
+        )
     }
 }
 
@@ -128,8 +146,30 @@ where
     }
 }
 
+// FIXME: Don't make this an enum but simply different structs for eah reptype.
+// We yield Box<dyn Iterators> anyway.
 pub enum RepTypeIter<T: Clone> {
     SubsetIter(RepType<T>, usize, usize),
+}
+
+pub struct RepTypeIterPairs<T: Clone> {
+    x: RepType<T>,
+    index: usize,
+    length: usize,
+}
+
+// FIXME: This will be extremely inefficient for Named subsets so optimize this.
+impl<T: Clone + Default> Iterator for RepTypeIterPairs<T> {
+    type Item = (Character, T);
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.index < self.length {
+            let x = self.x.get_inner_named(self.index);
+            self.index += 1;
+            x
+        } else {
+            None
+        }
+    }
 }
 
 impl<T: Clone + Default> Iterator for RepTypeIter<T> {
@@ -240,14 +280,6 @@ impl<T: Clone + Default> RepType<T> {
         todo!()
     }
 
-    /// Iterates over name, value pairs
-    pub fn with_iter_names<F, R>(&self, f: F)
-    where
-        F: Fn(&Character) -> R,
-    {
-        todo!()
-    }
-
     pub fn with_iter_ref<F, R>(&self, f: F)
     where
         F: FnOnce(&T) -> R,
@@ -322,9 +354,14 @@ impl<T: Clone + Default> RepType<T> {
         }
     }
 
+    // FIXME: Do we really need iter_named and iter_pairs?
     pub fn iter_named<'a>(&'a self) -> Option<Box<dyn Iterator<Item = (Character, T)> + 'a>> {
         let iter_names = self.iter_names()?;
         Some(Box::new(iter_names.zip(self.iter_values())))
+    }
+
+    pub fn iter_pairs<'a>(&'a self) -> Option<Box<dyn Iterator<Item = (Character, T)> + 'a>> {
+        todo!()
     }
 
     // TODO(refactor): This is internal implementation detail and should not be exposed via the API.
@@ -699,13 +736,23 @@ where
     }
 }
 
+impl From<Vec<Character>> for Naming {
+    fn from(value: Vec<Character>) -> Self {
+        let naming = Naming::new();
+        for k in value {
+            naming.push_name(k);
+        }
+        naming
+    }
+}
+
 impl<T: Clone> From<CowObj<Vec<T>>> for RepType<T> {
     fn from(value: CowObj<Vec<T>>) -> Self {
         RepType::Subset(value, Subsets::default(), Option::None)
     }
 }
 
-impl From<Vec<(Option<String>, Obj)>> for RepType<(Option<String>, Obj)> {
+impl From<Vec<(Option<String>, Obj)>> for RepType<Obj> {
     fn from(value: Vec<(Option<String>, Obj)>) -> Self {
         // FIXME: How to handle names?
         RepType::Subset(value.into(), Subsets::default(), Option::None)

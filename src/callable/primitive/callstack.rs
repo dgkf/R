@@ -40,7 +40,7 @@ impl Callable for PrimitiveCallstack {
                 .frames
                 .iter()
                 .skip(1) // skip global frame
-                .map(|f| (None, Obj::Expr(f.call.clone())))
+                .map(|f| (OptionNA::NA, Obj::Expr(f.call.clone())))
                 .collect::<Vec<_>>(),
         )))
     }

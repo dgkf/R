@@ -293,10 +293,7 @@ impl TryFrom<&str> for Box<dyn Builtin> {
     }
 }
 
-pub fn force_promises(
-    vals: List,
-    stack: &mut CallStack,
-) -> Result<Vec<(Option<String>, Obj)>, Signal> {
+pub fn force_promises(vals: List, stack: &mut CallStack) -> Result<Vec<(Character, Obj)>, Signal> {
     // Force any closures that were created during call. This helps with using
     // variables as argument for sep and collapse parameters.
     let x = vals.with_iter_pairs(|iter| {
@@ -306,6 +303,8 @@ pub fn force_promises(
         })
         .collect()
     });
+    x
+
     // vals.with_iter_pairs(|k, v| {
     //     (k, Ok(v)) => Ok((k, v)),
     //     (_, Err(e)) => Err(e),
