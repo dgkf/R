@@ -8,6 +8,7 @@ use crate::callable::builtins::BUILTIN;
 use crate::context::Context;
 use crate::error::Error;
 use crate::lang::{EvalResult, Signal};
+use crate::object::types::Character;
 use crate::object::ViewMut;
 
 use super::{Expr, ExprList, List, Obj};
@@ -55,18 +56,11 @@ impl Environment {
     }
 
     pub fn append(&self, l: List) {
-        let iter = l.iter_pairs();
-
-        if let Some(iter) {
-            for (key, value) in l.iter_paier {
-                if let Some(name) = key {
-                    self.values.borrow_mut().insert(name.clone(), value.clone());
-                }
+        for (key, value) in l.iter_pairs() {
+            if let Character::Some(name) = key {
+                self.values.borrow_mut().insert(name.clone(), value.clone());
             }
-        
         }
-
-
     }
 
     pub fn get(&self, name: String) -> EvalResult {

@@ -419,20 +419,15 @@ impl Callable for PostfixIndex {
             unreachable!();
         };
 
-        let Some((_, name)) = argstream.next() else {
+        let Some((_, index)) = argstream.next() else {
             unreachable!();
         };
 
         let value = stack.eval(value)?;
-        let mut what = stack.eval_mut(what)?;
+        let index = stack.eval(index)?;
+        let what = stack.eval_mut(what)?.try_get_inner_mut(index)?;
 
-        match name {
-            Expr::String(s) | Expr::Symbol(s) => {
-                what.set_named(s.as_str(), value)?;
-                Ok(what)
-            }
-            _ => unimplemented!(),
-        }
+        what.replace(value)
     }
 }
 

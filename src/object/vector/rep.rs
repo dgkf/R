@@ -87,6 +87,15 @@ where
         self.0.borrow_mut()
     }
 
+    pub fn replace(&self, value: Self) {
+        // if we do
+        // l = list(new.env())
+        // l[[1]] = list(99)
+        // we need to replace list(1, 2) with list(99)
+        let x = value.0.into_inner();
+        self.0.replace(x);
+    }
+
     /// Iterate over the (owned) values of the vector.
     // pub fn iter_values(&self) -> Box<dyn Iterator<Item = T> + '_> {
     //     let x = self.0.borrow().clone();
@@ -127,8 +136,8 @@ where
     }
 
     pub fn is_named(&self) -> bool {
-        match self.borrow() {
-            RepType::Subsets(.., Some(naming)) => true,
+        match self.borrow().clone() {
+            RepType::Subset(.., Some(_)) => true,
             _ => false,
         }
     }
@@ -178,6 +187,7 @@ where
     }
 
     pub fn iter_pairs(&self) -> Box<dyn Iterator<Item = (Character, T)>> {
+        // FIXME: This should probably return an Option where None is returned in case there are no names.
         todo!()
     }
 
@@ -251,8 +261,11 @@ where
         self.borrow().get_inner_named(index)
     }
 
-    pub fn push(&self, value: T) {
-        self.borrow().push(value)
+    pub fn values(&self) -> CowObj<Vec<T>> {
+        self.materialize_inplace();
+        match self.0.borrow().clone() {
+            RepType::Subset(values, ..) => values,
+        }
     }
 
     pub fn push_named(&self, name: OptionNA<String>, value: T) {
@@ -430,15 +443,6 @@ where
     }
 }
 
-impl<T> From<CowObj<Vec<(Option<String>, T)>>> for Rep<T>
-where
-    T: Clone + Default,
-{
-    fn from(rep: CowObj<Vec<(Option<String>, T)>>) -> Self {
-        Rep(RefCell::new(rep.into()))
-    }
-}
-
 impl<T> From<RepType<T>> for Rep<T>
 where
     T: Clone + Default,
@@ -514,6 +518,12 @@ impl From<Vec<OptionNA<String>>> for Rep<Character> {
 
 impl From<Vec<String>> for Rep<Character> {
     fn from(value: Vec<String>) -> Self {
+        Rep(RefCell::new(value.into()))
+    }
+}
+
+impl<T: Clone> From<Vec<(Option<String>, T)>> for Rep<T> {
+    fn from(value: Vec<(Option<String>, T)>) -> Self {
         Rep(RefCell::new(value.into()))
     }
 }

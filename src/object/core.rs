@@ -26,8 +26,8 @@ impl PartialEq for Obj {
         match (self, other) {
             (Obj::Null, Obj::Null) => true,
             (Obj::List(l), Obj::List(r)) => {
-                let liter = l.values.iter();
-                let riter = r.values.iter();
+                let liter = l.iter_pairs();
+                let riter = r.iter_pairs();
                 liter
                     .zip(riter)
                     .all(|((lk, lv), (rk, rv))| lk == rk && lv == rv)

@@ -3,6 +3,7 @@ use crate::cli::Experiment;
 use crate::context::Context;
 use crate::error::*;
 use crate::internal_err;
+use crate::object::rep::Rep;
 use crate::object::types::*;
 use crate::object::List;
 use crate::object::*;
@@ -94,11 +95,19 @@ impl Obj {
         }
     }
 
-    // For [[-assignment.
-    // e.g. list(list(1, 2))[[1]] = list(2) should not be vectorized.
-
     pub fn replace(&self, value: Obj) -> EvalResult {
         todo!()
+        // For [[-assignment.
+        // e.g. list(list(1, 2))[[1]] = list(2) should not be vectorized.
+        // use crate::object::Vector;
+        // match (self, value) {
+        //     (Obj::List(l), r) => l.replace(r),
+        //     (Obj::Vector(l), Obj::Vector(r)) => match (l, r) {
+        //         (Double(l), Double(r)) => todo!(),
+        //     },
+        //     _ => unimplemented!(),
+        // }
+        // self
     }
 
     pub fn assign(self, value: Obj) -> EvalResult {
@@ -125,7 +134,7 @@ impl Obj {
 
     pub fn as_list(&self) -> EvalResult {
         match self {
-            Obj::Null => Ok(Obj::List(List::from(vec![]))),
+            Obj::Null => Ok(Obj::List(List::new())),
             Obj::Vector(_v) => internal_err!(),
             Obj::List(l) => Ok(Obj::List(l.clone())),
             Obj::Expr(e) => match e {
@@ -221,8 +230,8 @@ impl Obj {
     pub fn get(&self, index: usize) -> Option<Obj> {
         match self {
             Obj::Vector(v) => v.get(index).map(Obj::Vector),
+            Obj::List(v) => v.get(index).map(Obj::List),
             Obj::Null => None,
-            Obj::List(l) => l.values.borrow().get(index).map(|x| x.1.clone()),
             Obj::Expr(..) => None,
             Obj::Promise(..) => None,
             Obj::Function(..) => None,
@@ -233,9 +242,8 @@ impl Obj {
     pub fn get_named(&mut self, name: &str) -> Option<Obj> {
         match self {
             Obj::List(v) => v
-                .values
-                .iter()
-                .find(|(k, _)| *k == Some(String::from(name)))
+                .iter_pairs()
+                .find(|(k, _)| *k == Character::Some(String::from(name)))
                 .map(|(_, v)| v.clone()),
             Obj::Environment(e) => match e.get(String::from(name)) {
                 Ok(v) => Some(v),
@@ -246,28 +254,30 @@ impl Obj {
     }
 
     pub fn set_named(&mut self, name: &str, value: Obj) -> EvalResult {
-        match self {
-            Obj::List(v) => {
-                let loc = v
-                    .values
-                    .iter()
-                    .enumerate()
-                    .find(|(_, (k, _))| *k == Some(name.into()))
-                    .map(|(i, _)| i);
+        todo!()
+        // I feel this is implemented twice
+        // because we have l[["a"]] = 1 and l$a = 1;
+        // match self {
+        //     Obj::List(v) => {
+        //         let loc = v
+        //             .iter_pairs()
+        //             .enumerate()
+        //             .find(|(_, (k, _))| *k == Character::Some(name.into()))
+        //             .map(|(i, _)| i);
 
-                v.values.with_inner_mut(|vb| match loc {
-                    Some(i) => vb[i].1 = value.clone(),
-                    None => vb.push((Some(name.into()), value.clone())),
-                });
+        //         v.with_inner_mut(|vb| match loc {
+        //             Some(i) => vb[i].1 = value.clone(),
+        //             None => vb.push((Some(name.into()), value.clone())),
+        //         });
 
-                Ok(value)
-            }
-            Obj::Environment(e) => {
-                e.values.borrow_mut().insert(name.into(), value.clone());
-                Ok(value)
-            }
-            _ => Ok(Obj::Null),
-        }
+        //         Ok(value)
+        //     }
+        //     Obj::Environment(e) => {
+        //         e.values.borrow_mut().insert(name.into(), value.clone());
+        //         Ok(value)
+        //     }
+        //     _ => Ok(Obj::Null),
+        // }
     }
 
     pub fn environment(&self) -> Option<Rc<Environment>> {
@@ -288,9 +298,14 @@ impl Obj {
 
     // Used for [ ] syntax
     pub fn try_get(&self, index: Obj) -> EvalResult {
+        let index = index.as_vector()?;
         match self {
             Obj::Vector(v) => v.try_get(index),
-            Obj::List(l) => l.try_get(index),
+            Obj::List(l) => {
+                let subset = Subset::try_from(index)?;
+                let x = l.subset(subset);
+                EvalResult::Ok(Obj::List(List::from(x)))
+            }
             obj => obj.as_list()?.try_get(index),
         }
     }
@@ -298,8 +313,8 @@ impl Obj {
     // Used for [[ ]] syntax
     pub fn try_get_inner(&self, index: Obj) -> EvalResult {
         match self {
-            Obj::Vector(v) => v.try_get(index),
-            Obj::List(l) => l.try_get_inner(index),
+            Obj::Vector(v) => v.try_get_inner(index),
+            Obj::List(l) => EvalResult::Ok(l.try_get_inner(index.try_into()?)?),
             obj => obj.as_list()?.try_get_inner(index),
         }
     }
@@ -308,7 +323,7 @@ impl Obj {
     pub fn try_get_inner_mut(&self, index: Obj) -> EvalResult {
         match self {
             Obj::Vector(v) => v.try_get(index),
-            Obj::List(l) => l.try_get_inner_mut(index),
+            Obj::List(l) => EvalResult::Ok(l.try_get_inner_mut(index.try_into()?)?),
             obj => obj.as_list()?.try_get_inner_mut(index),
         }
     }
@@ -379,29 +394,12 @@ impl Display for Obj {
 }
 
 fn display_list(x: &List, f: &mut fmt::Formatter<'_>, bc: Option<String>) -> fmt::Result {
-    let v = x.values.borrow();
-    let s = x.subsets.clone();
-
-    for (i, (_, si)) in s
-        .bind_names(x.names.clone())
-        .into_iter()
-        .take(v.len())
-        .enumerate()
-    {
-        let name;
-        let value;
-
-        if let Some(i) = si {
-            (name, value) = v[i].clone();
-        } else {
-            return write!(f, "{}", Obj::Null);
-        }
-
+    for (i, (maybe_name, value)) in x.iter_pairs().enumerate() {
         if i > 0 {
             writeln!(f)?
         }
 
-        let bc_elem = if let Some(name) = name {
+        let bc_elem = if let Character::Some(name) = maybe_name {
             format!("${}", name)
         } else {
             format!("[[{}]]", i + 1)
@@ -838,14 +836,15 @@ impl Context for CallStack {
                     match item {
                         (None, Expr::String(s) | Expr::Symbol(s)) => {
                             let index = Obj::Vector(Vector::from(vec![i]));
-                            let value = args.try_get_inner(index)?;
+                            let value = args.try_get_inner(index.try_into()?)?;
                             self.assign(Expr::Symbol(s), value)?;
                             i += 1;
                         }
                         // TODO(feature): allow arbitrary right-side expressions
                         // evaluated with list as additional data-frame
                         (Some(n), Expr::String(s) | Expr::Symbol(s)) => {
-                            let value = args.try_get_inner(Obj::Vector(Vector::from(vec![s])))?;
+                            let value =
+                                args.try_get_inner(Obj::Vector(Vector::from(vec![s])).try_into()?)?;
                             self.assign(Expr::Symbol(n), value)?;
                         }
                         _ => return internal_err!(),
@@ -1081,7 +1080,7 @@ impl Context for Obj {
 
     fn get(&mut self, name: String) -> EvalResult {
         match self {
-            Obj::List(l) => l.try_get_inner(Obj::Vector(Vector::from(vec![name]))),
+            Obj::List(l) => Ok(l.try_get_inner(Obj::Vector(Vector::from(vec![name])).try_into()?)?),
             Obj::Environment(e) => e.get(name),
             _ => unimplemented!(),
         }

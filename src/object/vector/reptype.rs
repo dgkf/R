@@ -752,10 +752,16 @@ impl<T: Clone> From<CowObj<Vec<T>>> for RepType<T> {
     }
 }
 
-impl From<Vec<(Option<String>, Obj)>> for RepType<Obj> {
-    fn from(value: Vec<(Option<String>, Obj)>) -> Self {
-        // FIXME: How to handle names?
-        RepType::Subset(value.into(), Subsets::default(), Option::None)
+impl<T: Clone> From<Vec<(Option<String>, T)>> for RepType<T> {
+    fn from(value: Vec<(Option<String>, T)>) -> Self {
+        let mut names = Vec::with_capacity(value.len());
+        let mut values = Vec::with_capacity(value.len());
+        for (k, v) in value.into_iter() {
+            names.push(k.map_or(Character::NA, |x| Character::Some(x)));
+            values.push(v)
+        }
+        let naming = Naming::from(names);
+        RepType::Subset(values.into(), Subsets::default(), Some(naming))
     }
 }
 

@@ -60,6 +60,9 @@ pub enum Vector {
     // Raw(Raw),
 }
 
+// TODO: Implement vector more like Rep<T>
+// I.e. the conversion from and to objects should be handled via TryFrom/From
+// and .into() calls
 impl Clone for Vector {
     fn clone(&self) -> Self {
         match self {
@@ -71,6 +74,8 @@ impl Clone for Vector {
     }
 }
 
+// TODO: Ensure that Vector API does not go beyond Rep<Obj> unless it is really
+// necessary.
 impl Vector {
     pub fn get(&self, index: usize) -> Option<Vector> {
         use Vector::*;

@@ -1,6 +1,7 @@
 use std::rc::Rc;
 
 use crate::lang::{EvalResult, Signal};
+use crate::object::types::Character;
 use crate::object::*;
 use crate::{error::*, internal_err};
 
@@ -131,14 +132,14 @@ pub trait Context: std::fmt::Debug + std::fmt::Display {
                         if let Ok(Obj::List(ellipsis)) = self.get_ellipsis() {
                             Ok(ellipsis.iter_pairs())
                         } else {
-                            Ok(List::from(vec![]).iter_pairs())
+                            Ok(List::from(Vec::<(Character, Obj)>::new()).iter_pairs())
                         }
                     }
                     (_, Expr::Ellipsis(Some(name))) => {
                         if let Ok(Obj::List(more)) = self.get(name) {
                             Ok(more.iter_pairs())
                         } else {
-                            Ok(List::from(vec![]).iter_pairs())
+                            Ok(List::from(Vec::<(Character, Obj)>::new()).iter_pairs())
                         }
                     }
                     (k, v) => match self.eval_and_finalize(v) {
