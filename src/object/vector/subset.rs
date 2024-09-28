@@ -190,11 +190,16 @@ impl Subset {
 impl TryFrom<Obj> for Subset {
     type Error = Signal;
     fn try_from(value: Obj) -> Result<Self, Self::Error> {
-        use crate::object::Vector;
         let err = Error::Other("Cannot use object for indexing".to_string());
-        match value.as_vector()? {
+        match value {
             Obj::Vector(v) => match v {
-                Vector::Double(x) => unimplemented!(),
+                Vector::Double(_) => {
+                    if let Vector::Integer(x) = v.as_integer() {
+                        Ok(Subset::Indices(x.values()))
+                    } else {
+                        unreachable!()
+                    }
+                }
                 Vector::Integer(x) => Ok(Subset::Indices(x.values())),
                 Vector::Character(x) => Ok(Subset::Names(x.values())),
                 Vector::Logical(x) => Ok(Subset::Mask(x.values())),

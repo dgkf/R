@@ -23,6 +23,13 @@ impl Naming {
         Naming::default()
     }
 
+    pub fn with_capacity(n: usize) -> Self {
+        Self {
+            map: HashMap::<String, Vec<usize>>::with_capacity(n).into(),
+            names: CowObj::from(Vec::<Character>::with_capacity(n)),
+        }
+    }
+
     pub fn remove(&self, index: usize) -> Character {
         // FIXME: Already assumes names are unique
         let maybe_name = self.names.with_inner_mut(|names| names.remove(index));
@@ -131,6 +138,7 @@ impl<T: Clone + Default + ViewMut> RepType<T> {
     }
 }
 
+// TODO: Remove this it is stupid
 impl<T> IntoIterator for RepType<T>
 where
     T: Clone + Default,
@@ -146,6 +154,7 @@ where
     }
 }
 
+/// TODO: probably also remove this because we should usually iterate over references and we can then call .map(|(a, b)| (a.clone(), b.clone())) if we need to.
 pub struct RepTypeSubsetIterPairs<T: Clone> {
     pub values: Rc<Vec<T>>,
     pub names: Option<Rc<Vec<Character>>>,
@@ -153,10 +162,35 @@ pub struct RepTypeSubsetIterPairs<T: Clone> {
 }
 
 pub struct RepTypeSubsetIterPairsRef<'a, T: Clone> {
-    values: &'a Rc<Vec<T>>,
-    names: &'a Rc<Vec<Character>>,
+    values: &'a [T],
+    names: Option<&'a [Character]>,
+    // this should be the default value.
+    // In the future when we don't allow subsetting with NAs anymore this should become irrelevant.
+    // we need this because when the iter iterator below yields Option::None we need to return NA.
     na: &'a T,
     iter: Box<dyn Iterator<Item = Option<usize>>>,
+}
+
+impl<'a, T: Clone> Iterator for RepTypeSubsetIterPairsRef<'a, T> {
+    type Item = (&'a Character, &'a T);
+    fn next(&mut self) -> Option<Self::Item> {
+        // None represents NA, will be removed in the future I think.
+        let maybe_index = self.iter.next()?;
+
+        if let Some(index) = maybe_index {
+            println!("hiii: {}", index);
+            let value = &self.values[index];
+
+            if let Some(names) = &self.names {
+                Option::Some((&names[index], value))
+            } else {
+                Option::Some((&Character::NA, value))
+            }
+        } else {
+            panic!()
+            // Option::Some((&Character::NA, self.na))
+        }
+    }
 }
 
 impl<T: Clone + Default> Iterator for RepTypeSubsetIterPairs<T> {
@@ -164,7 +198,6 @@ impl<T: Clone + Default> Iterator for RepTypeSubsetIterPairs<T> {
     fn next(&mut self) -> Option<Self::Item> {
         let maybe_index = self.iter.next()?;
         if let Some(index) = maybe_index {
-            println!("hiii: {}", index);
             let value = self.values[index].clone();
             // Option::Some((self.names[index].clone(), self.values[index].clone()))
             if let Some(names) = &self.names {
@@ -174,18 +207,6 @@ impl<T: Clone + Default> Iterator for RepTypeSubsetIterPairs<T> {
             }
         } else {
             Option::Some((Character::NA, T::default()))
-        }
-    }
-}
-
-impl<'a, T: Clone + Default> Iterator for RepTypeSubsetIterPairsRef<'a, T> {
-    type Item = (&'a OptionNA<String>, &'a T);
-    fn next(&mut self) -> Option<Self::Item> {
-        let maybe_index = self.iter.next()?;
-        if let Some(index) = maybe_index {
-            Option::Some((&self.names[index], &self.values[index]))
-        } else {
-            Option::Some((&OptionNA::NA, self.na))
         }
     }
 }
@@ -248,19 +269,7 @@ impl<T: Clone + Default> RepType<T> {
         )
     }
 
-    /// Preallocates a RepType with the given capacity.
-    pub fn with_capacity(n: usize) {
-        todo!()
-    }
-
     pub fn ensure_named(&self) {
-        todo!()
-    }
-
-    pub fn with_iter_pairs<F, R>(&self, f: F)
-    where
-        F: FnMut(Box<dyn Iterator<Item = (Character, T)>>) -> R,
-    {
         todo!()
     }
 
@@ -401,12 +410,41 @@ impl<T: Clone + Default> RepType<T> {
     }
 
     pub fn iter_subset_indices(&self) -> Box<dyn Iterator<Item = (usize, Option<usize>)>> {
+        // TODO: This function is crucial to fix
         match self.clone() {
-            RepType::Subset(_, subsets, Some(naming)) => {
-                println!("du");
+            RepType::Subset(vals, subsets, Some(naming)) => {
+                let x = vals.borrow().clone();
+
+                // println!("{}", x.len());
+
+                // for k in naming.map.borrow().keys() {
+                //     println!("{}", k);
+                // }
+
+                // for n in naming.names.clone() {
+                //     println!("{}", n);
+                // }
+
+                // for i in x {
+                //     println("{}", i);
+                // }
+                // let iter = subsets.clone().bind_names(naming.map.clone()).into_iter();
+
+                // for (_, maybe_i) in iter {
+                //     if let Some(i) = maybe_i {
+                //         println!("{}", i);
+                //     } else {
+                //         println!("None");
+                //     }
+                // }
+
+                // FIXME: we need to call .take() with the proper n
                 Box::new(subsets.bind_names(naming.map).into_iter())
             }
-            RepType::Subset(_, subsets, None) => Box::new(subsets.into_iter()),
+            RepType::Subset(_, subsets, None) => {
+                println!("BBB");
+                Box::new(subsets.into_iter())
+            }
         }
     }
 
@@ -555,8 +593,6 @@ impl<T: Clone + Default> RepType<T> {
         T: Clone + Default,
     {
         // TODO(feature): here we should also throw an error if the recycling rules are violated.
-        // TODO(refactor): I don't think we should ever iterate over the indices.
-        // Instead the API of RepType should conveniently, i.e. offer Iterators that yield mutable / immutable references to the Ts.
         let l_indices = self.iter_subset_indices();
         let r_indices = value.iter_subset_indices();
         match (self, value) {
@@ -729,8 +765,9 @@ impl<T: Clone + Default> RepType<T> {
 
     pub fn get_inner(&self, index: usize) -> Option<T> {
         match self {
-            RepType::Subset(v, subsets, n) => {
-                if n.is_some() {
+            RepType::Subset(v, subsets, maybe_naming) => {
+                if maybe_naming.is_some() {
+                    // TODO(NOW)
                     unimplemented!()
                 }
                 let vb = v.borrow();
@@ -740,6 +777,7 @@ impl<T: Clone + Default> RepType<T> {
         }
     }
     pub fn get_inner_named(&self, index: usize) -> Option<(OptionNA<String>, T)> {
+        // TODO: I don't think this is really needed
         match &self {
             RepType::Subset(.., maybe_naming) => {
                 let x = self.get_inner(index)?;

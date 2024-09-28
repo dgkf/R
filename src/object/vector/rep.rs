@@ -3,12 +3,13 @@ use std::fmt::{Debug, Display};
 
 use super::coercion::{AtomicMode, CoercibleInto, CommonCmp, CommonNum, MinimallyNumeric};
 use super::iterators::{map_common_numeric, zip_recycle};
-use super::reptype::RepType;
-use super::reptype::RepTypeIter;
+use super::reptype::{Naming, RepType};
+use super::reptype::{RepTypeIter, RepTypeSubsetIterPairsRef};
 use super::subset::Subset;
 use super::types::*;
 use super::{OptionNA, Pow, VecPartialCmp};
 use crate::error::Error;
+use crate::object::Subsets;
 use crate::object::{CowObj, Obj, ViewMut};
 
 use crate::object::reptype::RepTypeSubsetIterPairs;
@@ -164,6 +165,20 @@ where
         self.0.into_inner().dedup_last().into()
     }
 
+    /// Preallocates a
+    pub fn with_capacity(n: usize, names: bool) -> Self {
+        let naming = if names {
+            Some(Naming::with_capacity(n))
+        } else {
+            None
+        };
+        Self(RefCell::new(RepType::Subset(
+            CowObj::from(Vec::with_capacity(n)),
+            Subsets::default(),
+            naming,
+        )))
+    }
+
     /// Get mutable access to the internal vector through the passed closure.
     pub fn with_inner_mut<F, R>(&self, f: F) -> R
     where
@@ -188,10 +203,6 @@ where
         todo!()
     }
 
-    // pub fn into_iter_pairs(self) -> Box<dyn Iterator<Item = (Character, T)> + '_> {
-    //     self.clone().iter_pairs()
-    // }
-
     pub fn iter_pairs(&self) -> RepTypeSubsetIterPairs<T> {
         let x = self.borrow().clone();
 
@@ -212,13 +223,36 @@ where
         // x.iter_pairs()
     }
 
-    /// Get immutable access to the internal vector through the passed closure.
-    pub fn with_inner<F, R>(&self, f: F) -> R
-    where
-        F: FnOnce(&Vec<T>) -> R,
-    {
-        self.0.borrow().with_inner(f)
-    }
+    // pub fn iter_subset_indices(&self) -> Box<dyn Iterator<Item = (usize, Option<usize>)>> {
+    //     todo!()
+    // }
+
+    // /// Iterate over mutable references to the values of the vector by passing a closure.
+    // /// The current subsets of the vector are represented.
+    // /// This method should be used for vectorized assignment.
+    // ///
+    // /// It is
+    // /// Due to the complex structure of this struct it is not possible to return an iterator that yields
+    // /// mutable references to the values of the struct.
+    // pub fn with_iter_pairs_mut_ref<'a, F, R>(&'a self, f: F) -> R
+    // where
+    //      F: FnMut(&mut [T], Option<&mut [Character]>, Box<dyn Iterator<Item = Option<usize>>>) -> R,
+    // {
+    //     // We cannot easily get an Iterator that yields &mut T, even through a closure.
+    //     // This is because we might iterate over the same value multiple times (consider a subset x[c(1, 1)])
+    //     // two consecutive calls to .next() might yield the same mutable reference which is illegal.
+    //     // Instead we give acces to &mut [T] and &mut [Character] and the index iterator
+    //     //
+    //     // Maybe this is possible somehow but I am not sure how to satisfy the rust compiler.
+
+    //      when we cannot ensure that each index
+    //     for x in self.iter_mut() {}
+    //     // FIXME: This is impossible I think.
+    //     // It would be possible to pass a closure that receives |&mut T|
+    //     // FIXME: I don't think this would be
+    //     let iter = todo!();
+    //     f(iter)
+    // }
 
     pub fn materialize(&self) -> Self {
         self.borrow().materialize().into()
@@ -279,6 +313,7 @@ where
     }
 
     pub fn get_inner_named(&self, index: usize) -> Option<(Character, T)> {
+        // TODO: I don't think this is really needed.
         self.borrow().get_inner_named(index)
     }
 

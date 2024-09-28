@@ -51,28 +51,26 @@ impl Callable for PrimitiveC {
         };
 
         // lets first see what we're aiming to build.
-        let ty: u8 = vals.with_iter_pairs(|iter| {
-            iter.map(|(_, v)| match v {
+        let ty: u8 = vals
+            .iter_pairs()
+            .map(|(_, v)| match v {
                 Obj::Null => 0,
                 Obj::Vector(_) => 1,
                 Obj::List(_) => 2,
                 _ => 0,
             })
-            .fold(0, std::cmp::max)
-        });
+            .fold(0, std::cmp::max);
 
         // if the output will have names
-        let named = vals.with_iter_pairs(|mut iter| {
-            iter.any(|(n, o)| {
-                if matches!(n, OptionNA::Some(_)) {
-                    return true;
-                }
-                match o {
-                    Obj::Vector(v) => v.is_named(),
-                    Obj::List(l) => l.is_named(),
-                    _ => todo!(),
-                }
-            })
+        let named = vals.iter_pairs().any(|(n, o)| {
+            if matches!(n, OptionNA::Some(_)) {
+                return true;
+            }
+            match o {
+                Obj::Vector(v) => v.is_named(),
+                Obj::List(l) => l.is_named(),
+                _ => todo!(),
+            }
         });
 
         // most complex type was NULL
@@ -87,49 +85,44 @@ impl Callable for PrimitiveC {
         }
 
         let names: Option<Vec<Character>> = if named {
-            let nms = vals.with_iter_pairs(|iter| {
-                iter.flat_map(|(name, obj)| {
-                    let maybe_prefix = name
-                        .as_option()
-                        .as_ref()
-                        .and_then(|n| Option::Some(n.clone()));
+            let nms = vals.iter_pairs().flat_map(|(name, obj)| {
+                let maybe_prefix = name
+                    .as_option()
+                    .as_ref()
+                    .and_then(|n| Option::Some(n.clone()));
 
-                    if let Obj::Vector(v) = obj {
-                        let maybe_names_iter = v.iter_names();
+                if let Obj::Vector(v) = obj {
+                    let maybe_names_iter = v.iter_names();
 
-                        let x: Vec<Character> = match (maybe_prefix, maybe_names_iter) {
-                            (None, None) => {
-                                std::iter::repeat(Character::NA).take(v.len()).collect()
-                            }
-                            (Some(prefix), None) => {
-                                std::iter::repeat(Character::Some(prefix.clone()))
-                                    .take(v.len())
-                                    .collect()
-                            }
-                            (None, Some(names_iter)) => names_iter.collect(),
-                            (Some(prefix), Some(names_iter)) => names_iter
-                                .map(|maybe_name| {
-                                    if let OptionNA::Some(name) = maybe_name {
-                                        Character::Some(format!("{}.{}", prefix, name))
-                                    } else {
-                                        Character::Some(prefix.clone())
-                                    }
-                                })
-                                .collect(),
-                        };
-                        x
-                    } else {
-                        unimplemented!()
-                    }
-                })
+                    let x: Vec<Character> = match (maybe_prefix, maybe_names_iter) {
+                        (None, None) => std::iter::repeat(Character::NA).take(v.len()).collect(),
+                        (Some(prefix), None) => std::iter::repeat(Character::Some(prefix.clone()))
+                            .take(v.len())
+                            .collect(),
+                        (None, Some(names_iter)) => names_iter.collect(),
+                        (Some(prefix), Some(names_iter)) => names_iter
+                            .map(|maybe_name| {
+                                if let OptionNA::Some(name) = maybe_name {
+                                    Character::Some(format!("{}.{}", prefix, name))
+                                } else {
+                                    Character::Some(prefix.clone())
+                                }
+                            })
+                            .collect(),
+                    };
+                    x
+                } else {
+                    unimplemented!()
+                }
             });
             Some(nms.collect())
         } else {
             None
         };
 
-        let ret = vals.with_iter_pairs(|iter| {
-            iter.map(|(_, r)| match r {
+        let ret = vals
+            .iter_pairs()
+            .map(|(_, r)| match r {
                 Obj::Vector(Vector::Logical(_)) => Vector::from(Vec::<Logical>::new()),
                 Obj::Vector(Vector::Integer(_)) => Vector::from(Vec::<Integer>::new()),
                 Obj::Vector(Vector::Double(_)) => Vector::from(Vec::<Double>::new()),
@@ -144,8 +137,7 @@ impl Callable for PrimitiveC {
                 (v @ Vector::Integer(_), _) => v,
                 (_, v @ Vector::Integer(_)) => v,
                 (v @ Vector::Logical(_), _) => v,
-            })
-        });
+            });
 
         // consume values and merge into a new collection
         let v = match ret {

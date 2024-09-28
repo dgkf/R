@@ -81,8 +81,7 @@ pub trait Callable {
         // remove any Ellipsis param, and any trailing unassigned params
         let remainder = formals.pop_trailing();
 
-        // backfill unnamed args, populating ellipsis with overflow
-        args.with_pairs(|key, value| {
+        for (key, value) in args.iter_pairs() {
             match key {
                 // named args go directly to ellipsis, they did not match a formal
                 Character::Some(arg) => ellipsis.push_named(Character::Some(arg), value),
@@ -97,7 +96,7 @@ pub trait Callable {
                     }
                 }
             }
-        });
+        }
 
         // add back in parameter defaults that weren't filled with args
         for (param, default) in formals.into_iter() {
@@ -296,24 +295,12 @@ impl TryFrom<&str> for Box<dyn Builtin> {
 pub fn force_promises(vals: List, stack: &mut CallStack) -> Result<Vec<(Character, Obj)>, Signal> {
     // Force any closures that were created during call. This helps with using
     // variables as argument for sep and collapse parameters.
-    let x = vals.with_iter_pairs(|iter| {
-        iter.map(|(k, v)| match (k, v.force(stack)) {
+    vals.iter_pairs()
+        .map(|(k, v)| match (k, v.force(stack)) {
             (k, Ok(v)) => Ok((k, v)),
             (_, Err(e)) => Err(e),
         })
         .collect()
-    });
-    x
-
-    // vals.with_iter_pairs(|k, v| {
-    //     (k, Ok(v)) => Ok((k, v)),
-    //     (_, Err(e)) => Err(e),
-    // })
-    // vals.values
-    //     .into_iter()
-    //     .map(|(k, v)| match (k, v.force(stack)) {
-    //     })
-    //     .collect()
 }
 
 impl Format for String {
