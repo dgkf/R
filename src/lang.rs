@@ -242,8 +242,9 @@ impl Obj {
     pub fn get_named(&mut self, name: &str) -> Option<Obj> {
         match self {
             Obj::List(v) => v
-                .iter_pairs()
-                .find(|(k, _)| *k == Character::Some(String::from(name)))
+                .pairs()
+                .iter()
+                .find(|(k, _)| *k == &Character::Some(String::from(name)))
                 .map(|(_, v)| v.clone()),
             Obj::Environment(e) => match e.get(String::from(name)) {
                 Ok(v) => Some(v),
@@ -394,7 +395,7 @@ impl Display for Obj {
 }
 
 fn display_list(x: &List, f: &mut fmt::Formatter<'_>, bc: Option<String>) -> fmt::Result {
-    for (i, (maybe_name, value)) in x.iter_pairs().enumerate() {
+    for (i, (maybe_name, value)) in x.pairs().iter().enumerate() {
         if i > 0 {
             writeln!(f)?
         }

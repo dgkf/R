@@ -25,13 +25,11 @@ impl PartialEq for Obj {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
             (Obj::Null, Obj::Null) => true,
-            (Obj::List(l), Obj::List(r)) => {
-                let liter = l.iter_pairs();
-                let riter = r.iter_pairs();
-                liter
-                    .zip(riter)
-                    .all(|((lk, lv), (rk, rv))| lk == rk && lv == rv)
-            }
+            (Obj::List(l), Obj::List(r)) => l
+                .pairs()
+                .iter()
+                .zip(r.pairs().iter())
+                .all(|((lk, lv), (rk, rv))| lk == rk && lv == rv),
             (Obj::Expr(l), Obj::Expr(r)) => l == r,
             (Obj::Promise(None, lc, lenv), Obj::Promise(None, rc, renv)) => {
                 lc == rc && lenv == renv

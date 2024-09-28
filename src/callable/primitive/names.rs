@@ -71,7 +71,8 @@ impl Callable for PrimitiveNames {
             Expr(..) => Ok(Null),     // handle arg lists?
             Function(..) => Ok(Null), // return formals?
             List(x) => {
-                Ok(x.iter_pairs()
+                Ok(x.pairs()
+                    .iter()
                     .map(|(k, _)| match k {
                         Character::Some(name) => OptionNA::Some(name.clone()),
                         OptionNA::NA => OptionNA::NA, // unlike R, unnamed elements are NAs

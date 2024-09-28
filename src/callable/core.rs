@@ -44,15 +44,8 @@ pub trait Callable {
 
         // assign named args to corresponding formals
 
-        // What we do here:
-        // 1. We iterate over the args values, check whether the value is named.
-        // 2. If this is also a formal, we add it to the matched list.
-        // 3. Otherwise we keep iterating.
-        // We need the special 'inner context because we are acessing args.values mutable and immutably.
-
-        // How else can we implement this?
-
         let mut i: usize = 0;
+
         'outer: while i < args.len() {
             'inner: {
                 // check argname with immutable borrow, but drop scope. If
@@ -81,18 +74,20 @@ pub trait Callable {
         // remove any Ellipsis param, and any trailing unassigned params
         let remainder = formals.pop_trailing();
 
-        for (key, value) in args.iter_pairs() {
+        for (key, value) in args.pairs().iter() {
             match key {
                 // named args go directly to ellipsis, they did not match a formal
-                Character::Some(arg) => ellipsis.push_named(Character::Some(arg), value),
+                Character::Some(arg) => {
+                    ellipsis.push_named(Character::Some(arg.clone()), value.clone())
+                }
 
                 // unnamed args populate next formal, or ellipsis if formals exhausted
                 Character::NA => {
                     let next_unassigned_formal = formals.remove(0);
                     if let Some((Some(param), _)) = next_unassigned_formal {
-                        matched_args.push_named(Character::Some(param), value);
+                        matched_args.push_named(Character::Some(param), value.clone());
                     } else {
-                        ellipsis.push_named(Character::NA, value);
+                        ellipsis.push_named(Character::NA, value.clone());
                     }
                 }
             }
@@ -295,7 +290,9 @@ impl TryFrom<&str> for Box<dyn Builtin> {
 pub fn force_promises(vals: List, stack: &mut CallStack) -> Result<Vec<(Character, Obj)>, Signal> {
     // Force any closures that were created during call. This helps with using
     // variables as argument for sep and collapse parameters.
-    vals.iter_pairs()
+    vals.pairs()
+        .iter()
+        .map(|(a, b)| (a.clone(), b.clone()))
         .map(|(k, v)| match (k, v.force(stack)) {
             (k, Ok(v)) => Ok((k, v)),
             (_, Err(e)) => Err(e),

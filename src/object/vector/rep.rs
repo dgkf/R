@@ -4,15 +4,13 @@ use std::fmt::{Debug, Display};
 use super::coercion::{AtomicMode, CoercibleInto, CommonCmp, CommonNum, MinimallyNumeric};
 use super::iterators::{map_common_numeric, zip_recycle};
 use super::reptype::{Naming, RepType};
-use super::reptype::{RepTypeIter, RepTypeSubsetIterPairsRef};
+use super::reptype::{RepTypeIntoIterable, RepTypeIter};
 use super::subset::Subset;
 use super::types::*;
 use super::{OptionNA, Pow, VecPartialCmp};
 use crate::error::Error;
 use crate::object::Subsets;
 use crate::object::{CowObj, Obj, ViewMut};
-
-use crate::object::reptype::RepTypeSubsetIterPairs;
 
 /// Vector Representation
 ///
@@ -203,24 +201,8 @@ where
         todo!()
     }
 
-    pub fn iter_pairs(&self) -> RepTypeSubsetIterPairs<T> {
-        let x = self.borrow().clone();
-
-        match x.clone() {
-            RepType::Subset(values, _, maybe_naming) => {
-                let index_iter = x.iter_subset_indices().map(|(_, i)| i);
-                let names = maybe_naming.map(|x| x.names.inner_rc());
-
-                RepTypeSubsetIterPairs {
-                    values: values.inner_rc(),
-                    names,
-                    iter: Box::new(index_iter),
-                }
-            }
-        }
-        // // FIXME: This should probably return an Option where None is returned in case there are no names.
-        // let x = self.borrow().clone();
-        // x.iter_pairs()
+    pub fn pairs(&self) -> RepTypeIntoIterable<T> {
+        self.0.borrow().iterable()
     }
 
     // pub fn iter_subset_indices(&self) -> Box<dyn Iterator<Item = (usize, Option<usize>)>> {
