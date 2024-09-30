@@ -239,7 +239,7 @@ impl<T: Clone + Default + 'static> RepType<T> {
     pub fn iter_pairs(&self) -> RepTypeIterPairs<T> {
         match self.clone() {
             RepType::Subset(values, _, maybe_naming) => {
-                let iter = Box::new(self.iter_subset_indices().map(|(_, i)| i));
+                let iter = Box::new(self.iter_subset_indices());
                 let values = values.inner_rc();
                 let names = maybe_naming.map(|x| x.names.inner_rc());
 
@@ -304,7 +304,7 @@ impl<T: Clone + Default> RepType<T> {
     pub fn iterable(&self) -> RepTypeIntoIterable<T> {
         match self.clone() {
             RepType::Subset(values, _, maybe_naming) => {
-                let iter = Box::new(self.iter_subset_indices().map(|(_, i)| i));
+                let iter = Box::new(self.iter_subset_indices());
                 let values = values.inner_rc();
                 let names = maybe_naming.map(|x| x.names.inner_rc());
 
@@ -414,16 +414,19 @@ impl<T: Clone + Default> RepType<T> {
         }
     }
 
-    pub fn iter_subset_indices(&self) -> Box<dyn Iterator<Item = (usize, Option<usize>)>> {
+    pub fn iter_subset_indices(&self) -> Box<dyn Iterator<Item = Option<usize>>> {
         // TODO: This function is crucial to fix
         match self.clone() {
-            RepType::Subset(vals, subsets, Some(naming)) => {
-                let x = vals.borrow().clone();
-
-                // FIXME: we need to call .take() with the proper n
-                Box::new(subsets.bind_names(naming.map).into_iter())
+            RepType::Subset(vals, subsets, maybe_naming) => {
+                if subsets.is_empty() {
+                    return Box::new((0_usize..vals.len()).map(|x| Some(x)));
+                }
+                if let Some(naming) = maybe_naming {
+                    Box::new(subsets.bind_names(naming.map).into_iter().map(|(x, y)| y))
+                } else {
+                    Box::new(subsets.into_iter().map(|(_, y)| y))
+                }
             }
-            RepType::Subset(_, subsets, None) => Box::new(subsets.into_iter()),
         }
     }
 
@@ -575,14 +578,12 @@ impl<T: Clone + Default> RepType<T> {
         let l_indices = self.iter_subset_indices();
         let r_indices = value.iter_subset_indices();
         match (self, value) {
-            (RepType::Subset(lv, ls, ln), RepType::Subset(rv, rs, _)) => {
+            (RepType::Subset(lv, ls, ln), RepType::Subset(rv, ..)) => {
                 lv.with_inner_mut(|lvb| {
                     let rvc = rv.clone();
                     let rvb = rvc.borrow();
 
-                    let lv_len = lvb.len();
-
-                    for ((_, li), (_, ri)) in l_indices.zip(r_indices) {
+                    for (li, ri) in l_indices.zip(r_indices) {
                         match (li, ri) {
                             (Some(li), None) => lvb[li] = T::default(),
                             (Some(li), Some(ri)) => lvb[li] = rvb[ri % rvb.len()].clone(),

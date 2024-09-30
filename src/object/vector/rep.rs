@@ -83,6 +83,9 @@ impl<T: Clone + Default + 'static> Rep<T> {
         // FIXME: This should maybe return an option
         self.0.borrow().clone().iter_pairs()
     }
+    pub fn into_iter_values(self) -> Box<dyn Iterator<Item = T>> {
+        Box::new(self.clone().iter_pairs().map(|(_, x)| x))
+    }
 }
 
 impl<T> Rep<T>
@@ -297,7 +300,6 @@ where
     pub fn get_inner(&self, index: usize) -> Option<T> {
         self.borrow().get_inner(index)
     }
-
     pub fn get_inner_named(&self, index: usize) -> Option<(Character, T)> {
         // TODO: I don't think this is really needed.
         self.borrow().get_inner_named(index)
@@ -437,10 +439,6 @@ where
             .into_inner()
             .vectorized_partial_cmp(other.0.into_inner())
     }
-
-    pub fn iter(&self) -> RepIter<T> {
-        self.clone().into_iter()
-    }
 }
 
 impl<T> Default for Rep<T>
@@ -449,30 +447,6 @@ where
 {
     fn default() -> Self {
         Rep(RefCell::new(RepType::default()))
-    }
-}
-
-pub struct RepIter<T: Clone>(RepTypeIter<T>);
-
-impl<T> IntoIterator for Rep<T>
-where
-    T: Clone + Default,
-{
-    type Item = T;
-    type IntoIter = RepIter<T>;
-    fn into_iter(self) -> Self::IntoIter {
-        let x = self.0.into_inner();
-        RepIter(x.into_iter())
-    }
-}
-
-impl<T> Iterator for RepIter<T>
-where
-    T: Clone + Default,
-{
-    type Item = T;
-    fn next(&mut self) -> Option<Self::Item> {
-        self.0.next()
     }
 }
 

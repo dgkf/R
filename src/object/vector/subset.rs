@@ -239,7 +239,7 @@ impl TryFrom<Vector> for Subset {
             value @ Vector::Double(_) => Subset::try_from(value.as_integer()),
             Vector::Integer(v) => {
                 let y = v
-                    .into_iter()
+                    .into_iter_values()
                     .map(|i| match i {
                         OptionNA::Some(x) => OptionNA::Some(x - 1),
                         OptionNA::NA => OptionNA::NA,

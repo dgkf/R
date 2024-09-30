@@ -73,7 +73,7 @@ impl IntoIterator for NamedSubsets {
     fn into_iter(self) -> Self::IntoIter {
         let n_subsets = self.subsets.len();
         if n_subsets == 0 {
-            return Box::new((0_usize..n_subsets).map(|(i)| (i, Some(i))));
+            return Box::new((0_usize..).map(|i| (i, Some(i))));
         }
 
         let mut iter = Box::new((0_usize..).map(|i| (i, Some(i)))) as Self::IntoIter;
