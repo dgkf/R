@@ -78,17 +78,6 @@ impl IntoIterator for NamedSubsets {
 
         let mut iter = Box::new((0_usize..).map(|i| (i, Some(i)))) as Self::IntoIter;
         let Subsets(subsets) = self.subsets;
-        // Explanation:
-        // We have a HashMap: String -> Vec<usize>
-        // We start with an Iterator that yields (usize, Option<usize>) for 1, ..., n where n is the length
-        // Each iterator adapts it to (usize, Option<usize>) where the first element is the index (1, ..., n_new) and the second the original index
-        // let's say we do
-        // l = list(a = 1, b = 2, c = 3)
-        // l[c(2, 1)][c("b", "a")] which yields list(b = 2, a = 1)
-        // 1. Iterator gives [(1, Some(2)), (2, Some(1))]
-        // 2. Iterator:
-        //   2.1 We find the value for "b". Here we only need to check the names from 1, ..., 2 (the size_hint below)
-        //   2.2
 
         for subset in subsets {
             match subset {
