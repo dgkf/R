@@ -756,22 +756,6 @@ impl<T: Clone + Default> RepType<T> {
             }
         }
     }
-    pub fn get_inner_named(&self, index: usize) -> Option<(OptionNA<String>, T)> {
-        // TODO: I don't think this is really needed
-        match &self {
-            RepType::Subset(.., maybe_naming) => {
-                let x = self.get_inner(index)?;
-                if let Some(naming) = maybe_naming {
-                    Some((
-                        OptionNA::Some(naming.names.borrow().get(index).unwrap().to_string()),
-                        x,
-                    ))
-                } else {
-                    Some((OptionNA::NA, x))
-                }
-            }
-        }
-    }
 }
 
 impl<T> TryInto<bool> for RepType<OptionNA<T>>

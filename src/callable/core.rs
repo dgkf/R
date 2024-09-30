@@ -6,7 +6,9 @@ use crate::cli::Experiment;
 use crate::context::Context;
 use crate::error::Error;
 use crate::object::types::Character;
+use crate::object::types::Integer;
 use crate::object::List;
+use crate::object::{CowObj, Subset};
 use crate::object::{Expr, ExprList, Obj};
 use crate::{internal_err, lang::*};
 
@@ -46,27 +48,24 @@ pub trait Callable {
 
         let mut i: usize = 0;
 
-        'outer: while i < args.len() {
-            'inner: {
-                // check argname with immutable borrow, but drop scope. If
-                // found, drop borrow so we can mutably assign it
-                if let (Character::Some(argname), _) = args.get_inner_named(i).unwrap() {
-                    if let Some((Some(_), _)) = formals.remove_named(&argname) {
-                        break 'inner;
-                    }
+        let args = args.materialize();
+
+        let mut indices: Vec<i32> = Vec::new();
+
+        for (i, (name, value)) in args.pairs().iter().enumerate() {
+            if let Character::Some(name) = name {
+                if let Some((Some(_), _)) = formals.remove_named(&name) {
+                    matched_args.push_named(Character::Some(name.clone()), value.clone());
+                    continue;
                 }
-
-                i += 1;
-                continue 'outer;
             }
-
-            // 1. Remove the name and value from args
-            // 2. Push them to matched args
-
-            let (name, obj) = args.remove(i);
-
-            matched_args.push_named(name, obj)
+            indices.push((i + 1) as i32);
         }
+
+        let indices: Vec<Integer> = indices.into_iter().map(|i| Integer::Some(i)).collect();
+        let subset = Subset::Indices(indices.into());
+        args.subset(subset.into());
+        let args = args.materialize();
 
         // TODO(bug): need to evaluate trailing unassigned params that have
         // a default value before popping off remaining trailing params
@@ -74,20 +73,18 @@ pub trait Callable {
         // remove any Ellipsis param, and any trailing unassigned params
         let remainder = formals.pop_trailing();
 
-        for (key, value) in args.pairs().iter() {
+        for (key, value) in args.iter_pairs() {
             match key {
                 // named args go directly to ellipsis, they did not match a formal
-                Character::Some(arg) => {
-                    ellipsis.push_named(Character::Some(arg.clone()), value.clone())
-                }
+                Character::Some(arg) => ellipsis.push_named(Character::Some(arg), value),
 
                 // unnamed args populate next formal, or ellipsis if formals exhausted
                 Character::NA => {
                     let next_unassigned_formal = formals.remove(0);
                     if let Some((Some(param), _)) = next_unassigned_formal {
-                        matched_args.push_named(Character::Some(param), value.clone());
+                        matched_args.push_named(Character::Some(param), value);
                     } else {
-                        ellipsis.push_named(Character::NA, value.clone());
+                        ellipsis.push_named(Character::NA, value);
                     }
                 }
             }

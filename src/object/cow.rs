@@ -11,7 +11,7 @@ pub trait ViewMut {
 
 /// Internal Data representation for copy-on-write semantics.
 #[derive(Debug, PartialEq, Default)]
-pub struct CowObj<T: Clone>(Rc<RefCell<Rc<T>>>);
+pub struct CowObj<T: Clone>(pub Rc<RefCell<Rc<T>>>);
 
 impl<T: Clone> Clone for CowObj<T> {
     fn clone(&self) -> Self {

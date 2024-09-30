@@ -297,14 +297,6 @@ where
         x.map(|x| x.into())
     }
 
-    pub fn get_inner(&self, index: usize) -> Option<T> {
-        self.borrow().get_inner(index)
-    }
-    pub fn get_inner_named(&self, index: usize) -> Option<(Character, T)> {
-        // TODO: I don't think this is really needed.
-        self.borrow().get_inner_named(index)
-    }
-
     pub fn values(&self) -> CowObj<Vec<T>> {
         self.materialize_inplace();
         match self.0.borrow().clone() {
@@ -468,19 +460,24 @@ where
     }
 }
 
+// TODO: I think this should err when rep has length > 1
 impl<T> TryInto<bool> for Rep<OptionNA<T>>
 where
     OptionNA<T>: AtomicMode + Clone + CoercibleInto<OptionNA<bool>>,
+    T: 'static,
 {
     type Error = ();
     fn try_into(self) -> Result<bool, Self::Error> {
-        self.get_inner(0).map_or(
-            Err(()),
-            |i| match CoercibleInto::<OptionNA<bool>>::coerce_into(i) {
-                OptionNA::Some(x) => Ok(x),
-                OptionNA::NA => Err(()),
-            },
-        )
+        self.iter_pairs()
+            .next()
+            .map(|(_, x)| x)
+            .map_or(
+                Err(()),
+                |i| match CoercibleInto::<OptionNA<bool>>::coerce_into(i) {
+                    OptionNA::Some(x) => Ok(x),
+                    OptionNA::NA => Err(()),
+                },
+            )
     }
 }
 
