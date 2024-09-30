@@ -234,6 +234,46 @@ impl<T: Clone> ViewMut for RepType<T> {
     }
 }
 
+impl<T: Clone + Default + 'static> RepType<T> {
+    // FIXME: Do we really need iter_named and iter_pairs?
+    pub fn iter_pairs(&self) -> RepTypeIterPairs<T> {
+        match self.clone() {
+            RepType::Subset(values, _, maybe_naming) => {
+                let iter = Box::new(self.iter_subset_indices().map(|(_, i)| i));
+                let values = values.inner_rc();
+                let names = maybe_naming.map(|x| x.names.inner_rc());
+
+                RepTypeIterPairs {
+                    values,
+                    names,
+                    iter,
+                }
+            }
+        }
+    }
+}
+
+pub struct RepTypeIterPairs<T> {
+    values: Rc<Vec<T>>,
+    names: Option<Rc<Vec<Character>>>,
+    iter: Box<dyn Iterator<Item = (Option<usize>)>>,
+}
+
+impl<T: Clone> Iterator for RepTypeIterPairs<T> {
+    type Item = (Character, T);
+    fn next(&mut self) -> Option<Self::Item> {
+        // FIXME: Already assumes no indexing with NA
+        let i = self.iter.next()?.unwrap();
+        let value = self.values[i].clone();
+        let name = if let Some(names) = &self.names {
+            names[i].clone()
+        } else {
+            Character::NA
+        };
+        Some((name, value))
+    }
+}
+
 impl<T: Clone + Default> RepType<T> {
     /// Create an empty vector
     ///
@@ -374,71 +414,16 @@ impl<T: Clone + Default> RepType<T> {
         }
     }
 
-    pub fn iter_values<'a>(&'a self) -> Box<dyn Iterator<Item = T> + 'a> {
-        let iter = self.iter_subset_indices();
-        match self.clone() {
-            RepType::Subset(values, ..) => Box::new(iter.map(move |(_, i)| {
-                let i = i.unwrap();
-                let vb = values.borrow();
-                (&vb[i]).clone()
-            })),
-        }
-    }
-
-    pub fn iter_names(&self) -> Option<Box<dyn Iterator<Item = Character>>> {
-        let iter = self.iter_subset_indices();
-        match self.clone() {
-            RepType::Subset(.., None) => None,
-            RepType::Subset(.., Some(naming)) => Some(Box::new(iter.map(move |(_, i)| {
-                let i = i.unwrap();
-                let vb = naming.names.borrow();
-                (&vb[i]).clone()
-            }))),
-        }
-    }
-
-    // FIXME: Do we really need iter_named and iter_pairs?
-    pub fn iter_named<'a>(&'a self) -> Option<Box<dyn Iterator<Item = (Character, T)> + 'a>> {
-        let iter_names = self.iter_names()?;
-        Some(Box::new(iter_names.zip(self.iter_values())))
-    }
-
     pub fn iter_subset_indices(&self) -> Box<dyn Iterator<Item = (usize, Option<usize>)>> {
         // TODO: This function is crucial to fix
         match self.clone() {
             RepType::Subset(vals, subsets, Some(naming)) => {
                 let x = vals.borrow().clone();
 
-                // println!("{}", x.len());
-
-                // for k in naming.map.borrow().keys() {
-                //     println!("{}", k);
-                // }
-
-                // for n in naming.names.clone() {
-                //     println!("{}", n);
-                // }
-
-                // for i in x {
-                //     println("{}", i);
-                // }
-                // let iter = subsets.clone().bind_names(naming.map.clone()).into_iter();
-
-                // for (_, maybe_i) in iter {
-                //     if let Some(i) = maybe_i {
-                //         println!("{}", i);
-                //     } else {
-                //         println!("None");
-                //     }
-                // }
-
                 // FIXME: we need to call .take() with the proper n
                 Box::new(subsets.bind_names(naming.map).into_iter())
             }
-            RepType::Subset(_, subsets, None) => {
-                println!("BBB");
-                Box::new(subsets.into_iter())
-            }
+            RepType::Subset(_, subsets, None) => Box::new(subsets.into_iter()),
         }
     }
 

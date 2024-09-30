@@ -9,6 +9,7 @@ use super::subset::Subset;
 use super::types::*;
 use super::{OptionNA, Pow, VecPartialCmp};
 use crate::error::Error;
+use crate::object::reptype::RepTypeIterPairs;
 use crate::object::Subsets;
 use crate::object::{CowObj, Obj, ViewMut};
 
@@ -76,6 +77,14 @@ impl<T: ViewMut + Default + Clone> Rep<T> {
     }
 }
 
+impl<T: Clone + Default + 'static> Rep<T> {
+    /// Iterate over the names and values of the vector (if the names exist).
+    pub fn iter_pairs(&self) -> RepTypeIterPairs<T> {
+        // FIXME: This should maybe return an option
+        self.0.borrow().clone().iter_pairs()
+    }
+}
+
 impl<T> Rep<T>
 where
     T: Clone + Default,
@@ -106,11 +115,6 @@ where
     // /// Iterate over the names of the vector (if they exist).
     // pub fn iter_names(&self) -> Option<Box<dyn Iterator<Item = Character>>> {
     //     self.0.borrow().iter_names()
-    // }
-
-    // /// Iterate over the names and values of the vector (if the names exist).
-    // pub fn iter_pairs(&self) -> Option<Box<dyn Iterator<Item = (Character, T)>>> {
-    //     self.0.borrow().iter_named()
     // }
 
     fn materialize_inplace(&self) -> &Self {

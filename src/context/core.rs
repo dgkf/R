@@ -76,14 +76,14 @@ pub trait Context: std::fmt::Debug + std::fmt::Display {
                 .map(|pair| match pair {
                     (_, Expr::Ellipsis(None)) => {
                         if let Ok(Obj::List(ellipsis)) = self.get_ellipsis() {
-                            Ok(ellipsis.pairs().iter())
+                            Ok(ellipsis.iter_pairs())
                         } else {
-                            Ok(List::new().pairs().iter())
+                            Ok(List::new().iter_pairs())
                         }
                     }
                     (_, Expr::Ellipsis(Some(name))) => {
                         if let Ok(Obj::List(more)) = self.get(name) {
-                            Ok(more.pairs().iter())
+                            Ok(more.iter_pairs())
                         } else {
                             internal_err!()
                         }
@@ -92,7 +92,7 @@ pub trait Context: std::fmt::Debug + std::fmt::Display {
                     (k, Expr::Symbol(s)) => match self.env().get(s.clone()) {
                         Ok(c @ Obj::Promise(..)) => {
                             let k = k.map_or(OptionNA::NA, |x| OptionNA::Some(x));
-                            Ok(List::from(vec![(k, c)]).pairs().iter())
+                            Ok(List::from(vec![(k, c)]).iter_pairs())
                         }
                         _ => {
                             let k = k.map_or(OptionNA::NA, |x| OptionNA::Some(x));
@@ -100,19 +100,18 @@ pub trait Context: std::fmt::Debug + std::fmt::Display {
                                 k,
                                 Obj::Promise(None, Expr::Symbol(s), self.env()),
                             )])
-                            .pairs()
-                            .iter())
+                            .iter_pairs())
                         }
                     },
                     (k, c @ Expr::Call(..)) => {
                         let k = k.map_or(OptionNA::NA, |x| OptionNA::Some(x));
                         let elem = vec![(k, Obj::Promise(None, c, self.env()))];
-                        Ok(List::from(elem).pairs().iter())
+                        Ok(List::from(elem).iter_pairs())
                     }
                     (k, v) => {
                         let k = k.map_or(OptionNA::NA, |x| OptionNA::Some(x));
                         if let Ok(elem) = self.eval(v) {
-                            Ok(List::from(vec![(k, elem)]).pairs().iter())
+                            Ok(List::from(vec![(k, elem)]).iter_pairs())
                         } else {
                             internal_err!()
                         }
@@ -131,22 +130,22 @@ pub trait Context: std::fmt::Debug + std::fmt::Display {
                 .map(|pair| match pair {
                     (_, Expr::Ellipsis(None)) => {
                         if let Ok(Obj::List(ellipsis)) = self.get_ellipsis() {
-                            Ok(ellipsis.pairs().iter())
+                            Ok(ellipsis.iter_pairs())
                         } else {
-                            Ok(List::from(Vec::<(Character, Obj)>::new()).pairs().iter())
+                            Ok(List::from(Vec::<(Character, Obj)>::new()).iter_pairs())
                         }
                     }
                     (_, Expr::Ellipsis(Some(name))) => {
                         if let Ok(Obj::List(more)) = self.get(name) {
-                            Ok(more.pairs().iter())
+                            Ok(more.iter_pairs())
                         } else {
-                            Ok(List::from(Vec::<(Character, Obj)>::new()).pairs().iter())
+                            Ok(List::from(Vec::<(Character, Obj)>::new()).iter_pairs())
                         }
                     }
                     (k, v) => match self.eval_and_finalize(v) {
                         Ok(elem) => {
                             let k = k.map_or(OptionNA::NA, |x| OptionNA::Some(x));
-                            Ok(List::from(vec![(k, elem)]).pairs().iter())
+                            Ok(List::from(vec![(k, elem)]).iter_pairs())
                         }
                         Err(e) => Err(e),
                     },
