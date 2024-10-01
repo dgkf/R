@@ -6,6 +6,7 @@ use super::subset::Subset;
 use super::subsets::Subsets;
 use super::types::*;
 use super::{OptionNA, Pow, VecPartialCmp};
+use crate::error::Error;
 use crate::object::{CowObj, Obj, ViewMut};
 use hashbrown::HashMap;
 use std::cell::RefCell;
@@ -127,12 +128,47 @@ impl<T: Clone + Default> Default for RepType<T> {
 
 impl<T: Clone + Default + ViewMut> RepType<T> {
     /// Retrieve the internal data as a mutable view.
-    pub fn try_get_inner_mut(&self, index: usize) -> Option<T> {
-        match self {
-            RepType::Subset(v, subsets, _) => {
-                let vb = v.borrow();
-                let index = subsets.get_index_at(index).unwrap();
-                vb.get(index).map(|i| i.view_mut())
+    pub fn try_get_inner_mut(&self, subset: Subset) -> Result<T, Error> {
+        let self_subset = self.subset(subset);
+        match self_subset {
+            RepType::Subset(..) => {
+                let mut iter = self.iter_subset_indices();
+
+                if let Some(i) = iter.next() {
+                    iter.next()
+                        .ok_or(Error::Other("subset is not of length 1".to_string()))?;
+
+                    // TODO: subsetting with NA should not be possible.
+                    let i = i.unwrap();
+
+                    Ok(self.with_inner_mut(|values| values[i].view_mut()))
+                } else {
+                    return Err(Error::Other("subset is empty".to_string()));
+                }
+
+                // if let Some(naming) = maybe_naming {
+                //     let mut iter = subsets.bind_names(naming.map).into_iter();
+
+                //     // Here, the subset must produce exactly one index, i.e. we call next() twice and the second
+                //     // yielded element must be None
+                //     if let Some((i, _)) = iter.next() {
+                //         if let None = iter.next() {
+                //             values.with_inner_mut(|v| {
+                //                 v.get_mut(i)
+                //                     .map_or(Err(Error::Other("todo".to_string())), |x| {
+                //                         Ok(x.view_mut())
+                //                     })
+                //             })
+                //         } else {
+                //             Err(Error::Other("todo".to_string()))
+                //         }
+                //     } else {
+                //         Err(Error::Other("todo".to_string()))
+                //     }
+                // } else {
+                //     // TODO
+                //     Err(Error::Other("todo".to_string()))
+                // }
             }
         }
     }
@@ -305,6 +341,10 @@ impl<T: Clone + Default> RepType<T> {
         match self.clone() {
             RepType::Subset(values, _, maybe_naming) => {
                 let iter = Box::new(self.iter_subset_indices());
+                let iter2 = Box::new(self.iter_subset_indices());
+                for i in iter2 {
+                    println!("{}", i.unwrap());
+                }
                 let values = values.inner_rc();
                 let names = maybe_naming.map(|x| x.names.inner_rc());
 

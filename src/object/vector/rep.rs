@@ -42,34 +42,7 @@ impl<T: ViewMut + Default + Clone> Rep<T> {
     /// Get the inner value mutably.
     /// This is used for assignments like `list(1)[[1]] = 10`.
     pub fn try_get_inner_mut(&self, subset: Subset) -> Result<T, Error> {
-        match self.borrow().clone() {
-            RepType::Subset(values, mut subsets, maybe_naming) => {
-                subsets.push(subset);
-                if let Some(naming) = maybe_naming {
-                    let mut iter = subsets.bind_names(naming.map).into_iter();
-
-                    // Here, the subset must produce exactly one index, i.e. we call next() twice and the second
-                    // yielded element must be None
-                    if let Some((i, _)) = iter.next() {
-                        if let None = iter.next() {
-                            values.with_inner_mut(|v| {
-                                v.get_mut(i)
-                                    .map_or(Err(Error::Other("todo".to_string())), |x| {
-                                        Ok(x.view_mut())
-                                    })
-                            })
-                        } else {
-                            Err(Error::Other("todo".to_string()))
-                        }
-                    } else {
-                        Err(Error::Other("todo".to_string()))
-                    }
-                } else {
-                    // TODO
-                    Err(Error::Other("todo".to_string()))
-                }
-            }
-        }
+        self.borrow().try_get_inner_mut(subset).into()
     }
 
     pub fn try_get_inner(&self, subset: Subset) -> Result<T, Error> {
