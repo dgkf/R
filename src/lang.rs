@@ -255,13 +255,7 @@ impl Obj {
     }
 
     pub fn set_subset(&mut self, subset: Subset, value: Obj) -> EvalResult {
-        match self {
-            Obj::Vector(v) {
-            v.set_sub
-        }
-        }
         todo!()
-        m
     }
 
     // use set_subset instead

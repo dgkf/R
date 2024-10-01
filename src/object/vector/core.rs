@@ -87,15 +87,15 @@ impl Vector {
         }
     }
 
-    pub fn set_subset(&mut self, subset: Subset, value: ) -> Result<Self, Error> {
-        use Vector::*;
-        match self {
-            Double(x) => x.subset(Double),
-            Integer(x) => x.get(index).map(Integer),
-            Logical(x) => x.get(index).map(Logical),
-            Character(x) => x.get(index).map(Character),
-        }
-        
+    pub fn set_subset(&mut self, subset: Subset, value: Obj) -> Result<Self, Error> {
+        todo!()
+        // use Vector::*;
+        // match self {
+        //     Double(x) => x.subset(Double),
+        //     Integer(x) => x.get(index).map(Integer),
+        //     Logical(x) => x.get(index).map(Logical),
+        //     Character(x) => x.get(index).map(Character),
+        // }
     }
 
     /// Iterate over the names of the vector.
