@@ -8,7 +8,7 @@ use crate::error::Error;
 use crate::object::types::Character;
 use crate::object::types::Integer;
 use crate::object::List;
-use crate::object::{CowObj, Subset};
+use crate::object::Subset;
 use crate::object::{Expr, ExprList, Obj};
 use crate::{internal_err, lang::*};
 
@@ -46,26 +46,42 @@ pub trait Callable {
 
         // assign named args to corresponding formals
 
-        let mut i: usize = 0;
-
         let args = args.materialize();
 
         let mut indices: Vec<i32> = Vec::new();
 
-        for (i, (name, value)) in args.pairs().iter().enumerate() {
-            if let Character::Some(name) = name {
+        for (i, (maybe_name, value)) in args.pairs().iter().enumerate() {
+            if let Character::Some(name) = maybe_name {
                 if let Some((Some(_), _)) = formals.remove_named(&name) {
                     matched_args.push_named(Character::Some(name.clone()), value.clone());
                     continue;
                 }
             }
-            indices.push((i + 1) as i32);
+            println!("push it {}", i);
+            indices.push(i as i32);
         }
 
+        println!("matched_args start");
+        for (key, _) in matched_args.pairs().iter() {
+            dbg!(key);
+        }
+        println!("matched_args end");
+
         let indices: Vec<Integer> = indices.into_iter().map(|i| Integer::Some(i)).collect();
+        dbg!(&indices);
         let subset = Subset::Indices(indices.into());
-        args.subset(subset.into());
-        let args = args.materialize();
+        let args = args.subset(subset.into()).materialize();
+
+        // println!("matching args start");
+        // for (maybe_name, _) in args.pairs().iter() {
+        //     dbg!(&maybe_name);
+        // }
+        // println!("matching args end");
+        println!("args start");
+        for (maybe_name, _) in args.pairs().iter() {
+            dbg!(&maybe_name);
+        }
+        println!("args end");
 
         // TODO(bug): need to evaluate trailing unassigned params that have
         // a default value before popping off remaining trailing params

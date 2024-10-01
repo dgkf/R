@@ -277,6 +277,10 @@ where
         }
     }
 
+    pub fn set_subset(&mut self, subset: Subset, value: T) -> Result<T, Error> {
+        self.0.borrow_mut().set_subset(subset, value)
+    }
+
     pub fn push_named(&self, name: OptionNA<String>, value: T) {
         self.borrow().push_named(name, value)
     }
@@ -534,6 +538,7 @@ where
                 return write!(f, "character(0)");
             }
         }
+        // FIXME: This should use the new rep API
 
         let nlen = format!("{}", n).len();
         // TODO: iteratively calculate when we hit max print so our

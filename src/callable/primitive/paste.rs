@@ -58,6 +58,13 @@ impl Callable for PrimitivePaste {
         let (args, ellipsis) = self.match_arg_exprs(args, stack)?;
 
         let ellipsis = force_promises(ellipsis, stack)?;
+
+        println!("ellipsis start");
+        for x in &ellipsis {
+            dbg!(&x.1);
+        }
+        println!("ellipsis end");
+
         let args = force_promises(args, stack)?;
 
         let mut sep = String::from(" ");
@@ -94,6 +101,9 @@ impl Callable for PrimitivePaste {
             }
         }
 
+        dbg!(&collapse);
+        dbg!(&sep);
+
         // coerce all of our remaining arguments into vectors of strings
         let vec_s_vec: Vec<Vec<String>> = ellipsis
             .into_iter()
@@ -124,6 +134,8 @@ impl Callable for PrimitivePaste {
                 }
             });
         });
+
+        dbg!(&output);
 
         if should_collapse {
             output = vec![output.join(&collapse)];

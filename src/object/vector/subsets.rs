@@ -71,14 +71,8 @@ impl IntoIterator for NamedSubsets {
     type IntoIter = Box<dyn Iterator<Item = Self::Item>>;
 
     fn into_iter(self) -> Self::IntoIter {
-        let n_subsets = self.subsets.len();
-        if n_subsets == 0 {
-            return Box::new((0_usize..).map(|i| (i, Some(i))));
-        }
-
         let mut iter = Box::new((0_usize..).map(|i| (i, Some(i)))) as Self::IntoIter;
         let Subsets(subsets) = self.subsets;
-
         for subset in subsets {
             match subset {
                 Subset::Names(names) => {
@@ -156,6 +150,8 @@ impl IntoIterator for Subsets {
 
 #[cfg(test)]
 mod test {
+    use std::borrow::BorrowMut;
+
     use crate::object::Vector;
 
     #[test]
@@ -250,4 +246,69 @@ mod test {
         let expect = Vector::from(vec![1, 2, 3, 4, 102, 101, 7, 8, 9, 10]);
         assert_eq!(x, expect)
     }
+
+    #[test]
+    fn iter_named_subsets() {
+        use crate::object::reptype::Naming;
+        use crate::object::reptype::RepType;
+        use crate::object::types::{Character, Integer, Logical};
+        use crate::object::CowObj;
+        use crate::object::{Subset, Subsets};
+        use hashbrown::HashMap;
+        use std::cell::RefCell;
+        use std::rc::Rc;
+
+        let v = CowObj::new(Rc::new(RefCell::new(Rc::new(
+            vec![1, 2, 3]
+                .into_iter()
+                .map(|i| Integer::Some(i))
+                .collect(),
+        ))));
+        let n = CowObj::new(Rc::new(RefCell::new(Rc::new(
+            vec!["a".to_string(), "b".to_string(), "c".to_string()]
+                .into_iter()
+                .map(|i| Character::Some(i))
+                .collect(),
+        ))));
+        let s_names: CowObj<Vec<Character>> = CowObj::new(Rc::new(RefCell::new(Rc::new(
+            vec!["a".to_string()]
+                .into_iter()
+                .map(|i| Character::Some(i))
+                .collect(),
+        ))));
+        let s_indices: CowObj<Vec<Integer>> = CowObj::new(Rc::new(RefCell::new(Rc::new(
+            vec![1, 2].into_iter().map(|i| Integer::Some(i)).collect(),
+        ))));
+        let s_logical: CowObj<Vec<Logical>> = CowObj::new(Rc::new(RefCell::new(Rc::new(
+            vec![true, true, true]
+                .into_iter()
+                .map(|i| Logical::Some(i))
+                .collect(),
+        ))));
+        let mut m1: HashMap<String, Vec<usize>> = HashMap::new();
+        m1.insert("a".to_string(), vec![0 as usize]);
+        m1.insert("b".to_string(), vec![1 as usize]);
+        m1.insert("c".to_string(), vec![2 as usize]);
+        let m: CowObj<HashMap<String, Vec<usize>>> =
+            CowObj::new(Rc::new(RefCell::new(Rc::new(m1))));
+        let naming = Naming { map: m, names: n };
+        let x = RepType::Subset(v, Subsets(vec![Subset::Indices(s_indices)]), Option::None);
+        for i in x.iter_subset_indices().take(3) {
+            println!("{}", i.unwrap());
+        }
+        // let x: CowObj::from(vec![1, 2, 3]);
+        // // let x = RepType::Sub
+    }
+
+    // table:
+    // -- has_names: true
+    // - range:   currently unused
+    // - mask:    correct
+    // - names:   correct
+    // - indices: false
+    // -- has_names: false
+    // - range:   currently unused
+    // - mask:    correct
+    // - names:   unimplemented
+    // - indices: false
 }

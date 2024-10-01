@@ -3,6 +3,7 @@ use r_derive::*;
 use super::core::*;
 use crate::context::Context;
 use crate::error::Error;
+use crate::lang::Signal;
 use crate::lang::{CallStack, EvalResult};
 use crate::object::types::*;
 use crate::object::*;
@@ -409,7 +410,10 @@ impl Callable for PostfixIndex {
         let x = args.unnamed_binary_args();
         let what = stack.eval_mut(x.0)?;
         let index = stack.eval(x.1)?;
-        what.try_get_inner_mut(index)
+        // TODO: Ensure that index is of length 1.
+        // We cannot call into try_get_inner_mut because not all objects can be modified in-place
+        // Instead, we internally simply return the slice which can be modified in-place
+        what.try_get(index)
     }
 
     fn call_assign(&self, value: Expr, args: ExprList, stack: &mut CallStack) -> EvalResult {
@@ -424,10 +428,15 @@ impl Callable for PostfixIndex {
         };
 
         let value = stack.eval(value)?;
-        let index = stack.eval(index)?;
-        let what = stack.eval_mut(what)?.try_get_inner_mut(index)?;
+        let mut what = stack.eval_mut(what)?;
+        let index = stack.eval_mut(index)?;
 
-        what.replace(value)
+        let subset = index.try_into()?;
+
+        match what.clone() {
+            Obj::List(mut r) => r.set_subset(subset, what).map_err(|e| Signal::Error(e)),
+            _ => unimplemented!(),
+        }
     }
 }
 

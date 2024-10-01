@@ -135,8 +135,8 @@ impl<T: Clone + Default + ViewMut> RepType<T> {
                 let mut iter = self.iter_subset_indices();
 
                 if let Some(i) = iter.next() {
-                    iter.next()
-                        .ok_or(Error::Other("subset is not of length 1".to_string()))?;
+                    // iter.next()
+                    //     .ok_or(Error::Other("subset is not of length 1".to_string()))?;
 
                     // TODO: subsetting with NA should not be possible.
                     let i = i.unwrap();
@@ -337,14 +337,36 @@ impl<T: Clone + Default> RepType<T> {
         )
     }
 
+    pub fn set_subset(&mut self, subset: Subset, value: T) -> Result<T, Error> {
+        match &self {
+            RepType::Subset(..) => {
+                let err = Error::Other("subset must have length 1".to_string());
+
+                let mut iter = self.clone().subset(subset).iter_subset_indices();
+                let i1 = iter.next();
+
+                // check that subset has exactly length 1
+                // assumes no indexing with NA (unwrap the option)
+                let i = if let Some(i) = i1 {
+                    if let Some(_) = iter.next() {
+                        return Err(err);
+                    }
+                    i
+                } else {
+                    return Err(err);
+                }
+                .unwrap();
+
+                self.with_inner_mut(|v| v[i] = value.clone());
+                Ok(value.clone())
+            }
+        }
+    }
+
     pub fn iterable(&self) -> RepTypeIntoIterable<T> {
         match self.clone() {
             RepType::Subset(values, _, maybe_naming) => {
                 let iter = Box::new(self.iter_subset_indices());
-                let iter2 = Box::new(self.iter_subset_indices());
-                for i in iter2 {
-                    println!("{}", i.unwrap());
-                }
                 let values = values.inner_rc();
                 let names = maybe_naming.map(|x| x.names.inner_rc());
 
@@ -455,16 +477,24 @@ impl<T: Clone + Default> RepType<T> {
     }
 
     pub fn iter_subset_indices(&self) -> Box<dyn Iterator<Item = Option<usize>>> {
+        // TODO: Why do we have to do -1 here. Shouldnt' .filter() and the Iterator method of NamedSubsets
+        // not already return the 0-based indices?
         // TODO: This function is crucial to fix
         match self.clone() {
             RepType::Subset(vals, subsets, maybe_naming) => {
                 if subsets.is_empty() {
                     return Box::new((0_usize..vals.len()).map(|x| Some(x)));
                 }
+
                 if let Some(naming) = maybe_naming {
-                    Box::new(subsets.bind_names(naming.map).into_iter().map(|(x, y)| y))
+                    Box::new(
+                        subsets
+                            .bind_names(naming.map)
+                            .into_iter()
+                            .map(|(x, y)| y.map(|y| y)),
+                    )
                 } else {
-                    Box::new(subsets.into_iter().map(|(_, y)| y))
+                    Box::new(subsets.into_iter().map(|(_, y)| y.map(|y| y)))
                 }
             }
         }

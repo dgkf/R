@@ -1,5 +1,5 @@
 use std::cell::RefCell;
-use std::ops::Range;
+use std::ops::{DerefMut, Range};
 use std::rc::Rc;
 
 use super::{types::*, OptionNA, Vector};
@@ -14,6 +14,8 @@ use crate::object::{CowObj, Obj};
 ///
 #[derive(Debug, Clone, PartialEq)]
 pub enum Subset {
+    // This is currently 0-index.
+    // TODO: I think this should be 1-indexed as pushing integer vectors as a subset otherwise requires an allocation.
     Indices(CowObj<Vec<Integer>>),
     Mask(CowObj<Vec<Logical>>),
     Names(CowObj<Vec<Character>>),
@@ -192,18 +194,43 @@ impl TryFrom<Obj> for Subset {
     fn try_from(value: Obj) -> Result<Self, Self::Error> {
         let err = Error::Other("Cannot use object for indexing".to_string());
         match value {
-            Obj::Vector(v) => match v {
-                Vector::Double(_) => {
-                    if let Vector::Integer(x) = v.as_integer() {
-                        Ok(Subset::Indices(x.values()))
-                    } else {
-                        unreachable!()
-                    }
-                }
-                Vector::Integer(x) => Ok(Subset::Indices(x.values())),
-                Vector::Character(x) => Ok(Subset::Names(x.values())),
-                Vector::Logical(x) => Ok(Subset::Mask(x.values())),
-            },
+            Obj::Vector(v) => Subset::try_from(v),
+            // Obj::Vector(v) => match v {
+            //     Vector::Double(_) => {
+            //         if let Vector::Integer(x) = v.as_integer() {
+            //             let x = Obj::Vector(x.into());
+            //             Subset::try_from(x)
+            //             // todo!()
+            //             // v.try_from()
+            //             // // FIXME: This needs to -1
+            //             // let indices: Vec<Integer> = x
+            //             //     .values()
+            //             //     .inner_rc()
+            //             //     .into_iter()
+            //             //     .map(|i| i.map(|i| OptionNA::Some(i - 1)))
+            //             //     .collect();
+
+            //             // todo!()
+            //             // // Ok(Subset::Indices(indices.into()))
+            //         } else {
+            //             unreachable!()
+            //         }
+            //     }
+            //     Vector::Integer(x) => {
+            //         let indices: Vec<Integer> = x
+            //             .pairs()
+            //             .iter()
+            //             .map(|(_, x)| x.clone().map(|i| i - 1))
+            //             .collect();
+            //         Subset::Indices(x.values())
+
+            //         todo!()
+
+            //         // Ok(Subset::Indices(x.values())),
+            //     }
+            //     Vector::Character(x) => Ok(Subset::Names(x.values())),
+            //     Vector::Logical(x) => Ok(Subset::Mask(x.values())),
+            // },
             _ => err.into(),
         }
     }
