@@ -3,7 +3,6 @@ use r_derive::*;
 use super::core::*;
 use crate::context::Context;
 use crate::error::Error;
-use crate::lang::Signal;
 use crate::lang::{CallStack, EvalResult};
 use crate::object::types::*;
 use crate::object::*;
@@ -435,7 +434,7 @@ impl Callable for PostfixIndex {
 
         Ok(match what {
             Obj::List(mut v) => v.set_subset(subset, value)?,
-            Obj::Vector(mut v) => v.set_subset(subset, value).map(|v| Obj::Vector(v))?,
+            Obj::Vector(mut v) => v.set_subset(subset, value).map(Obj::Vector)?,
             _ => unimplemented!(),
         })
     }
