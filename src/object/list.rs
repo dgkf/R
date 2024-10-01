@@ -1,9 +1,5 @@
-use hashbrown::HashMap;
 
-use crate::error::Error;
-use crate::lang::EvalResult;
 use crate::object::rep::Rep;
-use crate::object::vector::types::Character;
 
 use super::*;
 

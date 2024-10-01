@@ -150,7 +150,7 @@ impl IntoIterator for Subsets {
 
 #[cfg(test)]
 mod test {
-    use std::borrow::BorrowMut;
+    
 
     use crate::object::Vector;
 
@@ -261,34 +261,34 @@ mod test {
         let v = CowObj::new(Rc::new(RefCell::new(Rc::new(
             vec![1, 2, 3]
                 .into_iter()
-                .map(|i| Integer::Some(i))
+                .map(Integer::Some)
                 .collect(),
         ))));
         let n = CowObj::new(Rc::new(RefCell::new(Rc::new(
             vec!["a".to_string(), "b".to_string(), "c".to_string()]
                 .into_iter()
-                .map(|i| Character::Some(i))
+                .map(Character::Some)
                 .collect(),
         ))));
         let s_names: CowObj<Vec<Character>> = CowObj::new(Rc::new(RefCell::new(Rc::new(
             vec!["a".to_string()]
                 .into_iter()
-                .map(|i| Character::Some(i))
+                .map(Character::Some)
                 .collect(),
         ))));
         let s_indices: CowObj<Vec<Integer>> = CowObj::new(Rc::new(RefCell::new(Rc::new(
-            vec![1, 2].into_iter().map(|i| Integer::Some(i)).collect(),
+            vec![1, 2].into_iter().map(Integer::Some).collect(),
         ))));
         let s_logical: CowObj<Vec<Logical>> = CowObj::new(Rc::new(RefCell::new(Rc::new(
             vec![true, true, true]
                 .into_iter()
-                .map(|i| Logical::Some(i))
+                .map(Logical::Some)
                 .collect(),
         ))));
         let mut m1: HashMap<String, Vec<usize>> = HashMap::new();
-        m1.insert("a".to_string(), vec![0 as usize]);
-        m1.insert("b".to_string(), vec![1 as usize]);
-        m1.insert("c".to_string(), vec![2 as usize]);
+        m1.insert("a".to_string(), vec![0_usize]);
+        m1.insert("b".to_string(), vec![1_usize]);
+        m1.insert("c".to_string(), vec![2_usize]);
         let m: CowObj<HashMap<String, Vec<usize>>> =
             CowObj::new(Rc::new(RefCell::new(Rc::new(m1))));
         let naming = Naming { map: m, names: n };

@@ -428,15 +428,16 @@ impl Callable for PostfixIndex {
         };
 
         let value = stack.eval(value)?;
-        let mut what = stack.eval_mut(what)?;
-        let index = stack.eval_mut(index)?;
+        let what = stack.eval_mut(what)?;
+        let index = stack.eval(index)?;
 
         let subset = index.try_into()?;
 
-        match what.clone() {
-            Obj::List(mut r) => r.set_subset(subset, what).map_err(|e| Signal::Error(e)),
+        Ok(match what {
+            Obj::List(mut v) => v.set_subset(subset, value)?,
+            Obj::Vector(mut v) => v.set_subset(subset, value).map(|v| Obj::Vector(v))?,
             _ => unimplemented!(),
-        }
+        })
     }
 }
 

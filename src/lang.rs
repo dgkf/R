@@ -3,7 +3,6 @@ use crate::cli::Experiment;
 use crate::context::Context;
 use crate::error::*;
 use crate::internal_err;
-use crate::object::rep::Rep;
 use crate::object::types::*;
 use crate::object::List;
 use crate::object::*;
@@ -419,7 +418,7 @@ fn display_list(x: &List, f: &mut fmt::Formatter<'_>, bc: Option<String>) -> fmt
         match value {
             Obj::List(nested_values) => {
                 writeln!(f, "{}", breadcrumbs)?;
-                display_list(&nested_values, f, Some(breadcrumbs))?
+                display_list(nested_values, f, Some(breadcrumbs))?
             }
             _ => write!(f, "{}\n{}\n", breadcrumbs, value)?,
         }

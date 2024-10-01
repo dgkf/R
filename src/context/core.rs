@@ -91,11 +91,11 @@ pub trait Context: std::fmt::Debug + std::fmt::Display {
                     // Avoid creating a new closure just to point to another, just reuse it
                     (k, Expr::Symbol(s)) => match self.env().get(s.clone()) {
                         Ok(c @ Obj::Promise(..)) => {
-                            let k = k.map_or(OptionNA::NA, |x| OptionNA::Some(x));
+                            let k = k.map_or(OptionNA::NA, OptionNA::Some);
                             Ok(List::from(vec![(k, c)]).iter_pairs())
                         }
                         _ => {
-                            let k = k.map_or(OptionNA::NA, |x| OptionNA::Some(x));
+                            let k = k.map_or(OptionNA::NA, OptionNA::Some);
                             Ok(List::from(vec![(
                                 k,
                                 Obj::Promise(None, Expr::Symbol(s), self.env()),
@@ -104,12 +104,12 @@ pub trait Context: std::fmt::Debug + std::fmt::Display {
                         }
                     },
                     (k, c @ Expr::Call(..)) => {
-                        let k = k.map_or(OptionNA::NA, |x| OptionNA::Some(x));
+                        let k = k.map_or(OptionNA::NA, OptionNA::Some);
                         let elem = vec![(k, Obj::Promise(None, c, self.env()))];
                         Ok(List::from(elem).iter_pairs())
                     }
                     (k, v) => {
-                        let k = k.map_or(OptionNA::NA, |x| OptionNA::Some(x));
+                        let k = k.map_or(OptionNA::NA, OptionNA::Some);
                         if let Ok(elem) = self.eval(v) {
                             Ok(List::from(vec![(k, elem)]).iter_pairs())
                         } else {
@@ -144,7 +144,7 @@ pub trait Context: std::fmt::Debug + std::fmt::Display {
                     }
                     (k, v) => match self.eval_and_finalize(v) {
                         Ok(elem) => {
-                            let k = k.map_or(OptionNA::NA, |x| OptionNA::Some(x));
+                            let k = k.map_or(OptionNA::NA, OptionNA::Some);
                             Ok(List::from(vec![(k, elem)]).iter_pairs())
                         }
                         Err(e) => Err(e),

@@ -1,5 +1,5 @@
 use std::cell::RefCell;
-use std::ops::{DerefMut, Range};
+use std::ops::Range;
 use std::rc::Rc;
 
 use super::{types::*, OptionNA, Vector};

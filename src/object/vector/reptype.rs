@@ -7,7 +7,7 @@ use super::subsets::Subsets;
 use super::types::*;
 use super::{OptionNA, Pow, VecPartialCmp};
 use crate::error::Error;
-use crate::object::{CowObj, Obj, ViewMut};
+use crate::object::{CowObj, ViewMut};
 use hashbrown::HashMap;
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -143,7 +143,7 @@ impl<T: Clone + Default + ViewMut> RepType<T> {
 
                     Ok(self.with_inner_mut(|values| values[i].view_mut()))
                 } else {
-                    return Err(Error::Other("subset is empty".to_string()));
+                    Err(Error::Other("subset is empty".to_string()))
                 }
 
                 // if let Some(naming) = maybe_naming {
@@ -292,7 +292,7 @@ impl<T: Clone + Default + 'static> RepType<T> {
 pub struct RepTypeIterPairs<T> {
     values: Rc<Vec<T>>,
     names: Option<Rc<Vec<Character>>>,
-    iter: Box<dyn Iterator<Item = (Option<usize>)>>,
+    iter: Box<dyn Iterator<Item = Option<usize>>>,
 }
 
 impl<T: Clone> Iterator for RepTypeIterPairs<T> {
@@ -348,7 +348,7 @@ impl<T: Clone + Default> RepType<T> {
                 // check that subset has exactly length 1
                 // assumes no indexing with NA (unwrap the option)
                 let i = if let Some(i) = i1 {
-                    if let Some(_) = iter.next() {
+                    if iter.next().is_some() {
                         return Err(err);
                     }
                     i
@@ -446,7 +446,7 @@ impl<T: Clone + Default> RepType<T> {
     pub fn remove(&self, index: usize) -> (Character, T) {
         match self {
             RepType::Subset(values, Subsets(subsets), maybe_naming) => {
-                if let [] = subsets.as_slice() {
+                if subsets.as_slice().is_empty() {
                     let value = values.with_inner_mut(|values| values.remove(index));
 
                     let name = if let Some(naming) = maybe_naming {
@@ -454,7 +454,7 @@ impl<T: Clone + Default> RepType<T> {
                     } else {
                         OptionNA::NA
                     };
-                    return (name, value);
+                    (name, value)
                 } else {
                     unimplemented!()
                 }
@@ -483,7 +483,7 @@ impl<T: Clone + Default> RepType<T> {
         match self.clone() {
             RepType::Subset(vals, subsets, maybe_naming) => {
                 if subsets.is_empty() {
-                    return Box::new((0_usize..vals.len()).map(|x| Some(x)));
+                    return Box::new((0_usize..vals.len()).map(Some));
                 }
 
                 if let Some(naming) = maybe_naming {
@@ -491,10 +491,10 @@ impl<T: Clone + Default> RepType<T> {
                         subsets
                             .bind_names(naming.map)
                             .into_iter()
-                            .map(|(x, y)| y.map(|y| y)),
+                            .map(|(x, y)| y),
                     )
                 } else {
-                    Box::new(subsets.into_iter().map(|(_, y)| y.map(|y| y)))
+                    Box::new(subsets.into_iter().map(|(_, y)| y))
                 }
             }
         }
@@ -502,21 +502,18 @@ impl<T: Clone + Default> RepType<T> {
 
     /// Reindex the mapping from names to indices.
     pub fn reindex(&mut self) {
-        match self {
-            RepType::Subset(.., Some(naming)) => naming.map.with_inner_mut(|map| {
-                map.drain();
+        if let RepType::Subset(.., Some(naming)) = self { naming.map.with_inner_mut(|map| {
+            map.drain();
 
-                for (i, maybe_name) in naming.names.borrow().iter().enumerate() {
-                    if let OptionNA::Some(name) = maybe_name {
-                        let indices = map.entry(name.clone()).or_default();
-                        if !indices.contains(&i) {
-                            indices.push(i)
-                        }
+            for (i, maybe_name) in naming.names.borrow().iter().enumerate() {
+                if let OptionNA::Some(name) = maybe_name {
+                    let indices = map.entry(name.clone()).or_default();
+                    if !indices.contains(&i) {
+                        indices.push(i)
                     }
                 }
-            }),
-            _ => (),
-        }
+            }
+        }) }
     }
 
     pub fn dedup_last(self) -> Self {
@@ -548,7 +545,7 @@ impl<T: Clone + Default> RepType<T> {
                 });
                 RepType::Subset(values, subsets, Some(naming))
             }
-            RepType::Subset(.., None) => return self,
+            RepType::Subset(.., None) => self,
         }
     }
 
@@ -865,7 +862,7 @@ impl<T: Clone> From<Vec<(Option<String>, T)>> for RepType<T> {
         let mut names = Vec::with_capacity(value.len());
         let mut values = Vec::with_capacity(value.len());
         for (k, v) in value.into_iter() {
-            names.push(k.map_or(Character::NA, |x| Character::Some(x)));
+            names.push(k.map_or(Character::NA, Character::Some));
             values.push(v)
         }
         let naming = Naming::from(names);

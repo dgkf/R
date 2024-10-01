@@ -90,9 +90,7 @@ impl Callable for PrimitiveC {
             let nms = pairs.iter().flat_map(|(name, obj)| {
                 let maybe_prefix = name
                     .clone()
-                    .as_option()
-                    .as_ref()
-                    .and_then(|n| Option::Some(n.clone()));
+                    .as_option().clone();
 
                 if let Obj::Vector(v) = obj {
                     let maybe_names_iter = v.iter_names();

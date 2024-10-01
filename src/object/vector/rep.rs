@@ -4,7 +4,7 @@ use std::fmt::{Debug, Display};
 use super::coercion::{AtomicMode, CoercibleInto, CommonCmp, CommonNum, MinimallyNumeric};
 use super::iterators::{map_common_numeric, zip_recycle};
 use super::reptype::{Naming, RepType};
-use super::reptype::{RepTypeIntoIterable, RepTypeIter};
+use super::reptype::RepTypeIntoIterable;
 use super::subset::Subset;
 use super::types::*;
 use super::{OptionNA, Pow, VecPartialCmp};
@@ -42,11 +42,11 @@ impl<T: ViewMut + Default + Clone> Rep<T> {
     /// Get the inner value mutably.
     /// This is used for assignments like `list(1)[[1]] = 10`.
     pub fn try_get_inner_mut(&self, subset: Subset) -> Result<T, Error> {
-        self.borrow().try_get_inner_mut(subset).into()
+        self.borrow().try_get_inner_mut(subset)
     }
 
     pub fn try_get_inner(&self, subset: Subset) -> Result<T, Error> {
-        self.try_get_inner_mut(subset).map(|v| v.clone())
+        self.try_get_inner_mut(subset)
     }
 }
 
@@ -127,11 +127,7 @@ where
         match self.borrow().clone() {
             RepType::Subset(_, s, n) => {
                 if s.is_empty() {
-                    if let Option::Some(n) = n {
-                        Option::Some(n.clone().names)
-                    } else {
-                        Option::None
-                    }
+                    n.map(|n| n.clone().names)
                 } else {
                     unimplemented!()
                 }

@@ -52,7 +52,7 @@ pub trait Callable {
 
         for (i, (maybe_name, value)) in args.pairs().iter().enumerate() {
             if let Character::Some(name) = maybe_name {
-                if let Some((Some(_), _)) = formals.remove_named(&name) {
+                if let Some((Some(_), _)) = formals.remove_named(name) {
                     matched_args.push_named(Character::Some(name.clone()), value.clone());
                     continue;
                 }
@@ -67,10 +67,10 @@ pub trait Callable {
         }
         println!("matched_args end");
 
-        let indices: Vec<Integer> = indices.into_iter().map(|i| Integer::Some(i)).collect();
+        let indices: Vec<Integer> = indices.into_iter().map(Integer::Some).collect();
         dbg!(&indices);
         let subset = Subset::Indices(indices.into());
-        let args = args.subset(subset.into()).materialize();
+        let args = args.subset(subset).materialize();
 
         // println!("matching args start");
         // for (maybe_name, _) in args.pairs().iter() {
