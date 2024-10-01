@@ -88,9 +88,7 @@ impl Callable for PrimitiveC {
         let names: Option<Vec<Character>> = if named {
             let mut pairs = vals.pairs();
             let nms = pairs.iter().flat_map(|(name, obj)| {
-                let maybe_prefix = name
-                    .clone()
-                    .as_option().clone();
+                let maybe_prefix = name.clone().as_option().clone();
 
                 if let Obj::Vector(v) = obj {
                     let maybe_names_iter = v.iter_names();

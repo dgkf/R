@@ -412,7 +412,7 @@ impl Callable for PostfixIndex {
         // TODO: Ensure that index is of length 1.
         // We cannot call into try_get_inner_mut because not all objects can be modified in-place
         // Instead, we internally simply return the slice which can be modified in-place
-        what.try_get(index)
+        what.try_get_inner_mut(index)
     }
 
     fn call_assign(&self, value: Expr, args: ExprList, stack: &mut CallStack) -> EvalResult {

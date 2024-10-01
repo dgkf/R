@@ -88,14 +88,21 @@ impl Vector {
     }
 
     pub fn set_subset(&mut self, subset: Subset, value: Obj) -> Result<Self, Error> {
-        todo!()
-        // use Vector::*;
-        // match self {
-        //     Double(x) => x.subset(Double),
-        //     Integer(x) => x.get(index).map(Integer),
-        //     Logical(x) => x.get(index).map(Logical),
-        //     Character(x) => x.get(index).map(Character),
-        // }
+        use Vector::*;
+        match self {
+            Double(x) => x
+                .set_subset(subset, value.try_into()?)
+                .map(|x| Double(Rep::from(vec![x]))),
+            Integer(x) => x
+                .set_subset(subset, value.try_into()?)
+                .map(|x| Integer(Rep::from(vec![x]))),
+            Character(x) => x
+                .set_subset(subset, value.try_into()?)
+                .map(|x| Character(Rep::from(vec![x]))),
+            Logical(x) => x
+                .set_subset(subset, value.try_into()?)
+                .map(|x| Logical(Rep::from(vec![x]))),
+        }
     }
 
     /// Iterate over the names of the vector.
@@ -160,16 +167,16 @@ impl Vector {
         }
     }
 
-    pub fn try_get_inner_mut(&self, index: Obj) -> EvalResult {
-        // This method will be needed when we have scalars
-        todo!()
-    }
+    // pub fn try_get_inner_mut(&self, index: Obj) -> EvalResult {
+    //     // This method will be needed when we have scalars
+    //     todo!()
+    // }
 
-    pub fn try_get_inner(&self, index: Obj) -> EvalResult {
-        // This method will be needed when we have scalars
-        #[allow(clippy::map_clone)]
-        self.try_get_inner_mut(index).map(|v| v.clone())
-    }
+    // pub fn try_get_inner(&self, index: Obj) -> EvalResult {
+    //     // This method will be needed when we have scalars
+    //     #[allow(clippy::map_clone)]
+    //     self.try_get_inner_mut(index).map(|v| v.clone())
+    // }
 
     pub fn subset(&self, subset: Subset) -> Self {
         match self {
@@ -986,5 +993,20 @@ impl std::ops::BitAnd for Vector {
             (Character(l), Logical(r)) => l.bitand(r).into(),
             (Character(l), Character(r)) => l.bitand(r).into(),
         }
+    }
+}
+
+#[cfg(test)]
+
+mod tests {
+    use crate::{r, r_expect};
+
+    #[test]
+    fn double_brackets_assign() {
+        r_expect! {{"
+            x = c(1, 2)
+            x[[1]] = 10
+            x[[1]] == 10 & x[[2]] == 2
+        "}}
     }
 }

@@ -1,5 +1,8 @@
 use super::coercion::AtomicMode;
 use super::OptionNA;
+use crate::error::Error;
+use crate::object::Obj;
+use crate::object::Vector;
 
 pub type Double = OptionNA<f64>;
 impl AtomicMode for Double {
@@ -26,5 +29,81 @@ pub type Character = OptionNA<String>;
 impl AtomicMode for Character {
     fn is_character() -> bool {
         true
+    }
+}
+
+impl TryFrom<Obj> for Double {
+    type Error = Error;
+    fn try_from(value: Obj) -> Result<Self, Self::Error> {
+        let err = Err(Error::Other(
+            "Cannot convert object to scalar double.".to_string(),
+        ));
+        if let Obj::Vector(Vector::Double(v)) = value {
+            if v.len() == 1 {
+                let x = v.iter_pairs().map(|(_, x)| x.clone()).next().unwrap();
+                return Ok(x.into());
+            } else {
+                return err;
+            }
+        } else {
+            return err;
+        }
+    }
+}
+
+impl TryFrom<Obj> for Integer {
+    type Error = Error;
+    fn try_from(value: Obj) -> Result<Self, Self::Error> {
+        let err = Err(Error::Other(
+            "Cannot convert object to scalar double.".to_string(),
+        ));
+        if let Obj::Vector(Vector::Integer(v)) = value {
+            if v.len() == 1 {
+                let x = v.iter_pairs().map(|(_, x)| x.clone()).next().unwrap();
+                return Ok(x.into());
+            } else {
+                return err;
+            }
+        } else {
+            return err;
+        }
+    }
+}
+
+impl TryFrom<Obj> for Character {
+    type Error = Error;
+    fn try_from(value: Obj) -> Result<Self, Self::Error> {
+        let err = Err(Error::Other(
+            "Cannot convert object to scalar double.".to_string(),
+        ));
+        if let Obj::Vector(Vector::Character(v)) = value {
+            if v.len() == 1 {
+                let x = v.iter_pairs().map(|(_, x)| x.clone()).next().unwrap();
+                return Ok(x.into());
+            } else {
+                return err;
+            }
+        } else {
+            return err;
+        }
+    }
+}
+
+impl TryFrom<Obj> for Logical {
+    type Error = Error;
+    fn try_from(value: Obj) -> Result<Self, Self::Error> {
+        let err = Err(Error::Other(
+            "Cannot convert object to scalar double.".to_string(),
+        ));
+        if let Obj::Vector(Vector::Logical(v)) = value {
+            if v.len() == 1 {
+                let x = v.iter_pairs().map(|(_, x)| x.clone()).next().unwrap();
+                return Ok(x.into());
+            } else {
+                return err;
+            }
+        } else {
+            return err;
+        }
     }
 }

@@ -1,4 +1,3 @@
-
 use crate::object::rep::Rep;
 
 use super::*;
@@ -358,6 +357,14 @@ mod tests {
             l = (1, 2, 3)
             l[1:2] = (10, 20)
             l[[1]] == 10 & l[[2]] == 20
+        "#}}
+    }
+    #[test]
+    fn list_assign() {
+        r_expect! {{r#"
+            l = (function() null, )
+            l[[1]] = 1
+            l[[1]] == 1
         "#}}
     }
 }

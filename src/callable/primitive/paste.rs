@@ -148,7 +148,7 @@ impl Callable for PrimitivePaste {
 #[cfg(test)]
 mod test {
     use super::*;
-    
+
     use crate::r;
 
     #[test]

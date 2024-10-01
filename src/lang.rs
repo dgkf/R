@@ -318,7 +318,7 @@ impl Obj {
     // Used for [[ ]] syntax
     pub fn try_get_inner(&self, index: Obj) -> EvalResult {
         match self {
-            Obj::Vector(v) => v.try_get_inner(index),
+            Obj::Vector(v) => v.try_get(index),
             Obj::List(l) => EvalResult::Ok(l.try_get_inner(index.try_into()?)?),
             obj => obj.as_list()?.try_get_inner(index),
         }

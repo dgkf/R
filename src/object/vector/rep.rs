@@ -3,8 +3,8 @@ use std::fmt::{Debug, Display};
 
 use super::coercion::{AtomicMode, CoercibleInto, CommonCmp, CommonNum, MinimallyNumeric};
 use super::iterators::{map_common_numeric, zip_recycle};
-use super::reptype::{Naming, RepType};
 use super::reptype::RepTypeIntoIterable;
+use super::reptype::{Naming, RepType};
 use super::subset::Subset;
 use super::types::*;
 use super::{OptionNA, Pow, VecPartialCmp};

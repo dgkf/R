@@ -132,7 +132,7 @@ impl<T: Clone + Default + ViewMut> RepType<T> {
         let self_subset = self.subset(subset);
         match self_subset {
             RepType::Subset(..) => {
-                let mut iter = self.iter_subset_indices();
+                let mut iter = self_subset.iter_subset_indices();
 
                 if let Some(i) = iter.next() {
                     // iter.next()
@@ -140,6 +140,7 @@ impl<T: Clone + Default + ViewMut> RepType<T> {
 
                     // TODO: subsetting with NA should not be possible.
                     let i = i.unwrap();
+                    dbg!(i);
 
                     Ok(self.with_inner_mut(|values| values[i].view_mut()))
                 } else {
@@ -477,9 +478,6 @@ impl<T: Clone + Default> RepType<T> {
     }
 
     pub fn iter_subset_indices(&self) -> Box<dyn Iterator<Item = Option<usize>>> {
-        // TODO: Why do we have to do -1 here. Shouldnt' .filter() and the Iterator method of NamedSubsets
-        // not already return the 0-based indices?
-        // TODO: This function is crucial to fix
         match self.clone() {
             RepType::Subset(vals, subsets, maybe_naming) => {
                 if subsets.is_empty() {
@@ -487,12 +485,7 @@ impl<T: Clone + Default> RepType<T> {
                 }
 
                 if let Some(naming) = maybe_naming {
-                    Box::new(
-                        subsets
-                            .bind_names(naming.map)
-                            .into_iter()
-                            .map(|(x, y)| y),
-                    )
+                    Box::new(subsets.bind_names(naming.map).into_iter().map(|(_, y)| y))
                 } else {
                     Box::new(subsets.into_iter().map(|(_, y)| y))
                 }
@@ -502,18 +495,20 @@ impl<T: Clone + Default> RepType<T> {
 
     /// Reindex the mapping from names to indices.
     pub fn reindex(&mut self) {
-        if let RepType::Subset(.., Some(naming)) = self { naming.map.with_inner_mut(|map| {
-            map.drain();
+        if let RepType::Subset(.., Some(naming)) = self {
+            naming.map.with_inner_mut(|map| {
+                map.drain();
 
-            for (i, maybe_name) in naming.names.borrow().iter().enumerate() {
-                if let OptionNA::Some(name) = maybe_name {
-                    let indices = map.entry(name.clone()).or_default();
-                    if !indices.contains(&i) {
-                        indices.push(i)
+                for (i, maybe_name) in naming.names.borrow().iter().enumerate() {
+                    if let OptionNA::Some(name) = maybe_name {
+                        let indices = map.entry(name.clone()).or_default();
+                        if !indices.contains(&i) {
+                            indices.push(i)
+                        }
                     }
                 }
-            }
-        }) }
+            })
+        }
     }
 
     pub fn dedup_last(self) -> Self {

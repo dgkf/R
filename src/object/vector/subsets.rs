@@ -150,7 +150,6 @@ impl IntoIterator for Subsets {
 
 #[cfg(test)]
 mod test {
-    
 
     use crate::object::Vector;
 
@@ -259,10 +258,7 @@ mod test {
         use std::rc::Rc;
 
         let v = CowObj::new(Rc::new(RefCell::new(Rc::new(
-            vec![1, 2, 3]
-                .into_iter()
-                .map(Integer::Some)
-                .collect(),
+            vec![1, 2, 3].into_iter().map(Integer::Some).collect(),
         ))));
         let n = CowObj::new(Rc::new(RefCell::new(Rc::new(
             vec!["a".to_string(), "b".to_string(), "c".to_string()]
