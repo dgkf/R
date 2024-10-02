@@ -50,7 +50,7 @@ pub trait Callable {
 
         let mut indices: Vec<i32> = Vec::new();
 
-        for (i, (maybe_name, value)) in args.pairs().iter().enumerate() {
+        for (i, (maybe_name, value)) in args.pairs_ref().iter().enumerate() {
             if let Character::Some(name) = maybe_name {
                 if let Some((Some(_), _)) = formals.remove_named(name) {
                     matched_args.push_named(Character::Some(name.clone()), value.clone());
@@ -62,7 +62,7 @@ pub trait Callable {
         }
 
         println!("matched_args start");
-        for (key, _) in matched_args.pairs().iter() {
+        for (key, _) in matched_args.pairs_ref().iter() {
             dbg!(key);
         }
         println!("matched_args end");
@@ -78,7 +78,7 @@ pub trait Callable {
         // }
         // println!("matching args end");
         println!("args start");
-        for (maybe_name, _) in args.pairs().iter() {
+        for (maybe_name, _) in args.pairs_ref().iter() {
             dbg!(&maybe_name);
         }
         println!("args end");
@@ -303,7 +303,7 @@ impl TryFrom<&str> for Box<dyn Builtin> {
 pub fn force_promises(vals: List, stack: &mut CallStack) -> Result<Vec<(Character, Obj)>, Signal> {
     // Force any closures that were created during call. This helps with using
     // variables as argument for sep and collapse parameters.
-    vals.pairs()
+    vals.pairs_ref()
         .iter()
         .map(|(a, b)| (a.clone(), b.clone()))
         .map(|(k, v)| match (k, v.force(stack)) {

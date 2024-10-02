@@ -1,3 +1,4 @@
+use lazy_static::lazy_static;
 use r_derive::*;
 
 use crate::callable::core::*;
@@ -6,6 +7,10 @@ use crate::internal_err;
 use crate::lang::*;
 use crate::object::reptype::RepType;
 use crate::object::*;
+
+lazy_static! {
+    pub static ref FORMALS: ExprList = ExprList::from(vec![(None, Expr::Ellipsis(None)),]);
+}
 
 /// Calculate a Sum of Elements
 ///
@@ -34,7 +39,7 @@ pub struct PrimitiveSum;
 
 impl Callable for PrimitiveSum {
     fn formals(&self) -> ExprList {
-        ExprList::from(vec![(None, Expr::Ellipsis(None))])
+        FORMALS.clone()
     }
 
     fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {

@@ -45,7 +45,7 @@ impl Naming {
     pub fn push_name(&self, name: OptionNA<String>) {
         self.names.with_inner_mut(|v| v.push(name.clone()));
         if let OptionNA::Some(name) = name {
-            let n = self.names.len();
+            let n = self.names.len() - 1;
             self.map.with_inner_mut(|map| {
                 let indices = map.entry(name.clone()).or_default();
                 if !indices.contains(&n) {
@@ -191,6 +191,24 @@ where
     }
 }
 
+pub struct RepTypeIntoIterableValues<T: Clone> {
+    values: Rc<Vec<T>>,
+    na_value: T,
+    iter: Box<dyn Iterator<Item = Option<usize>>>,
+}
+
+impl<T: Clone + Default> RepTypeIntoIterableValues<T> {
+    pub fn iter(&mut self) -> RepTypeIterableValues<'_, T> {
+        let values = &self.values[..];
+
+        RepTypeIterableValues {
+            values,
+            na_value: &self.na_value,
+            iter: &mut self.iter,
+        }
+    }
+}
+
 pub struct RepTypeIntoIterable<T: Clone> {
     values: Rc<Vec<T>>,
     names: Option<Rc<Vec<Character>>>,
@@ -215,6 +233,12 @@ impl<T: Clone + Default> RepTypeIntoIterable<T> {
     }
 }
 
+pub struct RepTypeIterableValues<'a, T: Clone> {
+    values: &'a [T],
+    na_value: &'a T,
+    iter: &'a mut Box<dyn Iterator<Item = Option<usize>>>,
+}
+
 pub struct RepTypeIterable<'a, T: Clone> {
     values: &'a [T],
     names: Option<&'a [Character]>,
@@ -237,6 +261,16 @@ impl<'a, T: Clone> Iterator for RepTypeIterable<'a, T> {
         };
 
         Some((name, value))
+    }
+}
+
+impl<'a, T: Clone> Iterator for RepTypeIterableValues<'a, T> {
+    type Item = &'a T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        // FIXME: This panics when subsetting with NA
+        let i = self.iter.next()?.unwrap();
+        Some(&self.values[i])
     }
 }
 
@@ -364,7 +398,22 @@ impl<T: Clone + Default> RepType<T> {
         }
     }
 
-    pub fn iterable(&self) -> RepTypeIntoIterable<T> {
+    pub fn values_ref(&self) -> RepTypeIntoIterableValues<T> {
+        match self.clone() {
+            RepType::Subset(values, ..) => {
+                let iter = Box::new(self.iter_subset_indices());
+                let values = values.inner_rc();
+
+                RepTypeIntoIterableValues {
+                    values,
+                    na_value: T::default(),
+                    iter,
+                }
+            }
+        }
+    }
+
+    pub fn pairs_ref(&self) -> RepTypeIntoIterable<T> {
         match self.clone() {
             RepType::Subset(values, _, maybe_naming) => {
                 let iter = Box::new(self.iter_subset_indices());

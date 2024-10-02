@@ -71,7 +71,7 @@ impl Callable for PrimitiveNames {
             Expr(..) => Ok(Null),     // handle arg lists?
             Function(..) => Ok(Null), // return formals?
             List(x) => {
-                Ok(x.pairs()
+                Ok(x.pairs_ref()
                     .iter()
                     .map(|(k, _)| match k {
                         Character::Some(name) => OptionNA::Some(name.clone()),

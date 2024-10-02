@@ -59,12 +59,6 @@ impl Callable for PrimitivePaste {
 
         let ellipsis = force_promises(ellipsis, stack)?;
 
-        println!("ellipsis start");
-        for x in &ellipsis {
-            dbg!(&x.1);
-        }
-        println!("ellipsis end");
-
         let args = force_promises(args, stack)?;
 
         let mut sep = String::from(" ");

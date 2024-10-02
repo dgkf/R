@@ -288,7 +288,11 @@ mod test {
         let m: CowObj<HashMap<String, Vec<usize>>> =
             CowObj::new(Rc::new(RefCell::new(Rc::new(m1))));
         let naming = Naming { map: m, names: n };
-        let x = RepType::Subset(v, Subsets(vec![Subset::Indices(s_indices)]), Option::None);
+        let x = RepType::Subset(
+            v,
+            Subsets(vec![Subset::Names(s_names)]),
+            Option::Some(naming),
+        );
         for i in x.iter_subset_indices().take(3) {
             println!("{}", i.unwrap());
         }

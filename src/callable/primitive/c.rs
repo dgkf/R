@@ -52,7 +52,7 @@ impl Callable for PrimitiveC {
 
         // lets first see what we're aiming to build.
         let ty: u8 = vals
-            .pairs()
+            .pairs_ref()
             .iter()
             .map(|(_, v)| match v {
                 Obj::Null => 0,
@@ -63,7 +63,7 @@ impl Callable for PrimitiveC {
             .fold(0, std::cmp::max);
 
         // if the output will have names
-        let named = vals.pairs().iter().any(|(n, o)| {
+        let named = vals.pairs_ref().iter().any(|(n, o)| {
             if matches!(n, OptionNA::Some(_)) {
                 return true;
             }
@@ -86,7 +86,7 @@ impl Callable for PrimitiveC {
         }
 
         let names: Option<Vec<Character>> = if named {
-            let mut pairs = vals.pairs();
+            let mut pairs = vals.pairs_ref();
             let nms = pairs.iter().flat_map(|(name, obj)| {
                 let maybe_prefix = name.clone().as_option().clone();
 
@@ -120,7 +120,7 @@ impl Callable for PrimitiveC {
         };
 
         let ret = vals
-            .pairs()
+            .pairs_ref()
             .iter()
             .map(|(_, r)| match r {
                 Obj::Vector(Vector::Logical(_)) => Vector::from(Vec::<Logical>::new()),
@@ -145,47 +145,45 @@ impl Callable for PrimitiveC {
                 Vector::Character(_) => Vector::from(
                     Vec::<OptionNA<String>>::new()
                         .into_iter()
-                        .chain(vals.pairs().iter().flat_map(
-                            |(_, i)| match i.clone().as_character() {
+                        .chain(vals.pairs_ref().iter().flat_map(|(_, i)| {
+                            match i.clone().as_character() {
                                 Ok(Obj::Vector(Vector::Character(v))) => v.into_iter_values(),
+                                _ => unreachable!(),
+                            }
+                        }))
+                        .collect::<Vec<Character>>(),
+                ),
+                Vector::Double(_) => Vector::from(
+                    Vec::<OptionNA<f64>>::new()
+                        .into_iter()
+                        .chain(vals.pairs_ref().iter().flat_map(
+                            |(_, i)| match i.clone().as_double() {
+                                Ok(Obj::Vector(Vector::Double(v))) => v.into_iter_values(),
                                 _ => unreachable!(),
                             },
                         ))
-                        .collect::<Vec<Character>>(),
+                        .collect::<Vec<Double>>(),
                 ),
-                Vector::Double(_) => {
-                    Vector::from(
-                        Vec::<OptionNA<f64>>::new()
-                            .into_iter()
-                            .chain(vals.pairs().iter().flat_map(
-                                |(_, i)| match i.clone().as_double() {
-                                    Ok(Obj::Vector(Vector::Double(v))) => v.into_iter_values(),
-                                    _ => unreachable!(),
-                                },
-                            ))
-                            .collect::<Vec<Double>>(),
-                    )
-                }
                 Vector::Integer(_) => Vector::from(
                     Vec::<OptionNA<i32>>::new()
                         .into_iter()
-                        .chain(vals.pairs().iter().flat_map(
-                            |(_, i)| match i.clone().as_integer() {
+                        .chain(vals.pairs_ref().iter().flat_map(|(_, i)| {
+                            match i.clone().as_integer() {
                                 Ok(Obj::Vector(Vector::Integer(v))) => v.into_iter_values(),
                                 _ => unreachable!(),
-                            },
-                        ))
+                            }
+                        }))
                         .collect::<Vec<Integer>>(),
                 ),
                 Vector::Logical(_) => Vector::from(
                     Vec::<OptionNA<bool>>::new()
                         .into_iter()
-                        .chain(vals.pairs().iter().flat_map(
-                            |(_, i)| match i.clone().as_logical() {
+                        .chain(vals.pairs_ref().iter().flat_map(|(_, i)| {
+                            match i.clone().as_logical() {
                                 Ok(Obj::Vector(Vector::Logical(v))) => v.into_iter_values(),
                                 _ => unreachable!(),
-                            },
-                        ))
+                            }
+                        }))
                         .collect::<Vec<Logical>>(),
                 ),
             };

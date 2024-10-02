@@ -32,6 +32,12 @@ impl AtomicMode for Character {
     }
 }
 
+impl<T> OptionNA<T> {
+    pub fn is_na(&self) -> bool {
+        matches!(self, OptionNA::NA)
+    }
+}
+
 impl TryFrom<Obj> for Double {
     type Error = Error;
     fn try_from(value: Obj) -> Result<Self, Self::Error> {

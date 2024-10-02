@@ -4,7 +4,7 @@
 ///
 use hashbrown::HashMap;
 
-use ::lazy_static::lazy_static;
+use lazy_static::lazy_static;
 
 use crate::callable::core::Builtin;
 use crate::callable::operators::*;
@@ -40,10 +40,13 @@ lazy_static! {
             ("..", Box::new(PostfixPack) as Box<dyn Builtin>),
             ("[[", Box::new(PostfixIndex) as Box<dyn Builtin>),
             ("[", Box::new(PostfixVecIndex) as Box<dyn Builtin>),
+            ("all", Box::new(PrimitiveAll) as Box<dyn Builtin>),
             ("c", Box::new(PrimitiveC) as Box<dyn Builtin>),
             ("callstack", Box::new(PrimitiveCallstack) as Box<dyn Builtin>),
             ("environment", Box::new(PrimitiveEnvironment) as Box<dyn Builtin>),
             ("eval", Box::new(PrimitiveEval) as Box<dyn Builtin>),
+            ("is_na", Box::new(PrimitiveIsNA) as Box<dyn Builtin>),
+            ("is_null", Box::new(PrimitiveIsNull) as Box<dyn Builtin>),
             ("length", Box::new(PrimitiveLength) as Box<dyn Builtin>),
             ("list", Box::new(PrimitiveList) as Box<dyn Builtin>),
             ("names", Box::new(PrimitiveNames) as Box<dyn Builtin>),

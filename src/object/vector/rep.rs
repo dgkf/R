@@ -3,8 +3,8 @@ use std::fmt::{Debug, Display};
 
 use super::coercion::{AtomicMode, CoercibleInto, CommonCmp, CommonNum, MinimallyNumeric};
 use super::iterators::{map_common_numeric, zip_recycle};
-use super::reptype::RepTypeIntoIterable;
 use super::reptype::{Naming, RepType};
+use super::reptype::{RepTypeIntoIterable, RepTypeIntoIterableValues};
 use super::subset::Subset;
 use super::types::*;
 use super::{OptionNA, Pow, VecPartialCmp};
@@ -51,7 +51,7 @@ impl<T: ViewMut + Default + Clone> Rep<T> {
 }
 
 impl<T: Clone + Default + 'static> Rep<T> {
-    /// Iterate over the names and values of the vector (if the names exist).
+    /// Iterate over the owned names and values of the vector.
     pub fn iter_pairs(&self) -> RepTypeIterPairs<T> {
         // FIXME: This should maybe return an option
         self.0.borrow().clone().iter_pairs()
@@ -177,8 +177,12 @@ where
         todo!()
     }
 
-    pub fn pairs(&self) -> RepTypeIntoIterable<T> {
-        self.0.borrow().iterable()
+    pub fn pairs_ref(&self) -> RepTypeIntoIterable<T> {
+        self.0.borrow().pairs_ref()
+    }
+
+    pub fn values_ref(&self) -> RepTypeIntoIterableValues<T> {
+        self.0.borrow().values_ref()
     }
 
     // pub fn iter_subset_indices(&self) -> Box<dyn Iterator<Item = (usize, Option<usize>)>> {
@@ -423,6 +427,19 @@ where
         Rep(RefCell::new(rep.into()))
     }
 }
+
+// impl<T> From<T> for Rep<T>
+// where
+//     T: Clone + Default,
+// {
+//     fn from(x: T) -> Self {
+//         Rep(RefCell::new(RepType::Subset(
+//             vec![x].into(),
+//             Subsets::default(),
+//             None,
+//         )))
+//     }
+// }
 
 impl<T> From<RepType<T>> for Rep<T>
 where

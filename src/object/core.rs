@@ -26,9 +26,9 @@ impl PartialEq for Obj {
         match (self, other) {
             (Obj::Null, Obj::Null) => true,
             (Obj::List(l), Obj::List(r)) => l
-                .pairs()
+                .pairs_ref()
                 .iter()
-                .zip(r.pairs().iter())
+                .zip(r.pairs_ref().iter())
                 .all(|((lk, lv), (rk, rv))| lk == rk && lv == rv),
             (Obj::Expr(l), Obj::Expr(r)) => l == r,
             (Obj::Promise(None, lc, lenv), Obj::Promise(None, rc, renv)) => {

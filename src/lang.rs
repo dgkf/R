@@ -94,21 +94,7 @@ impl Obj {
         }
     }
 
-    pub fn replace(&self, value: Obj) -> EvalResult {
-        todo!()
-        // For [[-assignment.
-        // e.g. list(list(1, 2))[[1]] = list(2) should not be vectorized.
-        // use crate::object::Vector;
-        // match (self, value) {
-        //     (Obj::List(l), r) => l.replace(r),
-        //     (Obj::Vector(l), Obj::Vector(r)) => match (l, r) {
-        //         (Double(l), Double(r)) => todo!(),
-        //     },
-        //     _ => unimplemented!(),
-        // }
-        // self
-    }
-
+    // this is vectorized assignment.
     pub fn assign(self, value: Obj) -> EvalResult {
         // TODO(ERROR) cleanup
         let err = Error::Other("Invalid target for assignment".to_string());
@@ -119,13 +105,20 @@ impl Obj {
                 Ok(value)
             }
             Obj::List(mut l) => {
-                //
-                if let Obj::List(x) = value.clone() {
-                    l.assign(x);
-                    Ok(value)
-                } else {
-                    Err(err.into())
-                }
+                let v = match value.clone() {
+                    // what about recycling, is this needed here?
+                    // todo:
+                    // x= list(1, 2)
+                    // x[1:2] = c(10, 11) is vectorized in R.
+                    Obj::List(x) => {
+                        println!("Heeere");
+                        x
+                    }
+                    _ => return Err(err.into()),
+                };
+
+                l.assign(v);
+                Ok(value)
             }
             _ => Err(err.into()),
         }
@@ -241,7 +234,7 @@ impl Obj {
     pub fn get_named(&mut self, name: &str) -> Option<Obj> {
         match self {
             Obj::List(v) => v
-                .pairs()
+                .pairs_ref()
                 .iter()
                 .find(|(k, _)| *k == &Character::Some(String::from(name)))
                 .map(|(_, v)| v.clone()),
@@ -251,10 +244,6 @@ impl Obj {
             },
             _ => None,
         }
-    }
-
-    pub fn set_subset(&mut self, subset: Subset, value: Obj) -> EvalResult {
-        todo!()
     }
 
     // use set_subset instead
@@ -399,7 +388,7 @@ impl Display for Obj {
 }
 
 fn display_list(x: &List, f: &mut fmt::Formatter<'_>, bc: Option<String>) -> fmt::Result {
-    for (i, (maybe_name, value)) in x.pairs().iter().enumerate() {
+    for (i, (maybe_name, value)) in x.pairs_ref().iter().enumerate() {
         if i > 0 {
             writeln!(f)?
         }
