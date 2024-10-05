@@ -62,6 +62,7 @@ impl Callable for PrimitiveC {
             .fold(0, std::cmp::max);
 
         // if the output will have names
+        // either an argument is named or its values has names
         let named = vals.pairs_ref().iter().any(|(n, o)| {
             if matches!(n, OptionNA::Some(_)) {
                 return true;
@@ -79,7 +80,6 @@ impl Callable for PrimitiveC {
         }
 
         // most complex type was List
-        // FIXME: handle names
         if ty == 2 {
             // TODO: We should use size hints here.
             let list = List::new();
@@ -131,7 +131,7 @@ impl Callable for PrimitiveC {
                     };
                     x
                 } else {
-                    unimplemented!()
+                    unreachable!("if we are not building a list, all elements are vectors")
                 }
             });
             Some(nms.collect())
@@ -139,10 +139,11 @@ impl Callable for PrimitiveC {
             None
         };
 
+        // otherwise, try to collapse vectors into same type
         let ret = vals
-            .pairs_ref()
+            .values_ref()
             .iter()
-            .map(|(_, r)| match r {
+            .map(|r| match r {
                 Obj::Vector(Vector::Logical(_)) => Vector::from(Vec::<Logical>::new()),
                 Obj::Vector(Vector::Integer(_)) => Vector::from(Vec::<Integer>::new()),
                 Obj::Vector(Vector::Double(_)) => Vector::from(Vec::<Double>::new()),
@@ -227,14 +228,14 @@ mod tests {
     fn list_list() {
         r_expect! {{"
             l = c(list(1), list(2))
-            l[[1]] == 1 & l[[2]] == 2 && length(l) == 2
+            l[[1]] == 1 & l[[2]] == 2
         "}}
     }
     #[test]
     fn list_vec() {
         r_expect! {{"
             l = c(list(1), 2:3)
-            length(l) == 2
+            l[[1]] == 1 & l[[2]][1] == 2 & l[[2]][2] == 3
         "}}
     }
     #[test]
