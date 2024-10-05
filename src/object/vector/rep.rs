@@ -4,7 +4,7 @@ use std::iter::repeat;
 
 use super::coercion::{AtomicMode, CoercibleInto, CommonCmp, CommonNum, MinimallyNumeric};
 use super::iterators::{map_common_numeric, zip_recycle};
-use super::reptype::{Naming, RepType, RepTypeIterNames};
+use super::reptype::{Naming, RepType, RepTypeIter};
 use super::reptype::{RepTypeIntoIterable, RepTypeIntoIterableNames, RepTypeIntoIterableValues};
 use super::subset::Subset;
 use super::types::*;
@@ -84,13 +84,12 @@ where
     }
 
     /// Iterate over the (owned) values of the vector.
-    // pub fn iter_values(&self) -> Box<dyn Iterator<Item = T> + '_> {
-    //     let x = self.0.borrow().clone();
-    //     x.into_iter()
-    // }
+    pub fn iter_values(&self) -> RepTypeIter<T> {
+        self.0.borrow().iter_values()
+    }
 
     /// Iterate over the names of the vector (if they exist).
-    pub fn iter_names(&self) -> Option<RepTypeIterNames> {
+    pub fn iter_names(&self) -> Option<RepTypeIter<Character>> {
         self.0.borrow().iter_names()
     }
 

@@ -9,7 +9,7 @@ use crate::object::Obj;
 use super::coercion::CoercibleInto;
 use super::rep::Rep;
 use super::reptype::RepType;
-use super::reptype::RepTypeIterNames;
+use super::reptype::RepTypeIter;
 use super::subset::Subset;
 use super::types::*;
 
@@ -107,7 +107,7 @@ impl Vector {
     }
 
     /// Iterate over the names of the vector.
-    pub fn iter_names(&self) -> Option<RepTypeIterNames> {
+    pub fn iter_names(&self) -> Option<RepTypeIter<Character>> {
         use Vector::*;
         match self {
             Double(x) => x.iter_names(),

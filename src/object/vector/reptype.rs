@@ -151,22 +151,6 @@ impl<T: Clone + Default + ViewMut> RepType<T> {
     }
 }
 
-// TODO: Remove this it is stupid
-impl<T> IntoIterator for RepType<T>
-where
-    T: Clone + Default,
-{
-    type Item = T;
-    type IntoIter = RepTypeIter<T>;
-    fn into_iter(self) -> Self::IntoIter {
-        // FIXME: this might materialize
-        let n = self.len();
-        match self {
-            RepType::Subset(..) => RepTypeIter::SubsetIter(self, 0, n),
-        }
-    }
-}
-
 pub struct RepTypeIntoIterableNames {
     names: Rc<Vec<Character>>,
     na_name: Character,
@@ -283,29 +267,6 @@ impl<'a, T: Clone> Iterator for RepTypeIterableValues<'a, T> {
     }
 }
 
-// FIXME: Don't make this an enum but simply different structs for eah reptype.
-// We yield Box<dyn Iterators> anyway.
-pub enum RepTypeIter<T: Clone> {
-    SubsetIter(RepType<T>, usize, usize),
-}
-
-impl<T: Clone + Default> Iterator for RepTypeIter<T> {
-    type Item = T;
-    fn next(&mut self) -> Option<Self::Item> {
-        match self {
-            RepTypeIter::SubsetIter(rep, i, len) => {
-                if i < len {
-                    let x = rep.get_inner(*i);
-                    *i += 1;
-                    x
-                } else {
-                    None
-                }
-            }
-        }
-    }
-}
-
 impl<T: Clone> ViewMut for RepType<T> {
     fn view_mut(&self) -> Self {
         match self {
@@ -333,17 +294,17 @@ impl<T: Clone + Default + 'static> RepType<T> {
     }
 }
 
-pub struct RepTypeIterNames {
-    names: Rc<Vec<Character>>,
+pub struct RepTypeIter<T: Clone> {
+    values: Rc<Vec<T>>,
     iter: Box<dyn Iterator<Item = Option<usize>>>,
 }
 
-impl Iterator for RepTypeIterNames {
-    type Item = Character;
+impl<T: Clone> Iterator for RepTypeIter<T> {
+    type Item = T;
     fn next(&mut self) -> Option<Self::Item> {
         // FIXME: Already assumes no indexing with NA
         let i = self.iter.next()?.unwrap();
-        Some(self.names[i].clone())
+        Some(self.values[i].clone())
     }
 }
 
@@ -470,14 +431,29 @@ impl<T: Clone + Default> RepType<T> {
         }
     }
 
+    pub fn iter_values(&self) -> RepTypeIter<T> {
+        match self.clone() {
+            RepType::Subset(values, ..) => {
+                let iter = Box::new(self.iter_subset_indices());
+                RepTypeIter {
+                    values: values.inner_rc(),
+                    iter,
+                }
+            }
+        }
+    }
+
     // FIXME: Do we really need iter_named and iter_pairs?
-    pub fn iter_names(&self) -> Option<RepTypeIterNames> {
+    pub fn iter_names(&self) -> Option<RepTypeIter<Character>> {
         match self.clone() {
             RepType::Subset(.., maybe_naming) => {
                 let iter = Box::new(self.iter_subset_indices());
                 let names = maybe_naming.map(|x| x.names.inner_rc())?;
 
-                Some(RepTypeIterNames { names, iter })
+                Some(RepTypeIter {
+                    values: names,
+                    iter,
+                })
             }
         }
     }
@@ -1459,18 +1435,5 @@ mod test {
         let expected_type = RepType::<Logical>::new();
         assert!(z.is_same_type_as(&expected_type));
         assert!(z.is_logical());
-    }
-
-    #[test]
-    fn iter() {
-        let x = RepType::from(vec![Some(1), Some(2)]);
-        let mut xi = x.into_iter();
-        assert_eq!(xi.next(), Option::Some(OptionNA::Some(1)));
-        assert_eq!(xi.next(), Option::Some(OptionNA::Some(2)));
-        assert_eq!(xi.next(), Option::None);
-        let xs = RepType::from(vec![Some("a".to_string())]);
-        let mut xsi = xs.into_iter();
-        assert_eq!(xsi.next(), Option::Some(OptionNA::Some("a".to_string())));
-        assert_eq!(xsi.next(), Option::None);
     }
 }

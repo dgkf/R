@@ -47,7 +47,7 @@ impl Callable for PrimitiveLength {
                 Vector::Logical(rep) => rep.len(),
                 Vector::Character(rep) => rep.len(),
             },
-            Obj::List(_) => todo!("Not implemented yet"),
+            Obj::List(rep) => rep.len(),
             Obj::Environment(env) => env.len(),
             _ => return Error::Other("Argument 'x' does not have a length".into()).into(),
         };
@@ -109,5 +109,12 @@ mod tests {
             r! {length(null)},
             EvalResult::Err(Error::Other("Argument 'x' does not have a length".to_string()).into())
         )
+    }
+
+    #[test]
+    fn list() {
+        r_expect! {{"
+            length(list(1)) == 1 && length(list()) == 0
+        "}}
     }
 }
