@@ -31,7 +31,7 @@ lazy_static! {
 ///
 /// ```custom,{class=r-repl}
 /// is_null(null)
-/// is_null(1)
+/// is_null(0)
 /// ```
 #[doc(alias = "is_null")]
 #[builtin(sym = "is_null")]

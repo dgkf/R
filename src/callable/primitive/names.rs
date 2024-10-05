@@ -92,7 +92,7 @@ impl Callable for PrimitiveNames {
 #[cfg(test)]
 mod test {
     use crate::error::Error;
-    use crate::r;
+    use crate::{r, r_expect};
 
     #[test]
     fn no_args() {
@@ -113,5 +113,12 @@ mod test {
             r! { names(list(a = 1, b = 2, 3, d = 4)) },
             r! { c("a", "b", NA, "d") }
         )
+    }
+    #[test]
+    fn subset() {
+        r_expect! {{r#"
+            names([a = 1, b = 2][1]) == "a"
+                
+        "#}}
     }
 }

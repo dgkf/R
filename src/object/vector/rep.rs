@@ -128,8 +128,15 @@ where
             RepType::Subset(_, s, n) => {
                 if s.is_empty() {
                     n.map(|n| n.clone().names)
+                } else if let Some(_) = n {
+                    Some(
+                        self.iter_names()
+                            .expect("checked that names exist")
+                            .collect::<Vec<Character>>()
+                            .into(),
+                    )
                 } else {
-                    unimplemented!()
+                    None
                 }
             }
         }
