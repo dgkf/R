@@ -64,6 +64,6 @@ mod tests {
     }
     #[test]
     fn is_not_null() {
-        r_expect!(is_null(1:2))
+        r_expect!(!is_null(1:2))
     }
 }

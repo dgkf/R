@@ -681,9 +681,10 @@ impl<T: Clone + Default> RepType<T> {
     /// Assignment to a vector from another. The aggregate subsetted indices
     /// are iterated over while performing the assignment.
     ///
-    pub fn assign(&mut self, value: Self) -> Self
+    pub fn assign<R>(&mut self, value: RepType<R>) -> Self
     where
-        T: Clone + Default,
+        T: Clone + Default + From<R>,
+        R: Default + Clone,
     {
         // TODO(feature): here we should also throw an error if the recycling rules are violated.
         let l_indices = self.iter_subset_indices();
@@ -697,7 +698,7 @@ impl<T: Clone + Default> RepType<T> {
                     for (li, ri) in l_indices.zip(r_indices) {
                         match (li, ri) {
                             (Some(li), None) => lvb[li] = T::default(),
-                            (Some(li), Some(ri)) => lvb[li] = rvb[ri % rvb.len()].clone(),
+                            (Some(li), Some(ri)) => lvb[li] = rvb[ri % rvb.len()].clone().into(),
                             _ => (),
                         }
                     }

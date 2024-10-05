@@ -285,7 +285,11 @@ where
         self.borrow().push_named(name, value)
     }
 
-    pub fn assign(&mut self, value: Self) -> Self {
+    pub fn assign<R>(&mut self, value: Rep<R>) -> Self
+    where
+        T: From<R> + Clone,
+        R: Clone + Default,
+    {
         // TODO: Handle names here
         // The assign method from List had a lot more code,
         // check that everything is covered here.
@@ -386,6 +390,14 @@ where
         T: CoercibleInto<Character> + AtomicMode,
     {
         self.as_mode::<Character>()
+    }
+
+    pub fn try_scalar(&self) -> Result<T, Error> {
+        if self.len() == 1 {
+            Ok(self.values_ref().iter().next().cloned().unwrap())
+        } else {
+            Err(Error::Other("Vector is not of length 1".to_string()))
+        }
     }
 
     /// Apply over the vector contents to produce a vector of [std::cmp::Ordering]

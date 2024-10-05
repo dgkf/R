@@ -106,11 +106,11 @@ mod tests {
         "#}}
     }
     #[test]
-    fn dont_convert_atomic() {
+    fn assign_atomic_to_list_slice() {
         r_expect! {{r#"
-            l = (1, )
-            l[1] = [1, 2]
-            l[[1]][1] == 1 & l[[1]][2] == 
+            l = (1, 2, 3)
+            l[1:2] = [3, 4]
+            l[[1]] == 3 & l[[2]] == 4
         "#}}
     }
     #[test]

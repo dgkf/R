@@ -57,31 +57,12 @@ pub trait Callable {
                     continue;
                 }
             }
-            println!("push it {}", i);
             indices.push(i as i32);
         }
 
-        println!("matched_args start");
-        for (key, _) in matched_args.pairs_ref().iter() {
-            dbg!(key);
-        }
-        println!("matched_args end");
-
         let indices: Vec<Integer> = indices.into_iter().map(Integer::Some).collect();
-        dbg!(&indices);
         let subset = Subset::Indices(indices.into());
         let args = args.subset(subset).materialize();
-
-        // println!("matching args start");
-        // for (maybe_name, _) in args.pairs().iter() {
-        //     dbg!(&maybe_name);
-        // }
-        // println!("matching args end");
-        println!("args start");
-        for (maybe_name, _) in args.pairs_ref().iter() {
-            dbg!(&maybe_name);
-        }
-        println!("args end");
 
         // TODO(bug): need to evaluate trailing unassigned params that have
         // a default value before popping off remaining trailing params

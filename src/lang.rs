@@ -105,19 +105,32 @@ impl Obj {
                 Ok(value)
             }
             Obj::List(mut l) => {
-                let v = match value.clone() {
+                match value.clone() {
                     // what about recycling, is this needed here?
                     // todo:
                     // x= list(1, 2)
                     // x[1:2] = c(10, 11) is vectorized in R.
-                    Obj::List(x) => {
-                        println!("Heeere");
-                        x
+                    Obj::List(r) => {
+                        l.assign(r);
                     }
+                    Obj::Vector(r) => match r {
+                        Vector::Integer(r) => {
+                            l.assign(r);
+                        }
+                        Vector::Character(r) => {
+                            l.assign(r);
+                        }
+                        Vector::Logical(r) => {
+                            l.assign(r);
+                        }
+                        Vector::Double(r) => {
+                            l.assign(r);
+                        }
+                        _ => todo!(),
+                    },
                     _ => return Err(err.into()),
                 };
 
-                l.assign(v);
                 Ok(value)
             }
             _ => Err(err.into()),

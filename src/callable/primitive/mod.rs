@@ -32,7 +32,3 @@ mod length;
 pub use length::PrimitiveLength;
 mod is_null;
 pub use is_null::PrimitiveIsNull;
-mod all;
-pub use all::PrimitiveAll;
-mod is_na;
-pub use is_na::PrimitiveIsNA;
