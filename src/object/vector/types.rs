@@ -32,6 +32,42 @@ impl AtomicMode for Character {
     }
 }
 
+impl From<Option<i32>> for OptionNA<i32> {
+    fn from(value: Option<i32>) -> Self {
+        match value {
+            None => Self::NA,
+            Some(x) => Self::Some(x),
+        }
+    }
+}
+
+impl From<Option<bool>> for OptionNA<bool> {
+    fn from(value: Option<bool>) -> Self {
+        match value {
+            None => Self::NA,
+            Some(x) => Self::Some(x),
+        }
+    }
+}
+
+impl From<Option<String>> for OptionNA<String> {
+    fn from(value: Option<String>) -> Self {
+        match value {
+            None => Self::NA,
+            Some(x) => Self::Some(x),
+        }
+    }
+}
+
+impl From<Option<f64>> for OptionNA<f64> {
+    fn from(value: Option<f64>) -> Self {
+        match value {
+            None => Self::NA,
+            Some(x) => Self::Some(x),
+        }
+    }
+}
+
 impl<T> OptionNA<T> {
     pub fn is_na(&self) -> bool {
         matches!(self, OptionNA::NA)
@@ -114,6 +150,9 @@ impl TryFrom<Obj> for Logical {
     }
 }
 
+// TODO: Because From<T: Into<Vector>> for Obj is implement this means that
+// when converting Character -> Obj we get a character vector.
+// Change this once we have scalars.
 impl From<Character> for Vector {
     fn from(value: Character) -> Self {
         Vector::Character(vec![value].into())

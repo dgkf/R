@@ -135,41 +135,17 @@ impl<T: Clone + Default + ViewMut> RepType<T> {
                 let mut iter = self_subset.iter_subset_indices();
 
                 if let Some(i) = iter.next() {
-                    // iter.next()
-                    //     .ok_or(Error::Other("subset is not of length 1".to_string()))?;
+                    if let Some(_) = iter.next() {
+                        return Err(Error::Other("subset is not of length 1".to_string()));
+                    }
 
                     // TODO: subsetting with NA should not be possible.
                     let i = i.unwrap();
-                    dbg!(i);
 
                     Ok(self.with_inner_mut(|values| values[i].view_mut()))
                 } else {
                     Err(Error::Other("subset is empty".to_string()))
                 }
-
-                // if let Some(naming) = maybe_naming {
-                //     let mut iter = subsets.bind_names(naming.map).into_iter();
-
-                //     // Here, the subset must produce exactly one index, i.e. we call next() twice and the second
-                //     // yielded element must be None
-                //     if let Some((i, _)) = iter.next() {
-                //         if let None = iter.next() {
-                //             values.with_inner_mut(|v| {
-                //                 v.get_mut(i)
-                //                     .map_or(Err(Error::Other("todo".to_string())), |x| {
-                //                         Ok(x.view_mut())
-                //                     })
-                //             })
-                //         } else {
-                //             Err(Error::Other("todo".to_string()))
-                //         }
-                //     } else {
-                //         Err(Error::Other("todo".to_string()))
-                //     }
-                // } else {
-                //     // TODO
-                //     Err(Error::Other("todo".to_string()))
-                // }
             }
         }
     }
@@ -188,6 +164,39 @@ where
         match self {
             RepType::Subset(..) => RepTypeIter::SubsetIter(self, 0, n),
         }
+    }
+}
+
+pub struct RepTypeIntoIterableNames {
+    names: Rc<Vec<Character>>,
+    na_name: Character,
+    iter: Box<dyn Iterator<Item = Option<usize>>>,
+}
+
+pub struct RepTypeIterableNames<'a> {
+    names: &'a [Character],
+    na_name: &'a Character,
+    iter: &'a mut Box<dyn Iterator<Item = Option<usize>>>,
+}
+
+impl RepTypeIntoIterableNames {
+    pub fn iter(&mut self) -> RepTypeIterableNames<'_> {
+        let names = &self.names[..];
+        RepTypeIterableNames {
+            names,
+            na_name: &self.na_name,
+            iter: &mut self.iter,
+        }
+    }
+}
+
+impl<'a> Iterator for RepTypeIterableNames<'a> {
+    type Item = &'a Character;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        // FIXME: This panics when subsetting with NA
+        let i = self.iter.next()?.unwrap();
+        Some(&self.names[i])
     }
 }
 
@@ -324,6 +333,20 @@ impl<T: Clone + Default + 'static> RepType<T> {
     }
 }
 
+pub struct RepTypeIterNames {
+    names: Rc<Vec<Character>>,
+    iter: Box<dyn Iterator<Item = Option<usize>>>,
+}
+
+impl Iterator for RepTypeIterNames {
+    type Item = Character;
+    fn next(&mut self) -> Option<Self::Item> {
+        // FIXME: Already assumes no indexing with NA
+        let i = self.iter.next()?.unwrap();
+        Some(self.names[i].clone())
+    }
+}
+
 pub struct RepTypeIterPairs<T> {
     values: Rc<Vec<T>>,
     names: Option<Rc<Vec<Character>>>,
@@ -413,6 +436,22 @@ impl<T: Clone + Default> RepType<T> {
         }
     }
 
+    pub fn names_ref(&self) -> Option<RepTypeIntoIterableNames> {
+        match self.clone() {
+            RepType::Subset(.., naming) => {
+                let iter = Box::new(self.iter_subset_indices());
+                let naming = naming?;
+                let names = naming.names.inner_rc();
+
+                Some(RepTypeIntoIterableNames {
+                    names,
+                    na_name: Character::default(),
+                    iter,
+                })
+            }
+        }
+    }
+
     pub fn pairs_ref(&self) -> RepTypeIntoIterable<T> {
         match self.clone() {
             RepType::Subset(values, _, maybe_naming) => {
@@ -431,8 +470,16 @@ impl<T: Clone + Default> RepType<T> {
         }
     }
 
-    pub fn ensure_named(&self) {
-        todo!()
+    // FIXME: Do we really need iter_named and iter_pairs?
+    pub fn iter_names(&self) -> Option<RepTypeIterNames> {
+        match self.clone() {
+            RepType::Subset(.., maybe_naming) => {
+                let iter = Box::new(self.iter_subset_indices());
+                let names = maybe_naming.map(|x| x.names.inner_rc())?;
+
+                Some(RepTypeIterNames { names, iter })
+            }
+        }
     }
 
     /// Iterates over owned (name, value) tuples.

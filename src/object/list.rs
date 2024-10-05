@@ -121,4 +121,11 @@ mod tests {
             is_null(l[[1]])
         "#}}
     }
+    #[test]
+    #[should_panic]
+    fn index_length_one() {
+        r_expect! {{r#"
+            list(1, 2)[[c(1L, 2L)]]
+        "#}}
+    }
 }

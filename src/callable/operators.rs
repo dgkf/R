@@ -5,7 +5,7 @@ use crate::context::Context;
 use crate::error::Error;
 use crate::lang::{CallStack, EvalResult};
 use crate::object::types::*;
-use crate::object::*;
+use crate::{internal_err, object::*};
 
 #[derive(Debug, Clone, PartialEq)]
 #[builtin(sym = "<-", kind = Infix)]
@@ -336,10 +336,13 @@ impl Callable for InfixDollar {
             unreachable!();
         };
 
-        let mut what = stack.eval(what)?;
+        let what = stack.eval(what)?;
 
         match index {
-            Expr::String(s) | Expr::Symbol(s) => what.try_get_named(s.as_str()),
+            Expr::String(s) | Expr::Symbol(s) => {
+                let index = Obj::Vector(Vector::Character(vec![Character::Some(s)].into()));
+                what.try_get_inner(index)
+            }
             _ => Ok(Obj::Null),
         }
     }
@@ -355,10 +358,13 @@ impl Callable for InfixDollar {
             unreachable!();
         };
 
-        let mut what = stack.eval_mut(what)?;
+        let what = stack.eval_mut(what)?;
 
         match index {
-            Expr::String(s) | Expr::Symbol(s) => what.try_get_named(s.as_str()),
+            Expr::String(s) | Expr::Symbol(s) => {
+                let index = Obj::Vector(Vector::Character(vec![Character::Some(s)].into()));
+                what.try_get_inner_mut(index)
+            }
             _ => Ok(Obj::Null),
         }
     }
@@ -375,12 +381,15 @@ impl Callable for InfixDollar {
         };
 
         let value = stack.eval(value)?;
-        let mut what = stack.eval_mut(what)?;
+        let what = stack.eval_mut(what)?;
 
         match name {
             Expr::String(s) | Expr::Symbol(s) => {
-                what.set_named(s.as_str(), value)?;
-                Ok(what)
+                let index = Subset::Names(vec![Character::Some(s)].into());
+                Ok(match what {
+                    Obj::List(mut v) => v.set_subset(index, value)?,
+                    _ => unimplemented!(),
+                })
             }
             _ => unimplemented!(),
         }
@@ -409,9 +418,6 @@ impl Callable for PostfixIndex {
         let x = args.unnamed_binary_args();
         let what = stack.eval_mut(x.0)?;
         let index = stack.eval(x.1)?;
-        // TODO: Ensure that index is of length 1.
-        // We cannot call into try_get_inner_mut because not all objects can be modified in-place
-        // Instead, we internally simply return the slice which can be modified in-place
         what.try_get_inner_mut(index)
     }
 
@@ -495,12 +501,37 @@ impl Callable for PrimList {
 mod tests {
     use crate::error::Error;
     use crate::lang::{EvalResult, Signal};
-    use crate::r;
+    use crate::{r, r_expect};
     #[test]
     fn colon_operator() {
         assert_eq!(EvalResult::Err(Signal::Error(Error::InvalidRange)), r!(1:0));
         assert_eq!(r!([1, 2]), r!(1:2));
         assert_eq!(r!([1]), r!(1:1));
         assert_eq!(r!(1:-2:-3), r!([1, -1, -3]));
+    }
+
+    #[test]
+    fn dollar_assign() {
+        r_expect! {{"
+            l = (a = 1, )
+            x = (l$a = 2)
+            l$a == 2 & x == 2
+        "}}
+    }
+    #[test]
+    fn dollar_assign_nested() {
+        r_expect! {{"
+            l = (a = (b = 1,),)
+            x = (l$a$b = 2)
+            l$a$b == 2 & x == 2
+        "}}
+    }
+
+    #[test]
+    fn dollar_access() {
+        r_expect! {{"
+            l = (a = 1, )
+            l$a == 1
+        "}}
     }
 }

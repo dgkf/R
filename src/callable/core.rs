@@ -46,8 +46,6 @@ pub trait Callable {
 
         // assign named args to corresponding formals
 
-        let args = args.materialize();
-
         let mut indices: Vec<i32> = Vec::new();
 
         for (i, (maybe_name, value)) in args.pairs_ref().iter().enumerate() {
@@ -89,13 +87,8 @@ pub trait Callable {
 
         // add back in parameter defaults that weren't filled with args
         for (param, default) in formals.into_iter() {
-            let param = if let Some(param) = param {
-                Character::Some(param)
-            } else {
-                Character::NA
-            };
             matched_args.push_named(
-                param,
+                param.into(),
                 Obj::Promise(None, default, stack.last_frame().env().clone()),
             )
         }
@@ -284,9 +277,7 @@ impl TryFrom<&str> for Box<dyn Builtin> {
 pub fn force_promises(vals: List, stack: &mut CallStack) -> Result<Vec<(Character, Obj)>, Signal> {
     // Force any closures that were created during call. This helps with using
     // variables as argument for sep and collapse parameters.
-    vals.pairs_ref()
-        .iter()
-        .map(|(a, b)| (a.clone(), b.clone()))
+    vals.iter_pairs()
         .map(|(k, v)| match (k, v.force(stack)) {
             (k, Ok(v)) => Ok((k, v)),
             (_, Err(e)) => Err(e),

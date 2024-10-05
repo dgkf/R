@@ -1,10 +1,11 @@
 use std::cell::{Ref, RefCell, RefMut};
 use std::fmt::{Debug, Display};
+use std::iter::repeat;
 
 use super::coercion::{AtomicMode, CoercibleInto, CommonCmp, CommonNum, MinimallyNumeric};
 use super::iterators::{map_common_numeric, zip_recycle};
-use super::reptype::{Naming, RepType};
-use super::reptype::{RepTypeIntoIterable, RepTypeIntoIterableValues};
+use super::reptype::{Naming, RepType, RepTypeIterNames};
+use super::reptype::{RepTypeIntoIterable, RepTypeIntoIterableNames, RepTypeIntoIterableValues};
 use super::subset::Subset;
 use super::types::*;
 use super::{OptionNA, Pow, VecPartialCmp};
@@ -88,10 +89,10 @@ where
     //     x.into_iter()
     // }
 
-    // /// Iterate over the names of the vector (if they exist).
-    // pub fn iter_names(&self) -> Option<Box<dyn Iterator<Item = Character>>> {
-    //     self.0.borrow().iter_names()
-    // }
+    /// Iterate over the names of the vector (if they exist).
+    pub fn iter_names(&self) -> Option<RepTypeIterNames> {
+        self.0.borrow().iter_names()
+    }
 
     fn materialize_inplace(&self) -> &Self {
         // TODO: Rewrite this to avoid copying unnecessarily
@@ -111,7 +112,7 @@ where
     }
 
     /// Set the names of the vector.
-    pub fn set_names_(&self, names: CowObj<Vec<OptionNA<String>>>) {
+    pub fn set_names(&self, names: CowObj<Vec<OptionNA<String>>>) {
         let new_repr = self.borrow().materialize().set_names(names);
         self.0.replace(new_repr);
     }
@@ -183,6 +184,10 @@ where
 
     pub fn values_ref(&self) -> RepTypeIntoIterableValues<T> {
         self.0.borrow().values_ref()
+    }
+
+    pub fn names_ref(&self) -> Option<RepTypeIntoIterableNames> {
+        self.0.borrow().names_ref()
     }
 
     // pub fn iter_subset_indices(&self) -> Box<dyn Iterator<Item = (usize, Option<usize>)>> {
@@ -563,48 +568,148 @@ where
                 return write!(f, "character(0)");
             }
         }
-        // FIXME: This should use the new rep API
-
         let nlen = format!("{}", n).len();
-        // TODO: iteratively calculate when we hit max print so our
-        // max_len isn't inflated by a value that is omitted
-
-        let xc = self.inner().clone();
-        let xb = xc.borrow();
-
-        let x_strs = xb.iter().map(|xi| format!("{:?}", xi));
-        let max_len = x_strs
-            .clone()
-            .fold(0, |max_len, xi| std::cmp::max(max_len, xi.len()));
-
-        let mut col = 0;
-        let gutterlen = 2 + nlen + 1;
-
-        // hard coded max print & console width
-        let maxprint = 20 * ((80 - gutterlen) / max_len);
-
-        x_strs
-            .take(maxprint)
-            .enumerate()
-            .try_for_each(|(i, x_str)| {
-                if i == 0 {
-                    col = gutterlen + max_len;
-                    write!(f, "{:>3$}[{}] {:>4$}", "", i + 1, x_str, nlen - 1, max_len)
-                } else if col + 1 + max_len > 80 {
-                    col = gutterlen + max_len;
-                    let i_str = format!("{}", i + 1);
-                    let gutter = nlen - i_str.len();
-                    write!(f, "\n{:>3$}[{}] {:>4$}", "", i_str, x_str, gutter, max_len)
-                } else {
-                    col += 1 + max_len;
-                    write!(f, " {:>1$}", x_str, max_len)
+        // calculate how many characters are printed per value.
+        // The iteraror yields the characters needed for a specific item.
+        fn element_width(iter: impl Iterator<Item = usize>) -> usize {
+            let mut elt_width = 1_usize;
+            for (i, width) in iter.enumerate() {
+                elt_width = std::cmp::max(elt_width, width);
+                if elt_width * (i + 1) >= 20 * 80 {
+                    break;
                 }
-            })?;
-
-        if n > maxprint {
-            write!(f, "\n[ omitting {} entries ]", n - maxprint)?;
+            }
+            elt_width
         }
 
+        if !self.is_named() {
+            let elt_width =
+                element_width(self.values_ref().iter().map(|x| format!("{:?}", x).len()));
+            // TODO: iteratively calculate when we hit max print so our
+            // max_len isn't inflated by a value that is omitted
+
+            let mut values_ref = self.values_ref();
+            let x_strs = values_ref.iter().map(|xi| format!("{:?}", xi));
+
+            let mut col = 0;
+            //| [1]  1  2  3  4  5  6  7  8  9|
+            //|[10] 10 11 12 13 14 15 16 17 18|
+            //|-----|
+            // in the above example the gutterlen is  5
+            let gutterlen = 2 + nlen + 1;
+
+            // hard coded max print & console width
+            // we print at most 20 rows
+            let maxprint = 20 * ((80 - gutterlen) / (elt_width + 1));
+
+            x_strs
+                .take(maxprint)
+                .enumerate()
+                .try_for_each(|(i, x_str)| {
+                    if i == 0 {
+                        col = gutterlen + elt_width;
+                        write!(
+                            f,
+                            "{:>3$}[{}] {:>4$}",
+                            "",
+                            i + 1,
+                            x_str,
+                            nlen - 1,
+                            elt_width
+                        )
+                    } else if col + 1 + elt_width > 80 {
+                        col = gutterlen + elt_width;
+                        let i_str = format!("{}", i + 1);
+                        let gutter = nlen - i_str.len();
+                        write!(
+                            f,
+                            "\n{:>3$}[{}] {:>4$}",
+                            "", i_str, x_str, gutter, elt_width
+                        )
+                    } else {
+                        col += 1 + elt_width;
+                        write!(f, " {:>1$}", x_str, elt_width)
+                    }
+                })?;
+
+            if n > maxprint {
+                write!(f, "\n[ omitting {} entries ]", n - maxprint)?;
+            }
+        } else {
+            let elt_width = element_width(
+                self.pairs_ref()
+                    .iter()
+                    .map(|x| std::cmp::max(format!("{:}", x.0).len(), format!("{:?}", x.1).len())),
+            );
+            let mut values_ref = self.values_ref();
+            let mut names_ref = self
+                .names_ref()
+                .expect("already checked existence of names");
+
+            let mut values_strs = values_ref.iter().map(|x| format!("{:?}", x));
+            let mut names_strs = names_ref.iter().map(|x| format!("{:}", x));
+
+            let mut col = 0;
+
+            // hard coded max print & console width
+            // we print at most 20 rows
+            let elts_per_line = 80 / (elt_width + 1);
+
+            'lines: for _ in 1..=20 {
+                for _ in 1..=elts_per_line {
+                    if let Some(name) = names_strs.next() {
+                        write!(f, "{:}{:>2$}", name, " ", elt_width - name.len())?;
+                    } else {
+                        break;
+                    }
+                }
+                write!(f, "\n")?;
+                for _ in 1..=elts_per_line {
+                    if let Some(value) = values_strs.next() {
+                        write!(f, "{:}{:>2$}", value, " ", elt_width - value.len())?;
+                    } else {
+                        break 'lines;
+                    }
+                }
+                write!(f, "\n")?;
+            }
+
+            // for name in names_strs {}
+
+            // let elts_per_line = x_strs
+            //     .take(maxprint)
+            //     .enumerate()
+            //     .try_for_each(|(i, x_str)| {
+            //         if i == 0 {
+            //             col = gutterlen + elt_width;
+            //             write!(
+            //                 f,
+            //                 "{:>3$}[{}] {:>4$}",
+            //                 "",
+            //                 i + 1,
+            //                 x_str,
+            //                 nlen - 1,
+            //                 elt_width
+            //             )
+            //         } else if col + 1 + elt_width > 80 {
+            //             col = gutterlen + elt_width;
+            //             let i_str = format!("{}", i + 1);
+            //             let gutter = nlen - i_str.len();
+            //             write!(
+            //                 f,
+            //                 "\n{:>3$}[{}] {:>4$}",
+            //                 "", i_str, x_str, gutter, elt_width
+            //             )
+            //         } else {
+            //             col += 1 + elt_width;
+            //             write!(f, " {:>1$}", x_str, elt_width)
+            //         }
+            //     })?;
+
+            // if n > maxprint {
+            //     write!(f, "\n[ omitting {} entries ]", n - maxprint)?;
+            // }
+        }
         Ok(())
     }
 }

@@ -95,9 +95,6 @@ impl Callable for PrimitivePaste {
             }
         }
 
-        dbg!(&collapse);
-        dbg!(&sep);
-
         // coerce all of our remaining arguments into vectors of strings
         let vec_s_vec: Vec<Vec<String>> = ellipsis
             .into_iter()
@@ -129,12 +126,9 @@ impl Callable for PrimitivePaste {
             });
         });
 
-        dbg!(&output);
-
         if should_collapse {
             output = vec![output.join(&collapse)];
         }
-
         Ok(Obj::Vector(output.into()))
     }
 }

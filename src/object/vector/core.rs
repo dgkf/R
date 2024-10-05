@@ -9,6 +9,7 @@ use crate::object::Obj;
 use super::coercion::CoercibleInto;
 use super::rep::Rep;
 use super::reptype::RepType;
+use super::reptype::RepTypeIterNames;
 use super::subset::Subset;
 use super::types::*;
 
@@ -106,15 +107,14 @@ impl Vector {
     }
 
     /// Iterate over the names of the vector.
-    pub fn iter_names(&self) -> Option<Box<dyn Iterator<Item = OptionNA<String>>>> {
-        todo!()
-        // use Vector::*;
-        // match self {
-        //     Double(x) => x.iter_names(),
-        //     Integer(x) => x.iter_names(),
-        //     Logical(x) => x.iter_names(),
-        //     Character(x) => x.iter_names(),
-        // }
+    pub fn iter_names(&self) -> Option<RepTypeIterNames> {
+        use Vector::*;
+        match self {
+            Double(x) => x.iter_names(),
+            Integer(x) => x.iter_names(),
+            Logical(x) => x.iter_names(),
+            Character(x) => x.iter_names(),
+        }
     }
 
     pub fn is_named(&self) -> bool {
@@ -138,12 +138,12 @@ impl Vector {
         }
     }
 
-    pub fn set_names_(&self, names: CowObj<Vec<Character>>) {
+    pub fn set_names(&self, names: CowObj<Vec<Character>>) {
         match self {
-            Vector::Character(x) => x.set_names_(names),
-            Vector::Logical(x) => x.set_names_(names),
-            Vector::Integer(x) => x.set_names_(names),
-            Vector::Double(x) => x.set_names_(names),
+            Vector::Character(x) => x.set_names(names),
+            Vector::Logical(x) => x.set_names(names),
+            Vector::Integer(x) => x.set_names(names),
+            Vector::Double(x) => x.set_names(names),
         };
     }
 

@@ -195,42 +195,6 @@ impl TryFrom<Obj> for Subset {
         let err = Error::Other("Cannot use object for indexing".to_string());
         match value {
             Obj::Vector(v) => Subset::try_from(v),
-            // Obj::Vector(v) => match v {
-            //     Vector::Double(_) => {
-            //         if let Vector::Integer(x) = v.as_integer() {
-            //             let x = Obj::Vector(x.into());
-            //             Subset::try_from(x)
-            //             // todo!()
-            //             // v.try_from()
-            //             // // FIXME: This needs to -1
-            //             // let indices: Vec<Integer> = x
-            //             //     .values()
-            //             //     .inner_rc()
-            //             //     .into_iter()
-            //             //     .map(|i| i.map(|i| OptionNA::Some(i - 1)))
-            //             //     .collect();
-
-            //             // todo!()
-            //             // // Ok(Subset::Indices(indices.into()))
-            //         } else {
-            //             unreachable!()
-            //         }
-            //     }
-            //     Vector::Integer(x) => {
-            //         let indices: Vec<Integer> = x
-            //             .pairs()
-            //             .iter()
-            //             .map(|(_, x)| x.clone().map(|i| i - 1))
-            //             .collect();
-            //         Subset::Indices(x.values())
-
-            //         todo!()
-
-            //         // Ok(Subset::Indices(x.values())),
-            //     }
-            //     Vector::Character(x) => Ok(Subset::Names(x.values())),
-            //     Vector::Logical(x) => Ok(Subset::Mask(x.values())),
-            // },
             _ => err.into(),
         }
     }

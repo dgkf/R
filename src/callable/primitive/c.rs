@@ -2,9 +2,9 @@ use r_derive::*;
 
 use crate::callable::core::*;
 use crate::context::Context;
-use crate::lang::*;
 use crate::object::types::*;
 use crate::object::*;
+use crate::{internal_err, lang::*};
 
 /// Concatenate Values
 ///
@@ -57,8 +57,7 @@ impl Callable for PrimitiveC {
             .map(|(_, v)| match v {
                 Obj::Null => 0,
                 Obj::Vector(_) => 1,
-                Obj::List(_) => 2,
-                _ => 0,
+                _ => 2,
             })
             .fold(0, std::cmp::max);
 
@@ -70,7 +69,7 @@ impl Callable for PrimitiveC {
             match o {
                 Obj::Vector(v) => v.is_named(),
                 Obj::List(l) => l.is_named(),
-                _ => todo!(),
+                _ => false,
             }
         });
 
@@ -82,7 +81,28 @@ impl Callable for PrimitiveC {
         // most complex type was List
         // FIXME: handle names
         if ty == 2 {
-            return Ok(Obj::List(vals));
+            // TODO: We should use size hints here.
+            let list = List::new();
+            for (name1, value1) in vals.iter_pairs() {
+                match value1 {
+                    Obj::List(x) => {
+                        for (name2, value2) in x.iter_pairs() {
+                            let name = match (&name1, name2) {
+                                (OptionNA::Some(x1), OptionNA::Some(x2)) => {
+                                    OptionNA::Some(format!("{x1}.{x2}"))
+                                }
+                                (OptionNA::NA, OptionNA::Some(x2)) => OptionNA::Some(x2),
+                                (OptionNA::Some(_), OptionNA::NA) => name1.clone(),
+                                (OptionNA::NA, OptionNA::NA) => OptionNA::NA,
+                            };
+
+                            list.push_named(name, value2)
+                        }
+                    }
+                    _ => list.push_named(name1, value1),
+                }
+            }
+            return Ok(Obj::List(list));
         }
 
         let names: Option<Vec<Character>> = if named {
@@ -189,8 +209,72 @@ impl Callable for PrimitiveC {
             };
 
         if let Some(names) = names {
-            v.set_names_(names.into())
+            v.set_names(names.into())
         }
         Ok(Obj::Vector(v))
+    }
+}
+
+#[cfg(test)]
+
+mod tests {
+    use crate::{r, r_expect};
+    #[test]
+    fn list_empty() {
+        assert_eq!(r!(list()), r!(c(list())))
+    }
+    #[test]
+    fn list_list() {
+        r_expect! {{"
+            l = c(list(1), list(2))
+            l[[1]] == 1 & l[[2]] == 2
+        "}}
+    }
+    #[test]
+    fn list_vec() {
+        r_expect! {{"
+            l = c(list(1), 2:3)
+            l[[1]] == 1 & l[[2]][1] == 2 & l[[2]][2] == 3
+        "}}
+    }
+    #[test]
+    fn list_fn() {
+        r_expect! {{"
+            l = c(list(1), fn() 2)
+            l[[1]] == 1 & l[[2]]() == 2
+        "}}
+    }
+    #[test]
+    fn function() {
+        r_expect! {{"
+            l = c(fn() 2)
+            l[[1]]() == 2
+        "}}
+    }
+    #[test]
+    fn list_names_outer() {
+        r_expect! {{"
+            c(a = list(1))$a == 1
+        "}}
+    }
+    #[test]
+    fn list_names_inner() {
+        r_expect! {{"
+            c(list(a = 1))$a == 1
+        "}}
+    }
+    #[test]
+    fn list_names_both() {
+        r_expect! {{"
+            c(a = list(b = 1))$a.b == 1
+        "}}
+    }
+
+    #[test]
+    fn vector_names() {
+        r_expect! {{r#"
+            x = [a = 1]
+            names(x) == "a"
+        "#}}
     }
 }
