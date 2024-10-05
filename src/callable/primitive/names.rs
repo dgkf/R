@@ -118,7 +118,6 @@ mod test {
     fn subset() {
         r_expect! {{r#"
             names([a = 1, b = 2][1]) == "a"
-                
         "#}}
     }
 }

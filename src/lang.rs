@@ -259,34 +259,6 @@ impl Obj {
         }
     }
 
-    // use set_subset instead
-    pub fn set_named(&mut self, name: &str, value: Obj) -> EvalResult {
-        todo!()
-        // I feel this is implemented twice
-        // because we have l[["a"]] = 1 and l$a = 1;
-        // match self {
-        //     Obj::List(v) => {
-        //         let loc = v
-        //             .iter_pairs()
-        //             .enumerate()
-        //             .find(|(_, (k, _))| *k == Character::Some(name.into()))
-        //             .map(|(i, _)| i);
-
-        //         v.with_inner_mut(|vb| match loc {
-        //             Some(i) => vb[i].1 = value.clone(),
-        //             None => vb.push((Some(name.into()), value.clone())),
-        //         });
-
-        //         Ok(value)
-        //     }
-        //     Obj::Environment(e) => {
-        //         e.values.borrow_mut().insert(name.into(), value.clone());
-        //         Ok(value)
-        //     }
-        //     _ => Ok(Obj::Null),
-        // }
-    }
-
     pub fn environment(&self) -> Option<Rc<Environment>> {
         match self {
             Obj::Promise(.., e) | Obj::Function(.., e) | Obj::Environment(e) => Some(e.clone()),
