@@ -75,15 +75,6 @@ where
         self.0.borrow_mut()
     }
 
-    pub fn replace(&self, value: Self) {
-        // if we do
-        // l = list(new.env())
-        // l[[1]] = list(99)
-        // we need to replace list(1, 2) with list(99)
-        let x = value.0.into_inner();
-        self.0.replace(x);
-    }
-
     /// Iterate over the (owned) values of the vector.
     pub fn iter_values(&self) -> RepTypeIter<T> {
         self.0.borrow().iter_values()
@@ -262,6 +253,8 @@ where
         }
     }
 
+    /// Used for `[[`-assignment.
+    /// The subset should be a single name or index to which the given value will be assigned.
     pub fn set_subset(&mut self, subset: Subset, value: T) -> Result<T, Signal> {
         self.0.borrow_mut().set_subset(subset, value)
     }

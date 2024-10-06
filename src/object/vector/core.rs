@@ -78,6 +78,8 @@ impl Clone for Vector {
 
 // TODO: Ensure that Vector API does not go beyond Rep<Obj> unless it is really
 // necessary.
+
+/// See [`Rep`] for the documentation on the methods.
 impl Vector {
     pub fn get(&self, index: usize) -> Option<Vector> {
         use Vector::*;
@@ -107,7 +109,6 @@ impl Vector {
         }
     }
 
-    /// Iterate over the names of the vector.
     pub fn iter_names(&self) -> Option<RepTypeIter<Character>> {
         use Vector::*;
         match self {
@@ -128,7 +129,6 @@ impl Vector {
         }
     }
 
-    /// Get the names of the vector.
     pub fn names(&self) -> Option<CowObj<Vec<Character>>> {
         use Vector::*;
         match self {
