@@ -70,16 +70,10 @@ impl Callable for PrimitiveNames {
             },
             Expr(..) => Ok(Null),     // handle arg lists?
             Function(..) => Ok(Null), // return formals?
-            List(x) => {
-                Ok(x.pairs_ref()
-                    .iter()
-                    .map(|(k, _)| match k {
-                        Character::Some(name) => OptionNA::Some(name.clone()),
-                        OptionNA::NA => OptionNA::NA, // unlike R, unnamed elements are NAs
-                    })
-                    .collect::<Vec<OptionNA<String>>>()
-                    .into())
-            }
+            List(l) => match l.names() {
+                Some(n) => Ok(Obj::Vector(n.into())),
+                None => Ok(Null),
+            },
             Environment(e) => {
                 let mut names = e.values.borrow().keys().cloned().collect::<Vec<String>>();
                 names.sort();
@@ -115,6 +109,19 @@ mod test {
     fn subset() {
         r_expect! {{r#"
             names([a = 1, b = 2][1]) == "a"
+        "#}}
+    }
+
+    #[test]
+    fn unnamed_atomic() {
+        r_expect! {{r#"
+            is_null(names([1, 2]))
+        "#}}
+    }
+    #[test]
+    fn named_atomic() {
+        r_expect! {{r#"
+            names([a = 1]) == "a"
         "#}}
     }
 }
