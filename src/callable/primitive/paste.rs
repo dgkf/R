@@ -1,10 +1,10 @@
-use r_derive::*;
-
 use crate::callable::core::*;
 use crate::error::*;
+use crate::formals;
 use crate::lang::*;
 use crate::object::types::Character;
 use crate::object::*;
+use r_derive::*;
 
 /// Paste Objects into Strings
 ///
@@ -45,15 +45,10 @@ use crate::object::*;
 #[builtin(sym = "paste")]
 #[derive(Debug, Clone, PartialEq)]
 pub struct PrimitivePaste;
-impl Callable for PrimitivePaste {
-    fn formals(&self) -> ExprList {
-        ExprList::from(vec![
-            (None, Expr::Ellipsis(None)),
-            (Some(String::from("sep")), Expr::String(" ".to_string())),
-            (Some(String::from("collapse")), Expr::Null),
-        ])
-    }
 
+formals!(PrimitivePaste, "(..., sep = ' ', collapse = null)");
+
+impl Callable for PrimitivePaste {
     fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
         let (args, ellipsis) = self.match_arg_exprs(args, stack)?;
 

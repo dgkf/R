@@ -1,26 +1,28 @@
-use crate::{cli::Experiment, parser::Localization, session::Session};
+use crate::cli::Experiment;
+use crate::parser::Localization;
+use crate::session::Session;
+use std::sync::LazyLock;
 use strum::IntoEnumIterator;
 
-pub const RELEASE_NAME: &str = "Beautiful You";
-
+pub const RELEASE_NAME: &str = "Wonder Where We Land";
 pub const GIT_HASH: &str = env!("GIT_HASH");
 pub const RELEASE_VERSION: &str = env!("CARGO_PKG_VERSION");
-
 pub const YEAR: &str = "2024";
 
-pub const COPYRIGHT_LONG_INST: &str = "--warranty";
-lazy_static::lazy_static! {
-    static ref COPYRIGHT: String = format!(
-"Copyright (C) {YEAR} R Authors
+pub const COPYRIGHT_LONG_FLAG: &str = "--warranty";
+static COPYRIGHT: LazyLock<String> = LazyLock::new(|| {
+    format!(
+        "Copyright (C) {YEAR} R Authors
   
 This program comes with ABSOLUTELY NO WARRANTY. This is free software, 
 and you are welcome to redistribute it under certain conditions. For more
-information, restart with `{COPYRIGHT_LONG_INST}`.");
-}
+information, restart with `{COPYRIGHT_LONG_FLAG}`."
+    )
+});
 
-lazy_static::lazy_static! {
-    static ref COPYRIGHT_LONG: String = format!(
-"Copyright (C) {YEAR} R Authors
+static COPYRIGHT_LONG: LazyLock<String> = LazyLock::new(|| {
+    format!(
+        "Copyright (C) {YEAR} R Authors
   
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -33,8 +35,9 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 GNU General Public License for more details.  
   
 You should have received a copy of the GNU General Public License
-along with this program. If not, see <https://www.gnu.org/licenses/>.");
-}
+along with this program. If not, see <https://www.gnu.org/licenses/>."
+    )
+});
 
 pub const AVAILABLE_FUNCTIONS: &str =
     "\nSee a list of implemented functions using `names(parent())`\n";

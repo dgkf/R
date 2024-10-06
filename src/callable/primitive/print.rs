@@ -1,17 +1,10 @@
-use lazy_static::lazy_static;
 use r_derive::*;
 use std::io::Write;
 
 use crate::callable::core::*;
+use crate::formals;
 use crate::lang::*;
 use crate::object::*;
-
-lazy_static! {
-    pub static ref FORMALS: ExprList = ExprList::from(vec![
-        (Some("x".to_string()), Expr::Missing),
-        (None, Expr::Ellipsis(None))
-    ]);
-}
 
 /// Print to the Console
 ///
@@ -20,7 +13,7 @@ lazy_static! {
 /// ## Usage
 ///
 /// ```custom,{class=r}
-/// print(x)
+/// print(x, ...)
 /// ```
 ///
 /// ## Arguments
@@ -37,11 +30,10 @@ lazy_static! {
 #[builtin(sym = "print")]
 #[derive(Debug, Clone, PartialEq)]
 pub struct PrimitivePrint;
-impl Callable for PrimitivePrint {
-    fn formals(&self) -> ExprList {
-        FORMALS.clone()
-    }
 
+formals!(PrimitivePrint, "(x, ...)");
+
+impl Callable for PrimitivePrint {
     fn call_matched(&self, args: List, _ellipsis: List, stack: &mut CallStack) -> EvalResult {
         let mut args = Obj::List(args);
         let x = args.try_get_named("x")?.force(stack)?;

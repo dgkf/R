@@ -2,6 +2,7 @@ use r_derive::*;
 
 use crate::callable::core::*;
 use crate::error::Error;
+use crate::formals;
 use crate::lang::*;
 use crate::object::*;
 
@@ -32,10 +33,9 @@ use crate::object::*;
 #[derive(Debug, Clone, PartialEq)]
 pub struct PrimitiveLength;
 
+formals!(PrimitiveLength, "(x,)");
+
 impl Callable for PrimitiveLength {
-    fn formals(&self) -> ExprList {
-        ExprList::from(vec![(Some("x".to_string()), Expr::Missing)])
-    }
     fn call_matched(&self, args: List, _ellipsis: List, stack: &mut CallStack) -> EvalResult {
         let mut args = Obj::List(args);
         let x = args.try_get_named("x")?.force(stack)?;

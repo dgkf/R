@@ -26,10 +26,7 @@ pub struct SessionParserConfig {
 
 impl From<Session> for SessionParserConfig {
     fn from(val: Session) -> Self {
-        SessionParserConfig {
-            locale: val.locale,
-            experiments: val.experiments,
-        }
+        SessionParserConfig { locale: val.locale, experiments: val.experiments }
     }
 }
 

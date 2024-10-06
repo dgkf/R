@@ -3,6 +3,7 @@ use r_derive::*;
 use crate::callable::core::*;
 use crate::context::Context;
 use crate::error::Error;
+use crate::formals;
 use crate::lang::*;
 use crate::object::*;
 
@@ -41,11 +42,10 @@ use crate::object::*;
 #[builtin(sym = "environment")]
 #[derive(Debug, Clone, PartialEq)]
 pub struct PrimitiveEnvironment;
-impl Callable for PrimitiveEnvironment {
-    fn formals(&self) -> ExprList {
-        ExprList::from(vec![(Some(String::from("fun")), Expr::Missing)])
-    }
 
+formals!(PrimitiveEnvironment, "(fun,)");
+
+impl Callable for PrimitiveEnvironment {
     fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
         let (vals, _) = self.match_arg_exprs(args, stack)?;
         let mut vals = Obj::List(vals);

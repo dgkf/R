@@ -1,6 +1,7 @@
 use r_derive::*;
 
 use crate::callable::core::*;
+use crate::formals;
 use crate::lang::*;
 use crate::object::*;
 
@@ -30,6 +31,9 @@ use crate::object::*;
 #[builtin(sym = "quote")]
 #[derive(Debug, Clone, PartialEq)]
 pub struct PrimitiveQuote;
+
+formals!(PrimitiveQuote, "(x)");
+
 impl Callable for PrimitiveQuote {
     fn call(&self, args: ExprList, _stack: &mut CallStack) -> EvalResult {
         Ok(Obj::Expr(args.get(0).unwrap_or(Expr::Null)))

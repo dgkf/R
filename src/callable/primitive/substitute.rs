@@ -1,25 +1,12 @@
-use lazy_static::lazy_static;
 use r_derive::*;
 
 use crate::callable::core::*;
 use crate::callable::keywords::KeywordParen;
 use crate::context::Context;
+use crate::formals;
 use crate::internal_err;
 use crate::lang::*;
 use crate::object::*;
-
-lazy_static! {
-    pub static ref FORMALS: ExprList = ExprList::from(vec![
-        (Some("expr".to_string()), Expr::Missing),
-        (
-            Some("envir".to_string()),
-            Expr::Call(
-                Box::new(Expr::Symbol("environment".to_string())),
-                ExprList::new()
-            )
-        )
-    ]);
-}
 
 /// Substitute Expressions
 ///
@@ -55,11 +42,10 @@ lazy_static! {
 #[builtin(sym = "substitute")]
 #[derive(Debug, Clone, PartialEq)]
 pub struct PrimitiveSubstitute;
-impl Callable for PrimitiveSubstitute {
-    fn formals(&self) -> ExprList {
-        FORMALS.clone()
-    }
 
+formals!(PrimitiveSubstitute, "(expr, envir = environment())");
+
+impl Callable for PrimitiveSubstitute {
     fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
         use Expr::*;
         let (args, _ellipsis) = self.match_arg_exprs(args, stack)?;

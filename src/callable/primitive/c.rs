@@ -4,7 +4,7 @@ use crate::callable::core::*;
 use crate::context::Context;
 use crate::object::types::*;
 use crate::object::*;
-use crate::{internal_err, lang::*};
+use crate::{formals, lang::*};
 
 /// Concatenate Values
 ///
@@ -41,6 +41,9 @@ use crate::{internal_err, lang::*};
 #[builtin(sym = "c")]
 #[derive(Debug, Clone, PartialEq)]
 pub struct PrimitiveC;
+
+formals!(PrimitiveC, "(...)");
+
 impl Callable for PrimitiveC {
     fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
         // this can be cleaned up quite a bit, but I just need it working with

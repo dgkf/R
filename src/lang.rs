@@ -1,4 +1,5 @@
-use crate::callable::core::{builtin, Callable};
+use crate::callable::builtins::BUILTIN;
+use crate::callable::core::Callable;
 use crate::cli::Experiment;
 use crate::context::Context;
 use crate::error::*;
@@ -674,9 +675,9 @@ impl CallStack {
             };
         }
 
-        if let Ok(prim) = builtin(name.as_str()) {
+        if let Some(prim) = BUILTIN.get(name.as_str()) {
             Result::Ok((
-                Obj::Function(ExprList::new(), Expr::Primitive(prim), self.env()),
+                Obj::Function(ExprList::new(), Expr::Primitive(prim.clone()), self.env()),
                 env,
             ))
         } else {
@@ -690,10 +691,7 @@ impl CallStack {
     }
 
     pub fn add_child_frame(&mut self, call: Expr, env: Rc<Environment>) -> usize {
-        let local_env = Rc::new(Environment {
-            parent: Some(env.clone()),
-            ..Default::default()
-        });
+        let local_env = Rc::new(Environment { parent: Some(env.clone()), ..Default::default() });
 
         self.add_frame(call, local_env)
     }
@@ -932,8 +930,10 @@ fn eval_call(callstack: &mut CallStack, expr: Expr, mutable: bool) -> EvalResult
             };
             callstack.pop_frame_and_return(result)
         }
-        Expr::String(name) | Expr::Symbol(name) if builtin(&name).is_ok() => {
-            let f = builtin(&name)?;
+        Expr::String(name) | Expr::Symbol(name) if BUILTIN.contains_key(name.as_str()) => {
+            let f = BUILTIN
+                .get(name.as_str())
+                .ok_or(Error::VariableNotFound(name))?;
             callstack.add_frame(expr, callstack.last_frame().env().clone());
             let result = if mutable {
                 f.call_mut(args, callstack)

@@ -91,10 +91,10 @@ impl Environment {
                 continue;
 
             // if we're at the top level, fall back to primitives if available
-            } else if let Ok(prim) = name.as_str().try_into() {
+            } else if let Some(prim) = BUILTIN.get(name.as_str()) {
                 let x = Obj::Function(
                     ExprList::new(),
-                    Expr::Primitive(prim),
+                    Expr::Primitive(prim.clone()),
                     Rc::new(self.clone()), // TODO(bug): will this retain shared ref?
                 );
 

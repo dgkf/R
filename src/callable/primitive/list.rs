@@ -2,6 +2,7 @@ use r_derive::*;
 
 use crate::callable::core::*;
 use crate::context::Context;
+use crate::formals;
 use crate::lang::*;
 use crate::object::*;
 
@@ -49,6 +50,9 @@ use crate::object::*;
 #[builtin(sym = "list")]
 #[derive(Debug, Clone, PartialEq)]
 pub struct PrimitiveList;
+
+formals!(PrimitiveList, "(...)");
+
 impl Callable for PrimitiveList {
     fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
         stack.eval_list_eager(args)
