@@ -24,11 +24,20 @@ mod tests {
         "}}
     }
     #[test]
-    fn copy_on_write_bracket_names() {
+    fn copy_on_write_double_bracket_names() {
         r_expect! {{r#"
             l1 = (a = 1,)
             l2 = l1
             l1[["a"]] = 2
+            l1$a == 2 & l2$a == 1
+        "#}}
+    }
+    #[test]
+    fn copy_on_write_single_bracket_names() {
+        r_expect! {{r#"
+            l1 = (a = 1,)
+            l2 = l1
+            l1["a"] = 2
             l1$a == 2 & l2$a == 1
         "#}}
     }
