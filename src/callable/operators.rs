@@ -381,7 +381,7 @@ impl Callable for InfixDollar {
         let mut what = stack.eval_mut(what)?;
 
         match index {
-            Expr::String(s) | Expr::Symbol(s) => Ok(what.try_get_named_mut(s.as_str())?),
+            Expr::String(s) | Expr::Symbol(s) => what.try_get_named_mut(s.as_str()),
             _ => Ok(Obj::Null),
         }
     }

@@ -168,17 +168,6 @@ impl Vector {
         }
     }
 
-    // pub fn try_get_inner_mut(&self, index: Obj) -> EvalResult {
-    //     // This method will be needed when we have scalars
-    //     todo!()
-    // }
-
-    // pub fn try_get_inner(&self, index: Obj) -> EvalResult {
-    //     // This method will be needed when we have scalars
-    //     #[allow(clippy::map_clone)]
-    //     self.try_get_inner_mut(index).map(|v| v.clone())
-    // }
-
     pub fn subset(&self, subset: Subset) -> Self {
         match self {
             Vector::Double(x) => x.subset(subset).into(),

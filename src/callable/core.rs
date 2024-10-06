@@ -3,11 +3,8 @@ extern crate r_derive;
 use crate::callable::dyncompare::*;
 use crate::cli::Experiment;
 use crate::context::Context;
-use crate::object::types::Character;
-use crate::object::types::Integer;
-use crate::object::List;
-use crate::object::Subset;
-use crate::object::{Expr, ExprList, Obj};
+use crate::object::types::{Character, Integer};
+use crate::object::{Expr, ExprList, List, Obj, Subset};
 use crate::{internal_err, lang::*};
 
 impl std::fmt::Debug for Box<dyn Callable> {
