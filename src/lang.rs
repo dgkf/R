@@ -107,10 +107,6 @@ impl Obj {
             }
             Obj::List(mut l) => {
                 match value.clone() {
-                    // what about recycling, is this needed here?
-                    // todo:
-                    // x= list(1, 2)
-                    // x[1:2] = c(10, 11) is vectorized in R.
                     Obj::List(r) => {
                         l.assign(r);
                     }
