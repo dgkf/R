@@ -1,4 +1,3 @@
-use lazy_static::lazy_static;
 use r_derive::*;
 
 use crate::callable::core::*;
@@ -8,10 +7,6 @@ use crate::internal_err;
 use crate::lang::*;
 use crate::object::reptype::RepType;
 use crate::object::*;
-
-lazy_static! {
-    pub static ref FORMALS: ExprList = ExprList::from(vec![(None, Expr::Ellipsis(None)),]);
-}
 
 /// Calculate a Sum of Elements
 ///

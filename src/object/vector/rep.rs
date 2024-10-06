@@ -1,15 +1,16 @@
 use std::cell::{Ref, RefCell, RefMut};
 use std::fmt::{Debug, Display};
-use std::iter::repeat;
 
 use super::coercion::{AtomicMode, CoercibleInto, CommonCmp, CommonNum, MinimallyNumeric};
 use super::iterators::{map_common_numeric, zip_recycle};
 use super::reptype::{Naming, RepType, RepTypeIter};
-use super::reptype::{RepTypeIntoIterable, RepTypeIntoIterableNames, RepTypeIntoIterableValues};
+use super::reptype::{
+    RepTypeIntoIterableNames, RepTypeIntoIterablePairs, RepTypeIntoIterableValues,
+};
 use super::subset::Subset;
 use super::types::*;
 use super::{OptionNA, Pow, VecPartialCmp};
-use crate::error::Error;
+use crate::lang::Signal;
 use crate::object::reptype::RepTypeIterPairs;
 use crate::object::Subsets;
 use crate::object::{CowObj, Obj, ViewMut};
@@ -42,11 +43,11 @@ impl<T: Clone + Default> ViewMut for Rep<T> {
 impl<T: ViewMut + Default + Clone> Rep<T> {
     /// Get the inner value mutably.
     /// This is used for assignments like `list(1)[[1]] = 10`.
-    pub fn try_get_inner_mut(&self, subset: Subset) -> Result<T, Error> {
+    pub fn try_get_inner_mut(&self, subset: Subset) -> Result<T, Signal> {
         self.borrow().try_get_inner_mut(subset)
     }
 
-    pub fn try_get_inner(&self, subset: Subset) -> Result<T, Error> {
+    pub fn try_get_inner(&self, subset: Subset) -> Result<T, Signal> {
         self.try_get_inner_mut(subset)
     }
 }
@@ -117,10 +118,7 @@ where
     }
 
     pub fn is_named(&self) -> bool {
-        match self.borrow().clone() {
-            RepType::Subset(.., Some(_)) => true,
-            _ => false,
-        }
+        matches!(*self.borrow(), RepType::Subset(.., Some(_)))
     }
 
     pub fn names(&self) -> Option<CowObj<Vec<Character>>> {
@@ -128,7 +126,7 @@ where
             RepType::Subset(_, s, n) => {
                 if s.is_empty() {
                     n.map(|n| n.clone().names)
-                } else if let Some(_) = n {
+                } else if n.is_some() {
                     Some(
                         self.iter_names()
                             .expect("checked that names exist")
@@ -160,31 +158,7 @@ where
         )))
     }
 
-    /// Get mutable access to the internal vector through the passed closure.
-    pub fn with_inner_mut<F, R>(&self, f: F) -> R
-    where
-        F: FnOnce(&mut Vec<T>) -> R,
-    {
-        self.0.borrow().with_inner_mut(f)
-    }
-
-    /// Iterates over owned (name, value) tuples.
-    pub fn with_pairs<F, R>(&self, f: F)
-    where
-        F: FnMut(Character, T) -> R,
-    {
-        self.borrow().with_pairs(f)
-    }
-
-    /// Iterates over owned (name, value) tuples.
-    pub fn with_iter_pairs<F, R>(&self, f: F) -> R
-    where
-        F: FnMut(Box<dyn Iterator<Item = (Character, T)>>) -> R,
-    {
-        todo!()
-    }
-
-    pub fn pairs_ref(&self) -> RepTypeIntoIterable<T> {
+    pub fn pairs_ref(&self) -> RepTypeIntoIterablePairs<T> {
         self.0.borrow().pairs_ref()
     }
 
@@ -288,7 +262,7 @@ where
         }
     }
 
-    pub fn set_subset(&mut self, subset: Subset, value: T) -> Result<T, Error> {
+    pub fn set_subset(&mut self, subset: Subset, value: T) -> Result<T, Signal> {
         self.0.borrow_mut().set_subset(subset, value)
     }
 
@@ -401,14 +375,6 @@ where
         T: CoercibleInto<Character> + AtomicMode,
     {
         self.as_mode::<Character>()
-    }
-
-    pub fn try_scalar(&self) -> Result<T, Error> {
-        if self.len() == 1 {
-            Ok(self.values_ref().iter().next().cloned().unwrap())
-        } else {
-            Err(Error::Other("Vector is not of length 1".to_string()))
-        }
     }
 
     /// Apply over the vector contents to produce a vector of [std::cmp::Ordering]
@@ -655,8 +621,6 @@ where
             let mut values_strs = values_ref.iter().map(|x| format!("{:?}", x));
             let mut names_strs = names_ref.iter().map(|x| format!("{:}", x));
 
-            let mut col = 0;
-
             // hard coded max print & console width
             // we print at most 20 rows
             let elts_per_line = 80 / (elt_width + 1);
@@ -669,7 +633,7 @@ where
                         break;
                     }
                 }
-                write!(f, "\n")?;
+                writeln!(f)?;
                 for _ in 1..=elts_per_line {
                     if let Some(value) = values_strs.next() {
                         write!(f, "{:}{:>2$}", value, " ", elt_width - value.len())?;
@@ -677,7 +641,7 @@ where
                         break 'lines;
                     }
                 }
-                write!(f, "\n")?;
+                writeln!(f)?;
             }
 
             // for name in names_strs {}

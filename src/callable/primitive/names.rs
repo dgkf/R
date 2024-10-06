@@ -96,10 +96,7 @@ mod test {
 
     #[test]
     fn no_args() {
-        assert_eq!(
-            r! { names() },
-            Error::ArgumentMissing(String::from("x")).into()
-        )
+        assert_eq!(r! { names() }, Error::Missing.into())
     }
 
     #[test]

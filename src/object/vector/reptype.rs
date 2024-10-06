@@ -7,6 +7,7 @@ use super::subsets::Subsets;
 use super::types::*;
 use super::{OptionNA, Pow, VecPartialCmp};
 use crate::error::Error;
+use crate::lang::Signal;
 use crate::object::{CowObj, ViewMut};
 use hashbrown::HashMap;
 use std::cell::RefCell;
@@ -86,7 +87,7 @@ impl From<CowObj<Vec<Character>>> for Naming {
     fn from(value: CowObj<Vec<Character>>) -> Self {
         let mut map: HashMap<String, Vec<usize>> = HashMap::new();
 
-        value.iter().enumerate().map(|(i, maybe_name)| {
+        value.iter().enumerate().for_each(|(i, maybe_name)| {
             if let OptionNA::Some(name) = maybe_name {
                 let indices = map.entry(name.clone()).or_default();
                 if !indices.contains(&i) {
@@ -95,10 +96,7 @@ impl From<CowObj<Vec<Character>>> for Naming {
             };
         });
 
-        Self {
-            map: map.into(),
-            names: value,
-        }
+        Self { map: map.into(), names: value }
     }
 }
 
@@ -128,15 +126,15 @@ impl<T: Clone + Default> Default for RepType<T> {
 
 impl<T: Clone + Default + ViewMut> RepType<T> {
     /// Retrieve the internal data as a mutable view.
-    pub fn try_get_inner_mut(&self, subset: Subset) -> Result<T, Error> {
+    pub fn try_get_inner_mut(&self, subset: Subset) -> Result<T, Signal> {
         let self_subset = self.subset(subset);
         match self_subset {
             RepType::Subset(..) => {
                 let mut iter = self_subset.iter_subset_indices();
 
                 if let Some(i) = iter.next() {
-                    if let Some(_) = iter.next() {
-                        return Err(Error::Other("subset is not of length 1".to_string()));
+                    if iter.next().is_some() {
+                        return Error::Other("subset is not of length 1".to_string()).into();
                     }
 
                     // TODO: subsetting with NA should not be possible.
@@ -144,7 +142,7 @@ impl<T: Clone + Default + ViewMut> RepType<T> {
 
                     Ok(self.with_inner_mut(|values| values[i].view_mut()))
                 } else {
-                    Err(Error::Other("subset is empty".to_string()))
+                    Error::Other("subset is empty".to_string()).into()
                 }
             }
         }
@@ -178,9 +176,11 @@ impl<'a> Iterator for RepTypeIterableNames<'a> {
     type Item = &'a Character;
 
     fn next(&mut self) -> Option<Self::Item> {
-        // FIXME: This panics when subsetting with NA
-        let i = self.iter.next()?.unwrap();
-        Some(&self.names[i])
+        if let Some(i) = self.iter.next()? {
+            Some(&self.names[i])
+        } else {
+            Some(self.na_name)
+        }
     }
 }
 
@@ -202,7 +202,7 @@ impl<T: Clone + Default> RepTypeIntoIterableValues<T> {
     }
 }
 
-pub struct RepTypeIntoIterable<T: Clone> {
+pub struct RepTypeIntoIterablePairs<T: Clone> {
     values: Rc<Vec<T>>,
     names: Option<Rc<Vec<Character>>>,
     na_value: T,
@@ -210,13 +210,13 @@ pub struct RepTypeIntoIterable<T: Clone> {
     iter: Box<dyn Iterator<Item = Option<usize>>>,
 }
 
-impl<T: Clone + Default> RepTypeIntoIterable<T> {
-    pub fn iter(&mut self) -> RepTypeIterable<'_, T> {
+impl<T: Clone + Default> RepTypeIntoIterablePairs<T> {
+    pub fn iter(&mut self) -> RepTypeIterablePairs<'_, T> {
         let values = &self.values[..];
 
         let names = self.names.as_ref().map(|names| &names[..]);
 
-        RepTypeIterable {
+        RepTypeIterablePairs {
             values,
             names,
             na_value: &self.na_value,
@@ -232,7 +232,7 @@ pub struct RepTypeIterableValues<'a, T: Clone> {
     iter: &'a mut Box<dyn Iterator<Item = Option<usize>>>,
 }
 
-pub struct RepTypeIterable<'a, T: Clone> {
+pub struct RepTypeIterablePairs<'a, T: Clone> {
     values: &'a [T],
     names: Option<&'a [Character]>,
     na_value: &'a T,
@@ -240,20 +240,19 @@ pub struct RepTypeIterable<'a, T: Clone> {
     iter: &'a mut Box<dyn Iterator<Item = Option<usize>>>,
 }
 
-impl<'a, T: Clone> Iterator for RepTypeIterable<'a, T> {
+impl<'a, T: Clone> Iterator for RepTypeIterablePairs<'a, T> {
     type Item = (&'a Character, &'a T);
 
     fn next(&mut self) -> Option<Self::Item> {
-        // FIXME: This panics when subsetting with NA
-        let i = self.iter.next()?.unwrap();
-        let value = &self.values[i];
-        let name = if let Some(names) = self.names {
-            &names[i]
+        if let Some(i) = self.iter.next()? {
+            if let Some(names) = self.names {
+                Option::Some((&names[i], &self.values[i]))
+            } else {
+                Option::Some((self.na_name, &self.values[i]))
+            }
         } else {
-            self.na_name
-        };
-
-        Some((name, value))
+            Option::Some((self.na_name, self.na_value))
+        }
     }
 }
 
@@ -261,9 +260,11 @@ impl<'a, T: Clone> Iterator for RepTypeIterableValues<'a, T> {
     type Item = &'a T;
 
     fn next(&mut self) -> Option<Self::Item> {
-        // FIXME: This panics when subsetting with NA
-        let i = self.iter.next()?.unwrap();
-        Some(&self.values[i])
+        if let Some(i) = self.iter.next()? {
+            Some(&self.values[i])
+        } else {
+            Some(self.na_value)
+        }
     }
 }
 
@@ -284,11 +285,7 @@ impl<T: Clone + Default + 'static> RepType<T> {
                 let values = values.inner_rc();
                 let names = maybe_naming.map(|x| x.names.inner_rc());
 
-                RepTypeIterPairs {
-                    values,
-                    names,
-                    iter,
-                }
+                RepTypeIterPairs { values, names, iter }
             }
         }
     }
@@ -356,7 +353,7 @@ impl<T: Clone + Default> RepType<T> {
         )
     }
 
-    pub fn set_subset(&mut self, subset: Subset, value: T) -> Result<T, Error> {
+    pub fn set_subset(&mut self, subset: Subset, value: T) -> Result<T, Signal> {
         match &self {
             RepType::Subset(..) => {
                 let err = Error::Other("subset must have length 1".to_string());
@@ -368,11 +365,11 @@ impl<T: Clone + Default> RepType<T> {
                 // assumes no indexing with NA (unwrap the option)
                 let i = if let Some(i) = i1 {
                     if iter.next().is_some() {
-                        return Err(err);
+                        return err.into();
                     }
                     i
                 } else {
-                    return Err(err);
+                    return err.into();
                 }
                 .unwrap();
 
@@ -388,11 +385,7 @@ impl<T: Clone + Default> RepType<T> {
                 let iter = Box::new(self.iter_subset_indices());
                 let values = values.inner_rc();
 
-                RepTypeIntoIterableValues {
-                    values,
-                    na_value: T::default(),
-                    iter,
-                }
+                RepTypeIntoIterableValues { values, na_value: T::default(), iter }
             }
         }
     }
@@ -404,23 +397,19 @@ impl<T: Clone + Default> RepType<T> {
                 let naming = naming?;
                 let names = naming.names.inner_rc();
 
-                Some(RepTypeIntoIterableNames {
-                    names,
-                    na_name: Character::default(),
-                    iter,
-                })
+                Some(RepTypeIntoIterableNames { names, na_name: Character::default(), iter })
             }
         }
     }
 
-    pub fn pairs_ref(&self) -> RepTypeIntoIterable<T> {
+    pub fn pairs_ref(&self) -> RepTypeIntoIterablePairs<T> {
         match self.clone() {
             RepType::Subset(values, _, maybe_naming) => {
                 let iter = Box::new(self.iter_subset_indices());
                 let values = values.inner_rc();
                 let names = maybe_naming.map(|x| x.names.inner_rc());
 
-                RepTypeIntoIterable {
+                RepTypeIntoIterablePairs {
                     values,
                     names,
                     na_value: T::default(),
@@ -435,10 +424,7 @@ impl<T: Clone + Default> RepType<T> {
         match self.clone() {
             RepType::Subset(values, ..) => {
                 let iter = Box::new(self.iter_subset_indices());
-                RepTypeIter {
-                    values: values.inner_rc(),
-                    iter,
-                }
+                RepTypeIter { values: values.inner_rc(), iter }
             }
         }
     }
@@ -450,66 +436,9 @@ impl<T: Clone + Default> RepType<T> {
                 let iter = Box::new(self.iter_subset_indices());
                 let names = maybe_naming.map(|x| x.names.inner_rc())?;
 
-                Some(RepTypeIter {
-                    values: names,
-                    iter,
-                })
+                Some(RepTypeIter { values: names, iter })
             }
         }
-    }
-
-    /// Iterates over owned (name, value) tuples.
-    pub fn with_pairs<F, R>(&self, f: F)
-    where
-        F: FnMut(Character, T) -> R,
-    {
-        todo!()
-    }
-
-    /// Iterates over owned (name, value) tuples.
-    pub fn with_iter_pairs_mut<F, R>(&self, f: F)
-    where
-        F: Fn(&mut Character, &mut T) -> R,
-    {
-        todo!()
-    }
-
-    /// Iterates over name, value pairs
-    pub fn with_iter_values<F, R>(&self, f: F)
-    where
-        F: Fn(&T) -> R,
-    {
-        todo!()
-    }
-
-    /// Iterates over name, value pairs
-    pub fn with_iter_values_mut<F, R>(&self, f: F)
-    where
-        F: Fn(&T) -> R,
-    {
-        todo!()
-    }
-
-    /// Iterates over name, value pairs
-    pub fn with_iter_names<F, R>(&self, f: F)
-    where
-        F: Fn(&Character) -> R,
-    {
-        todo!()
-    }
-
-    pub fn with_iter_ref<F, R>(&self, f: F)
-    where
-        F: FnOnce(&T) -> R,
-    {
-        todo!()
-    }
-
-    pub fn with_iter_ref_mut<F, R>(&self, f: F)
-    where
-        F: FnOnce(&T) -> R,
-    {
-        todo!()
     }
 
     pub fn push_value(&self, value: T) {
@@ -1345,7 +1274,7 @@ where
 mod test {
     use super::OptionNA::*;
     use crate::object::reptype::RepType;
-    use crate::object::{types::*, OptionNA, VecPartialCmp};
+    use crate::object::{types::*, VecPartialCmp};
     use crate::utils::SameType;
 
     #[test]

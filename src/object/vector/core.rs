@@ -3,6 +3,7 @@ use std::fmt::Display;
 
 use crate::error::Error;
 use crate::lang::EvalResult;
+use crate::lang::Signal;
 use crate::object::CowObj;
 use crate::object::Obj;
 
@@ -88,7 +89,7 @@ impl Vector {
         }
     }
 
-    pub fn set_subset(&mut self, subset: Subset, value: Obj) -> Result<Self, Error> {
+    pub fn set_subset(&mut self, subset: Subset, value: Obj) -> Result<Self, Signal> {
         use Vector::*;
         match self {
             Double(x) => x

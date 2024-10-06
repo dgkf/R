@@ -3,7 +3,6 @@ extern crate r_derive;
 use crate::callable::dyncompare::*;
 use crate::cli::Experiment;
 use crate::context::Context;
-use crate::error::Error;
 use crate::object::types::Character;
 use crate::object::types::Integer;
 use crate::object::List;
@@ -264,10 +263,7 @@ where
 impl CallableFormals for String {}
 impl Builtin for String {}
 
-pub fn force_promises(
-    vals: List,
-    stack: &mut CallStack,
-) -> Result<Vec<(Option<String>, Obj)>, Signal> {
+pub fn force_promises(vals: List, stack: &mut CallStack) -> Result<Vec<(Character, Obj)>, Signal> {
     // Force any closures that were created during call. This helps with using
     // variables as argument for sep and collapse parameters.
     vals.iter_pairs()

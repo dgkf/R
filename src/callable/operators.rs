@@ -5,7 +5,7 @@ use crate::context::Context;
 use crate::error::Error;
 use crate::lang::{CallStack, EvalResult};
 use crate::object::types::*;
-use crate::{internal_err, object::*};
+use crate::object::*;
 
 #[derive(Debug, Clone, PartialEq)]
 #[builtin(sym = "<-", kind = Infix)]
@@ -359,13 +359,10 @@ impl Callable for InfixDollar {
             unreachable!();
         };
 
-        let what = stack.eval(what)?;
+        let mut what = stack.eval(what)?;
 
         match index {
-            Expr::String(s) | Expr::Symbol(s) => {
-                let index = Obj::Vector(Vector::Character(vec![Character::Some(s)].into()));
-                what.try_get_inner(index)
-            }
+            Expr::String(s) | Expr::Symbol(s) => what.try_get_named(&s),
             _ => Ok(Obj::Null),
         }
     }
@@ -381,13 +378,10 @@ impl Callable for InfixDollar {
             unreachable!();
         };
 
-        let what = stack.eval_mut(what)?;
+        let mut what = stack.eval_mut(what)?;
 
         match index {
-            Expr::String(s) | Expr::Symbol(s) => {
-                let index = Obj::Vector(Vector::Character(vec![Character::Some(s)].into()));
-                what.try_get_inner_mut(index)
-            }
+            Expr::String(s) | Expr::Symbol(s) => Ok(what.try_get_named_mut(s.as_str())?),
             _ => Ok(Obj::Null),
         }
     }
@@ -404,16 +398,10 @@ impl Callable for InfixDollar {
         };
 
         let value = stack.eval(value)?;
-        let what = stack.eval_mut(what)?;
+        let mut what = stack.eval_mut(what)?;
 
         match name {
-            Expr::String(s) | Expr::Symbol(s) => {
-                let index = Subset::Names(vec![Character::Some(s)].into());
-                Ok(match what {
-                    Obj::List(mut v) => v.set_subset(index, value)?,
-                    _ => unimplemented!(),
-                })
-            }
+            Expr::String(s) | Expr::Symbol(s) => what.try_set_named(&s, value),
             _ => unimplemented!(),
         }
     }

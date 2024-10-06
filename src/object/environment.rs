@@ -145,3 +145,18 @@ impl Display for Environment {
         Ok(())
     }
 }
+
+#[cfg(test)]
+
+mod tests {
+    use crate::{r, r_expect};
+
+    #[test]
+    fn dollar() {
+        r_expect! {{"
+            e = environment()
+            e$x = 1
+            e$x == 1
+        "}}
+    }
+}

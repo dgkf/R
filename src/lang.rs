@@ -127,7 +127,6 @@ impl Obj {
                         Vector::Double(r) => {
                             l.assign(r);
                         }
-                        _ => todo!(),
                     },
                     _ => return Err(err.into()),
                 };
@@ -245,21 +244,6 @@ impl Obj {
         }
     }
 
-    pub fn get_named(&mut self, name: &str) -> Option<Obj> {
-        match self {
-            Obj::List(v) => v
-                .pairs_ref()
-                .iter()
-                .find(|(k, _)| *k == &Character::Some(String::from(name)))
-                .map(|(_, v)| v.clone()),
-            Obj::Environment(e) => match e.get(String::from(name)) {
-                Ok(v) => Some(v),
-                Err(_) => None,
-            },
-            _ => None,
-        }
-    }
-
     pub fn environment(&self) -> Option<Rc<Environment>> {
         match self {
             Obj::Promise(.., e) | Obj::Function(.., e) | Obj::Environment(e) => Some(e.clone()),
@@ -267,12 +251,48 @@ impl Obj {
         }
     }
 
+    /// Used for `$`-assignment.
+    pub fn try_set_named(&mut self, name: &str, value: Obj) -> EvalResult {
+        match self {
+            Obj::List(l) => {
+                let subset = Subset::Names(vec![Character::Some(name.to_string())].into());
+                Ok(l.set_subset(subset, value)?)
+            }
+            Obj::Environment(e) => {
+                e.values.borrow_mut().insert(name.into(), value.clone());
+                Ok(value)
+            }
+            _ => internal_err!(),
+        }
+    }
+
+    /// Used for `$`-assignment.
+    pub fn try_get_named_mut(&mut self, name: &str) -> EvalResult {
+        match self {
+            Obj::List(l) => {
+                let subset = Subset::Names(vec![Character::Some(name.to_string())].into());
+                Ok(l.try_get_inner_mut(subset)?)
+            }
+            Obj::Environment(e) => match e.get_mut(String::from(name)) {
+                Ok(v) => Ok(v),
+                Err(_) => Err(Error::VariableNotFound(name.into()).into()),
+            },
+            _ => internal_err!(),
+        }
+    }
+
+    /// Used for `$`-access.
     pub fn try_get_named(&mut self, name: &str) -> EvalResult {
-        use Error::{ArgumentMissing, VariableNotFound};
-        match self.get_named(name) {
-            Some(Obj::Promise(_, Expr::Missing, _)) => Err(ArgumentMissing(name.into()).into()),
-            Some(x) => Ok(x),
-            None => Err(VariableNotFound(name.into()).into()),
+        match self {
+            Obj::List(l) => {
+                let subset = Subset::Names(vec![Character::Some(name.to_string())].into());
+                Ok(l.try_get_inner(subset)?)
+            }
+            Obj::Environment(e) => match e.get(String::from(name)) {
+                Ok(v) => Ok(v),
+                Err(_) => Err(Error::VariableNotFound(name.into()).into()),
+            },
+            _ => internal_err!(),
         }
     }
 
@@ -290,11 +310,13 @@ impl Obj {
         }
     }
 
-    // Used for [[ ]] syntax
+    // Used for `[[`-access.
     pub fn try_get_inner(&self, index: Obj) -> EvalResult {
         match self {
             Obj::Vector(v) => v.try_get(index),
             Obj::List(l) => EvalResult::Ok(l.try_get_inner(index.try_into()?)?),
+            // To access environemnts use try_get_named
+            Obj::Environment(_) => internal_err!(),
             obj => obj.as_list()?.try_get_inner(index),
         }
     }

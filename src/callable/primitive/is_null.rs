@@ -1,15 +1,10 @@
-use lazy_static::lazy_static;
 use r_derive::*;
 
 use crate::callable::core::*;
+use crate::formals;
 use crate::lang::*;
 use crate::object::types::Logical;
 use crate::object::*;
-
-lazy_static! {
-    pub static ref FORMALS: ExprList =
-        ExprList::from(vec![(Some("x".to_string()), Expr::Missing),]);
-}
 
 /// Is an object `null`
 ///
@@ -37,11 +32,10 @@ lazy_static! {
 #[builtin(sym = "is_null")]
 #[derive(Debug, Clone, PartialEq)]
 pub struct PrimitiveIsNull;
-impl Callable for PrimitiveIsNull {
-    fn formals(&self) -> ExprList {
-        FORMALS.clone()
-    }
 
+formals!(PrimitiveIsNull, "(x)");
+
+impl Callable for PrimitiveIsNull {
     fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
         let (args, _ellipsis) = self.match_arg_exprs(args, stack)?;
         let mut args = Obj::List(args);
