@@ -3,7 +3,6 @@ use r_derive::*;
 use crate::callable::core::*;
 use crate::formals;
 use crate::lang::*;
-use crate::object::types::Character;
 use crate::object::*;
 
 /// Get Names of an Object
