@@ -311,7 +311,7 @@ impl Obj {
         match self {
             Obj::Vector(v) => v.try_get(index),
             Obj::List(l) => EvalResult::Ok(l.try_get_inner(index.try_into()?)?),
-            // To access environemnts use try_get_named
+            // To access environments use try_get_named
             Obj::Environment(_) => internal_err!(),
             obj => obj.as_list()?.try_get_inner(index),
         }
