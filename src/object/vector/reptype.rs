@@ -570,16 +570,6 @@ impl<T: Clone + Default> RepType<T> {
         }
     }
 
-    /// Get mutable access to the internal vector through the passed closure.
-    pub fn with_inner<F, R>(&self, f: F) -> R
-    where
-        F: FnOnce(&Vec<T>) -> R,
-    {
-        match self {
-            RepType::Subset(v, ..) => v.with_inner(f),
-        }
-    }
-
     /// Subsetting a Vector
     ///
     /// Introduce a new subset into the aggregate list of subset indices.

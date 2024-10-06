@@ -76,19 +76,6 @@ impl<T: Clone> CowObj<T> {
         f(vals)
     }
 
-    /// Get immutable access to the internal vector.
-    /// In case more than one reference to the internal data exists,
-    /// the vector is cloned.
-    pub fn with_inner<F, R>(&self, f: F) -> R
-    where
-        F: FnOnce(&T) -> R,
-    {
-        let CowObj(x) = self;
-        let x1 = &mut *x.borrow_mut();
-        let vals: &T = Rc::make_mut(x1);
-        f(vals)
-    }
-
     /// Borrow the internal data immutably.
     pub fn borrow(&self) -> Ref<'_, Rc<T>> {
         self.0.borrow()
