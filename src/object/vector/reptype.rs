@@ -56,7 +56,7 @@ impl Naming {
         };
     }
 
-    /// Get mutable access to the internal vector through the passed closure.
+    /// Get mutable access to the internal data via the passed closure.
     pub fn with_inner_mut<F, R>(&self, f: F) -> R
     where
         F: FnOnce(&mut HashMap<String, Vec<usize>>, &mut Vec<OptionNA<String>>) -> R,
@@ -112,8 +112,7 @@ pub enum RepType<T: Clone> {
 impl<T: Clone> Clone for RepType<T> {
     fn clone(&self) -> Self {
         match self {
-            // FIXME: should this reall call .view_mut()? should add comment
-            RepType::Subset(v, s, n) => RepType::Subset(v.view_mut(), s.clone(), n.clone()),
+            RepType::Subset(v, s, n) => RepType::Subset(v.clone(), s.clone(), n.clone()),
         }
     }
 }
@@ -126,15 +125,16 @@ impl<T: Clone + Default> Default for RepType<T> {
 
 impl<T: Clone + Default + ViewMut> RepType<T> {
     /// Retrieve the internal data as a mutable view.
+    /// This is important for lists for things like `l$a[1:2] = c(10, 11)`
     pub fn try_get_inner_mut(&self, subset: Subset) -> Result<T, Signal> {
-        let self_subset = self.subset(subset);
-        match self_subset {
+        let new_subset = self.subset(subset);
+        match new_subset {
             RepType::Subset(..) => {
-                let mut iter = self_subset.iter_subset_indices();
+                let mut iter = new_subset.iter_subset_indices();
 
                 if let Some(i) = iter.next() {
                     if iter.next().is_some() {
-                        return Error::Other("subset is not of length 1".to_string()).into();
+                        return Error::Other("subset has length > 1".to_string()).into();
                     }
 
                     // TODO: subsetting with NA should not be possible.
@@ -429,7 +429,6 @@ impl<T: Clone + Default> RepType<T> {
         }
     }
 
-    // FIXME: Do we really need iter_named and iter_pairs?
     pub fn iter_names(&self) -> Option<RepTypeIter<Character>> {
         match self.clone() {
             RepType::Subset(.., maybe_naming) => {
@@ -1264,7 +1263,8 @@ where
 mod test {
     use super::OptionNA::*;
     use crate::object::reptype::RepType;
-    use crate::object::{types::*, VecPartialCmp};
+    use crate::object::{types::*, OptionNA, VecPartialCmp};
+    use crate::r;
     use crate::utils::SameType;
 
     #[test]
@@ -1354,5 +1354,203 @@ mod test {
         let expected_type = RepType::<Logical>::new();
         assert!(z.is_same_type_as(&expected_type));
         assert!(z.is_logical());
+    }
+
+    #[test]
+    fn test_iter_values() {
+        // Create values as Vec<i32>
+        let values = vec![1, 2, 3, 4, 5];
+
+        // Create RepType<Integer> from values
+        let rep = RepType::from(values.clone());
+
+        // Use iter_values to get an iterator and collect values
+        let collected_values: Vec<Integer> = rep.iter_values().collect();
+
+        // Expected values as Vec<OptionNA<i32>>
+        let expected_values: Vec<Integer> = values.into_iter().map(OptionNA::Some).collect();
+
+        // Assert collected values match expected values
+        assert_eq!(collected_values, expected_values);
+    }
+
+    #[test]
+    fn test_iter_names() {
+        // Create values with names
+        let values_with_names = vec![
+            (Character::Some(String::from("a")), 1),
+            (Character::Some(String::from("b")), 2),
+            (Character::NA, 3),
+            (Character::Some(String::from("d")), 4),
+            (Character::NA, 5),
+        ];
+
+        // Create RepType<Integer> from values with names
+        let rep = RepType::from(values_with_names.clone());
+
+        // Use iter_names to get an iterator
+        let names_iter = rep.iter_names();
+
+        // Ensure iter_names is Some iterator
+        assert!(names_iter.is_some());
+
+        // Collect names
+        let collected_names: Vec<Character> = names_iter.unwrap().collect();
+
+        // Expected names
+        let expected_names: Vec<Character> = values_with_names
+            .iter()
+            .map(|(name_opt, _)| match name_opt {
+                Some(name) => Character::Some(name.clone()),
+                Character::NA => Character::NA,
+            })
+            .collect();
+
+        // Assert collected names match expected names
+        assert_eq!(collected_names, expected_names);
+    }
+
+    use crate::object::{Obj, Vector};
+    // The tests below don't test the subsetting mechanism, which is instead tested in subsets.rs
+    #[test]
+    fn iter_pairs_mixed_names() {
+        let x = r!(c(a = 1, 2)).unwrap();
+
+        let mut x = if let Obj::Vector(Vector::Double(r)) = x {
+            r.borrow().clone().iter_pairs()
+        } else {
+            unreachable!()
+        };
+
+        assert_eq!(
+            x.next().unwrap(),
+            (Character::Some("a".to_string()), Double::Some(1.0))
+        );
+        assert_eq!(x.next().unwrap(), (Character::NA, Double::Some(2.0)));
+        assert_eq!(x.next(), None);
+    }
+
+    #[test]
+    fn iter_pairs_no_names() {
+        let x = r!(c(1, 2)).unwrap();
+
+        let mut x = if let Obj::Vector(Vector::Double(r)) = x {
+            r.borrow().clone().iter_pairs()
+        } else {
+            unreachable!()
+        };
+
+        assert_eq!(x.next().unwrap(), (Character::NA, Double::Some(1.0)));
+        assert_eq!(x.next().unwrap(), (Character::NA, Double::Some(2.0)));
+        assert_eq!(x.next(), None);
+    }
+
+    #[test]
+    fn iter_values() {
+        let x = r!(c(1, 2)).unwrap();
+
+        let mut x = if let Obj::Vector(Vector::Double(r)) = x {
+            r.borrow().clone().iter_values()
+        } else {
+            unreachable!()
+        };
+
+        assert_eq!(x.next().unwrap(), Double::Some(1.0));
+        assert_eq!(x.next().unwrap(), Double::Some(2.0));
+        assert_eq!(x.next(), None);
+    }
+
+    #[test]
+    fn iter_names_none() {
+        let x = r!(c(1, 2)).unwrap();
+
+        let x = if let Obj::Vector(Vector::Double(r)) = x {
+            r.borrow().clone().iter_names()
+        } else {
+            unreachable!()
+        };
+
+        assert!(x.is_none())
+    }
+
+    #[test]
+    fn iter_names_some() {
+        let x = r!(c(1, b = 2)).unwrap();
+
+        let mut x = if let Obj::Vector(Vector::Double(r)) = x {
+            r.borrow().clone().iter_names().unwrap()
+        } else {
+            unreachable!()
+        };
+
+        assert_eq!(x.next().unwrap(), Character::NA);
+        assert_eq!(x.next().unwrap(), Character::Some("b".to_string()));
+        assert_eq!(x.next(), None);
+    }
+
+    #[test]
+    fn names_ref_iter_some() {
+        let x = r!(c(1, b = 2)).unwrap();
+
+        let mut x = if let Obj::Vector(Vector::Double(r)) = x {
+            r.borrow().clone().names_ref().unwrap()
+        } else {
+            unreachable!()
+        };
+
+        let mut x = x.iter();
+
+        assert_eq!(x.next().unwrap(), &Character::NA);
+        assert_eq!(x.next().unwrap(), &Character::Some("b".to_string()));
+        assert_eq!(x.next(), None);
+    }
+
+    #[test]
+    #[should_panic]
+    fn names_ref_iter_none() {
+        let x = r!(c(1, 2)).unwrap();
+
+        if let Obj::Vector(Vector::Double(r)) = x {
+            r.borrow().clone().names_ref().unwrap()
+        } else {
+            unreachable!()
+        };
+    }
+
+    #[test]
+    fn values_ref_iter() {
+        let x = r!(c(1, b = 2)).unwrap();
+
+        let mut x = if let Obj::Vector(Vector::Double(r)) = x {
+            r.borrow().clone().values_ref()
+        } else {
+            unreachable!()
+        };
+
+        let mut x = x.iter();
+
+        assert_eq!(x.next().unwrap(), &Double::Some(1.0));
+        assert_eq!(x.next().unwrap(), &Double::Some(2.0));
+        assert_eq!(x.next(), None);
+    }
+
+    #[test]
+    fn pairs_ref_iter() {
+        let x = r!(c(1, b = 2)).unwrap();
+
+        let mut x = if let Obj::Vector(Vector::Double(r)) = x {
+            r.borrow().clone().pairs_ref()
+        } else {
+            unreachable!()
+        };
+
+        let mut x = x.iter();
+
+        assert_eq!(x.next().unwrap(), (&Character::NA, &Double::Some(1.0)));
+        assert_eq!(
+            x.next().unwrap(),
+            (&Character::Some("b".to_string()), &Double::Some(2.0))
+        );
+        assert_eq!(x.next(), None);
     }
 }

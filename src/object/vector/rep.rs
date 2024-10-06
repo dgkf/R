@@ -3,17 +3,15 @@ use std::fmt::{Debug, Display};
 
 use super::coercion::{AtomicMode, CoercibleInto, CommonCmp, CommonNum, MinimallyNumeric};
 use super::iterators::{map_common_numeric, zip_recycle};
-use super::reptype::{Naming, RepType, RepTypeIter};
 use super::reptype::{
-    RepTypeIntoIterableNames, RepTypeIntoIterablePairs, RepTypeIntoIterableValues,
+    Naming, RepType, RepTypeIntoIterableNames, RepTypeIntoIterablePairs, RepTypeIntoIterableValues,
+    RepTypeIter, RepTypeIterPairs,
 };
 use super::subset::Subset;
 use super::types::*;
 use super::{OptionNA, Pow, VecPartialCmp};
 use crate::lang::Signal;
-use crate::object::reptype::RepTypeIterPairs;
-use crate::object::Subsets;
-use crate::object::{CowObj, Obj, ViewMut};
+use crate::object::{CowObj, Obj, Subsets, ViewMut};
 
 /// Vector Representation
 ///
@@ -47,6 +45,8 @@ impl<T: ViewMut + Default + Clone> Rep<T> {
         self.borrow().try_get_inner_mut(subset)
     }
 
+    /// Get a cloned version of the inner value.
+    /// This is used for assignments like `list(1)[[1]]`.
     pub fn try_get_inner(&self, subset: Subset) -> Result<T, Signal> {
         self.try_get_inner_mut(subset)
     }
@@ -160,37 +160,6 @@ where
     pub fn names_ref(&self) -> Option<RepTypeIntoIterableNames> {
         self.0.borrow().names_ref()
     }
-
-    // pub fn iter_subset_indices(&self) -> Box<dyn Iterator<Item = (usize, Option<usize>)>> {
-    //     todo!()
-    // }
-
-    // /// Iterate over mutable references to the values of the vector by passing a closure.
-    // /// The current subsets of the vector are represented.
-    // /// This method should be used for vectorized assignment.
-    // ///
-    // /// It is
-    // /// Due to the complex structure of this struct it is not possible to return an iterator that yields
-    // /// mutable references to the values of the struct.
-    // pub fn with_iter_pairs_mut_ref<'a, F, R>(&'a self, f: F) -> R
-    // where
-    //      F: FnMut(&mut [T], Option<&mut [Character]>, Box<dyn Iterator<Item = Option<usize>>>) -> R,
-    // {
-    //     // We cannot easily get an Iterator that yields &mut T, even through a closure.
-    //     // This is because we might iterate over the same value multiple times (consider a subset x[c(1, 1)])
-    //     // two consecutive calls to .next() might yield the same mutable reference which is illegal.
-    //     // Instead we give acces to &mut [T] and &mut [Character] and the index iterator
-    //     //
-    //     // Maybe this is possible somehow but I am not sure how to satisfy the rust compiler.
-
-    //      when we cannot ensure that each index
-    //     for x in self.iter_mut() {}
-    //     // FIXME: This is impossible I think.
-    //     // It would be possible to pass a closure that receives |&mut T|
-    //     // FIXME: I don't think this would be
-    //     let iter = todo!();
-    //     f(iter)
-    // }
 
     pub fn materialize(&self) -> Self {
         self.borrow().materialize().into()
@@ -636,42 +605,6 @@ where
                 }
                 writeln!(f)?;
             }
-
-            // for name in names_strs {}
-
-            // let elts_per_line = x_strs
-            //     .take(maxprint)
-            //     .enumerate()
-            //     .try_for_each(|(i, x_str)| {
-            //         if i == 0 {
-            //             col = gutterlen + elt_width;
-            //             write!(
-            //                 f,
-            //                 "{:>3$}[{}] {:>4$}",
-            //                 "",
-            //                 i + 1,
-            //                 x_str,
-            //                 nlen - 1,
-            //                 elt_width
-            //             )
-            //         } else if col + 1 + elt_width > 80 {
-            //             col = gutterlen + elt_width;
-            //             let i_str = format!("{}", i + 1);
-            //             let gutter = nlen - i_str.len();
-            //             write!(
-            //                 f,
-            //                 "\n{:>3$}[{}] {:>4$}",
-            //                 "", i_str, x_str, gutter, elt_width
-            //             )
-            //         } else {
-            //             col += 1 + elt_width;
-            //             write!(f, " {:>1$}", x_str, elt_width)
-            //         }
-            //     })?;
-
-            // if n > maxprint {
-            //     write!(f, "\n[ omitting {} entries ]", n - maxprint)?;
-            // }
         }
         Ok(())
     }
