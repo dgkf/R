@@ -65,7 +65,7 @@ impl Callable for PrimitiveC {
             .fold(0, std::cmp::max);
 
         // if the output will have names
-        // either an argument is named or its values has names
+        // either an argument was passed via a name or it has names itself
         let named = vals.pairs_ref().iter().any(|(n, o)| {
             if matches!(n, OptionNA::Some(_)) {
                 return true;

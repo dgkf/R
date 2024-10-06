@@ -147,7 +147,6 @@ impl IntoIterator for Subsets {
 
 #[cfg(test)]
 mod test {
-
     use crate::object::Vector;
 
     #[test]

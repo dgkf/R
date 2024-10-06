@@ -82,8 +82,7 @@ impl TryFrom<Obj> for Double {
         ));
         if let Obj::Vector(Vector::Double(v)) = value {
             if v.len() == 1 {
-                let x = v.iter_pairs().map(|(_, x)| x.clone()).next().unwrap();
-                Ok(x)
+                Ok(v.iter_values().next().expect("length is one"))
             } else {
                 err
             }
@@ -101,8 +100,7 @@ impl TryFrom<Obj> for Integer {
         ));
         if let Obj::Vector(Vector::Integer(v)) = value {
             if v.len() == 1 {
-                let x = v.iter_pairs().map(|(_, x)| x.clone()).next().unwrap();
-                Ok(x)
+                Ok(v.iter_values().next().expect("length is one"))
             } else {
                 err
             }
@@ -120,8 +118,7 @@ impl TryFrom<Obj> for Character {
         ));
         if let Obj::Vector(Vector::Character(v)) = value {
             if v.len() == 1 {
-                let x = v.iter_pairs().map(|(_, x)| x.clone()).next().unwrap();
-                Ok(x)
+                Ok(v.iter_values().next().expect("length is one"))
             } else {
                 err
             }
@@ -139,8 +136,7 @@ impl TryFrom<Obj> for Logical {
         ));
         if let Obj::Vector(Vector::Logical(v)) = value {
             if v.len() == 1 {
-                let x = v.iter_pairs().map(|(_, x)| x.clone()).next().unwrap();
-                Ok(x)
+                Ok(v.iter_values().next().expect("length is one"))
             } else {
                 err
             }

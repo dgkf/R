@@ -68,6 +68,7 @@ pub trait Callable: CallableFormals {
         // remove any Ellipsis param, and any trailing unassigned params
         let remainder = formals.pop_trailing();
 
+        // backfill unnamed args, populating ellipsis with overflow
         for (key, value) in args.iter_pairs() {
             match key {
                 // named args go directly to ellipsis, they did not match a formal

@@ -14,8 +14,6 @@ use crate::object::{CowObj, Obj};
 ///
 #[derive(Debug, Clone, PartialEq)]
 pub enum Subset {
-    // This is currently 0-index.
-    // TODO: I think this should be 1-indexed as pushing integer vectors as a subset otherwise requires an allocation.
     Indices(CowObj<Vec<Integer>>),
     Mask(CowObj<Vec<Logical>>),
     Names(CowObj<Vec<Character>>),
