@@ -432,32 +432,13 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
 <a href="#399" id="399">399</a>
 <a href="#400" id="400">400</a>
 <a href="#401" id="401">401</a>
-<a href="#402" id="402">402</a>
-<a href="#403" id="403">403</a>
-<a href="#404" id="404">404</a>
-<a href="#405" id="405">405</a>
-<a href="#406" id="406">406</a>
-<a href="#407" id="407">407</a>
-<a href="#408" id="408">408</a>
-<a href="#409" id="409">409</a>
-<a href="#410" id="410">410</a>
-<a href="#411" id="411">411</a>
-<a href="#412" id="412">412</a>
-<a href="#413" id="413">413</a>
-<a href="#414" id="414">414</a>
-<a href="#415" id="415">415</a>
-<a href="#416" id="416">416</a>
-<a href="#417" id="417">417</a>
-<a href="#418" id="418">418</a>
-<a href="#419" id="419">419</a>
-<a href="#420" id="420">420</a>
 </pre></div><pre class="rust"><code><span class="kw">extern crate </span>r_derive;
 
 <span class="kw">use </span><span class="kw">crate</span>::callable::dyncompare::<span class="kw-2">*</span>;
 <span class="kw">use </span><span class="kw">crate</span>::cli::Experiment;
 <span class="kw">use </span><span class="kw">crate</span>::context::Context;
-<span class="kw">use </span><span class="kw">crate</span>::object::List;
-<span class="kw">use </span><span class="kw">crate</span>::object::{Expr, ExprList, Obj};
+<span class="kw">use </span><span class="kw">crate</span>::object::types::{Character, Integer};
+<span class="kw">use </span><span class="kw">crate</span>::object::{Expr, ExprList, List, Obj, Subset};
 <span class="kw">use crate</span>::{internal_err, lang::<span class="kw-2">*</span>};
 
 <span class="kw">impl </span>std::fmt::Debug <span class="kw">for </span>Box&lt;<span class="kw">dyn </span>Callable&gt; {
@@ -491,29 +472,26 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
 <span class="kw">pub trait </span>Callable: CallableFormals {
     <span class="kw">fn </span>match_args(<span class="kw-2">&amp;</span><span class="self">self</span>, args: List, stack: <span class="kw-2">&amp;mut </span>CallStack) -&gt; <span class="prelude-ty">Result</span>&lt;(List, List), Signal&gt; {
         <span class="kw">let </span><span class="kw-2">mut </span>formals = <span class="self">self</span>.formals();
-        <span class="kw">let </span>ellipsis: List = <span class="macro">vec!</span>[].into();
-        <span class="kw">let </span>matched_args: List = <span class="macro">vec!</span>[].into();
+        <span class="kw">let </span>ellipsis: List = List::new();
+        <span class="kw">let </span>matched_args: List = List::new();
 
         <span class="comment">// assign named args to corresponding formals
-        </span><span class="kw">let </span><span class="kw-2">mut </span>i: usize = <span class="number">0</span>;
-        <span class="lifetime">'outer</span>: <span class="kw">while </span>i &lt; args.values.len() {
-            <span class="lifetime">'inner</span>: {
-                <span class="comment">// check argname with immutable borrow, but drop scope. If
-                // found, drop borrow so we can mutably assign it
-                </span><span class="kw">if let </span>(<span class="prelude-val">Some</span>(argname), <span class="kw">_</span>) = <span class="kw-2">&amp;</span>args.values.borrow()[i] {
-                    <span class="kw">if let </span><span class="prelude-val">Some</span>((<span class="prelude-val">Some</span>(<span class="kw">_</span>), <span class="kw">_</span>)) = formals.remove_named(argname) {
-                        <span class="kw">break </span><span class="lifetime">'inner</span>;
-                    }
+
+        </span><span class="kw">let </span><span class="kw-2">mut </span>indices: Vec&lt;i32&gt; = Vec::new();
+
+        <span class="kw">for </span>(i, (maybe_name, value)) <span class="kw">in </span>args.pairs_ref().iter().enumerate() {
+            <span class="kw">if let </span>Character::Some(name) = maybe_name {
+                <span class="kw">if let </span><span class="prelude-val">Some</span>((<span class="prelude-val">Some</span>(<span class="kw">_</span>), <span class="kw">_</span>)) = formals.remove_named(name) {
+                    matched_args.push_named(Character::Some(name.clone()), value.clone());
+                    <span class="kw">continue</span>;
                 }
-
-                i += <span class="number">1</span>;
-                <span class="kw">continue </span><span class="lifetime">'outer</span>;
             }
-
-            matched_args
-                .values
-                .with_inner_mut(|v| v.push(args.values.with_inner_mut(|x| x.remove(i))))
+            indices.push(i <span class="kw">as </span>i32);
         }
+
+        <span class="kw">let </span>indices: Vec&lt;Integer&gt; = indices.into_iter().map(Integer::Some).collect();
+        <span class="kw">let </span>subset = Subset::Indices(indices.into());
+        <span class="kw">let </span>args = args.subset(subset).materialize();
 
         <span class="comment">// TODO(bug): need to evaluate trailing unassigned params that have
         // a default value before popping off remaining trailing params
@@ -522,27 +500,18 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
         </span><span class="kw">let </span>remainder = formals.pop_trailing();
 
         <span class="comment">// backfill unnamed args, populating ellipsis with overflow
-        </span><span class="kw">let </span>argsiter = args.values.into_iter();
-        <span class="kw">for </span>(key, value) <span class="kw">in </span>argsiter {
+        </span><span class="kw">for </span>(key, value) <span class="kw">in </span>args.iter_pairs() {
             <span class="kw">match </span>key {
                 <span class="comment">// named args go directly to ellipsis, they did not match a formal
-                </span><span class="prelude-val">Some</span>(arg) =&gt; {
-                    ellipsis
-                        .values
-                        .with_inner_mut(|v| v.push((<span class="prelude-val">Some</span>(arg), value)));
-                }
+                </span>Character::Some(arg) =&gt; ellipsis.push_named(Character::Some(arg), value),
 
                 <span class="comment">// unnamed args populate next formal, or ellipsis if formals exhausted
-                </span><span class="prelude-val">None </span>=&gt; {
+                </span>Character::NA =&gt; {
                     <span class="kw">let </span>next_unassigned_formal = formals.remove(<span class="number">0</span>);
                     <span class="kw">if let </span><span class="prelude-val">Some</span>((<span class="prelude-val">Some</span>(param), <span class="kw">_</span>)) = next_unassigned_formal {
-                        matched_args
-                            .values
-                            .with_inner_mut(|vals| vals.push((<span class="prelude-val">Some</span>(param), value)));
+                        matched_args.push_named(Character::Some(param), value);
                     } <span class="kw">else </span>{
-                        ellipsis
-                            .values
-                            .with_inner_mut(|vals| vals.push((<span class="prelude-val">None</span>, value)));
+                        ellipsis.push_named(Character::NA, value);
                     }
                 }
             }
@@ -550,22 +519,19 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
 
         <span class="comment">// add back in parameter defaults that weren't filled with args
         </span><span class="kw">for </span>(param, default) <span class="kw">in </span>formals.into_iter() {
-            matched_args.values.with_inner_mut(|v| {
-                v.push((
-                    param,
-                    Obj::Promise(<span class="prelude-val">None</span>, default, stack.last_frame().env().clone()),
-                ));
-            })
+            matched_args.push_named(
+                param.into(),
+                Obj::Promise(<span class="prelude-val">None</span>, default, stack.last_frame().env().clone()),
+            )
         }
 
         <span class="kw">if let </span><span class="prelude-val">Some</span>(Expr::Ellipsis(<span class="prelude-val">Some</span>(name))) = remainder.get(<span class="number">0</span>) {
-            matched_args
-                .values
-                .with_inner_mut(|v| v.push((<span class="prelude-val">Some</span>(name), Obj::List(ellipsis.clone()))))
+            matched_args.push_named(Character::Some(name), Obj::List(ellipsis.clone()));
         } <span class="kw">else if </span>!remainder.is_empty() {
-            matched_args
-                .values
-                .with_inner_mut(|v| v.push((<span class="prelude-val">Some</span>(<span class="string">"..."</span>.to_string()), Obj::List(ellipsis.clone()))))
+            matched_args.push_named(
+                Character::Some(<span class="string">"..."</span>.to_string()),
+                Obj::List(ellipsis.clone()),
+            );
         }
 
         <span class="prelude-val">Ok</span>((matched_args, ellipsis))
@@ -729,14 +695,10 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
 <span class="kw">impl </span>CallableFormals <span class="kw">for </span>String {}
 <span class="kw">impl </span>Builtin <span class="kw">for </span>String {}
 
-<span class="kw">pub fn </span>force_promises(
-    vals: List,
-    stack: <span class="kw-2">&amp;mut </span>CallStack,
-) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;(<span class="prelude-ty">Option</span>&lt;String&gt;, Obj)&gt;, Signal&gt; {
+<span class="kw">pub fn </span>force_promises(vals: List, stack: <span class="kw-2">&amp;mut </span>CallStack) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;(Character, Obj)&gt;, Signal&gt; {
     <span class="comment">// Force any closures that were created during call. This helps with using
     // variables as argument for sep and collapse parameters.
-    </span>vals.values
-        .into_iter()
+    </span>vals.iter_pairs()
         .map(|(k, v)| <span class="kw">match </span>(k, v.force(stack)) {
             (k, <span class="prelude-val">Ok</span>(v)) =&gt; <span class="prelude-val">Ok</span>((k, v)),
             (<span class="kw">_</span>, <span class="prelude-val">Err</span>(e)) =&gt; <span class="prelude-val">Err</span>(e),

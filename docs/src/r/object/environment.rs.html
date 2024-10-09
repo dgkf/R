@@ -177,6 +177,22 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
 <a href="#144" id="144">144</a>
 <a href="#145" id="145">145</a>
 <a href="#146" id="146">146</a>
+<a href="#147" id="147">147</a>
+<a href="#148" id="148">148</a>
+<a href="#149" id="149">149</a>
+<a href="#150" id="150">150</a>
+<a href="#151" id="151">151</a>
+<a href="#152" id="152">152</a>
+<a href="#153" id="153">153</a>
+<a href="#154" id="154">154</a>
+<a href="#155" id="155">155</a>
+<a href="#156" id="156">156</a>
+<a href="#157" id="157">157</a>
+<a href="#158" id="158">158</a>
+<a href="#159" id="159">159</a>
+<a href="#160" id="160">160</a>
+<a href="#161" id="161">161</a>
+<a href="#162" id="162">162</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>core::fmt;
 <span class="kw">use </span>hashbrown::HashMap;
 <span class="kw">use </span>std::cell::RefCell;
@@ -187,6 +203,7 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
 <span class="kw">use </span><span class="kw">crate</span>::context::Context;
 <span class="kw">use </span><span class="kw">crate</span>::error::Error;
 <span class="kw">use </span><span class="kw">crate</span>::lang::{EvalResult, Signal};
+<span class="kw">use </span><span class="kw">crate</span>::object::types::Character;
 <span class="kw">use </span><span class="kw">crate</span>::object::ViewMut;
 
 <span class="kw">use super</span>::{Expr, ExprList, List, Obj};
@@ -234,8 +251,8 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
     }
 
     <span class="kw">pub fn </span>append(<span class="kw-2">&amp;</span><span class="self">self</span>, l: List) {
-        <span class="kw">for </span>(key, value) <span class="kw">in </span>l.values.borrow().iter() {
-            <span class="kw">if let </span><span class="prelude-val">Some</span>(name) = key {
+        <span class="kw">for </span>(key, value) <span class="kw">in </span>l.pairs_ref().iter() {
+            <span class="kw">if let </span>Character::Some(name) = key {
                 <span class="self">self</span>.values.borrow_mut().insert(name.clone(), value.clone());
             }
         }
@@ -321,6 +338,21 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
 
         </span><span class="macro">write!</span>(f, <span class="string">"&gt;"</span>)<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(())
+    }
+}
+
+<span class="attr">#[cfg(test)]
+
+</span><span class="kw">mod </span>tests {
+    <span class="kw">use crate</span>::{r, r_expect};
+
+    <span class="attr">#[test]
+    </span><span class="kw">fn </span>dollar() {
+        <span class="macro">r_expect!</span> {{<span class="string">"
+            e = environment()
+            e$x = 1
+            e$x == 1
+        "</span>}}
     }
 }
 </code></pre></div></section></main></body></html>

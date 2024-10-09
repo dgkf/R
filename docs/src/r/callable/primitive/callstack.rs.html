@@ -126,7 +126,7 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
                 .frames
                 .iter()
                 .skip(<span class="number">1</span>) <span class="comment">// skip global frame
-                </span>.map(|f| (<span class="prelude-val">None</span>, Obj::Expr(f.call.clone())))
+                </span>.map(|f| (OptionNA::NA, Obj::Expr(f.call.clone())))
                 .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;(),
         )))
     }

@@ -240,10 +240,12 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
 <a href="#207" id="207">207</a>
 <a href="#208" id="208">208</a>
 <a href="#209" id="209">209</a>
+<a href="#210" id="210">210</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::callable::core::<span class="kw-2">*</span>;
 <span class="kw">use </span><span class="kw">crate</span>::error::<span class="kw-2">*</span>;
 <span class="kw">use </span><span class="kw">crate</span>::formals;
 <span class="kw">use </span><span class="kw">crate</span>::lang::<span class="kw-2">*</span>;
+<span class="kw">use </span><span class="kw">crate</span>::object::types::Character;
 <span class="kw">use </span><span class="kw">crate</span>::object::<span class="kw-2">*</span>;
 <span class="kw">use </span>r_derive::<span class="kw-2">*</span>;
 
@@ -294,6 +296,7 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
         <span class="kw">let </span>(args, ellipsis) = <span class="self">self</span>.match_arg_exprs(args, stack)<span class="question-mark">?</span>;
 
         <span class="kw">let </span>ellipsis = force_promises(ellipsis, stack)<span class="question-mark">?</span>;
+
         <span class="kw">let </span>args = force_promises(args, stack)<span class="question-mark">?</span>;
 
         <span class="kw">let </span><span class="kw-2">mut </span>sep = String::from(<span class="string">" "</span>);
@@ -302,7 +305,7 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
 
         <span class="comment">// remove named sep and collapse args from our arguments and populate values
         </span><span class="kw">for </span>(k, v) <span class="kw">in </span>args.iter().rev() {
-            <span class="kw">let </span><span class="prelude-val">Some</span>(k) = k <span class="kw">else </span>{ <span class="kw">continue </span>};
+            <span class="kw">let </span>Character::Some(k) = k <span class="kw">else </span>{ <span class="kw">continue </span>};
 
             <span class="kw">match </span>(k.as_str(), v) {
                 (<span class="string">"sep"</span>, Obj::Vector(v)) =&gt; {
@@ -364,7 +367,6 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
         <span class="kw">if </span>should_collapse {
             output = <span class="macro">vec!</span>[output.join(<span class="kw-2">&amp;</span>collapse)];
         }
-
         <span class="prelude-val">Ok</span>(Obj::Vector(output.into()))
     }
 }
@@ -372,7 +374,7 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
 <span class="attr">#[cfg(test)]
 </span><span class="kw">mod </span>test {
     <span class="kw">use super</span>::<span class="kw-2">*</span>;
-    <span class="kw">use </span><span class="kw">crate</span>::object::types::<span class="kw-2">*</span>;
+
     <span class="kw">use </span><span class="kw">crate</span>::r;
 
     <span class="attr">#[test]

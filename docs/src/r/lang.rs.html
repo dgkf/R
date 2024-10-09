@@ -1382,6 +1382,10 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
 <a href="#1349" id="1349">1349</a>
 <a href="#1350" id="1350">1350</a>
 <a href="#1351" id="1351">1351</a>
+<a href="#1352" id="1352">1352</a>
+<a href="#1353" id="1353">1353</a>
+<a href="#1354" id="1354">1354</a>
+<a href="#1355" id="1355">1355</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::callable::builtins::BUILTIN;
 <span class="kw">use </span><span class="kw">crate</span>::callable::core::Callable;
 <span class="kw">use </span><span class="kw">crate</span>::cli::Experiment;
@@ -1389,11 +1393,12 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
 <span class="kw">use </span><span class="kw">crate</span>::error::<span class="kw-2">*</span>;
 <span class="kw">use </span><span class="kw">crate</span>::internal_err;
 <span class="kw">use </span><span class="kw">crate</span>::object::types::<span class="kw-2">*</span>;
+<span class="kw">use </span><span class="kw">crate</span>::object::List;
 <span class="kw">use </span><span class="kw">crate</span>::object::<span class="kw-2">*</span>;
 <span class="kw">use </span><span class="kw">crate</span>::parser::LocalizedParser;
 <span class="kw">use </span><span class="kw">crate</span>::parser::ParseResult;
 <span class="kw">use </span><span class="kw">crate</span>::session::{Session, SessionParserConfig};
-<span class="kw">use </span>std::collections::HashSet;
+<span class="kw">use </span>hashbrown::HashSet;
 
 <span class="kw">use </span>core::fmt;
 <span class="kw">use </span>std::fmt::Display;
@@ -1454,11 +1459,7 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
                 Vector::Logical(v) =&gt; Vector::Logical(v.view_mut()),
             }),
 
-            Obj::List(List { names, values, subsets }) =&gt; Obj::List(List {
-                names: (<span class="kw-2">*</span>names).view_mut(),
-                values: (<span class="kw-2">*</span>values).view_mut(),
-                subsets: (<span class="kw-2">*</span>subsets).clone(),
-            }),
+            Obj::List(l) =&gt; Obj::List(l.view_mut()),
             <span class="comment">// FIXME: this needs to be implemented for all objects that can be mutated
             </span>x =&gt; x.clone(),
         }
@@ -1482,7 +1483,8 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
         }
     }
 
-    <span class="kw">pub fn </span>assign(<span class="self">self</span>, value: Obj) -&gt; EvalResult {
+    <span class="comment">// this is vectorized assignment.
+    </span><span class="kw">pub fn </span>assign(<span class="self">self</span>, value: Obj) -&gt; EvalResult {
         <span class="comment">// TODO(ERROR) cleanup
         </span><span class="kw">let </span>err = Error::Other(<span class="string">"Invalid target for assignment"</span>.to_string());
 
@@ -1492,7 +1494,27 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
                 <span class="prelude-val">Ok</span>(value)
             }
             Obj::List(<span class="kw-2">mut </span>l) =&gt; {
-                l.assign(value.clone())<span class="question-mark">?</span>;
+                <span class="kw">match </span>value.clone() {
+                    Obj::List(r) =&gt; {
+                        l.assign(r);
+                    }
+                    Obj::Vector(r) =&gt; <span class="kw">match </span>r {
+                        Vector::Integer(r) =&gt; {
+                            l.assign(r);
+                        }
+                        Vector::Character(r) =&gt; {
+                            l.assign(r);
+                        }
+                        Vector::Logical(r) =&gt; {
+                            l.assign(r);
+                        }
+                        Vector::Double(r) =&gt; {
+                            l.assign(r);
+                        }
+                    },
+                    <span class="kw">_ </span>=&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(err.into()),
+                };
+
                 <span class="prelude-val">Ok</span>(value)
             }
             <span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(err.into()),
@@ -1501,7 +1523,7 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
 
     <span class="kw">pub fn </span>as_list(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; EvalResult {
         <span class="kw">match </span><span class="self">self </span>{
-            Obj::Null =&gt; <span class="prelude-val">Ok</span>(Obj::List(List::from(<span class="macro">vec!</span>[]))),
+            Obj::Null =&gt; <span class="prelude-val">Ok</span>(Obj::List(List::new())),
             Obj::Vector(_v) =&gt; <span class="macro">internal_err!</span>(),
             Obj::List(l) =&gt; <span class="prelude-val">Ok</span>(Obj::List(l.clone())),
             Obj::Expr(e) =&gt; <span class="kw">match </span>e {
@@ -1597,53 +1619,12 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
     <span class="kw">pub fn </span>get(<span class="kw-2">&amp;</span><span class="self">self</span>, index: usize) -&gt; <span class="prelude-ty">Option</span>&lt;Obj&gt; {
         <span class="kw">match </span><span class="self">self </span>{
             Obj::Vector(v) =&gt; v.get(index).map(Obj::Vector),
+            Obj::List(v) =&gt; v.get(index).map(Obj::List),
             Obj::Null =&gt; <span class="prelude-val">None</span>,
-            Obj::List(l) =&gt; l.values.borrow().get(index).map(|x| x.<span class="number">1</span>.clone()),
             Obj::Expr(..) =&gt; <span class="prelude-val">None</span>,
             Obj::Promise(..) =&gt; <span class="prelude-val">None</span>,
             Obj::Function(..) =&gt; <span class="prelude-val">None</span>,
             Obj::Environment(..) =&gt; <span class="prelude-val">None</span>,
-        }
-    }
-
-    <span class="kw">pub fn </span>get_named(<span class="kw-2">&amp;mut </span><span class="self">self</span>, name: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;Obj&gt; {
-        <span class="kw">match </span><span class="self">self </span>{
-            Obj::List(v) =&gt; v
-                .values
-                .borrow()
-                .iter()
-                .find(|(k, <span class="kw">_</span>)| <span class="kw-2">*</span>k == <span class="prelude-val">Some</span>(String::from(name)))
-                .map(|(<span class="kw">_</span>, v)| v.clone()),
-            Obj::Environment(e) =&gt; <span class="kw">match </span>e.get(String::from(name)) {
-                <span class="prelude-val">Ok</span>(v) =&gt; <span class="prelude-val">Some</span>(v),
-                <span class="prelude-val">Err</span>(<span class="kw">_</span>) =&gt; <span class="prelude-val">None</span>,
-            },
-            <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
-        }
-    }
-
-    <span class="kw">pub fn </span>set_named(<span class="kw-2">&amp;mut </span><span class="self">self</span>, name: <span class="kw-2">&amp;</span>str, value: Obj) -&gt; EvalResult {
-        <span class="kw">match </span><span class="self">self </span>{
-            Obj::List(v) =&gt; {
-                <span class="kw">let </span>loc = v
-                    .values
-                    .iter()
-                    .enumerate()
-                    .find(|(<span class="kw">_</span>, (k, <span class="kw">_</span>))| <span class="kw-2">*</span>k == <span class="prelude-val">Some</span>(name.into()))
-                    .map(|(i, <span class="kw">_</span>)| i);
-
-                v.values.with_inner_mut(|vb| <span class="kw">match </span>loc {
-                    <span class="prelude-val">Some</span>(i) =&gt; vb[i].<span class="number">1 </span>= value.clone(),
-                    <span class="prelude-val">None </span>=&gt; vb.push((<span class="prelude-val">Some</span>(name.into()), value.clone())),
-                });
-
-                <span class="prelude-val">Ok</span>(value)
-            }
-            Obj::Environment(e) =&gt; {
-                e.values.borrow_mut().insert(name.into(), value.clone());
-                <span class="prelude-val">Ok</span>(value)
-            }
-            <span class="kw">_ </span>=&gt; <span class="prelude-val">Ok</span>(Obj::Null),
         }
     }
 
@@ -1654,29 +1635,72 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
         }
     }
 
-    <span class="kw">pub fn </span>try_get_named(<span class="kw-2">&amp;mut </span><span class="self">self</span>, name: <span class="kw-2">&amp;</span>str) -&gt; EvalResult {
-        <span class="kw">use </span>Error::{ArgumentMissing, VariableNotFound};
-        <span class="kw">match </span><span class="self">self</span>.get_named(name) {
-            <span class="prelude-val">Some</span>(Obj::Promise(<span class="kw">_</span>, Expr::Missing, <span class="kw">_</span>)) =&gt; <span class="prelude-val">Err</span>(ArgumentMissing(name.into()).into()),
-            <span class="prelude-val">Some</span>(x) =&gt; <span class="prelude-val">Ok</span>(x),
-            <span class="prelude-val">None </span>=&gt; <span class="prelude-val">Err</span>(VariableNotFound(name.into()).into()),
+    <span class="doccomment">/// Used for `$`-assignment.
+    </span><span class="kw">pub fn </span>try_set_named(<span class="kw-2">&amp;mut </span><span class="self">self</span>, name: <span class="kw-2">&amp;</span>str, value: Obj) -&gt; EvalResult {
+        <span class="kw">match </span><span class="self">self </span>{
+            Obj::List(l) =&gt; {
+                <span class="kw">let </span>subset = Subset::Names(<span class="macro">vec!</span>[Character::Some(name.to_string())].into());
+                <span class="prelude-val">Ok</span>(l.set_subset(subset, value)<span class="question-mark">?</span>)
+            }
+            Obj::Environment(e) =&gt; {
+                e.values.borrow_mut().insert(name.into(), value.clone());
+                <span class="prelude-val">Ok</span>(value)
+            }
+            <span class="kw">_ </span>=&gt; <span class="macro">internal_err!</span>(),
+        }
+    }
+
+    <span class="doccomment">/// Used for `$`-assignment.
+    </span><span class="kw">pub fn </span>try_get_named_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>, name: <span class="kw-2">&amp;</span>str) -&gt; EvalResult {
+        <span class="kw">match </span><span class="self">self </span>{
+            Obj::List(l) =&gt; {
+                <span class="kw">let </span>subset = Subset::Names(<span class="macro">vec!</span>[Character::Some(name.to_string())].into());
+                <span class="prelude-val">Ok</span>(l.try_get_inner_mut(subset)<span class="question-mark">?</span>)
+            }
+            Obj::Environment(e) =&gt; <span class="kw">match </span>e.get_mut(String::from(name)) {
+                <span class="prelude-val">Ok</span>(v) =&gt; <span class="prelude-val">Ok</span>(v),
+                <span class="prelude-val">Err</span>(<span class="kw">_</span>) =&gt; <span class="prelude-val">Err</span>(Error::VariableNotFound(name.into()).into()),
+            },
+            <span class="kw">_ </span>=&gt; <span class="macro">internal_err!</span>(),
+        }
+    }
+
+    <span class="doccomment">/// Used for `$`-access.
+    </span><span class="kw">pub fn </span>try_get_named(<span class="kw-2">&amp;mut </span><span class="self">self</span>, name: <span class="kw-2">&amp;</span>str) -&gt; EvalResult {
+        <span class="kw">match </span><span class="self">self </span>{
+            Obj::List(l) =&gt; {
+                <span class="kw">let </span>subset = Subset::Names(<span class="macro">vec!</span>[Character::Some(name.to_string())].into());
+                <span class="prelude-val">Ok</span>(l.try_get_inner(subset)<span class="question-mark">?</span>)
+            }
+            Obj::Environment(e) =&gt; <span class="kw">match </span>e.get(String::from(name)) {
+                <span class="prelude-val">Ok</span>(v) =&gt; <span class="prelude-val">Ok</span>(v),
+                <span class="prelude-val">Err</span>(<span class="kw">_</span>) =&gt; <span class="prelude-val">Err</span>(Error::VariableNotFound(name.into()).into()),
+            },
+            <span class="kw">_ </span>=&gt; <span class="macro">internal_err!</span>(),
         }
     }
 
     <span class="comment">// Used for [ ] syntax
     </span><span class="kw">pub fn </span>try_get(<span class="kw-2">&amp;</span><span class="self">self</span>, index: Obj) -&gt; EvalResult {
+        <span class="kw">let </span>index = index.as_vector()<span class="question-mark">?</span>;
         <span class="kw">match </span><span class="self">self </span>{
             Obj::Vector(v) =&gt; v.try_get(index),
-            Obj::List(l) =&gt; l.try_get(index),
+            Obj::List(l) =&gt; {
+                <span class="kw">let </span>subset = Subset::try_from(index)<span class="question-mark">?</span>;
+                <span class="kw">let </span>x = l.subset(subset);
+                EvalResult::Ok(Obj::List(List::from(x)))
+            }
             obj =&gt; obj.as_list()<span class="question-mark">?</span>.try_get(index),
         }
     }
 
-    <span class="comment">// Used for [[ ]] syntax
+    <span class="comment">// Used for `[[`-access.
     </span><span class="kw">pub fn </span>try_get_inner(<span class="kw-2">&amp;</span><span class="self">self</span>, index: Obj) -&gt; EvalResult {
         <span class="kw">match </span><span class="self">self </span>{
             Obj::Vector(v) =&gt; v.try_get(index),
-            Obj::List(l) =&gt; l.try_get_inner(index),
+            Obj::List(l) =&gt; EvalResult::Ok(l.try_get_inner(index.try_into()<span class="question-mark">?</span>)<span class="question-mark">?</span>),
+            <span class="comment">// To access environments use try_get_named
+            </span>Obj::Environment(<span class="kw">_</span>) =&gt; <span class="macro">internal_err!</span>(),
             obj =&gt; obj.as_list()<span class="question-mark">?</span>.try_get_inner(index),
         }
     }
@@ -1685,7 +1709,7 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
     </span><span class="kw">pub fn </span>try_get_inner_mut(<span class="kw-2">&amp;</span><span class="self">self</span>, index: Obj) -&gt; EvalResult {
         <span class="kw">match </span><span class="self">self </span>{
             Obj::Vector(v) =&gt; v.try_get(index),
-            Obj::List(l) =&gt; l.try_get_inner_mut(index),
+            Obj::List(l) =&gt; EvalResult::Ok(l.try_get_inner_mut(index.try_into()<span class="question-mark">?</span>)<span class="question-mark">?</span>),
             obj =&gt; obj.as_list()<span class="question-mark">?</span>.try_get_inner_mut(index),
         }
     }
@@ -1756,29 +1780,12 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
 }
 
 <span class="kw">fn </span>display_list(x: <span class="kw-2">&amp;</span>List, f: <span class="kw-2">&amp;mut </span>fmt::Formatter&lt;<span class="lifetime">'_</span>&gt;, bc: <span class="prelude-ty">Option</span>&lt;String&gt;) -&gt; fmt::Result {
-    <span class="kw">let </span>v = x.values.borrow();
-    <span class="kw">let </span>s = x.subsets.clone();
-
-    <span class="kw">for </span>(i, (<span class="kw">_</span>, si)) <span class="kw">in </span>s
-        .bind_names(x.names.clone())
-        .into_iter()
-        .take(v.len())
-        .enumerate()
-    {
-        <span class="kw">let </span>name;
-        <span class="kw">let </span>value;
-
-        <span class="kw">if let </span><span class="prelude-val">Some</span>(i) = si {
-            (name, value) = v[i].clone();
-        } <span class="kw">else </span>{
-            <span class="kw">return </span><span class="macro">write!</span>(f, <span class="string">"{}"</span>, Obj::Null);
-        }
-
+    <span class="kw">for </span>(i, (maybe_name, value)) <span class="kw">in </span>x.pairs_ref().iter().enumerate() {
         <span class="kw">if </span>i &gt; <span class="number">0 </span>{
             <span class="macro">writeln!</span>(f)<span class="question-mark">?
         </span>}
 
-        <span class="kw">let </span>bc_elem = <span class="kw">if let </span><span class="prelude-val">Some</span>(name) = name {
+        <span class="kw">let </span>bc_elem = <span class="kw">if let </span>Character::Some(name) = maybe_name {
             <span class="macro">format!</span>(<span class="string">"${}"</span>, name)
         } <span class="kw">else </span>{
             <span class="macro">format!</span>(<span class="string">"[[{}]]"</span>, i + <span class="number">1</span>)
@@ -1792,7 +1799,7 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
         <span class="kw">match </span>value {
             Obj::List(nested_values) =&gt; {
                 <span class="macro">writeln!</span>(f, <span class="string">"{}"</span>, breadcrumbs)<span class="question-mark">?</span>;
-                display_list(<span class="kw-2">&amp;</span>nested_values, f, <span class="prelude-val">Some</span>(breadcrumbs))<span class="question-mark">?
+                display_list(nested_values, f, <span class="prelude-val">Some</span>(breadcrumbs))<span class="question-mark">?
             </span>}
             <span class="kw">_ </span>=&gt; <span class="macro">write!</span>(f, <span class="string">"{}\n{}\n"</span>, breadcrumbs, value)<span class="question-mark">?</span>,
         }
@@ -2212,14 +2219,15 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
                     <span class="kw">match </span>item {
                         (<span class="prelude-val">None</span>, Expr::String(s) | Expr::Symbol(s)) =&gt; {
                             <span class="kw">let </span>index = Obj::Vector(Vector::from(<span class="macro">vec!</span>[i]));
-                            <span class="kw">let </span>value = args.try_get_inner(index)<span class="question-mark">?</span>;
+                            <span class="kw">let </span>value = args.try_get_inner(index.try_into()<span class="question-mark">?</span>)<span class="question-mark">?</span>;
                             <span class="self">self</span>.assign(Expr::Symbol(s), value)<span class="question-mark">?</span>;
                             i += <span class="number">1</span>;
                         }
                         <span class="comment">// TODO(feature): allow arbitrary right-side expressions
                         // evaluated with list as additional data-frame
                         </span>(<span class="prelude-val">Some</span>(n), Expr::String(s) | Expr::Symbol(s)) =&gt; {
-                            <span class="kw">let </span>value = args.try_get_inner(Obj::Vector(Vector::from(<span class="macro">vec!</span>[s])))<span class="question-mark">?</span>;
+                            <span class="kw">let </span>value =
+                                args.try_get_inner(Obj::Vector(Vector::from(<span class="macro">vec!</span>[s])).try_into()<span class="question-mark">?</span>)<span class="question-mark">?</span>;
                             <span class="self">self</span>.assign(Expr::Symbol(n), value)<span class="question-mark">?</span>;
                         }
                         <span class="kw">_ </span>=&gt; <span class="kw">return </span><span class="macro">internal_err!</span>(),
@@ -2457,7 +2465,7 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
 
     <span class="kw">fn </span>get(<span class="kw-2">&amp;mut </span><span class="self">self</span>, name: String) -&gt; EvalResult {
         <span class="kw">match </span><span class="self">self </span>{
-            Obj::List(l) =&gt; l.try_get_inner(Obj::Vector(Vector::from(<span class="macro">vec!</span>[name]))),
+            Obj::List(l) =&gt; <span class="prelude-val">Ok</span>(l.try_get_inner(Obj::Vector(Vector::from(<span class="macro">vec!</span>[name])).try_into()<span class="question-mark">?</span>)<span class="question-mark">?</span>),
             Obj::Environment(e) =&gt; e.get(name),
             <span class="kw">_ </span>=&gt; <span class="macro">unimplemented!</span>(),
         }
@@ -2550,7 +2558,7 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
         }
     }
 
-    <span class="prelude-val">Ok</span>(formals)
+    <span class="prelude-val">Ok</span>(formals.clone())
 }
 
 <span class="attr">#[cfg(test)]

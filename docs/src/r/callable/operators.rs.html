@@ -502,6 +502,52 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
 <a href="#469" id="469">469</a>
 <a href="#470" id="470">470</a>
 <a href="#471" id="471">471</a>
+<a href="#472" id="472">472</a>
+<a href="#473" id="473">473</a>
+<a href="#474" id="474">474</a>
+<a href="#475" id="475">475</a>
+<a href="#476" id="476">476</a>
+<a href="#477" id="477">477</a>
+<a href="#478" id="478">478</a>
+<a href="#479" id="479">479</a>
+<a href="#480" id="480">480</a>
+<a href="#481" id="481">481</a>
+<a href="#482" id="482">482</a>
+<a href="#483" id="483">483</a>
+<a href="#484" id="484">484</a>
+<a href="#485" id="485">485</a>
+<a href="#486" id="486">486</a>
+<a href="#487" id="487">487</a>
+<a href="#488" id="488">488</a>
+<a href="#489" id="489">489</a>
+<a href="#490" id="490">490</a>
+<a href="#491" id="491">491</a>
+<a href="#492" id="492">492</a>
+<a href="#493" id="493">493</a>
+<a href="#494" id="494">494</a>
+<a href="#495" id="495">495</a>
+<a href="#496" id="496">496</a>
+<a href="#497" id="497">497</a>
+<a href="#498" id="498">498</a>
+<a href="#499" id="499">499</a>
+<a href="#500" id="500">500</a>
+<a href="#501" id="501">501</a>
+<a href="#502" id="502">502</a>
+<a href="#503" id="503">503</a>
+<a href="#504" id="504">504</a>
+<a href="#505" id="505">505</a>
+<a href="#506" id="506">506</a>
+<a href="#507" id="507">507</a>
+<a href="#508" id="508">508</a>
+<a href="#509" id="509">509</a>
+<a href="#510" id="510">510</a>
+<a href="#511" id="511">511</a>
+<a href="#512" id="512">512</a>
+<a href="#513" id="513">513</a>
+<a href="#514" id="514">514</a>
+<a href="#515" id="515">515</a>
+<a href="#516" id="516">516</a>
+<a href="#517" id="517">517</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>r_derive::<span class="kw-2">*</span>;
 
 <span class="kw">use </span><span class="kw">super</span>::core::<span class="kw-2">*</span>;
@@ -866,7 +912,7 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
         <span class="kw">let </span><span class="kw-2">mut </span>what = stack.eval(what)<span class="question-mark">?</span>;
 
         <span class="kw">match </span>index {
-            Expr::String(s) | Expr::Symbol(s) =&gt; what.try_get_named(s.as_str()),
+            Expr::String(s) | Expr::Symbol(s) =&gt; what.try_get_named(<span class="kw-2">&amp;</span>s),
             <span class="kw">_ </span>=&gt; <span class="prelude-val">Ok</span>(Obj::Null),
         }
     }
@@ -885,7 +931,7 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
         <span class="kw">let </span><span class="kw-2">mut </span>what = stack.eval_mut(what)<span class="question-mark">?</span>;
 
         <span class="kw">match </span>index {
-            Expr::String(s) | Expr::Symbol(s) =&gt; what.try_get_named(s.as_str()),
+            Expr::String(s) | Expr::Symbol(s) =&gt; what.try_get_named_mut(s.as_str()),
             <span class="kw">_ </span>=&gt; <span class="prelude-val">Ok</span>(Obj::Null),
         }
     }
@@ -905,10 +951,7 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
         <span class="kw">let </span><span class="kw-2">mut </span>what = stack.eval_mut(what)<span class="question-mark">?</span>;
 
         <span class="kw">match </span>name {
-            Expr::String(s) | Expr::Symbol(s) =&gt; {
-                what.set_named(s.as_str(), value)<span class="question-mark">?</span>;
-                <span class="prelude-val">Ok</span>(what)
-            }
+            Expr::String(s) | Expr::Symbol(s) =&gt; what.try_set_named(<span class="kw-2">&amp;</span>s, value),
             <span class="kw">_ </span>=&gt; <span class="macro">unimplemented!</span>(),
         }
     }
@@ -940,6 +983,30 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
         <span class="kw">let </span>index = stack.eval(x.<span class="number">1</span>)<span class="question-mark">?</span>;
         what.try_get_inner_mut(index)
     }
+
+    <span class="kw">fn </span>call_assign(<span class="kw-2">&amp;</span><span class="self">self</span>, value: Expr, args: ExprList, stack: <span class="kw-2">&amp;mut </span>CallStack) -&gt; EvalResult {
+        <span class="kw">let </span><span class="kw-2">mut </span>argstream = args.into_iter();
+
+        <span class="kw">let </span><span class="prelude-val">Some</span>((<span class="kw">_</span>, what)) = argstream.next() <span class="kw">else </span>{
+            <span class="macro">unreachable!</span>();
+        };
+
+        <span class="kw">let </span><span class="prelude-val">Some</span>((<span class="kw">_</span>, index)) = argstream.next() <span class="kw">else </span>{
+            <span class="macro">unreachable!</span>();
+        };
+
+        <span class="kw">let </span>value = stack.eval(value)<span class="question-mark">?</span>;
+        <span class="kw">let </span>what = stack.eval_mut(what)<span class="question-mark">?</span>;
+        <span class="kw">let </span>index = stack.eval(index)<span class="question-mark">?</span>;
+
+        <span class="kw">let </span>subset = index.try_into()<span class="question-mark">?</span>;
+
+        <span class="prelude-val">Ok</span>(<span class="kw">match </span>what {
+            Obj::List(<span class="kw-2">mut </span>v) =&gt; v.set_subset(subset, value)<span class="question-mark">?</span>,
+            Obj::Vector(<span class="kw-2">mut </span>v) =&gt; v.set_subset(subset, value).map(Obj::Vector)<span class="question-mark">?</span>,
+            <span class="kw">_ </span>=&gt; <span class="macro">unimplemented!</span>(),
+        })
+    }
 }
 
 <span class="attr">#[derive(Debug, Clone, PartialEq)]
@@ -964,13 +1031,38 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
 </span><span class="kw">mod </span>tests {
     <span class="kw">use </span><span class="kw">crate</span>::error::Error;
     <span class="kw">use </span><span class="kw">crate</span>::lang::{EvalResult, Signal};
-    <span class="kw">use </span><span class="kw">crate</span>::r;
+    <span class="kw">use crate</span>::{r, r_expect};
     <span class="attr">#[test]
     </span><span class="kw">fn </span>colon_operator() {
         <span class="macro">assert_eq!</span>(EvalResult::Err(Signal::Error(Error::InvalidRange)), <span class="macro">r!</span>(<span class="number">1</span>:<span class="number">0</span>));
         <span class="macro">assert_eq!</span>(<span class="macro">r!</span>([<span class="number">1</span>, <span class="number">2</span>]), <span class="macro">r!</span>(<span class="number">1</span>:<span class="number">2</span>));
         <span class="macro">assert_eq!</span>(<span class="macro">r!</span>([<span class="number">1</span>]), <span class="macro">r!</span>(<span class="number">1</span>:<span class="number">1</span>));
         <span class="macro">assert_eq!</span>(<span class="macro">r!</span>(<span class="number">1</span>:-<span class="number">2</span>:-<span class="number">3</span>), <span class="macro">r!</span>([<span class="number">1</span>, -<span class="number">1</span>, -<span class="number">3</span>]));
+    }
+
+    <span class="attr">#[test]
+    </span><span class="kw">fn </span>dollar_assign() {
+        <span class="macro">r_expect!</span> {{<span class="string">"
+            l = (a = 1, )
+            x = (l$a = 2)
+            l$a == 2 &amp; x == 2
+        "</span>}}
+    }
+    <span class="attr">#[test]
+    </span><span class="kw">fn </span>dollar_assign_nested() {
+        <span class="macro">r_expect!</span> {{<span class="string">"
+            l = (a = (b = 1,),)
+            x = (l$a$b = 2)
+            l$a$b == 2 &amp; x == 2
+        "</span>}}
+    }
+
+    <span class="attr">#[test]
+    </span><span class="kw">fn </span>dollar_access() {
+        <span class="macro">r_expect!</span> {{<span class="string">"
+            l = (a = 1, )
+            l$a == 1
+        "</span>}}
     }
 }
 </code></pre></div></section></main></body></html>

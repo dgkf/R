@@ -90,6 +90,7 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
 <a href="#57" id="57">57</a>
 <a href="#58" id="58">58</a>
 <a href="#59" id="59">59</a>
+<a href="#60" id="60">60</a>
 </pre></div><pre class="rust"><code><span class="doccomment">/// Do not edit directly!
 ///
 /// The contents of this file are built by build.rs
@@ -134,6 +135,7 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
         (<span class="string">"callstack"</span>, Box::new(PrimitiveCallstack) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>Builtin&gt;),
         (<span class="string">"environment"</span>, Box::new(PrimitiveEnvironment) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>Builtin&gt;),
         (<span class="string">"eval"</span>, Box::new(PrimitiveEval) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>Builtin&gt;),
+        (<span class="string">"is_null"</span>, Box::new(PrimitiveIsNull) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>Builtin&gt;),
         (<span class="string">"length"</span>, Box::new(PrimitiveLength) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>Builtin&gt;),
         (<span class="string">"list"</span>, Box::new(PrimitiveList) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>Builtin&gt;),
         (<span class="string">"names"</span>, Box::new(PrimitiveNames) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>Builtin&gt;),

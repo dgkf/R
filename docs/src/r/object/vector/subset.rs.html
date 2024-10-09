@@ -280,14 +280,25 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
 <a href="#247" id="247">247</a>
 <a href="#248" id="248">248</a>
 <a href="#249" id="249">249</a>
+<a href="#250" id="250">250</a>
+<a href="#251" id="251">251</a>
+<a href="#252" id="252">252</a>
+<a href="#253" id="253">253</a>
+<a href="#254" id="254">254</a>
+<a href="#255" id="255">255</a>
+<a href="#256" id="256">256</a>
+<a href="#257" id="257">257</a>
+<a href="#258" id="258">258</a>
+<a href="#259" id="259">259</a>
+<a href="#260" id="260">260</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::cell::RefCell;
 <span class="kw">use </span>std::ops::Range;
 <span class="kw">use </span>std::rc::Rc;
 
-<span class="kw">use </span><span class="kw">crate</span>::lang::Signal;
-<span class="kw">use </span><span class="kw">crate</span>::object::CowObj;
-
 <span class="kw">use super</span>::{types::<span class="kw-2">*</span>, OptionNA, Vector};
+<span class="kw">use </span><span class="kw">crate</span>::error::Error;
+<span class="kw">use </span><span class="kw">crate</span>::lang::Signal;
+<span class="kw">use </span><span class="kw">crate</span>::object::{CowObj, Obj};
 
 <span class="doccomment">/// Subsets
 ///
@@ -469,6 +480,17 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
     }
 }
 
+<span class="kw">impl </span>TryFrom&lt;Obj&gt; <span class="kw">for </span>Subset {
+    <span class="kw">type </span>Error = Signal;
+    <span class="kw">fn </span>try_from(value: Obj) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="self">Self</span>::Error&gt; {
+        <span class="kw">let </span>err = Error::Other(<span class="string">"Cannot use object for indexing"</span>.to_string());
+        <span class="kw">match </span>value {
+            Obj::Vector(v) =&gt; Subset::try_from(v),
+            <span class="kw">_ </span>=&gt; err.into(),
+        }
+    }
+}
+
 <span class="kw">impl </span>From&lt;usize&gt; <span class="kw">for </span>Subset {
     <span class="kw">fn </span>from(value: usize) -&gt; <span class="self">Self </span>{
         Subset::Indices(<span class="macro">vec!</span>[OptionNA::Some(value <span class="kw">as </span>i32)].into())
@@ -499,7 +521,7 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
             value @ Vector::Double(<span class="kw">_</span>) =&gt; Subset::try_from(value.as_integer()),
             Vector::Integer(v) =&gt; {
                 <span class="kw">let </span>y = v
-                    .into_iter()
+                    .iter_values()
                     .map(|i| <span class="kw">match </span>i {
                         OptionNA::Some(x) =&gt; OptionNA::Some(x - <span class="number">1</span>),
                         OptionNA::NA =&gt; OptionNA::NA,

@@ -689,18 +689,226 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
 <a href="#656" id="656">656</a>
 <a href="#657" id="657">657</a>
 <a href="#658" id="658">658</a>
-</pre></div><pre class="rust"><code><span class="kw">use </span>std::cell::{Ref, RefCell};
+<a href="#659" id="659">659</a>
+<a href="#660" id="660">660</a>
+<a href="#661" id="661">661</a>
+<a href="#662" id="662">662</a>
+<a href="#663" id="663">663</a>
+<a href="#664" id="664">664</a>
+<a href="#665" id="665">665</a>
+<a href="#666" id="666">666</a>
+<a href="#667" id="667">667</a>
+<a href="#668" id="668">668</a>
+<a href="#669" id="669">669</a>
+<a href="#670" id="670">670</a>
+<a href="#671" id="671">671</a>
+<a href="#672" id="672">672</a>
+<a href="#673" id="673">673</a>
+<a href="#674" id="674">674</a>
+<a href="#675" id="675">675</a>
+<a href="#676" id="676">676</a>
+<a href="#677" id="677">677</a>
+<a href="#678" id="678">678</a>
+<a href="#679" id="679">679</a>
+<a href="#680" id="680">680</a>
+<a href="#681" id="681">681</a>
+<a href="#682" id="682">682</a>
+<a href="#683" id="683">683</a>
+<a href="#684" id="684">684</a>
+<a href="#685" id="685">685</a>
+<a href="#686" id="686">686</a>
+<a href="#687" id="687">687</a>
+<a href="#688" id="688">688</a>
+<a href="#689" id="689">689</a>
+<a href="#690" id="690">690</a>
+<a href="#691" id="691">691</a>
+<a href="#692" id="692">692</a>
+<a href="#693" id="693">693</a>
+<a href="#694" id="694">694</a>
+<a href="#695" id="695">695</a>
+<a href="#696" id="696">696</a>
+<a href="#697" id="697">697</a>
+<a href="#698" id="698">698</a>
+<a href="#699" id="699">699</a>
+<a href="#700" id="700">700</a>
+<a href="#701" id="701">701</a>
+<a href="#702" id="702">702</a>
+<a href="#703" id="703">703</a>
+<a href="#704" id="704">704</a>
+<a href="#705" id="705">705</a>
+<a href="#706" id="706">706</a>
+<a href="#707" id="707">707</a>
+<a href="#708" id="708">708</a>
+<a href="#709" id="709">709</a>
+<a href="#710" id="710">710</a>
+<a href="#711" id="711">711</a>
+<a href="#712" id="712">712</a>
+<a href="#713" id="713">713</a>
+<a href="#714" id="714">714</a>
+<a href="#715" id="715">715</a>
+<a href="#716" id="716">716</a>
+<a href="#717" id="717">717</a>
+<a href="#718" id="718">718</a>
+<a href="#719" id="719">719</a>
+<a href="#720" id="720">720</a>
+<a href="#721" id="721">721</a>
+<a href="#722" id="722">722</a>
+<a href="#723" id="723">723</a>
+<a href="#724" id="724">724</a>
+<a href="#725" id="725">725</a>
+<a href="#726" id="726">726</a>
+<a href="#727" id="727">727</a>
+<a href="#728" id="728">728</a>
+<a href="#729" id="729">729</a>
+<a href="#730" id="730">730</a>
+<a href="#731" id="731">731</a>
+<a href="#732" id="732">732</a>
+<a href="#733" id="733">733</a>
+<a href="#734" id="734">734</a>
+<a href="#735" id="735">735</a>
+<a href="#736" id="736">736</a>
+<a href="#737" id="737">737</a>
+<a href="#738" id="738">738</a>
+<a href="#739" id="739">739</a>
+<a href="#740" id="740">740</a>
+<a href="#741" id="741">741</a>
+<a href="#742" id="742">742</a>
+<a href="#743" id="743">743</a>
+<a href="#744" id="744">744</a>
+<a href="#745" id="745">745</a>
+<a href="#746" id="746">746</a>
+<a href="#747" id="747">747</a>
+<a href="#748" id="748">748</a>
+<a href="#749" id="749">749</a>
+<a href="#750" id="750">750</a>
+<a href="#751" id="751">751</a>
+<a href="#752" id="752">752</a>
+<a href="#753" id="753">753</a>
+<a href="#754" id="754">754</a>
+<a href="#755" id="755">755</a>
+<a href="#756" id="756">756</a>
+<a href="#757" id="757">757</a>
+<a href="#758" id="758">758</a>
+<a href="#759" id="759">759</a>
+<a href="#760" id="760">760</a>
+<a href="#761" id="761">761</a>
+<a href="#762" id="762">762</a>
+<a href="#763" id="763">763</a>
+<a href="#764" id="764">764</a>
+<a href="#765" id="765">765</a>
+<a href="#766" id="766">766</a>
+<a href="#767" id="767">767</a>
+<a href="#768" id="768">768</a>
+<a href="#769" id="769">769</a>
+<a href="#770" id="770">770</a>
+<a href="#771" id="771">771</a>
+<a href="#772" id="772">772</a>
+<a href="#773" id="773">773</a>
+<a href="#774" id="774">774</a>
+<a href="#775" id="775">775</a>
+<a href="#776" id="776">776</a>
+<a href="#777" id="777">777</a>
+<a href="#778" id="778">778</a>
+<a href="#779" id="779">779</a>
+<a href="#780" id="780">780</a>
+<a href="#781" id="781">781</a>
+<a href="#782" id="782">782</a>
+<a href="#783" id="783">783</a>
+<a href="#784" id="784">784</a>
+<a href="#785" id="785">785</a>
+<a href="#786" id="786">786</a>
+<a href="#787" id="787">787</a>
+<a href="#788" id="788">788</a>
+<a href="#789" id="789">789</a>
+<a href="#790" id="790">790</a>
+<a href="#791" id="791">791</a>
+<a href="#792" id="792">792</a>
+<a href="#793" id="793">793</a>
+<a href="#794" id="794">794</a>
+<a href="#795" id="795">795</a>
+<a href="#796" id="796">796</a>
+<a href="#797" id="797">797</a>
+<a href="#798" id="798">798</a>
+<a href="#799" id="799">799</a>
+<a href="#800" id="800">800</a>
+<a href="#801" id="801">801</a>
+<a href="#802" id="802">802</a>
+<a href="#803" id="803">803</a>
+<a href="#804" id="804">804</a>
+<a href="#805" id="805">805</a>
+<a href="#806" id="806">806</a>
+<a href="#807" id="807">807</a>
+<a href="#808" id="808">808</a>
+<a href="#809" id="809">809</a>
+<a href="#810" id="810">810</a>
+<a href="#811" id="811">811</a>
+<a href="#812" id="812">812</a>
+<a href="#813" id="813">813</a>
+<a href="#814" id="814">814</a>
+<a href="#815" id="815">815</a>
+<a href="#816" id="816">816</a>
+<a href="#817" id="817">817</a>
+<a href="#818" id="818">818</a>
+<a href="#819" id="819">819</a>
+<a href="#820" id="820">820</a>
+<a href="#821" id="821">821</a>
+<a href="#822" id="822">822</a>
+<a href="#823" id="823">823</a>
+<a href="#824" id="824">824</a>
+<a href="#825" id="825">825</a>
+<a href="#826" id="826">826</a>
+<a href="#827" id="827">827</a>
+<a href="#828" id="828">828</a>
+<a href="#829" id="829">829</a>
+<a href="#830" id="830">830</a>
+<a href="#831" id="831">831</a>
+<a href="#832" id="832">832</a>
+<a href="#833" id="833">833</a>
+<a href="#834" id="834">834</a>
+<a href="#835" id="835">835</a>
+<a href="#836" id="836">836</a>
+<a href="#837" id="837">837</a>
+<a href="#838" id="838">838</a>
+<a href="#839" id="839">839</a>
+<a href="#840" id="840">840</a>
+<a href="#841" id="841">841</a>
+<a href="#842" id="842">842</a>
+<a href="#843" id="843">843</a>
+<a href="#844" id="844">844</a>
+<a href="#845" id="845">845</a>
+<a href="#846" id="846">846</a>
+<a href="#847" id="847">847</a>
+<a href="#848" id="848">848</a>
+<a href="#849" id="849">849</a>
+<a href="#850" id="850">850</a>
+<a href="#851" id="851">851</a>
+<a href="#852" id="852">852</a>
+<a href="#853" id="853">853</a>
+<a href="#854" id="854">854</a>
+<a href="#855" id="855">855</a>
+<a href="#856" id="856">856</a>
+<a href="#857" id="857">857</a>
+<a href="#858" id="858">858</a>
+<a href="#859" id="859">859</a>
+<a href="#860" id="860">860</a>
+<a href="#861" id="861">861</a>
+<a href="#862" id="862">862</a>
+<a href="#863" id="863">863</a>
+<a href="#864" id="864">864</a>
+</pre></div><pre class="rust"><code><span class="kw">use </span>std::cell::{Ref, RefCell, RefMut};
 <span class="kw">use </span>std::fmt::{Debug, Display};
 
 <span class="kw">use </span><span class="kw">super</span>::coercion::{AtomicMode, CoercibleInto, CommonCmp, CommonNum, MinimallyNumeric};
 <span class="kw">use </span><span class="kw">super</span>::iterators::{map_common_numeric, zip_recycle};
-<span class="kw">use </span><span class="kw">super</span>::reptype::RepType;
-<span class="kw">use </span><span class="kw">super</span>::reptype::RepTypeIter;
+<span class="kw">use </span><span class="kw">super</span>::reptype::{
+    IntoIterableRefNames, IntoIterableRefPairs, IntoIterableRefValues, IterablePairs,
+    IterableValues, Naming, RepType,
+};
 <span class="kw">use </span><span class="kw">super</span>::subset::Subset;
 <span class="kw">use </span><span class="kw">super</span>::types::<span class="kw-2">*</span>;
 <span class="kw">use super</span>::{OptionNA, Pow, VecPartialCmp};
-<span class="kw">use </span><span class="kw">crate</span>::object::CowObj;
-<span class="kw">use </span><span class="kw">crate</span>::object::ViewMut;
+<span class="kw">use </span><span class="kw">crate</span>::lang::Signal;
+<span class="kw">use </span><span class="kw">crate</span>::object::{CowObj, Obj, Subsets, ViewMut};
 
 <span class="doccomment">/// Vector Representation
 ///
@@ -709,27 +917,68 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
 </span><span class="attr">#[derive(Debug, PartialEq)]
 </span><span class="kw">pub struct </span>Rep&lt;T: Clone&gt;(<span class="kw">pub </span>RefCell&lt;RepType&lt;T&gt;&gt;);
 
-<span class="kw">impl</span>&lt;T: Clone + AtomicMode + Default&gt; Clone <span class="kw">for </span>Rep&lt;T&gt; {
+<span class="kw">impl</span>&lt;T: Clone + Default&gt; Clone <span class="kw">for </span>Rep&lt;T&gt; {
     <span class="kw">fn </span>clone(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self </span>{
         <span class="kw">match </span><span class="self">self</span>.borrow().clone() {
-            RepType::Subset(v, s) =&gt; Rep(RefCell::new(RepType::Subset(v.clone(), s.clone()))),
+            RepType::Subset(v, s, n) =&gt; Rep(RefCell::new(RepType::Subset(
+                v.clone(),
+                s.clone(),
+                n.clone(),
+            ))),
         }
     }
 }
 
-<span class="kw">impl</span>&lt;T: Clone + AtomicMode + Default&gt; ViewMut <span class="kw">for </span>Rep&lt;T&gt; {
+<span class="kw">impl</span>&lt;T: Clone + Default&gt; ViewMut <span class="kw">for </span>Rep&lt;T&gt; {
     <span class="kw">fn </span>view_mut(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self </span>{
         <span class="self">Self</span>(RefCell::new(<span class="self">self</span>.borrow().view_mut()))
     }
 }
 
+<span class="kw">impl</span>&lt;T: ViewMut + Default + Clone&gt; Rep&lt;T&gt; {
+    <span class="doccomment">/// Get the inner value mutably.
+    /// This is used for assignments like `list(1)[[1]] = 10`.
+    </span><span class="kw">pub fn </span>try_get_inner_mut(<span class="kw-2">&amp;</span><span class="self">self</span>, subset: Subset) -&gt; <span class="prelude-ty">Result</span>&lt;T, Signal&gt; {
+        <span class="self">self</span>.borrow().try_get_inner_mut(subset)
+    }
+
+    <span class="doccomment">/// Get a cloned version of the inner value.
+    /// This is used for accessing inner values like `list(1)[[1]]`.
+    </span><span class="kw">pub fn </span>try_get_inner(<span class="kw-2">&amp;</span><span class="self">self</span>, subset: Subset) -&gt; <span class="prelude-ty">Result</span>&lt;T, Signal&gt; {
+        <span class="attr">#[allow(clippy::map_clone)]
+        </span><span class="self">self</span>.try_get_inner_mut(subset).map(|x| x.clone())
+    }
+}
+
+<span class="kw">impl</span>&lt;T: Clone + Default + <span class="lifetime">'static</span>&gt; Rep&lt;T&gt; {
+    <span class="doccomment">/// Iterate over the owned names and values of the vector.
+    </span><span class="kw">pub fn </span>iter_pairs(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; IterablePairs&lt;T&gt; {
+        <span class="self">self</span>.<span class="number">0</span>.borrow().clone().iter_pairs()
+    }
+}
+
 <span class="kw">impl</span>&lt;T&gt; Rep&lt;T&gt;
 <span class="kw">where
-    </span>T: AtomicMode + Clone + Default,
+    </span>T: Clone + Default,
 {
-    <span class="kw">fn </span>borrow(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Ref&lt;RepType&lt;T&gt;&gt; {
+    <span class="kw">pub fn </span>borrow(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Ref&lt;RepType&lt;T&gt;&gt; {
         <span class="self">self</span>.<span class="number">0</span>.borrow()
     }
+
+    <span class="kw">pub fn </span>borrow_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; RefMut&lt;RepType&lt;T&gt;&gt; {
+        <span class="self">self</span>.<span class="number">0</span>.borrow_mut()
+    }
+
+    <span class="doccomment">/// Iterate over the (owned) values of the vector.
+    </span><span class="kw">pub fn </span>iter_values(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; IterableValues&lt;T&gt; {
+        <span class="self">self</span>.<span class="number">0</span>.borrow().iter_values()
+    }
+
+    <span class="doccomment">/// Iterate over the names of the vector (if they exist).
+    </span><span class="kw">pub fn </span>iter_names(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;IterableValues&lt;Character&gt;&gt; {
+        <span class="self">self</span>.<span class="number">0</span>.borrow().iter_names()
+    }
+
     <span class="kw">fn </span>materialize_inplace(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="self">Self </span>{
         <span class="comment">// TODO: Rewrite this to avoid copying unnecessarily
         </span><span class="kw">let </span>new_repr = { <span class="self">self</span>.borrow().materialize() };
@@ -737,6 +986,86 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
 
         <span class="self">self
     </span>}
+
+    <span class="doccomment">/// Reindex the mapping from names to indices using the names vector from the `Naming`.
+    </span><span class="kw">pub fn </span>reindex(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
+        <span class="self">self</span>.borrow_mut().reindex()
+    }
+
+    <span class="doccomment">/// Set the names of the vector.
+    </span><span class="kw">pub fn </span>set_names(<span class="kw-2">&amp;</span><span class="self">self</span>, names: CowObj&lt;Vec&lt;OptionNA&lt;String&gt;&gt;&gt;) {
+        <span class="kw">let </span>new_repr = <span class="self">self</span>.borrow().materialize().set_names(names);
+        <span class="self">self</span>.<span class="number">0</span>.replace(new_repr);
+    }
+
+    <span class="doccomment">/// Whether the vector representation has names.
+    </span><span class="kw">pub fn </span>is_named(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
+        <span class="macro">matches!</span>(<span class="kw-2">*</span><span class="self">self</span>.borrow(), RepType::Subset(.., <span class="prelude-val">Some</span>(<span class="kw">_</span>)))
+    }
+
+    <span class="doccomment">/// Return the names of the vector if there are any.
+    </span><span class="kw">pub fn </span>names(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;CowObj&lt;Vec&lt;Character&gt;&gt;&gt; {
+        <span class="kw">match </span><span class="self">self</span>.borrow().clone() {
+            RepType::Subset(<span class="kw">_</span>, s, n) =&gt; {
+                <span class="kw">if </span>s.is_empty() {
+                    n.map(|n| n.clone().names)
+                } <span class="kw">else if </span>n.is_some() {
+                    <span class="prelude-val">Some</span>(
+                        <span class="self">self</span>.iter_names()
+                            .expect(<span class="string">"checked that names exist"</span>)
+                            .collect::&lt;Vec&lt;Character&gt;&gt;()
+                            .into(),
+                    )
+                } <span class="kw">else </span>{
+                    <span class="prelude-val">None
+                </span>}
+            }
+        }
+    }
+
+    <span class="kw">pub fn </span>dedup_last(<span class="self">self</span>) -&gt; <span class="self">Self </span>{
+        <span class="self">self</span>.<span class="number">0</span>.into_inner().dedup_last().into()
+    }
+
+    <span class="doccomment">/// Constructs a new, empty `Rep&lt;T&gt;` with at least the specified `capacity`.
+    /// Names are only include if `names` is true.
+    </span><span class="kw">pub fn </span>with_capacity(capacity: usize, names: bool) -&gt; <span class="self">Self </span>{
+        <span class="kw">let </span>naming = <span class="kw">if </span>names {
+            <span class="prelude-val">Some</span>(Naming::with_capacity(capacity))
+        } <span class="kw">else </span>{
+            <span class="prelude-val">None
+        </span>};
+        <span class="self">Self</span>(RefCell::new(RepType::Subset(
+            CowObj::from(Vec::with_capacity(capacity)),
+            Subsets::default(),
+            naming,
+        )))
+    }
+
+    <span class="doccomment">/// Get an `RepTypeIntoIterablePairs&lt;T&gt;` which in turn can be converted into an iterator over
+    /// pairs of references (&amp;name, &amp;value).
+    ///
+    /// Directly getting an iterator is not possible due to lifetime issues.
+    </span><span class="kw">pub fn </span>pairs_ref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; IntoIterableRefPairs&lt;T&gt; {
+        <span class="self">self</span>.<span class="number">0</span>.borrow().pairs_ref()
+    }
+
+    <span class="doccomment">/// Get an `Option&lt;RepTypeIntoIterableValues&lt;T&gt;&gt;` which in turn can be converted into an iterator over
+    /// references to the values.
+    /// The `None` variant is returned if the `Rep&lt;T&gt;` is not named.
+    ///
+    /// Directly getting an iterator is not possible due to lifetime issues.
+    </span><span class="kw">pub fn </span>values_ref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; IntoIterableRefValues&lt;T&gt; {
+        <span class="self">self</span>.<span class="number">0</span>.borrow().values_ref()
+    }
+
+    <span class="doccomment">/// Get an `RepTypeIntoIterableValues&lt;T&gt;` which in turn can be converted into an iterator over
+    /// references to the names.
+    ///
+    /// Directly getting an iterator is not possible due to lifetime issues.
+    </span><span class="kw">pub fn </span>names_ref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;IntoIterableRefNames&gt; {
+        <span class="self">self</span>.<span class="number">0</span>.borrow().names_ref()
+    }
 
     <span class="kw">pub fn </span>materialize(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self </span>{
         <span class="self">self</span>.borrow().materialize().into()
@@ -792,7 +1121,23 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
         x.map(|x| x.into())
     }
 
-    <span class="kw">pub fn </span>assign(<span class="kw-2">&amp;mut </span><span class="self">self</span>, value: <span class="self">Self</span>) -&gt; <span class="self">Self </span>{
+    <span class="doccomment">/// Change a value at the location given by `subset` to the provided `value`.
+    /// If the `subset` does not have length `1`, an error is returned.
+    </span><span class="kw">pub fn </span>set_subset(<span class="kw-2">&amp;mut </span><span class="self">self</span>, subset: Subset, value: T) -&gt; <span class="prelude-ty">Result</span>&lt;T, Signal&gt; {
+        <span class="comment">// Used for `[[`-assignment.
+        </span><span class="self">self</span>.<span class="number">0</span>.borrow_mut().set_subset(subset, value)
+    }
+
+    <span class="doccomment">/// Push a named `value` with a given `name` onto the `Rep&lt;T&gt;`.
+    </span><span class="kw">pub fn </span>push_named(<span class="kw-2">&amp;</span><span class="self">self</span>, name: OptionNA&lt;String&gt;, value: T) {
+        <span class="self">self</span>.borrow().push_named(name, value)
+    }
+
+    <span class="kw">pub fn </span>assign&lt;R&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, value: Rep&lt;R&gt;) -&gt; <span class="self">Self
+    </span><span class="kw">where
+        </span>T: From&lt;R&gt; + Clone,
+        R: Clone + Default,
+    {
         <span class="self">self</span>.<span class="number">0</span>.borrow_mut().assign(value.<span class="number">0</span>.into_inner()).into()
     }
     <span class="doccomment">/// Test the mode of the internal vector type
@@ -800,19 +1145,31 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
     /// Internally, this is defined by the [crate::object::coercion::AtomicMode]
     /// implementation of the vector's element type.
     ///
-    </span><span class="kw">pub fn </span>is_double(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
+    </span><span class="kw">pub fn </span>is_double(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool
+    <span class="kw">where
+        </span>T: AtomicMode,
+    {
         T::is_double()
     }
     <span class="doccomment">/// See [Self::is_double] for more information
-    </span><span class="kw">pub fn </span>is_logical(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
+    </span><span class="kw">pub fn </span>is_logical(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool
+    <span class="kw">where
+        </span>T: AtomicMode,
+    {
         T::is_logical()
     }
     <span class="doccomment">/// See [Self::is_double] for more information
-    </span><span class="kw">pub fn </span>is_integer(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
+    </span><span class="kw">pub fn </span>is_integer(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool
+    <span class="kw">where
+        </span>T: AtomicMode,
+    {
         T::is_integer()
     }
     <span class="doccomment">/// See [Self::is_double] for more information
-    </span><span class="kw">pub fn </span>is_character(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
+    </span><span class="kw">pub fn </span>is_character(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool
+    <span class="kw">where
+        </span>T: AtomicMode,
+    {
         T::is_character()
     }
 
@@ -842,7 +1199,7 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
     ///
     </span><span class="kw">pub fn </span>as_mode&lt;Mode&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Rep&lt;Mode&gt;
     <span class="kw">where
-        </span>T: CoercibleInto&lt;Mode&gt;,
+        </span>T: CoercibleInto&lt;Mode&gt; + AtomicMode,
         Mode: Clone,
     {
         Rep(RefCell::new(<span class="self">self</span>.borrow().as_mode()))
@@ -851,7 +1208,7 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
     <span class="doccomment">/// See [Self::as_mode] for more information
     </span><span class="kw">pub fn </span>as_logical(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Rep&lt;Logical&gt;
     <span class="kw">where
-        </span>T: CoercibleInto&lt;Logical&gt;,
+        </span>T: CoercibleInto&lt;Logical&gt; + AtomicMode,
     {
         <span class="self">self</span>.as_mode::&lt;Logical&gt;()
     }
@@ -859,7 +1216,7 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
     <span class="doccomment">/// See [Self::as_mode] for more information
     </span><span class="kw">pub fn </span>as_integer(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Rep&lt;Integer&gt;
     <span class="kw">where
-        </span>T: CoercibleInto&lt;Integer&gt;,
+        </span>T: CoercibleInto&lt;Integer&gt; + AtomicMode,
     {
         <span class="self">self</span>.as_mode::&lt;Integer&gt;()
     }
@@ -867,7 +1224,7 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
     <span class="doccomment">/// See [Self::as_mode] for more information
     </span><span class="kw">pub fn </span>as_double(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Rep&lt;Double&gt;
     <span class="kw">where
-        </span>T: CoercibleInto&lt;Double&gt;,
+        </span>T: CoercibleInto&lt;Double&gt; + AtomicMode,
     {
         <span class="self">self</span>.as_mode::&lt;Double&gt;()
     }
@@ -875,7 +1232,7 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
     <span class="doccomment">/// See [Self::as_mode] for more information
     </span><span class="kw">pub fn </span>as_character(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Rep&lt;Character&gt;
     <span class="kw">where
-        </span>T: CoercibleInto&lt;Character&gt;,
+        </span>T: CoercibleInto&lt;Character&gt; + AtomicMode,
     {
         <span class="self">self</span>.as_mode::&lt;Character&gt;()
     }
@@ -900,67 +1257,59 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
             </span>.into_inner()
             .vectorized_partial_cmp(other.<span class="number">0</span>.into_inner())
     }
-
-    <span class="kw">fn </span>get_inner(<span class="kw-2">&amp;</span><span class="self">self</span>, index: usize) -&gt; <span class="prelude-ty">Option</span>&lt;T&gt; {
-        <span class="self">self</span>.borrow().get_inner(index)
-    }
 }
 
 <span class="kw">impl</span>&lt;T&gt; Default <span class="kw">for </span>Rep&lt;T&gt;
 <span class="kw">where
-    </span>T: AtomicMode + Clone + Default,
+    </span>T: Clone + Default,
 {
     <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
         Rep(RefCell::new(RepType::default()))
     }
 }
 
-<span class="kw">pub struct </span>RepIter&lt;T: Clone&gt;(RepTypeIter&lt;T&gt;);
-
-<span class="kw">impl</span>&lt;T&gt; IntoIterator <span class="kw">for </span>Rep&lt;T&gt;
+<span class="kw">impl</span>&lt;T&gt; From&lt;CowObj&lt;Vec&lt;T&gt;&gt;&gt; <span class="kw">for </span>Rep&lt;T&gt;
 <span class="kw">where
-    </span>T: AtomicMode + Clone + Default,
+    </span>T: Clone + Default,
 {
-    <span class="kw">type </span>Item = T;
-    <span class="kw">type </span>IntoIter = RepIter&lt;T&gt;;
-    <span class="kw">fn </span>into_iter(<span class="self">self</span>) -&gt; <span class="self">Self</span>::IntoIter {
-        <span class="kw">let </span>x = <span class="self">self</span>.<span class="number">0</span>.into_inner();
-        RepIter(x.into_iter())
-    }
-}
-
-<span class="kw">impl</span>&lt;T&gt; Iterator <span class="kw">for </span>RepIter&lt;T&gt;
-<span class="kw">where
-    </span>T: AtomicMode + Clone + Default,
-{
-    <span class="kw">type </span>Item = T;
-    <span class="kw">fn </span>next(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Item&gt; {
-        <span class="self">self</span>.<span class="number">0</span>.next()
+    <span class="kw">fn </span>from(rep: CowObj&lt;Vec&lt;T&gt;&gt;) -&gt; <span class="self">Self </span>{
+        Rep(RefCell::new(rep.into()))
     }
 }
 
 <span class="kw">impl</span>&lt;T&gt; From&lt;RepType&lt;T&gt;&gt; <span class="kw">for </span>Rep&lt;T&gt;
 <span class="kw">where
-    </span>T: AtomicMode + Clone + Default,
+    </span>T: Clone + Default,
 {
     <span class="kw">fn </span>from(rep: RepType&lt;T&gt;) -&gt; <span class="self">Self </span>{
         Rep(RefCell::new(rep))
     }
 }
 
-<span class="kw">impl</span>&lt;T&gt; TryInto&lt;bool&gt; <span class="kw">for </span>Rep&lt;OptionNA&lt;T&gt;&gt;
+<span class="comment">// TODO: I think this should err when rep has length &gt; 1
+</span><span class="kw">impl</span>&lt;T&gt; TryInto&lt;bool&gt; <span class="kw">for </span>Rep&lt;OptionNA&lt;T&gt;&gt;
 <span class="kw">where
     </span>OptionNA&lt;T&gt;: AtomicMode + Clone + CoercibleInto&lt;OptionNA&lt;bool&gt;&gt;,
+    T: <span class="lifetime">'static</span>,
 {
     <span class="kw">type </span>Error = ();
     <span class="kw">fn </span>try_into(<span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;bool, <span class="self">Self</span>::Error&gt; {
-        <span class="self">self</span>.get_inner(<span class="number">0</span>).map_or(
-            <span class="prelude-val">Err</span>(()),
-            |i| <span class="kw">match </span>CoercibleInto::&lt;OptionNA&lt;bool&gt;&gt;::coerce_into(i) {
-                OptionNA::Some(x) =&gt; <span class="prelude-val">Ok</span>(x),
-                OptionNA::NA =&gt; <span class="prelude-val">Err</span>(()),
-            },
-        )
+        <span class="self">self</span>.iter_pairs()
+            .next()
+            .map(|(<span class="kw">_</span>, x)| x)
+            .map_or(
+                <span class="prelude-val">Err</span>(()),
+                |i| <span class="kw">match </span>CoercibleInto::&lt;OptionNA&lt;bool&gt;&gt;::coerce_into(i) {
+                    OptionNA::Some(x) =&gt; <span class="prelude-val">Ok</span>(x),
+                    OptionNA::NA =&gt; <span class="prelude-val">Err</span>(()),
+                },
+            )
+    }
+}
+
+<span class="kw">impl </span>From&lt;Vec&lt;(Character, Obj)&gt;&gt; <span class="kw">for </span>Rep&lt;Obj&gt; {
+    <span class="kw">fn </span>from(value: Vec&lt;(Character, Obj)&gt;) -&gt; <span class="self">Self </span>{
+        Rep(RefCell::new(value.into()))
     }
 }
 
@@ -1012,6 +1361,12 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
     }
 }
 
+<span class="kw">impl</span>&lt;T: Clone&gt; From&lt;Vec&lt;(<span class="prelude-ty">Option</span>&lt;String&gt;, T)&gt;&gt; <span class="kw">for </span>Rep&lt;T&gt; {
+    <span class="kw">fn </span>from(value: Vec&lt;(<span class="prelude-ty">Option</span>&lt;String&gt;, T)&gt;) -&gt; <span class="self">Self </span>{
+        Rep(RefCell::new(value.into()))
+    }
+}
+
 <span class="kw">impl</span>&lt;T&gt; Display <span class="kw">for </span>Rep&lt;T&gt;
 <span class="kw">where
     </span>T: AtomicMode + Debug + Default + Clone,
@@ -1032,47 +1387,104 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
                 <span class="kw">return </span><span class="macro">write!</span>(f, <span class="string">"character(0)"</span>);
             }
         }
-
         <span class="kw">let </span>nlen = <span class="macro">format!</span>(<span class="string">"{}"</span>, n).len();
-        <span class="comment">// TODO: iteratively calculate when we hit max print so our
-        // max_len isn't inflated by a value that is omitted
-
-        </span><span class="kw">let </span>xc = <span class="self">self</span>.inner().clone();
-        <span class="kw">let </span>xb = xc.borrow();
-
-        <span class="kw">let </span>x_strs = xb.iter().map(|xi| <span class="macro">format!</span>(<span class="string">"{:?}"</span>, xi));
-        <span class="kw">let </span>max_len = x_strs
-            .clone()
-            .fold(<span class="number">0</span>, |max_len, xi| std::cmp::max(max_len, xi.len()));
-
-        <span class="kw">let </span><span class="kw-2">mut </span>col = <span class="number">0</span>;
-        <span class="kw">let </span>gutterlen = <span class="number">2 </span>+ nlen + <span class="number">1</span>;
-
-        <span class="comment">// hard coded max print &amp; console width
-        </span><span class="kw">let </span>maxprint = <span class="number">20 </span>* ((<span class="number">80 </span>- gutterlen) / max_len);
-
-        x_strs
-            .take(maxprint)
-            .enumerate()
-            .try_for_each(|(i, x_str)| {
-                <span class="kw">if </span>i == <span class="number">0 </span>{
-                    col = gutterlen + max_len;
-                    <span class="macro">write!</span>(f, <span class="string">"{:&gt;3$}[{}] {:&gt;4$}"</span>, <span class="string">""</span>, i + <span class="number">1</span>, x_str, nlen - <span class="number">1</span>, max_len)
-                } <span class="kw">else if </span>col + <span class="number">1 </span>+ max_len &gt; <span class="number">80 </span>{
-                    col = gutterlen + max_len;
-                    <span class="kw">let </span>i_str = <span class="macro">format!</span>(<span class="string">"{}"</span>, i + <span class="number">1</span>);
-                    <span class="kw">let </span>gutter = nlen - i_str.len();
-                    <span class="macro">write!</span>(f, <span class="string">"\n{:&gt;3$}[{}] {:&gt;4$}"</span>, <span class="string">""</span>, i_str, x_str, gutter, max_len)
-                } <span class="kw">else </span>{
-                    col += <span class="number">1 </span>+ max_len;
-                    <span class="macro">write!</span>(f, <span class="string">" {:&gt;1$}"</span>, x_str, max_len)
+        <span class="comment">// calculate how many characters are printed per value.
+        // The iteraror yields the characters needed for a specific item.
+        </span><span class="kw">fn </span>element_width(iter: <span class="kw">impl </span>Iterator&lt;Item = usize&gt;) -&gt; usize {
+            <span class="kw">let </span><span class="kw-2">mut </span>elt_width = <span class="number">1_usize</span>;
+            <span class="kw">for </span>(i, width) <span class="kw">in </span>iter.enumerate() {
+                elt_width = std::cmp::max(elt_width, width);
+                <span class="kw">if </span>elt_width * (i + <span class="number">1</span>) &gt;= <span class="number">20 </span>* <span class="number">80 </span>{
+                    <span class="kw">break</span>;
                 }
-            })<span class="question-mark">?</span>;
-
-        <span class="kw">if </span>n &gt; maxprint {
-            <span class="macro">write!</span>(f, <span class="string">"\n[ omitting {} entries ]"</span>, n - maxprint)<span class="question-mark">?</span>;
+            }
+            elt_width
         }
 
+        <span class="kw">if </span>!<span class="self">self</span>.is_named() {
+            <span class="kw">let </span>elt_width =
+                element_width(<span class="self">self</span>.values_ref().iter().map(|x| <span class="macro">format!</span>(<span class="string">"{:?}"</span>, x).len()));
+
+            <span class="kw">let </span><span class="kw-2">mut </span>values_ref = <span class="self">self</span>.values_ref();
+            <span class="kw">let </span>x_strs = values_ref.iter().map(|xi| <span class="macro">format!</span>(<span class="string">"{:?}"</span>, xi));
+
+            <span class="kw">let </span><span class="kw-2">mut </span>col = <span class="number">0</span>;
+            <span class="kw">let </span>gutterlen = <span class="number">2 </span>+ nlen + <span class="number">1</span>;
+
+            <span class="comment">// hard coded max print &amp; console width
+            // we print at most 20 rows
+            </span><span class="kw">let </span>maxprint = <span class="number">20 </span>* ((<span class="number">80 </span>- gutterlen) / (elt_width + <span class="number">1</span>));
+
+            x_strs
+                .take(maxprint)
+                .enumerate()
+                .try_for_each(|(i, x_str)| {
+                    <span class="kw">if </span>i == <span class="number">0 </span>{
+                        col = gutterlen + elt_width;
+                        <span class="macro">write!</span>(
+                            f,
+                            <span class="string">"{:&gt;3$}[{}] {:&gt;4$}"</span>,
+                            <span class="string">""</span>,
+                            i + <span class="number">1</span>,
+                            x_str,
+                            nlen - <span class="number">1</span>,
+                            elt_width
+                        )
+                    } <span class="kw">else if </span>col + <span class="number">1 </span>+ elt_width &gt; <span class="number">80 </span>{
+                        col = gutterlen + elt_width;
+                        <span class="kw">let </span>i_str = <span class="macro">format!</span>(<span class="string">"{}"</span>, i + <span class="number">1</span>);
+                        <span class="kw">let </span>gutter = nlen - i_str.len();
+                        <span class="macro">write!</span>(
+                            f,
+                            <span class="string">"\n{:&gt;3$}[{}] {:&gt;4$}"</span>,
+                            <span class="string">""</span>, i_str, x_str, gutter, elt_width
+                        )
+                    } <span class="kw">else </span>{
+                        col += <span class="number">1 </span>+ elt_width;
+                        <span class="macro">write!</span>(f, <span class="string">" {:&gt;1$}"</span>, x_str, elt_width)
+                    }
+                })<span class="question-mark">?</span>;
+
+            <span class="kw">if </span>n &gt; maxprint {
+                <span class="macro">write!</span>(f, <span class="string">"\n[ omitting {} entries ]"</span>, n - maxprint)<span class="question-mark">?</span>;
+            }
+        } <span class="kw">else </span>{
+            <span class="kw">let </span>elt_width = element_width(
+                <span class="self">self</span>.pairs_ref()
+                    .iter()
+                    .map(|x| std::cmp::max(<span class="macro">format!</span>(<span class="string">"{:}"</span>, x.<span class="number">0</span>).len(), <span class="macro">format!</span>(<span class="string">"{:?}"</span>, x.<span class="number">1</span>).len())),
+            );
+            <span class="kw">let </span><span class="kw-2">mut </span>values_ref = <span class="self">self</span>.values_ref();
+            <span class="kw">let </span><span class="kw-2">mut </span>names_ref = <span class="self">self
+                </span>.names_ref()
+                .expect(<span class="string">"already checked existence of names"</span>);
+
+            <span class="kw">let </span><span class="kw-2">mut </span>values_strs = values_ref.iter().map(|x| <span class="macro">format!</span>(<span class="string">"{:?}"</span>, x));
+            <span class="kw">let </span><span class="kw-2">mut </span>names_strs = names_ref.iter().map(|x| <span class="macro">format!</span>(<span class="string">"{:}"</span>, x));
+
+            <span class="comment">// hard coded max print &amp; console width
+            // we print at most 20 rows
+            </span><span class="kw">let </span>elts_per_line = <span class="number">80 </span>/ (elt_width + <span class="number">1</span>);
+
+            <span class="lifetime">'lines</span>: <span class="kw">for _ in </span><span class="number">1</span>..=<span class="number">20 </span>{
+                <span class="kw">for _ in </span><span class="number">1</span>..=elts_per_line {
+                    <span class="kw">if let </span><span class="prelude-val">Some</span>(name) = names_strs.next() {
+                        <span class="macro">write!</span>(f, <span class="string">"{:}{:&gt;2$}"</span>, name, <span class="string">" "</span>, elt_width - name.len())<span class="question-mark">?</span>;
+                    } <span class="kw">else </span>{
+                        <span class="kw">break</span>;
+                    }
+                }
+                <span class="macro">writeln!</span>(f)<span class="question-mark">?</span>;
+                <span class="kw">for _ in </span><span class="number">1</span>..=elts_per_line {
+                    <span class="kw">if let </span><span class="prelude-val">Some</span>(value) = values_strs.next() {
+                        <span class="macro">write!</span>(f, <span class="string">"{:}{:&gt;2$}"</span>, value, <span class="string">" "</span>, elt_width - value.len())<span class="question-mark">?</span>;
+                    } <span class="kw">else </span>{
+                        <span class="kw">break </span><span class="lifetime">'lines</span>;
+                    }
+                }
+                <span class="macro">writeln!</span>(f)<span class="question-mark">?</span>;
+            }
+        }
         <span class="prelude-val">Ok</span>(())
     }
 }

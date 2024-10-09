@@ -96,6 +96,10 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
 <a href="#63" id="63">63</a>
 <a href="#64" id="64">64</a>
 <a href="#65" id="65">65</a>
+<a href="#66" id="66">66</a>
+<a href="#67" id="67">67</a>
+<a href="#68" id="68">68</a>
+<a href="#69" id="69">69</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>r_derive::<span class="kw-2">*</span>;
 
 <span class="kw">use </span><span class="kw">crate</span>::callable::core::<span class="kw-2">*</span>;
@@ -124,6 +128,11 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
 ///
 /// `...`: Arguments to collect into a `list`.
 ///
+/// ## Differences to the R implementation
+///
+/// Setting a list value to `null` does not remove the element but
+/// sets it to the value `null`.
+///
 /// ## Examples
 ///
 /// ```custom,{class=r-repl}
@@ -143,7 +152,6 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
 /// ```custom,{class=r-repl}
 /// (1,)
 /// ```
-///
 </span><span class="attr">#[doc(alias = <span class="string">"list"</span>)]
 #[builtin(sym = <span class="string">"list"</span>)]
 #[derive(Debug, Clone, PartialEq)]

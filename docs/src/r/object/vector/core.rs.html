@@ -945,15 +945,106 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
 <a href="#912" id="912">912</a>
 <a href="#913" id="913">913</a>
 <a href="#914" id="914">914</a>
+<a href="#915" id="915">915</a>
+<a href="#916" id="916">916</a>
+<a href="#917" id="917">917</a>
+<a href="#918" id="918">918</a>
+<a href="#919" id="919">919</a>
+<a href="#920" id="920">920</a>
+<a href="#921" id="921">921</a>
+<a href="#922" id="922">922</a>
+<a href="#923" id="923">923</a>
+<a href="#924" id="924">924</a>
+<a href="#925" id="925">925</a>
+<a href="#926" id="926">926</a>
+<a href="#927" id="927">927</a>
+<a href="#928" id="928">928</a>
+<a href="#929" id="929">929</a>
+<a href="#930" id="930">930</a>
+<a href="#931" id="931">931</a>
+<a href="#932" id="932">932</a>
+<a href="#933" id="933">933</a>
+<a href="#934" id="934">934</a>
+<a href="#935" id="935">935</a>
+<a href="#936" id="936">936</a>
+<a href="#937" id="937">937</a>
+<a href="#938" id="938">938</a>
+<a href="#939" id="939">939</a>
+<a href="#940" id="940">940</a>
+<a href="#941" id="941">941</a>
+<a href="#942" id="942">942</a>
+<a href="#943" id="943">943</a>
+<a href="#944" id="944">944</a>
+<a href="#945" id="945">945</a>
+<a href="#946" id="946">946</a>
+<a href="#947" id="947">947</a>
+<a href="#948" id="948">948</a>
+<a href="#949" id="949">949</a>
+<a href="#950" id="950">950</a>
+<a href="#951" id="951">951</a>
+<a href="#952" id="952">952</a>
+<a href="#953" id="953">953</a>
+<a href="#954" id="954">954</a>
+<a href="#955" id="955">955</a>
+<a href="#956" id="956">956</a>
+<a href="#957" id="957">957</a>
+<a href="#958" id="958">958</a>
+<a href="#959" id="959">959</a>
+<a href="#960" id="960">960</a>
+<a href="#961" id="961">961</a>
+<a href="#962" id="962">962</a>
+<a href="#963" id="963">963</a>
+<a href="#964" id="964">964</a>
+<a href="#965" id="965">965</a>
+<a href="#966" id="966">966</a>
+<a href="#967" id="967">967</a>
+<a href="#968" id="968">968</a>
+<a href="#969" id="969">969</a>
+<a href="#970" id="970">970</a>
+<a href="#971" id="971">971</a>
+<a href="#972" id="972">972</a>
+<a href="#973" id="973">973</a>
+<a href="#974" id="974">974</a>
+<a href="#975" id="975">975</a>
+<a href="#976" id="976">976</a>
+<a href="#977" id="977">977</a>
+<a href="#978" id="978">978</a>
+<a href="#979" id="979">979</a>
+<a href="#980" id="980">980</a>
+<a href="#981" id="981">981</a>
+<a href="#982" id="982">982</a>
+<a href="#983" id="983">983</a>
+<a href="#984" id="984">984</a>
+<a href="#985" id="985">985</a>
+<a href="#986" id="986">986</a>
+<a href="#987" id="987">987</a>
+<a href="#988" id="988">988</a>
+<a href="#989" id="989">989</a>
+<a href="#990" id="990">990</a>
+<a href="#991" id="991">991</a>
+<a href="#992" id="992">992</a>
+<a href="#993" id="993">993</a>
+<a href="#994" id="994">994</a>
+<a href="#995" id="995">995</a>
+<a href="#996" id="996">996</a>
+<a href="#997" id="997">997</a>
+<a href="#998" id="998">998</a>
+<a href="#999" id="999">999</a>
+<a href="#1000" id="1000">1000</a>
+<a href="#1001" id="1001">1001</a>
+<a href="#1002" id="1002">1002</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::fmt::Debug;
 <span class="kw">use </span>std::fmt::Display;
 
 <span class="kw">use </span><span class="kw">crate</span>::error::Error;
 <span class="kw">use </span><span class="kw">crate</span>::lang::EvalResult;
+<span class="kw">use </span><span class="kw">crate</span>::lang::Signal;
+<span class="kw">use </span><span class="kw">crate</span>::object::CowObj;
 <span class="kw">use </span><span class="kw">crate</span>::object::Obj;
 
 <span class="kw">use </span><span class="kw">super</span>::coercion::CoercibleInto;
 <span class="kw">use </span><span class="kw">super</span>::rep::Rep;
+<span class="kw">use </span><span class="kw">super</span>::reptype::IterableValues;
 <span class="kw">use </span><span class="kw">super</span>::reptype::RepType;
 <span class="kw">use </span><span class="kw">super</span>::subset::Subset;
 <span class="kw">use </span><span class="kw">super</span>::types::<span class="kw-2">*</span>;
@@ -987,6 +1078,13 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
             OptionNA::NA =&gt; OptionNA::NA,
         }
     }
+
+    <span class="kw">pub fn </span>as_option(<span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;T&gt; {
+        <span class="kw">match </span><span class="self">self </span>{
+            OptionNA::Some(x) =&gt; Option::Some(x),
+            OptionNA::NA =&gt; Option::None,
+        }
+    }
 }
 
 <span class="attr">#[derive(Debug, PartialEq)]
@@ -999,13 +1097,25 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
     // Raw(Raw),
 </span>}
 
-<span class="kw">impl </span>Clone <span class="kw">for </span>Vector {
+<span class="comment">// TODO: Implement vector more like Rep&lt;T&gt;
+// I.e. the conversion from and to objects should be handled via TryFrom/From
+// and .into() calls
+</span><span class="kw">impl </span>Clone <span class="kw">for </span>Vector {
     <span class="kw">fn </span>clone(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self </span>{
-        <span class="self">self</span>.lazy_copy()
+        <span class="kw">match </span><span class="self">self </span>{
+            Vector::Double(v) =&gt; Vector::Double(v.clone()),
+            Vector::Character(v) =&gt; Vector::Character(v.clone()),
+            Vector::Integer(v) =&gt; Vector::Integer(v.clone()),
+            Vector::Logical(v) =&gt; Vector::Logical(v.clone()),
+        }
     }
 }
 
-<span class="kw">impl </span>Vector {
+<span class="comment">// TODO: Ensure that Vector API does not go beyond Rep&lt;Obj&gt; unless it is really
+// necessary.
+
+</span><span class="doccomment">/// See [`Rep`] for the documentation on the methods.
+</span><span class="kw">impl </span>Vector {
     <span class="kw">pub fn </span>get(<span class="kw-2">&amp;</span><span class="self">self</span>, index: usize) -&gt; <span class="prelude-ty">Option</span>&lt;Vector&gt; {
         <span class="kw">use </span>Vector::<span class="kw-2">*</span>;
         <span class="kw">match </span><span class="self">self </span>{
@@ -1016,16 +1126,61 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
         }
     }
 
-    <span class="doccomment">/// Create a lazy copy of the vector.
-    /// When mutating vectors, the internal data only needs to be copied when there is more than
-    /// one such lazy copy.
-    </span><span class="kw">pub fn </span>lazy_copy(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self </span>{
+    <span class="kw">pub fn </span>set_subset(<span class="kw-2">&amp;mut </span><span class="self">self</span>, subset: Subset, value: Obj) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Signal&gt; {
+        <span class="kw">use </span>Vector::<span class="kw-2">*</span>;
         <span class="kw">match </span><span class="self">self </span>{
-            Vector::Double(v) =&gt; Vector::Double(v.clone()),
-            Vector::Character(v) =&gt; Vector::Character(v.clone()),
-            Vector::Integer(v) =&gt; Vector::Integer(v.clone()),
-            Vector::Logical(v) =&gt; Vector::Logical(v.clone()),
+            Double(x) =&gt; x
+                .set_subset(subset, value.try_into()<span class="question-mark">?</span>)
+                .map(|x| Double(Rep::from(<span class="macro">vec!</span>[x]))),
+            Integer(x) =&gt; x
+                .set_subset(subset, value.try_into()<span class="question-mark">?</span>)
+                .map(|x| Integer(Rep::from(<span class="macro">vec!</span>[x]))),
+            Character(x) =&gt; x
+                .set_subset(subset, value.try_into()<span class="question-mark">?</span>)
+                .map(|x| Character(Rep::from(<span class="macro">vec!</span>[x]))),
+            Logical(x) =&gt; x
+                .set_subset(subset, value.try_into()<span class="question-mark">?</span>)
+                .map(|x| Logical(Rep::from(<span class="macro">vec!</span>[x]))),
         }
+    }
+
+    <span class="kw">pub fn </span>iter_names(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;IterableValues&lt;Character&gt;&gt; {
+        <span class="kw">use </span>Vector::<span class="kw-2">*</span>;
+        <span class="kw">match </span><span class="self">self </span>{
+            Double(x) =&gt; x.iter_names(),
+            Integer(x) =&gt; x.iter_names(),
+            Logical(x) =&gt; x.iter_names(),
+            Character(x) =&gt; x.iter_names(),
+        }
+    }
+
+    <span class="kw">pub fn </span>is_named(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
+        <span class="kw">use </span>Vector::<span class="kw-2">*</span>;
+        <span class="kw">match </span><span class="self">self </span>{
+            Double(x) =&gt; x.is_named(),
+            Integer(x) =&gt; x.is_named(),
+            Logical(x) =&gt; x.is_named(),
+            Character(x) =&gt; x.is_named(),
+        }
+    }
+
+    <span class="kw">pub fn </span>names(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;CowObj&lt;Vec&lt;Character&gt;&gt;&gt; {
+        <span class="kw">use </span>Vector::<span class="kw-2">*</span>;
+        <span class="kw">match </span><span class="self">self </span>{
+            Double(x) =&gt; x.names(),
+            Integer(x) =&gt; x.names(),
+            Logical(x) =&gt; x.names(),
+            Character(x) =&gt; x.names(),
+        }
+    }
+
+    <span class="kw">pub fn </span>set_names(<span class="kw-2">&amp;</span><span class="self">self</span>, names: CowObj&lt;Vec&lt;Character&gt;&gt;) {
+        <span class="kw">match </span><span class="self">self </span>{
+            Vector::Character(x) =&gt; x.set_names(names),
+            Vector::Logical(x) =&gt; x.set_names(names),
+            Vector::Integer(x) =&gt; x.set_names(names),
+            Vector::Double(x) =&gt; x.set_names(names),
+        };
     }
 
     <span class="kw">pub fn </span>try_get(<span class="kw-2">&amp;</span><span class="self">self</span>, index: Obj) -&gt; EvalResult {
@@ -1188,6 +1343,12 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
             Logical(i) =&gt; i.try_into(),
             Character(i) =&gt; i.try_into(),
         }
+    }
+}
+
+<span class="kw">impl </span>From&lt;CowObj&lt;Vec&lt;Character&gt;&gt;&gt; <span class="kw">for </span>Vector {
+    <span class="kw">fn </span>from(x: CowObj&lt;Vec&lt;Character&gt;&gt;) -&gt; <span class="self">Self </span>{
+        Vector::Character(x.into())
     }
 }
 
@@ -1857,6 +2018,21 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
             (Character(l), Logical(r)) =&gt; l.bitand(r).into(),
             (Character(l), Character(r)) =&gt; l.bitand(r).into(),
         }
+    }
+}
+
+<span class="attr">#[cfg(test)]
+
+</span><span class="kw">mod </span>tests {
+    <span class="kw">use crate</span>::{r, r_expect};
+
+    <span class="attr">#[test]
+    </span><span class="kw">fn </span>double_brackets_assign() {
+        <span class="macro">r_expect!</span> {{<span class="string">"
+            x = c(1, 2)
+            x[[1]] = 10
+            x[[1]] == 10 &amp; x[[2]] == 2
+        "</span>}}
     }
 }
 </code></pre></div></section></main></body></html>

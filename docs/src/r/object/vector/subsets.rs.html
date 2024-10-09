@@ -267,6 +267,14 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
 <a href="#234" id="234">234</a>
 <a href="#235" id="235">235</a>
 <a href="#236" id="236">236</a>
+<a href="#237" id="237">237</a>
+<a href="#238" id="238">238</a>
+<a href="#239" id="239">239</a>
+<a href="#240" id="240">240</a>
+<a href="#241" id="241">241</a>
+<a href="#242" id="242">242</a>
+<a href="#243" id="243">243</a>
+<a href="#244" id="244">244</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::object::CowObj;
 <span class="kw">use </span>hashbrown::HashMap;
 
@@ -301,12 +309,20 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
         <span class="prelude-val">Some</span>(index)
     }
 
-    <span class="kw">pub fn </span>push&lt;T&gt;(<span class="self">self</span>, subset: T)
+    <span class="kw">pub fn </span>len(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
+        <span class="self">self</span>.<span class="number">0</span>.len()
+    }
+
+    <span class="attr">#[must_use]
+    </span><span class="kw">pub fn </span>is_empty(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
+        <span class="self">self</span>.len() == <span class="number">0
+    </span>}
+
+    <span class="kw">pub fn </span>push&lt;T&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, subset: T)
     <span class="kw">where
         </span>T: Into&lt;Subset&gt;,
     {
-        <span class="kw">let </span>Subsets(<span class="kw-2">mut </span>v) = <span class="self">self</span>;
-        v.push(subset.into());
+        <span class="self">self</span>.<span class="number">0</span>.push(subset.into());
     }
 
     <span class="kw">pub fn </span>bind_names(<span class="self">self</span>, names: CowObj&lt;HashMap&lt;String, Vec&lt;usize&gt;&gt;&gt;) -&gt; NamedSubsets {

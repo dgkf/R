@@ -178,9 +178,22 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
 <a href="#145" id="145">145</a>
 <a href="#146" id="146">146</a>
 <a href="#147" id="147">147</a>
+<a href="#148" id="148">148</a>
+<a href="#149" id="149">149</a>
+<a href="#150" id="150">150</a>
+<a href="#151" id="151">151</a>
+<a href="#152" id="152">152</a>
+<a href="#153" id="153">153</a>
+<a href="#154" id="154">154</a>
+<a href="#155" id="155">155</a>
+<a href="#156" id="156">156</a>
+<a href="#157" id="157">157</a>
+<a href="#158" id="158">158</a>
+<a href="#159" id="159">159</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::rc::Rc;
 
 <span class="kw">use </span><span class="kw">crate</span>::lang::{EvalResult, Signal};
+<span class="kw">use </span><span class="kw">crate</span>::object::types::Character;
 <span class="kw">use </span><span class="kw">crate</span>::object::<span class="kw-2">*</span>;
 <span class="kw">use crate</span>::{error::<span class="kw-2">*</span>, internal_err};
 
@@ -255,34 +268,42 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
                 .map(|pair| <span class="kw">match </span>pair {
                     (<span class="kw">_</span>, Expr::Ellipsis(<span class="prelude-val">None</span>)) =&gt; {
                         <span class="kw">if let </span><span class="prelude-val">Ok</span>(Obj::List(ellipsis)) = <span class="self">self</span>.get_ellipsis() {
-                            <span class="prelude-val">Ok</span>(ellipsis.values.into_iter())
+                            <span class="prelude-val">Ok</span>(ellipsis.iter_pairs())
                         } <span class="kw">else </span>{
-                            <span class="prelude-val">Ok</span>(CowObj::from(<span class="macro">vec!</span>[]).into_iter())
+                            <span class="prelude-val">Ok</span>(List::new().iter_pairs())
                         }
                     }
                     (<span class="kw">_</span>, Expr::Ellipsis(<span class="prelude-val">Some</span>(name))) =&gt; {
                         <span class="kw">if let </span><span class="prelude-val">Ok</span>(Obj::List(more)) = <span class="self">self</span>.get(name) {
-                            <span class="prelude-val">Ok</span>(more.values.into_iter())
+                            <span class="prelude-val">Ok</span>(more.iter_pairs())
                         } <span class="kw">else </span>{
                             <span class="macro">internal_err!</span>()
                         }
                     }
                     <span class="comment">// Avoid creating a new closure just to point to another, just reuse it
                     </span>(k, Expr::Symbol(s)) =&gt; <span class="kw">match </span><span class="self">self</span>.env().get(s.clone()) {
-                        <span class="prelude-val">Ok</span>(c @ Obj::Promise(..)) =&gt; <span class="prelude-val">Ok</span>(CowObj::from(<span class="macro">vec!</span>[(k, c)]).into_iter()),
-                        <span class="kw">_ </span>=&gt; <span class="prelude-val">Ok</span>(CowObj::from(<span class="macro">vec!</span>[(
-                            k,
-                            Obj::Promise(<span class="prelude-val">None</span>, Expr::Symbol(s), <span class="self">self</span>.env()),
-                        )])
-                        .into_iter()),
+                        <span class="prelude-val">Ok</span>(c @ Obj::Promise(..)) =&gt; {
+                            <span class="kw">let </span>k = k.map_or(OptionNA::NA, OptionNA::Some);
+                            <span class="prelude-val">Ok</span>(List::from(<span class="macro">vec!</span>[(k, c)]).iter_pairs())
+                        }
+                        <span class="kw">_ </span>=&gt; {
+                            <span class="kw">let </span>k = k.map_or(OptionNA::NA, OptionNA::Some);
+                            <span class="prelude-val">Ok</span>(List::from(<span class="macro">vec!</span>[(
+                                k,
+                                Obj::Promise(<span class="prelude-val">None</span>, Expr::Symbol(s), <span class="self">self</span>.env()),
+                            )])
+                            .iter_pairs())
+                        }
                     },
                     (k, c @ Expr::Call(..)) =&gt; {
+                        <span class="kw">let </span>k = k.map_or(OptionNA::NA, OptionNA::Some);
                         <span class="kw">let </span>elem = <span class="macro">vec!</span>[(k, Obj::Promise(<span class="prelude-val">None</span>, c, <span class="self">self</span>.env()))];
-                        <span class="prelude-val">Ok</span>(CowObj::from(elem).into_iter())
+                        <span class="prelude-val">Ok</span>(List::from(elem).iter_pairs())
                     }
                     (k, v) =&gt; {
+                        <span class="kw">let </span>k = k.map_or(OptionNA::NA, OptionNA::Some);
                         <span class="kw">if let </span><span class="prelude-val">Ok</span>(elem) = <span class="self">self</span>.eval(v) {
-                            <span class="prelude-val">Ok</span>(CowObj::from(<span class="macro">vec!</span>[(k, elem)]).into_iter())
+                            <span class="prelude-val">Ok</span>(List::from(<span class="macro">vec!</span>[(k, elem)]).iter_pairs())
                         } <span class="kw">else </span>{
                             <span class="macro">internal_err!</span>()
                         }
@@ -301,20 +322,23 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
                 .map(|pair| <span class="kw">match </span>pair {
                     (<span class="kw">_</span>, Expr::Ellipsis(<span class="prelude-val">None</span>)) =&gt; {
                         <span class="kw">if let </span><span class="prelude-val">Ok</span>(Obj::List(ellipsis)) = <span class="self">self</span>.get_ellipsis() {
-                            <span class="prelude-val">Ok</span>(ellipsis.values.into_iter())
+                            <span class="prelude-val">Ok</span>(ellipsis.iter_pairs())
                         } <span class="kw">else </span>{
-                            <span class="prelude-val">Ok</span>(CowObj::from(<span class="macro">vec!</span>[]).into_iter())
+                            <span class="prelude-val">Ok</span>(List::from(Vec::&lt;(Character, Obj)&gt;::new()).iter_pairs())
                         }
                     }
                     (<span class="kw">_</span>, Expr::Ellipsis(<span class="prelude-val">Some</span>(name))) =&gt; {
                         <span class="kw">if let </span><span class="prelude-val">Ok</span>(Obj::List(more)) = <span class="self">self</span>.get(name) {
-                            <span class="prelude-val">Ok</span>(more.values.into_iter())
+                            <span class="prelude-val">Ok</span>(more.iter_pairs())
                         } <span class="kw">else </span>{
-                            <span class="prelude-val">Ok</span>(CowObj::from(<span class="macro">vec!</span>[]).into_iter())
+                            <span class="prelude-val">Ok</span>(List::from(Vec::&lt;(Character, Obj)&gt;::new()).iter_pairs())
                         }
                     }
                     (k, v) =&gt; <span class="kw">match </span><span class="self">self</span>.eval_and_finalize(v) {
-                        <span class="prelude-val">Ok</span>(elem) =&gt; <span class="prelude-val">Ok</span>(CowObj::from(<span class="macro">vec!</span>[(k, elem)]).into_iter()),
+                        <span class="prelude-val">Ok</span>(elem) =&gt; {
+                            <span class="kw">let </span>k = k.map_or(OptionNA::NA, OptionNA::Some);
+                            <span class="prelude-val">Ok</span>(List::from(<span class="macro">vec!</span>[(k, elem)]).iter_pairs())
+                        }
                         <span class="prelude-val">Err</span>(e) =&gt; <span class="prelude-val">Err</span>(e),
                     },
                 })

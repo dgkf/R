@@ -478,10 +478,6 @@ function __wbg_get_imports() {
     imports.wbg.__wbindgen_object_drop_ref = function(arg0) {
         takeObject(arg0);
     };
-    imports.wbg.__wbindgen_is_undefined = function(arg0) {
-        const ret = getObject(arg0) === undefined;
-        return ret;
-    };
     imports.wbg.__wbindgen_try_into_number = function(arg0) {
         let result;
     try { result = +getObject(arg0) } catch (e) { result = e }
@@ -493,6 +489,10 @@ imports.wbg.__wbindgen_number_get = function(arg0, arg1) {
     const ret = typeof(obj) === 'number' ? obj : undefined;
     getFloat64Memory0()[arg0 / 8 + 1] = isLikeNone(ret) ? 0 : ret;
     getInt32Memory0()[arg0 / 4 + 0] = !isLikeNone(ret);
+};
+imports.wbg.__wbindgen_is_undefined = function(arg0) {
+    const ret = getObject(arg0) === undefined;
+    return ret;
 };
 imports.wbg.__wbg_log_622c0899e43adbe8 = function(arg0, arg1) {
     console.log(getStringFromWasm0(arg0, arg1));
@@ -614,8 +614,8 @@ imports.wbg.__wbindgen_memory = function() {
     const ret = wasm.memory;
     return addHeapObject(ret);
 };
-imports.wbg.__wbindgen_closure_wrapper2018 = function(arg0, arg1, arg2) {
-    const ret = makeClosure(arg0, arg1, 755, __wbg_adapter_28);
+imports.wbg.__wbindgen_closure_wrapper2481 = function(arg0, arg1, arg2) {
+    const ret = makeClosure(arg0, arg1, 1113, __wbg_adapter_28);
     return addHeapObject(ret);
 };
 

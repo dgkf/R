@@ -146,6 +146,10 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
 <a href="#113" id="113">113</a>
 <a href="#114" id="114">114</a>
 <a href="#115" id="115">115</a>
+<a href="#116" id="116">116</a>
+<a href="#117" id="117">117</a>
+<a href="#118" id="118">118</a>
+<a href="#119" id="119">119</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::cell::{Ref, RefCell};
 <span class="kw">use </span>std::iter::Iterator;
 <span class="kw">use </span>std::rc::Rc;
@@ -159,7 +163,7 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
 
 <span class="doccomment">/// Internal Data representation for copy-on-write semantics.
 </span><span class="attr">#[derive(Debug, PartialEq, Default)]
-</span><span class="kw">pub struct </span>CowObj&lt;T: Clone&gt;(Rc&lt;RefCell&lt;Rc&lt;T&gt;&gt;&gt;);
+</span><span class="kw">pub struct </span>CowObj&lt;T: Clone&gt;(<span class="kw">pub </span>Rc&lt;RefCell&lt;Rc&lt;T&gt;&gt;&gt;);
 
 <span class="kw">impl</span>&lt;T: Clone&gt; Clone <span class="kw">for </span>CowObj&lt;T&gt; {
     <span class="kw">fn </span>clone(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self </span>{
@@ -205,6 +209,10 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
     <span class="doccomment">/// Create a new instance
     </span><span class="kw">pub fn </span>new(x: Rc&lt;RefCell&lt;Rc&lt;T&gt;&gt;&gt;) -&gt; <span class="self">Self </span>{
         CowObj(x)
+    }
+
+    <span class="kw">pub fn </span>inner_rc(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Rc&lt;T&gt; {
+        <span class="self">self</span>.borrow().clone()
     }
 
     <span class="doccomment">/// Get mutable access to the internal vector.
