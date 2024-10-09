@@ -169,7 +169,7 @@ impl Callable for PrimitiveC {
                 Vec::<OptionNA<String>>::new()
                     .into_iter()
                     .chain(vals.iter_values().flat_map(|i| match i.as_character() {
-                        Ok(Obj::Vector(Vector::Character(v))) => v.into_iter_values(),
+                        Ok(Obj::Vector(Vector::Character(v))) => v.iter_values(),
                         _ => unreachable!(),
                     }))
                     .collect::<Vec<Character>>(),
@@ -180,7 +180,7 @@ impl Callable for PrimitiveC {
                     .chain(
                         vals.iter_values()
                             .flat_map(|i| match i.clone().as_double() {
-                                Ok(Obj::Vector(Vector::Double(v))) => v.into_iter_values(),
+                                Ok(Obj::Vector(Vector::Double(v))) => v.iter_values(),
                                 _ => unreachable!(),
                             }),
                     )
@@ -192,7 +192,7 @@ impl Callable for PrimitiveC {
                     .chain(
                         vals.iter_values()
                             .flat_map(|i| match i.clone().as_integer() {
-                                Ok(Obj::Vector(Vector::Integer(v))) => v.into_iter_values(),
+                                Ok(Obj::Vector(Vector::Integer(v))) => v.iter_values(),
                                 _ => unreachable!(),
                             }),
                     )
@@ -204,7 +204,7 @@ impl Callable for PrimitiveC {
                     .chain(
                         vals.iter_values()
                             .flat_map(|i| match i.clone().as_logical() {
-                                Ok(Obj::Vector(Vector::Logical(v))) => v.into_iter_values(),
+                                Ok(Obj::Vector(Vector::Logical(v))) => v.iter_values(),
                                 _ => unreachable!(),
                             }),
                     )

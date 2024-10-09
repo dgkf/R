@@ -4,8 +4,8 @@ use std::fmt::{Debug, Display};
 use super::coercion::{AtomicMode, CoercibleInto, CommonCmp, CommonNum, MinimallyNumeric};
 use super::iterators::{map_common_numeric, zip_recycle};
 use super::reptype::{
-    Naming, RepType, RepTypeIntoIterableNames, RepTypeIntoIterablePairs, RepTypeIntoIterableValues,
-    RepTypeIter, RepTypeIterPairs,
+    IntoIterableRefNames, IntoIterableRefPairs, IntoIterableRefValues, IterablePairs,
+    IterableValues, Naming, RepType,
 };
 use super::subset::Subset;
 use super::types::*;
@@ -46,20 +46,16 @@ impl<T: ViewMut + Default + Clone> Rep<T> {
     }
 
     /// Get a cloned version of the inner value.
-    /// This is used for assignments like `list(1)[[1]]`.
+    /// This is used for accessing inner values like `list(1)[[1]]`.
     pub fn try_get_inner(&self, subset: Subset) -> Result<T, Signal> {
-        self.try_get_inner_mut(subset)
+        self.try_get_inner_mut(subset).map(|x| x.clone())
     }
 }
 
 impl<T: Clone + Default + 'static> Rep<T> {
     /// Iterate over the owned names and values of the vector.
-    pub fn iter_pairs(&self) -> RepTypeIterPairs<T> {
-        // FIXME: This should maybe return an option
+    pub fn iter_pairs(&self) -> IterablePairs<T> {
         self.0.borrow().clone().iter_pairs()
-    }
-    pub fn into_iter_values(self) -> Box<dyn Iterator<Item = T>> {
-        Box::new(self.clone().iter_pairs().map(|(_, x)| x))
     }
 }
 
@@ -76,12 +72,12 @@ where
     }
 
     /// Iterate over the (owned) values of the vector.
-    pub fn iter_values(&self) -> RepTypeIter<T> {
+    pub fn iter_values(&self) -> IterableValues<T> {
         self.0.borrow().iter_values()
     }
 
     /// Iterate over the names of the vector (if they exist).
-    pub fn iter_names(&self) -> Option<RepTypeIter<Character>> {
+    pub fn iter_names(&self) -> Option<IterableValues<Character>> {
         self.0.borrow().iter_names()
     }
 
@@ -93,11 +89,7 @@ where
         self
     }
 
-    pub fn remove(&self, index: usize) -> (Character, T) {
-        self.borrow().remove(index)
-    }
-
-    /// Reindex the mapping from names to indices.
+    /// Reindex the mapping from names to indices using the names vector from the `Naming`.
     pub fn reindex(&mut self) {
         self.borrow_mut().reindex()
     }
@@ -108,10 +100,12 @@ where
         self.0.replace(new_repr);
     }
 
+    /// Whether the vector representation has names.
     pub fn is_named(&self) -> bool {
         matches!(*self.borrow(), RepType::Subset(.., Some(_)))
     }
 
+    /// Return the names of the vector if there are any.
     pub fn names(&self) -> Option<CowObj<Vec<Character>>> {
         match self.borrow().clone() {
             RepType::Subset(_, s, n) => {
@@ -135,29 +129,43 @@ where
         self.0.into_inner().dedup_last().into()
     }
 
-    /// Preallocates a
-    pub fn with_capacity(n: usize, names: bool) -> Self {
+    /// Constructs a new, empty `Rep<T>` with at least the specified `capacity`.
+    /// Names are only include if `names` is true.
+    pub fn with_capacity(capacity: usize, names: bool) -> Self {
         let naming = if names {
-            Some(Naming::with_capacity(n))
+            Some(Naming::with_capacity(capacity))
         } else {
             None
         };
         Self(RefCell::new(RepType::Subset(
-            CowObj::from(Vec::with_capacity(n)),
+            CowObj::from(Vec::with_capacity(capacity)),
             Subsets::default(),
             naming,
         )))
     }
 
-    pub fn pairs_ref(&self) -> RepTypeIntoIterablePairs<T> {
+    /// Get an `RepTypeIntoIterablePairs<T>` which in turn can be converted into an iterator over
+    /// pairs of references (&name, &value).
+    ///
+    /// Directly getting an iterator is not possible due to lifetime issues.
+    pub fn pairs_ref(&self) -> IntoIterableRefPairs<T> {
         self.0.borrow().pairs_ref()
     }
 
-    pub fn values_ref(&self) -> RepTypeIntoIterableValues<T> {
+    /// Get an `Option<RepTypeIntoIterableValues<T>>` which in turn can be converted into an iterator over
+    /// references to the values.
+    /// The `None` variant is returned if the `Rep<T>` is not named.
+    ///
+    /// Directly getting an iterator is not possible due to lifetime issues.
+    pub fn values_ref(&self) -> IntoIterableRefValues<T> {
         self.0.borrow().values_ref()
     }
 
-    pub fn names_ref(&self) -> Option<RepTypeIntoIterableNames> {
+    /// Get an `RepTypeIntoIterableValues<T>` which in turn can be converted into an iterator over
+    /// references to the names.
+    ///
+    /// Directly getting an iterator is not possible due to lifetime issues.
+    pub fn names_ref(&self) -> Option<IntoIterableRefNames> {
         self.0.borrow().names_ref()
     }
 
@@ -215,19 +223,14 @@ where
         x.map(|x| x.into())
     }
 
-    pub fn values(&self) -> CowObj<Vec<T>> {
-        self.materialize_inplace();
-        match self.0.borrow().clone() {
-            RepType::Subset(values, ..) => values,
-        }
-    }
-
-    /// Used for `[[`-assignment.
-    /// The subset should be a single name or index to which the given value will be assigned.
+    /// Change a value at the location given by `subset` to the provided `value`.
+    /// If the `subset` does not have length `1`, an error is returned.
     pub fn set_subset(&mut self, subset: Subset, value: T) -> Result<T, Signal> {
+        // Used for `[[`-assignment.
         self.0.borrow_mut().set_subset(subset, value)
     }
 
+    /// Push a named `value` with a given `name` onto the `Rep<T>`.
     pub fn push_named(&self, name: OptionNA<String>, value: T) {
         self.borrow().push_named(name, value)
     }
@@ -237,9 +240,6 @@ where
         T: From<R> + Clone,
         R: Clone + Default,
     {
-        // TODO: Handle names here
-        // The assign method from List had a lot more code,
-        // check that everything is covered here.
         self.0.borrow_mut().assign(value.0.into_inner()).into()
     }
     /// Test the mode of the internal vector type
@@ -379,19 +379,6 @@ where
     }
 }
 
-// impl<T> From<T> for Rep<T>
-// where
-//     T: Clone + Default,
-// {
-//     fn from(x: T) -> Self {
-//         Rep(RefCell::new(RepType::Subset(
-//             vec![x].into(),
-//             Subsets::default(),
-//             None,
-//         )))
-//     }
-// }
-
 impl<T> From<RepType<T>> for Rep<T>
 where
     T: Clone + Default,
@@ -519,17 +506,11 @@ where
         if !self.is_named() {
             let elt_width =
                 element_width(self.values_ref().iter().map(|x| format!("{:?}", x).len()));
-            // TODO: iteratively calculate when we hit max print so our
-            // max_len isn't inflated by a value that is omitted
 
             let mut values_ref = self.values_ref();
             let x_strs = values_ref.iter().map(|xi| format!("{:?}", xi));
 
             let mut col = 0;
-            //| [1]  1  2  3  4  5  6  7  8  9|
-            //|[10] 10 11 12 13 14 15 16 17 18|
-            //|-----|
-            // in the above example the gutterlen is  5
             let gutterlen = 2 + nlen + 1;
 
             // hard coded max print & console width

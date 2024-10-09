@@ -9,8 +9,8 @@ use crate::object::Obj;
 
 use super::coercion::CoercibleInto;
 use super::rep::Rep;
+use super::reptype::IterableValues;
 use super::reptype::RepType;
-use super::reptype::RepTypeIter;
 use super::subset::Subset;
 use super::types::*;
 
@@ -109,7 +109,7 @@ impl Vector {
         }
     }
 
-    pub fn iter_names(&self) -> Option<RepTypeIter<Character>> {
+    pub fn iter_names(&self) -> Option<IterableValues<Character>> {
         use Vector::*;
         match self {
             Double(x) => x.iter_names(),
