@@ -392,6 +392,11 @@ impl Display for Obj {
 }
 
 fn display_list(x: &List, f: &mut fmt::Formatter<'_>, bc: Option<String>) -> fmt::Result {
+    if x.is_empty() {
+        write!(f, "list()")?;
+        return Ok(());
+    }
+
     for (i, (maybe_name, value)) in x.pairs_ref().iter().enumerate() {
         if i > 0 {
             writeln!(f)?
