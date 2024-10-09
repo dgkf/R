@@ -18,7 +18,7 @@
 * Concatenating `list`s now works as expected (#177).
 * `names()` now works correctly when the vector is subset, e.g.
   `names(list(a = 1, b = 2)[1])` (#181).
-* `[[.<-` assignment has been fixed for lists  (#179)
+* `[[.<-` assignment has been fixed for lists (#179)
 
 # 0.4.0
 
