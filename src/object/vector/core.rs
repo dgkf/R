@@ -3,10 +3,13 @@ use std::fmt::Display;
 
 use crate::error::Error;
 use crate::lang::EvalResult;
+use crate::lang::Signal;
+use crate::object::CowObj;
 use crate::object::Obj;
 
 use super::coercion::CoercibleInto;
 use super::rep::Rep;
+use super::reptype::IterableValues;
 use super::reptype::RepType;
 use super::subset::Subset;
 use super::types::*;
@@ -40,6 +43,13 @@ impl<T> OptionNA<T> {
             OptionNA::NA => OptionNA::NA,
         }
     }
+
+    pub fn as_option(self) -> Option<T> {
+        match self {
+            OptionNA::Some(x) => Option::Some(x),
+            OptionNA::NA => Option::None,
+        }
+    }
 }
 
 #[derive(Debug, PartialEq)]
@@ -52,12 +62,24 @@ pub enum Vector {
     // Raw(Raw),
 }
 
+// TODO: Implement vector more like Rep<T>
+// I.e. the conversion from and to objects should be handled via TryFrom/From
+// and .into() calls
 impl Clone for Vector {
     fn clone(&self) -> Self {
-        self.lazy_copy()
+        match self {
+            Vector::Double(v) => Vector::Double(v.clone()),
+            Vector::Character(v) => Vector::Character(v.clone()),
+            Vector::Integer(v) => Vector::Integer(v.clone()),
+            Vector::Logical(v) => Vector::Logical(v.clone()),
+        }
     }
 }
 
+// TODO: Ensure that Vector API does not go beyond Rep<Obj> unless it is really
+// necessary.
+
+/// See [`Rep`] for the documentation on the methods.
 impl Vector {
     pub fn get(&self, index: usize) -> Option<Vector> {
         use Vector::*;
@@ -69,16 +91,61 @@ impl Vector {
         }
     }
 
-    /// Create a lazy copy of the vector.
-    /// When mutating vectors, the internal data only needs to be copied when there is more than
-    /// one such lazy copy.
-    pub fn lazy_copy(&self) -> Self {
+    pub fn set_subset(&mut self, subset: Subset, value: Obj) -> Result<Self, Signal> {
+        use Vector::*;
         match self {
-            Vector::Double(v) => Vector::Double(v.clone()),
-            Vector::Character(v) => Vector::Character(v.clone()),
-            Vector::Integer(v) => Vector::Integer(v.clone()),
-            Vector::Logical(v) => Vector::Logical(v.clone()),
+            Double(x) => x
+                .set_subset(subset, value.try_into()?)
+                .map(|x| Double(Rep::from(vec![x]))),
+            Integer(x) => x
+                .set_subset(subset, value.try_into()?)
+                .map(|x| Integer(Rep::from(vec![x]))),
+            Character(x) => x
+                .set_subset(subset, value.try_into()?)
+                .map(|x| Character(Rep::from(vec![x]))),
+            Logical(x) => x
+                .set_subset(subset, value.try_into()?)
+                .map(|x| Logical(Rep::from(vec![x]))),
         }
+    }
+
+    pub fn iter_names(&self) -> Option<IterableValues<Character>> {
+        use Vector::*;
+        match self {
+            Double(x) => x.iter_names(),
+            Integer(x) => x.iter_names(),
+            Logical(x) => x.iter_names(),
+            Character(x) => x.iter_names(),
+        }
+    }
+
+    pub fn is_named(&self) -> bool {
+        use Vector::*;
+        match self {
+            Double(x) => x.is_named(),
+            Integer(x) => x.is_named(),
+            Logical(x) => x.is_named(),
+            Character(x) => x.is_named(),
+        }
+    }
+
+    pub fn names(&self) -> Option<CowObj<Vec<Character>>> {
+        use Vector::*;
+        match self {
+            Double(x) => x.names(),
+            Integer(x) => x.names(),
+            Logical(x) => x.names(),
+            Character(x) => x.names(),
+        }
+    }
+
+    pub fn set_names(&self, names: CowObj<Vec<Character>>) {
+        match self {
+            Vector::Character(x) => x.set_names(names),
+            Vector::Logical(x) => x.set_names(names),
+            Vector::Integer(x) => x.set_names(names),
+            Vector::Double(x) => x.set_names(names),
+        };
     }
 
     pub fn try_get(&self, index: Obj) -> EvalResult {
@@ -241,6 +308,12 @@ impl TryInto<bool> for Vector {
             Logical(i) => i.try_into(),
             Character(i) => i.try_into(),
         }
+    }
+}
+
+impl From<CowObj<Vec<Character>>> for Vector {
+    fn from(x: CowObj<Vec<Character>>) -> Self {
+        Vector::Character(x.into())
     }
 }
 
@@ -910,5 +983,20 @@ impl std::ops::BitAnd for Vector {
             (Character(l), Logical(r)) => l.bitand(r).into(),
             (Character(l), Character(r)) => l.bitand(r).into(),
         }
+    }
+}
+
+#[cfg(test)]
+
+mod tests {
+    use crate::{r, r_expect};
+
+    #[test]
+    fn double_brackets_assign() {
+        r_expect! {{"
+            x = c(1, 2)
+            x[[1]] = 10
+            x[[1]] == 10 & x[[2]] == 2
+        "}}
     }
 }

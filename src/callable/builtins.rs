@@ -42,6 +42,7 @@ pub static BUILTIN: LazyLock<HashMap<&'static str, Box<dyn Builtin>>> = LazyLock
         ("callstack", Box::new(PrimitiveCallstack) as Box<dyn Builtin>),
         ("environment", Box::new(PrimitiveEnvironment) as Box<dyn Builtin>),
         ("eval", Box::new(PrimitiveEval) as Box<dyn Builtin>),
+        ("is_null", Box::new(PrimitiveIsNull) as Box<dyn Builtin>),
         ("length", Box::new(PrimitiveLength) as Box<dyn Builtin>),
         ("list", Box::new(PrimitiveList) as Box<dyn Builtin>),
         ("names", Box::new(PrimitiveNames) as Box<dyn Builtin>),

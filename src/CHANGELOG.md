@@ -2,6 +2,28 @@
 
 ## Changes
 
+* Named vectors were added and can e.g. be constructed via `[a = 1, b = 2]`
+* The `is_null()` primitive was added
+* Setting a list value to `null` actually sets it to `null` and does not remove it.
+
+## Internals
+
+* The `List` is now represented as a `Rep<Obj>`, unifying heterogenous and atomic vectors.
+  This included a considerable refactor.
+* Iterating over references of a `Rep<T>` was made much simpler and new methods were added
+  and unused ones removed.
+
+## Notable Bugs Addressed
+
+* Concatenating `list`s now works as expected (#177).
+* `names()` now works correctly when the vector is subset, e.g.
+  `names(list(a = 1, b = 2)[1])` (#181).
+* `[[.<-` assignment has been fixed for lists (#179)
+
+# 0.4.0
+
+## Changes
+
 * Added German (`ger`) localization.
 
 * Digits can now be separated by an underscore to improve readability.

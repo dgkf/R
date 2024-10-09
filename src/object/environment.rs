@@ -8,6 +8,7 @@ use crate::callable::builtins::BUILTIN;
 use crate::context::Context;
 use crate::error::Error;
 use crate::lang::{EvalResult, Signal};
+use crate::object::types::Character;
 use crate::object::ViewMut;
 
 use super::{Expr, ExprList, List, Obj};
@@ -55,8 +56,8 @@ impl Environment {
     }
 
     pub fn append(&self, l: List) {
-        for (key, value) in l.values.borrow().iter() {
-            if let Some(name) = key {
+        for (key, value) in l.pairs_ref().iter() {
+            if let Character::Some(name) = key {
                 self.values.borrow_mut().insert(name.clone(), value.clone());
             }
         }
@@ -142,5 +143,20 @@ impl Display for Environment {
 
         write!(f, ">")?;
         Ok(())
+    }
+}
+
+#[cfg(test)]
+
+mod tests {
+    use crate::{r, r_expect};
+
+    #[test]
+    fn dollar() {
+        r_expect! {{"
+            e = environment()
+            e$x = 1
+            e$x == 1
+        "}}
     }
 }

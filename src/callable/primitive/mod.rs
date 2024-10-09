@@ -30,3 +30,5 @@ mod sum;
 pub use sum::PrimitiveSum;
 mod length;
 pub use length::PrimitiveLength;
+mod is_null;
+pub use is_null::PrimitiveIsNull;

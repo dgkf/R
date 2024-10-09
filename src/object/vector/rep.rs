@@ -1,15 +1,17 @@
-use std::cell::{Ref, RefCell};
+use std::cell::{Ref, RefCell, RefMut};
 use std::fmt::{Debug, Display};
 
 use super::coercion::{AtomicMode, CoercibleInto, CommonCmp, CommonNum, MinimallyNumeric};
 use super::iterators::{map_common_numeric, zip_recycle};
-use super::reptype::RepType;
-use super::reptype::RepTypeIter;
+use super::reptype::{
+    IntoIterableRefNames, IntoIterableRefPairs, IntoIterableRefValues, IterablePairs,
+    IterableValues, Naming, RepType,
+};
 use super::subset::Subset;
 use super::types::*;
 use super::{OptionNA, Pow, VecPartialCmp};
-use crate::object::CowObj;
-use crate::object::ViewMut;
+use crate::lang::Signal;
+use crate::object::{CowObj, Obj, Subsets, ViewMut};
 
 /// Vector Representation
 ///
@@ -18,33 +20,154 @@ use crate::object::ViewMut;
 #[derive(Debug, PartialEq)]
 pub struct Rep<T: Clone>(pub RefCell<RepType<T>>);
 
-impl<T: Clone + AtomicMode + Default> Clone for Rep<T> {
+impl<T: Clone + Default> Clone for Rep<T> {
     fn clone(&self) -> Self {
         match self.borrow().clone() {
-            RepType::Subset(v, s) => Rep(RefCell::new(RepType::Subset(v.clone(), s.clone()))),
+            RepType::Subset(v, s, n) => Rep(RefCell::new(RepType::Subset(
+                v.clone(),
+                s.clone(),
+                n.clone(),
+            ))),
         }
     }
 }
 
-impl<T: Clone + AtomicMode + Default> ViewMut for Rep<T> {
+impl<T: Clone + Default> ViewMut for Rep<T> {
     fn view_mut(&self) -> Self {
         Self(RefCell::new(self.borrow().view_mut()))
     }
 }
 
+impl<T: ViewMut + Default + Clone> Rep<T> {
+    /// Get the inner value mutably.
+    /// This is used for assignments like `list(1)[[1]] = 10`.
+    pub fn try_get_inner_mut(&self, subset: Subset) -> Result<T, Signal> {
+        self.borrow().try_get_inner_mut(subset)
+    }
+
+    /// Get a cloned version of the inner value.
+    /// This is used for accessing inner values like `list(1)[[1]]`.
+    pub fn try_get_inner(&self, subset: Subset) -> Result<T, Signal> {
+        #[allow(clippy::map_clone)]
+        self.try_get_inner_mut(subset).map(|x| x.clone())
+    }
+}
+
+impl<T: Clone + Default + 'static> Rep<T> {
+    /// Iterate over the owned names and values of the vector.
+    pub fn iter_pairs(&self) -> IterablePairs<T> {
+        self.0.borrow().clone().iter_pairs()
+    }
+}
+
 impl<T> Rep<T>
 where
-    T: AtomicMode + Clone + Default,
+    T: Clone + Default,
 {
-    fn borrow(&self) -> Ref<RepType<T>> {
+    pub fn borrow(&self) -> Ref<RepType<T>> {
         self.0.borrow()
     }
+
+    pub fn borrow_mut(&mut self) -> RefMut<RepType<T>> {
+        self.0.borrow_mut()
+    }
+
+    /// Iterate over the (owned) values of the vector.
+    pub fn iter_values(&self) -> IterableValues<T> {
+        self.0.borrow().iter_values()
+    }
+
+    /// Iterate over the names of the vector (if they exist).
+    pub fn iter_names(&self) -> Option<IterableValues<Character>> {
+        self.0.borrow().iter_names()
+    }
+
     fn materialize_inplace(&self) -> &Self {
         // TODO: Rewrite this to avoid copying unnecessarily
         let new_repr = { self.borrow().materialize() };
         self.0.replace(new_repr);
 
         self
+    }
+
+    /// Reindex the mapping from names to indices using the names vector from the `Naming`.
+    pub fn reindex(&mut self) {
+        self.borrow_mut().reindex()
+    }
+
+    /// Set the names of the vector.
+    pub fn set_names(&self, names: CowObj<Vec<OptionNA<String>>>) {
+        let new_repr = self.borrow().materialize().set_names(names);
+        self.0.replace(new_repr);
+    }
+
+    /// Whether the vector representation has names.
+    pub fn is_named(&self) -> bool {
+        matches!(*self.borrow(), RepType::Subset(.., Some(_)))
+    }
+
+    /// Return the names of the vector if there are any.
+    pub fn names(&self) -> Option<CowObj<Vec<Character>>> {
+        match self.borrow().clone() {
+            RepType::Subset(_, s, n) => {
+                if s.is_empty() {
+                    n.map(|n| n.clone().names)
+                } else if n.is_some() {
+                    Some(
+                        self.iter_names()
+                            .expect("checked that names exist")
+                            .collect::<Vec<Character>>()
+                            .into(),
+                    )
+                } else {
+                    None
+                }
+            }
+        }
+    }
+
+    pub fn dedup_last(self) -> Self {
+        self.0.into_inner().dedup_last().into()
+    }
+
+    /// Constructs a new, empty `Rep<T>` with at least the specified `capacity`.
+    /// Names are only include if `names` is true.
+    pub fn with_capacity(capacity: usize, names: bool) -> Self {
+        let naming = if names {
+            Some(Naming::with_capacity(capacity))
+        } else {
+            None
+        };
+        Self(RefCell::new(RepType::Subset(
+            CowObj::from(Vec::with_capacity(capacity)),
+            Subsets::default(),
+            naming,
+        )))
+    }
+
+    /// Get an `RepTypeIntoIterablePairs<T>` which in turn can be converted into an iterator over
+    /// pairs of references (&name, &value).
+    ///
+    /// Directly getting an iterator is not possible due to lifetime issues.
+    pub fn pairs_ref(&self) -> IntoIterableRefPairs<T> {
+        self.0.borrow().pairs_ref()
+    }
+
+    /// Get an `Option<RepTypeIntoIterableValues<T>>` which in turn can be converted into an iterator over
+    /// references to the values.
+    /// The `None` variant is returned if the `Rep<T>` is not named.
+    ///
+    /// Directly getting an iterator is not possible due to lifetime issues.
+    pub fn values_ref(&self) -> IntoIterableRefValues<T> {
+        self.0.borrow().values_ref()
+    }
+
+    /// Get an `RepTypeIntoIterableValues<T>` which in turn can be converted into an iterator over
+    /// references to the names.
+    ///
+    /// Directly getting an iterator is not possible due to lifetime issues.
+    pub fn names_ref(&self) -> Option<IntoIterableRefNames> {
+        self.0.borrow().names_ref()
     }
 
     pub fn materialize(&self) -> Self {
@@ -101,7 +224,23 @@ where
         x.map(|x| x.into())
     }
 
-    pub fn assign(&mut self, value: Self) -> Self {
+    /// Change a value at the location given by `subset` to the provided `value`.
+    /// If the `subset` does not have length `1`, an error is returned.
+    pub fn set_subset(&mut self, subset: Subset, value: T) -> Result<T, Signal> {
+        // Used for `[[`-assignment.
+        self.0.borrow_mut().set_subset(subset, value)
+    }
+
+    /// Push a named `value` with a given `name` onto the `Rep<T>`.
+    pub fn push_named(&self, name: OptionNA<String>, value: T) {
+        self.borrow().push_named(name, value)
+    }
+
+    pub fn assign<R>(&mut self, value: Rep<R>) -> Self
+    where
+        T: From<R> + Clone,
+        R: Clone + Default,
+    {
         self.0.borrow_mut().assign(value.0.into_inner()).into()
     }
     /// Test the mode of the internal vector type
@@ -109,19 +248,31 @@ where
     /// Internally, this is defined by the [crate::object::coercion::AtomicMode]
     /// implementation of the vector's element type.
     ///
-    pub fn is_double(&self) -> bool {
+    pub fn is_double(&self) -> bool
+    where
+        T: AtomicMode,
+    {
         T::is_double()
     }
     /// See [Self::is_double] for more information
-    pub fn is_logical(&self) -> bool {
+    pub fn is_logical(&self) -> bool
+    where
+        T: AtomicMode,
+    {
         T::is_logical()
     }
     /// See [Self::is_double] for more information
-    pub fn is_integer(&self) -> bool {
+    pub fn is_integer(&self) -> bool
+    where
+        T: AtomicMode,
+    {
         T::is_integer()
     }
     /// See [Self::is_double] for more information
-    pub fn is_character(&self) -> bool {
+    pub fn is_character(&self) -> bool
+    where
+        T: AtomicMode,
+    {
         T::is_character()
     }
 
@@ -151,7 +302,7 @@ where
     ///
     pub fn as_mode<Mode>(&self) -> Rep<Mode>
     where
-        T: CoercibleInto<Mode>,
+        T: CoercibleInto<Mode> + AtomicMode,
         Mode: Clone,
     {
         Rep(RefCell::new(self.borrow().as_mode()))
@@ -160,7 +311,7 @@ where
     /// See [Self::as_mode] for more information
     pub fn as_logical(&self) -> Rep<Logical>
     where
-        T: CoercibleInto<Logical>,
+        T: CoercibleInto<Logical> + AtomicMode,
     {
         self.as_mode::<Logical>()
     }
@@ -168,7 +319,7 @@ where
     /// See [Self::as_mode] for more information
     pub fn as_integer(&self) -> Rep<Integer>
     where
-        T: CoercibleInto<Integer>,
+        T: CoercibleInto<Integer> + AtomicMode,
     {
         self.as_mode::<Integer>()
     }
@@ -176,7 +327,7 @@ where
     /// See [Self::as_mode] for more information
     pub fn as_double(&self) -> Rep<Double>
     where
-        T: CoercibleInto<Double>,
+        T: CoercibleInto<Double> + AtomicMode,
     {
         self.as_mode::<Double>()
     }
@@ -184,7 +335,7 @@ where
     /// See [Self::as_mode] for more information
     pub fn as_character(&self) -> Rep<Character>
     where
-        T: CoercibleInto<Character>,
+        T: CoercibleInto<Character> + AtomicMode,
     {
         self.as_mode::<Character>()
     }
@@ -209,67 +360,59 @@ where
             .into_inner()
             .vectorized_partial_cmp(other.0.into_inner())
     }
-
-    fn get_inner(&self, index: usize) -> Option<T> {
-        self.borrow().get_inner(index)
-    }
 }
 
 impl<T> Default for Rep<T>
 where
-    T: AtomicMode + Clone + Default,
+    T: Clone + Default,
 {
     fn default() -> Self {
         Rep(RefCell::new(RepType::default()))
     }
 }
 
-pub struct RepIter<T: Clone>(RepTypeIter<T>);
-
-impl<T> IntoIterator for Rep<T>
+impl<T> From<CowObj<Vec<T>>> for Rep<T>
 where
-    T: AtomicMode + Clone + Default,
+    T: Clone + Default,
 {
-    type Item = T;
-    type IntoIter = RepIter<T>;
-    fn into_iter(self) -> Self::IntoIter {
-        let x = self.0.into_inner();
-        RepIter(x.into_iter())
-    }
-}
-
-impl<T> Iterator for RepIter<T>
-where
-    T: AtomicMode + Clone + Default,
-{
-    type Item = T;
-    fn next(&mut self) -> Option<Self::Item> {
-        self.0.next()
+    fn from(rep: CowObj<Vec<T>>) -> Self {
+        Rep(RefCell::new(rep.into()))
     }
 }
 
 impl<T> From<RepType<T>> for Rep<T>
 where
-    T: AtomicMode + Clone + Default,
+    T: Clone + Default,
 {
     fn from(rep: RepType<T>) -> Self {
         Rep(RefCell::new(rep))
     }
 }
 
+// TODO: I think this should err when rep has length > 1
 impl<T> TryInto<bool> for Rep<OptionNA<T>>
 where
     OptionNA<T>: AtomicMode + Clone + CoercibleInto<OptionNA<bool>>,
+    T: 'static,
 {
     type Error = ();
     fn try_into(self) -> Result<bool, Self::Error> {
-        self.get_inner(0).map_or(
-            Err(()),
-            |i| match CoercibleInto::<OptionNA<bool>>::coerce_into(i) {
-                OptionNA::Some(x) => Ok(x),
-                OptionNA::NA => Err(()),
-            },
-        )
+        self.iter_pairs()
+            .next()
+            .map(|(_, x)| x)
+            .map_or(
+                Err(()),
+                |i| match CoercibleInto::<OptionNA<bool>>::coerce_into(i) {
+                    OptionNA::Some(x) => Ok(x),
+                    OptionNA::NA => Err(()),
+                },
+            )
+    }
+}
+
+impl From<Vec<(Character, Obj)>> for Rep<Obj> {
+    fn from(value: Vec<(Character, Obj)>) -> Self {
+        Rep(RefCell::new(value.into()))
     }
 }
 
@@ -321,6 +464,12 @@ impl From<Vec<String>> for Rep<Character> {
     }
 }
 
+impl<T: Clone> From<Vec<(Option<String>, T)>> for Rep<T> {
+    fn from(value: Vec<(Option<String>, T)>) -> Self {
+        Rep(RefCell::new(value.into()))
+    }
+}
+
 impl<T> Display for Rep<T>
 where
     T: AtomicMode + Debug + Default + Clone,
@@ -341,47 +490,104 @@ where
                 return write!(f, "character(0)");
             }
         }
-
         let nlen = format!("{}", n).len();
-        // TODO: iteratively calculate when we hit max print so our
-        // max_len isn't inflated by a value that is omitted
-
-        let xc = self.inner().clone();
-        let xb = xc.borrow();
-
-        let x_strs = xb.iter().map(|xi| format!("{:?}", xi));
-        let max_len = x_strs
-            .clone()
-            .fold(0, |max_len, xi| std::cmp::max(max_len, xi.len()));
-
-        let mut col = 0;
-        let gutterlen = 2 + nlen + 1;
-
-        // hard coded max print & console width
-        let maxprint = 20 * ((80 - gutterlen) / max_len);
-
-        x_strs
-            .take(maxprint)
-            .enumerate()
-            .try_for_each(|(i, x_str)| {
-                if i == 0 {
-                    col = gutterlen + max_len;
-                    write!(f, "{:>3$}[{}] {:>4$}", "", i + 1, x_str, nlen - 1, max_len)
-                } else if col + 1 + max_len > 80 {
-                    col = gutterlen + max_len;
-                    let i_str = format!("{}", i + 1);
-                    let gutter = nlen - i_str.len();
-                    write!(f, "\n{:>3$}[{}] {:>4$}", "", i_str, x_str, gutter, max_len)
-                } else {
-                    col += 1 + max_len;
-                    write!(f, " {:>1$}", x_str, max_len)
+        // calculate how many characters are printed per value.
+        // The iteraror yields the characters needed for a specific item.
+        fn element_width(iter: impl Iterator<Item = usize>) -> usize {
+            let mut elt_width = 1_usize;
+            for (i, width) in iter.enumerate() {
+                elt_width = std::cmp::max(elt_width, width);
+                if elt_width * (i + 1) >= 20 * 80 {
+                    break;
                 }
-            })?;
-
-        if n > maxprint {
-            write!(f, "\n[ omitting {} entries ]", n - maxprint)?;
+            }
+            elt_width
         }
 
+        if !self.is_named() {
+            let elt_width =
+                element_width(self.values_ref().iter().map(|x| format!("{:?}", x).len()));
+
+            let mut values_ref = self.values_ref();
+            let x_strs = values_ref.iter().map(|xi| format!("{:?}", xi));
+
+            let mut col = 0;
+            let gutterlen = 2 + nlen + 1;
+
+            // hard coded max print & console width
+            // we print at most 20 rows
+            let maxprint = 20 * ((80 - gutterlen) / (elt_width + 1));
+
+            x_strs
+                .take(maxprint)
+                .enumerate()
+                .try_for_each(|(i, x_str)| {
+                    if i == 0 {
+                        col = gutterlen + elt_width;
+                        write!(
+                            f,
+                            "{:>3$}[{}] {:>4$}",
+                            "",
+                            i + 1,
+                            x_str,
+                            nlen - 1,
+                            elt_width
+                        )
+                    } else if col + 1 + elt_width > 80 {
+                        col = gutterlen + elt_width;
+                        let i_str = format!("{}", i + 1);
+                        let gutter = nlen - i_str.len();
+                        write!(
+                            f,
+                            "\n{:>3$}[{}] {:>4$}",
+                            "", i_str, x_str, gutter, elt_width
+                        )
+                    } else {
+                        col += 1 + elt_width;
+                        write!(f, " {:>1$}", x_str, elt_width)
+                    }
+                })?;
+
+            if n > maxprint {
+                write!(f, "\n[ omitting {} entries ]", n - maxprint)?;
+            }
+        } else {
+            let elt_width = element_width(
+                self.pairs_ref()
+                    .iter()
+                    .map(|x| std::cmp::max(format!("{:}", x.0).len(), format!("{:?}", x.1).len())),
+            );
+            let mut values_ref = self.values_ref();
+            let mut names_ref = self
+                .names_ref()
+                .expect("already checked existence of names");
+
+            let mut values_strs = values_ref.iter().map(|x| format!("{:?}", x));
+            let mut names_strs = names_ref.iter().map(|x| format!("{:}", x));
+
+            // hard coded max print & console width
+            // we print at most 20 rows
+            let elts_per_line = 80 / (elt_width + 1);
+
+            'lines: for _ in 1..=20 {
+                for _ in 1..=elts_per_line {
+                    if let Some(name) = names_strs.next() {
+                        write!(f, "{:}{:>2$}", name, " ", elt_width - name.len())?;
+                    } else {
+                        break;
+                    }
+                }
+                writeln!(f)?;
+                for _ in 1..=elts_per_line {
+                    if let Some(value) = values_strs.next() {
+                        write!(f, "{:}{:>2$}", value, " ", elt_width - value.len())?;
+                    } else {
+                        break 'lines;
+                    }
+                }
+                writeln!(f)?;
+            }
+        }
         Ok(())
     }
 }

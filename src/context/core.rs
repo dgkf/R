@@ -1,6 +1,7 @@
 use std::rc::Rc;
 
 use crate::lang::{EvalResult, Signal};
+use crate::object::types::Character;
 use crate::object::*;
 use crate::{error::*, internal_err};
 
@@ -75,34 +76,42 @@ pub trait Context: std::fmt::Debug + std::fmt::Display {
                 .map(|pair| match pair {
                     (_, Expr::Ellipsis(None)) => {
                         if let Ok(Obj::List(ellipsis)) = self.get_ellipsis() {
-                            Ok(ellipsis.values.into_iter())
+                            Ok(ellipsis.iter_pairs())
                         } else {
-                            Ok(CowObj::from(vec![]).into_iter())
+                            Ok(List::new().iter_pairs())
                         }
                     }
                     (_, Expr::Ellipsis(Some(name))) => {
                         if let Ok(Obj::List(more)) = self.get(name) {
-                            Ok(more.values.into_iter())
+                            Ok(more.iter_pairs())
                         } else {
                             internal_err!()
                         }
                     }
                     // Avoid creating a new closure just to point to another, just reuse it
                     (k, Expr::Symbol(s)) => match self.env().get(s.clone()) {
-                        Ok(c @ Obj::Promise(..)) => Ok(CowObj::from(vec![(k, c)]).into_iter()),
-                        _ => Ok(CowObj::from(vec![(
-                            k,
-                            Obj::Promise(None, Expr::Symbol(s), self.env()),
-                        )])
-                        .into_iter()),
+                        Ok(c @ Obj::Promise(..)) => {
+                            let k = k.map_or(OptionNA::NA, OptionNA::Some);
+                            Ok(List::from(vec![(k, c)]).iter_pairs())
+                        }
+                        _ => {
+                            let k = k.map_or(OptionNA::NA, OptionNA::Some);
+                            Ok(List::from(vec![(
+                                k,
+                                Obj::Promise(None, Expr::Symbol(s), self.env()),
+                            )])
+                            .iter_pairs())
+                        }
                     },
                     (k, c @ Expr::Call(..)) => {
+                        let k = k.map_or(OptionNA::NA, OptionNA::Some);
                         let elem = vec![(k, Obj::Promise(None, c, self.env()))];
-                        Ok(CowObj::from(elem).into_iter())
+                        Ok(List::from(elem).iter_pairs())
                     }
                     (k, v) => {
+                        let k = k.map_or(OptionNA::NA, OptionNA::Some);
                         if let Ok(elem) = self.eval(v) {
-                            Ok(CowObj::from(vec![(k, elem)]).into_iter())
+                            Ok(List::from(vec![(k, elem)]).iter_pairs())
                         } else {
                             internal_err!()
                         }
@@ -121,20 +130,23 @@ pub trait Context: std::fmt::Debug + std::fmt::Display {
                 .map(|pair| match pair {
                     (_, Expr::Ellipsis(None)) => {
                         if let Ok(Obj::List(ellipsis)) = self.get_ellipsis() {
-                            Ok(ellipsis.values.into_iter())
+                            Ok(ellipsis.iter_pairs())
                         } else {
-                            Ok(CowObj::from(vec![]).into_iter())
+                            Ok(List::from(Vec::<(Character, Obj)>::new()).iter_pairs())
                         }
                     }
                     (_, Expr::Ellipsis(Some(name))) => {
                         if let Ok(Obj::List(more)) = self.get(name) {
-                            Ok(more.values.into_iter())
+                            Ok(more.iter_pairs())
                         } else {
-                            Ok(CowObj::from(vec![]).into_iter())
+                            Ok(List::from(Vec::<(Character, Obj)>::new()).iter_pairs())
                         }
                     }
                     (k, v) => match self.eval_and_finalize(v) {
-                        Ok(elem) => Ok(CowObj::from(vec![(k, elem)]).into_iter()),
+                        Ok(elem) => {
+                            let k = k.map_or(OptionNA::NA, OptionNA::Some);
+                            Ok(List::from(vec![(k, elem)]).iter_pairs())
+                        }
                         Err(e) => Err(e),
                     },
                 })

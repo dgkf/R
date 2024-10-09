@@ -362,7 +362,7 @@ impl Callable for InfixDollar {
         let mut what = stack.eval(what)?;
 
         match index {
-            Expr::String(s) | Expr::Symbol(s) => what.try_get_named(s.as_str()),
+            Expr::String(s) | Expr::Symbol(s) => what.try_get_named(&s),
             _ => Ok(Obj::Null),
         }
     }
@@ -381,7 +381,7 @@ impl Callable for InfixDollar {
         let mut what = stack.eval_mut(what)?;
 
         match index {
-            Expr::String(s) | Expr::Symbol(s) => what.try_get_named(s.as_str()),
+            Expr::String(s) | Expr::Symbol(s) => what.try_get_named_mut(s.as_str()),
             _ => Ok(Obj::Null),
         }
     }
@@ -401,10 +401,7 @@ impl Callable for InfixDollar {
         let mut what = stack.eval_mut(what)?;
 
         match name {
-            Expr::String(s) | Expr::Symbol(s) => {
-                what.set_named(s.as_str(), value)?;
-                Ok(what)
-            }
+            Expr::String(s) | Expr::Symbol(s) => what.try_set_named(&s, value),
             _ => unimplemented!(),
         }
     }
@@ -436,6 +433,30 @@ impl Callable for PostfixIndex {
         let index = stack.eval(x.1)?;
         what.try_get_inner_mut(index)
     }
+
+    fn call_assign(&self, value: Expr, args: ExprList, stack: &mut CallStack) -> EvalResult {
+        let mut argstream = args.into_iter();
+
+        let Some((_, what)) = argstream.next() else {
+            unreachable!();
+        };
+
+        let Some((_, index)) = argstream.next() else {
+            unreachable!();
+        };
+
+        let value = stack.eval(value)?;
+        let what = stack.eval_mut(what)?;
+        let index = stack.eval(index)?;
+
+        let subset = index.try_into()?;
+
+        Ok(match what {
+            Obj::List(mut v) => v.set_subset(subset, value)?,
+            Obj::Vector(mut v) => v.set_subset(subset, value).map(Obj::Vector)?,
+            _ => unimplemented!(),
+        })
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -460,12 +481,37 @@ impl Callable for PostfixVecIndex {
 mod tests {
     use crate::error::Error;
     use crate::lang::{EvalResult, Signal};
-    use crate::r;
+    use crate::{r, r_expect};
     #[test]
     fn colon_operator() {
         assert_eq!(EvalResult::Err(Signal::Error(Error::InvalidRange)), r!(1:0));
         assert_eq!(r!([1, 2]), r!(1:2));
         assert_eq!(r!([1]), r!(1:1));
         assert_eq!(r!(1:-2:-3), r!([1, -1, -3]));
+    }
+
+    #[test]
+    fn dollar_assign() {
+        r_expect! {{"
+            l = (a = 1, )
+            x = (l$a = 2)
+            l$a == 2 & x == 2
+        "}}
+    }
+    #[test]
+    fn dollar_assign_nested() {
+        r_expect! {{"
+            l = (a = (b = 1,),)
+            x = (l$a$b = 2)
+            l$a$b == 2 & x == 2
+        "}}
+    }
+
+    #[test]
+    fn dollar_access() {
+        r_expect! {{"
+            l = (a = 1, )
+            l$a == 1
+        "}}
     }
 }

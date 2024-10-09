@@ -2,10 +2,10 @@ use std::cell::RefCell;
 use std::ops::Range;
 use std::rc::Rc;
 
-use crate::lang::Signal;
-use crate::object::CowObj;
-
 use super::{types::*, OptionNA, Vector};
+use crate::error::Error;
+use crate::lang::Signal;
+use crate::object::{CowObj, Obj};
 
 /// Subsets
 ///
@@ -187,6 +187,17 @@ impl Subset {
     }
 }
 
+impl TryFrom<Obj> for Subset {
+    type Error = Signal;
+    fn try_from(value: Obj) -> Result<Self, Self::Error> {
+        let err = Error::Other("Cannot use object for indexing".to_string());
+        match value {
+            Obj::Vector(v) => Subset::try_from(v),
+            _ => err.into(),
+        }
+    }
+}
+
 impl From<usize> for Subset {
     fn from(value: usize) -> Self {
         Subset::Indices(vec![OptionNA::Some(value as i32)].into())
@@ -217,7 +228,7 @@ impl TryFrom<Vector> for Subset {
             value @ Vector::Double(_) => Subset::try_from(value.as_integer()),
             Vector::Integer(v) => {
                 let y = v
-                    .into_iter()
+                    .iter_values()
                     .map(|i| match i {
                         OptionNA::Some(x) => OptionNA::Some(x - 1),
                         OptionNA::NA => OptionNA::NA,

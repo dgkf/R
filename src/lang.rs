@@ -5,11 +5,12 @@ use crate::context::Context;
 use crate::error::*;
 use crate::internal_err;
 use crate::object::types::*;
+use crate::object::List;
 use crate::object::*;
 use crate::parser::LocalizedParser;
 use crate::parser::ParseResult;
 use crate::session::{Session, SessionParserConfig};
-use std::collections::HashSet;
+use hashbrown::HashSet;
 
 use core::fmt;
 use std::fmt::Display;
@@ -70,11 +71,7 @@ impl ViewMut for Obj {
                 Vector::Logical(v) => Vector::Logical(v.view_mut()),
             }),
 
-            Obj::List(List { names, values, subsets }) => Obj::List(List {
-                names: (*names).view_mut(),
-                values: (*values).view_mut(),
-                subsets: (*subsets).clone(),
-            }),
+            Obj::List(l) => Obj::List(l.view_mut()),
             // FIXME: this needs to be implemented for all objects that can be mutated
             x => x.clone(),
         }
@@ -98,6 +95,7 @@ impl Obj {
         }
     }
 
+    // this is vectorized assignment.
     pub fn assign(self, value: Obj) -> EvalResult {
         // TODO(ERROR) cleanup
         let err = Error::Other("Invalid target for assignment".to_string());
@@ -108,7 +106,27 @@ impl Obj {
                 Ok(value)
             }
             Obj::List(mut l) => {
-                l.assign(value.clone())?;
+                match value.clone() {
+                    Obj::List(r) => {
+                        l.assign(r);
+                    }
+                    Obj::Vector(r) => match r {
+                        Vector::Integer(r) => {
+                            l.assign(r);
+                        }
+                        Vector::Character(r) => {
+                            l.assign(r);
+                        }
+                        Vector::Logical(r) => {
+                            l.assign(r);
+                        }
+                        Vector::Double(r) => {
+                            l.assign(r);
+                        }
+                    },
+                    _ => return Err(err.into()),
+                };
+
                 Ok(value)
             }
             _ => Err(err.into()),
@@ -117,7 +135,7 @@ impl Obj {
 
     pub fn as_list(&self) -> EvalResult {
         match self {
-            Obj::Null => Ok(Obj::List(List::from(vec![]))),
+            Obj::Null => Ok(Obj::List(List::new())),
             Obj::Vector(_v) => internal_err!(),
             Obj::List(l) => Ok(Obj::List(l.clone())),
             Obj::Expr(e) => match e {
@@ -213,53 +231,12 @@ impl Obj {
     pub fn get(&self, index: usize) -> Option<Obj> {
         match self {
             Obj::Vector(v) => v.get(index).map(Obj::Vector),
+            Obj::List(v) => v.get(index).map(Obj::List),
             Obj::Null => None,
-            Obj::List(l) => l.values.borrow().get(index).map(|x| x.1.clone()),
             Obj::Expr(..) => None,
             Obj::Promise(..) => None,
             Obj::Function(..) => None,
             Obj::Environment(..) => None,
-        }
-    }
-
-    pub fn get_named(&mut self, name: &str) -> Option<Obj> {
-        match self {
-            Obj::List(v) => v
-                .values
-                .borrow()
-                .iter()
-                .find(|(k, _)| *k == Some(String::from(name)))
-                .map(|(_, v)| v.clone()),
-            Obj::Environment(e) => match e.get(String::from(name)) {
-                Ok(v) => Some(v),
-                Err(_) => None,
-            },
-            _ => None,
-        }
-    }
-
-    pub fn set_named(&mut self, name: &str, value: Obj) -> EvalResult {
-        match self {
-            Obj::List(v) => {
-                let loc = v
-                    .values
-                    .iter()
-                    .enumerate()
-                    .find(|(_, (k, _))| *k == Some(name.into()))
-                    .map(|(i, _)| i);
-
-                v.values.with_inner_mut(|vb| match loc {
-                    Some(i) => vb[i].1 = value.clone(),
-                    None => vb.push((Some(name.into()), value.clone())),
-                });
-
-                Ok(value)
-            }
-            Obj::Environment(e) => {
-                e.values.borrow_mut().insert(name.into(), value.clone());
-                Ok(value)
-            }
-            _ => Ok(Obj::Null),
         }
     }
 
@@ -270,29 +247,72 @@ impl Obj {
         }
     }
 
+    /// Used for `$`-assignment.
+    pub fn try_set_named(&mut self, name: &str, value: Obj) -> EvalResult {
+        match self {
+            Obj::List(l) => {
+                let subset = Subset::Names(vec![Character::Some(name.to_string())].into());
+                Ok(l.set_subset(subset, value)?)
+            }
+            Obj::Environment(e) => {
+                e.values.borrow_mut().insert(name.into(), value.clone());
+                Ok(value)
+            }
+            _ => internal_err!(),
+        }
+    }
+
+    /// Used for `$`-assignment.
+    pub fn try_get_named_mut(&mut self, name: &str) -> EvalResult {
+        match self {
+            Obj::List(l) => {
+                let subset = Subset::Names(vec![Character::Some(name.to_string())].into());
+                Ok(l.try_get_inner_mut(subset)?)
+            }
+            Obj::Environment(e) => match e.get_mut(String::from(name)) {
+                Ok(v) => Ok(v),
+                Err(_) => Err(Error::VariableNotFound(name.into()).into()),
+            },
+            _ => internal_err!(),
+        }
+    }
+
+    /// Used for `$`-access.
     pub fn try_get_named(&mut self, name: &str) -> EvalResult {
-        use Error::{ArgumentMissing, VariableNotFound};
-        match self.get_named(name) {
-            Some(Obj::Promise(_, Expr::Missing, _)) => Err(ArgumentMissing(name.into()).into()),
-            Some(x) => Ok(x),
-            None => Err(VariableNotFound(name.into()).into()),
+        match self {
+            Obj::List(l) => {
+                let subset = Subset::Names(vec![Character::Some(name.to_string())].into());
+                Ok(l.try_get_inner(subset)?)
+            }
+            Obj::Environment(e) => match e.get(String::from(name)) {
+                Ok(v) => Ok(v),
+                Err(_) => Err(Error::VariableNotFound(name.into()).into()),
+            },
+            _ => internal_err!(),
         }
     }
 
     // Used for [ ] syntax
     pub fn try_get(&self, index: Obj) -> EvalResult {
+        let index = index.as_vector()?;
         match self {
             Obj::Vector(v) => v.try_get(index),
-            Obj::List(l) => l.try_get(index),
+            Obj::List(l) => {
+                let subset = Subset::try_from(index)?;
+                let x = l.subset(subset);
+                EvalResult::Ok(Obj::List(List::from(x)))
+            }
             obj => obj.as_list()?.try_get(index),
         }
     }
 
-    // Used for [[ ]] syntax
+    // Used for `[[`-access.
     pub fn try_get_inner(&self, index: Obj) -> EvalResult {
         match self {
             Obj::Vector(v) => v.try_get(index),
-            Obj::List(l) => l.try_get_inner(index),
+            Obj::List(l) => EvalResult::Ok(l.try_get_inner(index.try_into()?)?),
+            // To access environments use try_get_named
+            Obj::Environment(_) => internal_err!(),
             obj => obj.as_list()?.try_get_inner(index),
         }
     }
@@ -301,7 +321,7 @@ impl Obj {
     pub fn try_get_inner_mut(&self, index: Obj) -> EvalResult {
         match self {
             Obj::Vector(v) => v.try_get(index),
-            Obj::List(l) => l.try_get_inner_mut(index),
+            Obj::List(l) => EvalResult::Ok(l.try_get_inner_mut(index.try_into()?)?),
             obj => obj.as_list()?.try_get_inner_mut(index),
         }
     }
@@ -372,29 +392,12 @@ impl Display for Obj {
 }
 
 fn display_list(x: &List, f: &mut fmt::Formatter<'_>, bc: Option<String>) -> fmt::Result {
-    let v = x.values.borrow();
-    let s = x.subsets.clone();
-
-    for (i, (_, si)) in s
-        .bind_names(x.names.clone())
-        .into_iter()
-        .take(v.len())
-        .enumerate()
-    {
-        let name;
-        let value;
-
-        if let Some(i) = si {
-            (name, value) = v[i].clone();
-        } else {
-            return write!(f, "{}", Obj::Null);
-        }
-
+    for (i, (maybe_name, value)) in x.pairs_ref().iter().enumerate() {
         if i > 0 {
             writeln!(f)?
         }
 
-        let bc_elem = if let Some(name) = name {
+        let bc_elem = if let Character::Some(name) = maybe_name {
             format!("${}", name)
         } else {
             format!("[[{}]]", i + 1)
@@ -408,7 +411,7 @@ fn display_list(x: &List, f: &mut fmt::Formatter<'_>, bc: Option<String>) -> fmt
         match value {
             Obj::List(nested_values) => {
                 writeln!(f, "{}", breadcrumbs)?;
-                display_list(&nested_values, f, Some(breadcrumbs))?
+                display_list(nested_values, f, Some(breadcrumbs))?
             }
             _ => write!(f, "{}\n{}\n", breadcrumbs, value)?,
         }
@@ -828,14 +831,15 @@ impl Context for CallStack {
                     match item {
                         (None, Expr::String(s) | Expr::Symbol(s)) => {
                             let index = Obj::Vector(Vector::from(vec![i]));
-                            let value = args.try_get_inner(index)?;
+                            let value = args.try_get_inner(index.try_into()?)?;
                             self.assign(Expr::Symbol(s), value)?;
                             i += 1;
                         }
                         // TODO(feature): allow arbitrary right-side expressions
                         // evaluated with list as additional data-frame
                         (Some(n), Expr::String(s) | Expr::Symbol(s)) => {
-                            let value = args.try_get_inner(Obj::Vector(Vector::from(vec![s])))?;
+                            let value =
+                                args.try_get_inner(Obj::Vector(Vector::from(vec![s])).try_into()?)?;
                             self.assign(Expr::Symbol(n), value)?;
                         }
                         _ => return internal_err!(),
@@ -1073,7 +1077,7 @@ impl Context for Obj {
 
     fn get(&mut self, name: String) -> EvalResult {
         match self {
-            Obj::List(l) => l.try_get_inner(Obj::Vector(Vector::from(vec![name]))),
+            Obj::List(l) => Ok(l.try_get_inner(Obj::Vector(Vector::from(vec![name])).try_into()?)?),
             Obj::Environment(e) => e.get(name),
             _ => unimplemented!(),
         }
@@ -1166,7 +1170,7 @@ pub fn assert_formals(session: &Session, formals: ExprList) -> Result<ExprList, 
         }
     }
 
-    Ok(formals)
+    Ok(formals.clone())
 }
 
 #[cfg(test)]

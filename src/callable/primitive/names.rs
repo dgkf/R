@@ -63,20 +63,16 @@ impl Callable for PrimitiveNames {
         match x {
             Null => Ok(Null),
             Promise(..) => Ok(Null),
-            Vector(..) => Ok(Null), // named vectors currently not supported...
-            Expr(..) => Ok(Null),   // handle arg lists?
+            Vector(v) => match v.names() {
+                Some(n) => Ok(Obj::Vector(n.into())),
+                None => Ok(Null),
+            },
+            Expr(..) => Ok(Null),     // handle arg lists?
             Function(..) => Ok(Null), // return formals?
-            List(x) => {
-                Ok(x.values
-                    .borrow()
-                    .iter()
-                    .map(|(k, _)| match k {
-                        Some(name) => OptionNA::Some(name.clone()),
-                        None => OptionNA::NA, // unlike R, unnamed elements are NAs
-                    })
-                    .collect::<Vec<OptionNA<String>>>()
-                    .into())
-            }
+            List(l) => match l.names() {
+                Some(n) => Ok(Obj::Vector(n.into())),
+                None => Ok(Null),
+            },
             Environment(e) => {
                 let mut names = e.values.borrow().keys().cloned().collect::<Vec<String>>();
                 names.sort();
@@ -89,14 +85,11 @@ impl Callable for PrimitiveNames {
 #[cfg(test)]
 mod test {
     use crate::error::Error;
-    use crate::r;
+    use crate::{r, r_expect};
 
     #[test]
     fn no_args() {
-        assert_eq!(
-            r! { names() },
-            Error::ArgumentMissing(String::from("x")).into()
-        )
+        assert_eq!(r! { names() }, Error::Missing.into())
     }
 
     #[test]
@@ -110,5 +103,24 @@ mod test {
             r! { names(list(a = 1, b = 2, 3, d = 4)) },
             r! { c("a", "b", NA, "d") }
         )
+    }
+    #[test]
+    fn subset() {
+        r_expect! {{r#"
+            names([a = 1, b = 2][1]) == "a"
+        "#}}
+    }
+
+    #[test]
+    fn unnamed_atomic() {
+        r_expect! {{r#"
+            is_null(names([1, 2]))
+        "#}}
+    }
+    #[test]
+    fn named_atomic() {
+        r_expect! {{r#"
+            names([a = 1]) == "a"
+        "#}}
     }
 }
