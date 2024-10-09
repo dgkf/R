@@ -482,8 +482,6 @@ impl<T: Clone + Default> RepType<T> {
     }
 
     pub fn dedup_last(self) -> Self {
-        println!("dedup");
-        // TODO(docu): What exactly does this? I think there might still be a bug here because we drain ALL indices (?)
         match self {
             RepType::Subset(values, subsets, Some(naming)) => {
                 naming.with_inner_mut(|map, names| {
@@ -505,10 +503,8 @@ impl<T: Clone + Default> RepType<T> {
                         }
                     });
 
-                    println!("Hi");
                     for (_, indices) in map.iter_mut() {
                         indices.drain(0..(indices.len()));
-                        dbg!(&indices);
                     }
                 });
                 RepType::Subset(values, subsets, Some(naming))

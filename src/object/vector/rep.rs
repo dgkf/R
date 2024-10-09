@@ -48,6 +48,7 @@ impl<T: ViewMut + Default + Clone> Rep<T> {
     /// Get a cloned version of the inner value.
     /// This is used for accessing inner values like `list(1)[[1]]`.
     pub fn try_get_inner(&self, subset: Subset) -> Result<T, Signal> {
+        #[allow(clippy::map_clone)]
         self.try_get_inner_mut(subset).map(|x| x.clone())
     }
 }

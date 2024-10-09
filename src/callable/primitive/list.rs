@@ -26,6 +26,11 @@ use crate::object::*;
 ///
 /// `...`: Arguments to collect into a `list`.
 ///
+/// ## Differences to the R implementation
+///
+/// Setting a list value to `null` does not remove the element but
+/// sets it to the value `null`.
+///
 /// ## Examples
 ///
 /// ```custom,{class=r-repl}
@@ -45,7 +50,6 @@ use crate::object::*;
 /// ```custom,{class=r-repl}
 /// (1,)
 /// ```
-///
 #[doc(alias = "list")]
 #[builtin(sym = "list")]
 #[derive(Debug, Clone, PartialEq)]
