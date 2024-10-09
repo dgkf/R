@@ -1386,6 +1386,11 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
 <a href="#1353" id="1353">1353</a>
 <a href="#1354" id="1354">1354</a>
 <a href="#1355" id="1355">1355</a>
+<a href="#1356" id="1356">1356</a>
+<a href="#1357" id="1357">1357</a>
+<a href="#1358" id="1358">1358</a>
+<a href="#1359" id="1359">1359</a>
+<a href="#1360" id="1360">1360</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::callable::builtins::BUILTIN;
 <span class="kw">use </span><span class="kw">crate</span>::callable::core::Callable;
 <span class="kw">use </span><span class="kw">crate</span>::cli::Experiment;
@@ -1780,6 +1785,11 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
 }
 
 <span class="kw">fn </span>display_list(x: <span class="kw-2">&amp;</span>List, f: <span class="kw-2">&amp;mut </span>fmt::Formatter&lt;<span class="lifetime">'_</span>&gt;, bc: <span class="prelude-ty">Option</span>&lt;String&gt;) -&gt; fmt::Result {
+    <span class="kw">if </span>x.is_empty() {
+        <span class="macro">write!</span>(f, <span class="string">"list()"</span>)<span class="question-mark">?</span>;
+        <span class="kw">return </span><span class="prelude-val">Ok</span>(());
+    }
+
     <span class="kw">for </span>(i, (maybe_name, value)) <span class="kw">in </span>x.pairs_ref().iter().enumerate() {
         <span class="kw">if </span>i &gt; <span class="number">0 </span>{
             <span class="macro">writeln!</span>(f)<span class="question-mark">?
