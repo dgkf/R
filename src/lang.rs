@@ -392,7 +392,7 @@ impl Display for Obj {
 }
 
 fn display_list(x: &List, f: &mut fmt::Formatter<'_>, bc: Option<String>) -> fmt::Result {
-    if x.len() == 0 {
+    if x.is_empty() {
         write!(f, "list()")?;
         return Ok(());
     }
