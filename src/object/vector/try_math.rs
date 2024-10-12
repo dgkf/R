@@ -1,16 +1,15 @@
 use std::cell::RefCell;
 
+use crate::error::Error;
+use crate::lang::Signal;
+use crate::object::coercion::{AtomicMode, CoercibleInto, CommonNum, MinimallyNumeric};
 use crate::object::rep::Rep;
 use crate::object::reptype::RepType;
-use crate::object::coercion::{AtomicMode, CommonNum, CoercibleInto, MinimallyNumeric};
-use crate::object::iterators::{map_common_numeric, zip_recycle};
 
-
-pub trait TryAdd<Rhs>
-{
+pub trait TryAdd<Rhs = Self> {
     type Output;
 
-    fn try_add(self, rhs: Rhs) -> Result<Self::Output, (usize, usize)>;
+    fn try_add(self, rhs: Rhs) -> Result<Self::Output, Signal>;
 }
 
 impl<L, R, C, O, LNum, RNum> TryAdd<Rep<R>> for Rep<L>
@@ -22,21 +21,38 @@ where
     RepType<C>: From<Vec<O>>,
 {
     type Output = Rep<C>;
-    fn try_add(self, rhs: Rep<R>) -> Result<Self::Output, (usize, usize)> {
-        let lc = self.inner().clone();
-        let lb = lc.borrow();
-        let lhs = lb.iter();
+    fn try_add(self, rhs: Rep<R>) -> Result<Self::Output, Signal> {
+        let mut lc = self.iter_values();
+        let mut rc = rhs.iter_values();
 
-        let rc = rhs.inner().clone();
-        let rb = rc.borrow();
-        let rhs = rb.iter();
+        let x = lc.by_ref().zip(rc.by_ref()).map(|(l, r)| {
+            (
+                CoercibleInto::<LNum>::coerce_into(l.clone()),
+                CoercibleInto::<RNum>::coerce_into(r.clone()),
+            )
+                .into_common()
+        });
 
-        let result = RepType::from(
-            map_common_numeric(zip_recycle(lhs, rhs))
-                .map(|(l, r)| l + r)
-                .collect::<Vec<O>>(),
-        );
+        let result = x.map(|(l, r)| l + r).collect::<Vec<O>>();
 
-        Ok(Rep(RefCell::new(result)))
+        // We check whether they were recyclable after the fact
+        let l_extra = lc.count();
+        let r_extra = rc.count();
+
+        // we need to add one to the count because above we consumed more one than allocated
+        // in the result vector (for the iterator to stop yielding)
+        if l_extra != 0 {
+            return Err(Signal::Error(Error::NonRecyclableLengths(
+                l_extra + result.len() + 1,
+                result.len(),
+            )));
+        } else if r_extra != 0 {
+            return Err(Signal::Error(Error::NonRecyclableLengths(
+                result.len(),
+                r_extra + result.len() + 1,
+            )));
+        }
+
+        Ok(Rep(RefCell::new(RepType::from(result))))
     }
 }

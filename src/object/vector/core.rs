@@ -4,6 +4,7 @@ use std::fmt::Display;
 use crate::error::Error;
 use crate::lang::EvalResult;
 use crate::lang::Signal;
+use crate::object::try_math::TryAdd;
 use crate::object::CowObj;
 use crate::object::Obj;
 
@@ -674,6 +675,28 @@ impl std::ops::Not for Vector {
         match self {
             Logical(x) => (!x).into(),
             _ => todo!(),
+        }
+    }
+}
+
+impl TryAdd for Vector {
+    type Output = Self;
+    fn try_add(self, other: Self) -> Result<Self, Signal> {
+        use Vector::*;
+        match (self, other) {
+            (Double(l), Double(r)) => l.try_add(r).map(|x| x.into()),
+            (Double(l), Integer(r)) => l.try_add(r).map(|x| x.into()),
+            (Double(l), Logical(r)) => l.try_add(r).map(|x| x.into()),
+            (Integer(l), Double(r)) => l.try_add(r).map(|x| x.into()),
+            (Integer(l), Integer(r)) => l.try_add(r).map(|x| x.into()),
+            (Integer(l), Logical(r)) => l.try_add(r).map(|x| x.into()),
+            (Logical(l), Double(r)) => l.try_add(r).map(|x| x.into()),
+            (Logical(l), Integer(r)) => l.try_add(r).map(|x| x.into()),
+            (Logical(l), Logical(r)) => l.try_add(r).map(|x| x.into()),
+            // Add more combinations if necessary
+            _ => Err(Error::Other(
+                "Unsupported Vector types for addition".to_string(),
+            ).into()),
         }
     }
 }

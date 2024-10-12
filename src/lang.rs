@@ -4,6 +4,7 @@ use crate::cli::Experiment;
 use crate::context::Context;
 use crate::error::*;
 use crate::internal_err;
+use crate::object::try_math::TryAdd;
 use crate::object::types::*;
 use crate::object::List;
 use crate::object::*;
@@ -418,6 +419,19 @@ fn display_list(x: &List, f: &mut fmt::Formatter<'_>, bc: Option<String>) -> fmt
     }
 
     Ok(())
+}
+
+
+// implement TryAdd for Obj
+impl TryAdd<Obj> for Obj {
+    type Output = Obj;
+
+    fn try_add(self, rhs: Self) -> Result<Self::Output, Signal> {
+        match (self.as_double()?, rhs.as_double()?) {
+            (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector(l.try_add(r)?)),
+            _ => internal_err!(),
+        }
+    }
 }
 
 impl std::ops::Add for Obj {

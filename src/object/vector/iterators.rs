@@ -26,14 +26,16 @@ where
     l.cycle().zip(r.cycle()).take(n)
 }
 
-//pub fn try_zip_recycle<L, R, LItem, RItem>(l: L, r: R) -> impl Iterator<Item = Result<(LItem, RItem), usize>>
+//pub fn try_zip_recycle<L, R, LItem, RItem>(
+    //l: L,
+    //r: R,
+//) -> impl Iterator<Item = Result<(LItem, RItem), usize>>
 //where
-    //L: ExactSizeIterator + Iterator<Item = LItem> + Clone,
-    //R: ExactSizeIterator + Iterator<Item = RItem> + Clone,
+    //L: Iterator<Item = LItem> + Clone,
+    //R: Iterator<Item = RItem> + Clone,
 //{
-//// I want the returned iterator to yield a Result<(LItem, RItem)>
-//// The Err variant should return the length of the iterator that was too short
-
+/// I want the returned iterator to yield a Result<(LItem, RItem)>
+/// The Err variant should return the length of the iterator that was too short
 
     //let l = l.into_iter();
     //let r = r.into_iter();
