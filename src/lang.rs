@@ -108,20 +108,20 @@ impl Obj {
             Obj::List(mut l) => {
                 match value.clone() {
                     Obj::List(r) => {
-                        l.assign(r);
+                        l.assign(r)?;
                     }
                     Obj::Vector(r) => match r {
                         Vector::Integer(r) => {
-                            l.assign(r);
+                            l.assign(r)?;
                         }
                         Vector::Character(r) => {
-                            l.assign(r);
+                            l.assign(r)?;
                         }
                         Vector::Logical(r) => {
-                            l.assign(r);
+                            l.assign(r)?;
                         }
                         Vector::Double(r) => {
-                            l.assign(r);
+                            l.assign(r)?;
                         }
                     },
                     _ => return Err(err.into()),
@@ -1266,7 +1266,7 @@ mod test {
         r_expect! {{"
             f = fn(x) x
             a = f((y = 2))
-            a == 2 
+            a == 2
         "}}
     }
 
@@ -1275,7 +1275,7 @@ mod test {
         r_expect! {{"
             f = fn(x) x
             f((y = 2))
-            y == 2 
+            y == 2
         "}}
     }
 

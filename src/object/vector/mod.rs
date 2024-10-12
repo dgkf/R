@@ -8,6 +8,7 @@ pub mod coercion;
 pub mod iterators;
 pub mod rep;
 pub mod reptype;
+pub mod try_math;
 pub mod types;
 
 mod subsets;

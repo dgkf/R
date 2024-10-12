@@ -180,18 +180,19 @@ impl Vector {
     pub fn assign(&mut self, other: Obj) -> EvalResult {
         let err =
             Error::Other("Cannot assign to a vector from a different type".to_string()).into();
+        // convert the R
         match (self, other) {
             (Vector::Double(l), Obj::Vector(Vector::Double(r))) => {
-                Ok(Obj::Vector(Vector::from(l.assign(r))))
+                Ok(Obj::Vector(Vector::from(l.assign(r)?)))
             }
             (Vector::Integer(l), Obj::Vector(Vector::Integer(r))) => {
-                Ok(Obj::Vector(Vector::from(l.assign(r))))
+                Ok(Obj::Vector(Vector::from(l.assign(r)?)))
             }
             (Vector::Logical(l), Obj::Vector(Vector::Logical(r))) => {
-                Ok(Obj::Vector(Vector::from(l.assign(r))))
+                Ok(Obj::Vector(Vector::from(l.assign(r)?)))
             }
             (Vector::Character(l), Obj::Vector(Vector::Character(r))) => {
-                Ok(Obj::Vector(Vector::from(l.assign(r))))
+                Ok(Obj::Vector(Vector::from(l.assign(r)?)))
             }
             _ => Err(err),
         }

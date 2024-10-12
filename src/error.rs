@@ -30,6 +30,8 @@ pub enum Error {
     CannotBeCoercedTo(&'static str),
     InvalidRange,
 
+    NonRecyclableLengths(usize, usize),
+
     // destructuring
     CannotBeDestructuredIntoList,
 
@@ -75,6 +77,9 @@ impl Error {
             }
             Error::NotInterpretableAsLogical => {
                 "argument is not interpretable as logical".to_string()
+            }
+            Error::NonRecyclableLengths(l, r) => {
+                format!("Vector lengths {l} and {r} cannot be recycled.")
             }
             Error::ConditionIsNotScalar => "the condition has length > 1".to_string(),
             Error::CannotBeCoercedToCharacter => {

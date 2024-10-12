@@ -236,12 +236,15 @@ where
         self.borrow().push_named(name, value)
     }
 
-    pub fn assign<R>(&mut self, value: Rep<R>) -> Self
+    pub fn assign<R>(&mut self, value: Rep<R>) -> Result<Self, Signal>
     where
         T: From<R> + Clone,
         R: Clone + Default,
     {
-        self.0.borrow_mut().assign(value.0.into_inner()).into()
+        self.0
+            .borrow_mut()
+            .assign(value.0.into_inner())
+            .map(|x| x.into())
     }
     /// Test the mode of the internal vector type
     ///
@@ -860,5 +863,31 @@ where
             })
             .collect::<Vec<Logical>>()
             .into()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    // add tests for recycling checks
+    use crate::error::Error;
+    use crate::lang::Signal;
+    use crate::{r, r_expect};
+    #[test]
+    fn recycle_incompatible_errors() {
+        assert_eq!(
+            r! {{"
+              x = 1:10
+              x[1:3] = 1:2
+            "}},
+            Err(Signal::Error(Error::NonRecyclableLengths(3, 2)))
+        );
+    }
+    #[test]
+    fn recycle_length_one() {
+        r_expect! {{"
+          x = 1:10
+          x[1:2] = 99
+          x[1] == 99 & x[2] == 99
+        "}}
     }
 }

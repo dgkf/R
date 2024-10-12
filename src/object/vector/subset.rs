@@ -73,6 +73,9 @@ impl Subset {
     {
         match self.clone() {
             Subset::Indices(i) => {
+                // For the length:
+                // 1. Check that the max value is < length
+                // 2. Calculate the length of the indices.
                 let l = self.len();
 
                 // fastest case, when no indices are selected
@@ -163,6 +166,7 @@ impl Subset {
                 }
             }
             Subset::Mask(mask) => {
+                //
                 Box::new(
                     (**mask.borrow())
                         .clone()

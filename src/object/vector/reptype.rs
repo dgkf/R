@@ -447,6 +447,13 @@ impl<T: Clone + Default> RepType<T> {
         }
     }
 
+    pub fn iter_subset_indices_exact(&self) -> ExactIterSubsetIndices {
+        let iter = self.iter_subset_indices();
+        let len = iter.map(|_| 1).sum();
+        let iter = self.iter_subset_indices();
+        ExactIterSubsetIndices { iter, len }
+    }
+
     pub fn iter_subset_indices(&self) -> Box<dyn Iterator<Item = Option<usize>>> {
         match self.clone() {
             RepType::Subset(vals, subsets, maybe_naming) => {
@@ -591,14 +598,45 @@ impl<T: Clone + Default> RepType<T> {
     /// Assignment to a vector from another. The aggregate subsetted indices
     /// are iterated over while performing the assignment.
     ///
-    pub fn assign<R>(&mut self, value: RepType<R>) -> Self
+    pub fn assign<R>(&mut self, value: RepType<R>) -> Result<Self, Signal>
     where
         T: Clone + Default + From<R>,
         R: Default + Clone,
     {
         // TODO(feature): here we should also throw an error if the recycling rules are violated.
-        let l_indices = self.iter_subset_indices();
-        let r_indices = value.iter_subset_indices();
+        let l_indices = self.iter_subset_indices_exact();
+        let mut r_indices = value.iter_subset_indices_exact();
+        dbg!(l_indices.len());
+        dbg!(r_indices.len());
+
+        if r_indices.len() == 1 {
+            // get the element from reptype value
+            let index = r_indices
+                .next()
+                .expect("index should exist")
+                .expect("No NA for subsetting");
+            let elem = value.get_inner(index).expect("element should exist");
+            // assign this element to all the indices in l_indices
+            // update the code from below to do this
+            match (self, value) {
+                (RepType::Subset(lv, ls, ln), RepType::Subset(..)) => {
+                    lv.with_inner_mut(|lvb| {
+                        for li in l_indices {
+                            lvb[li.unwrap()] = elem.clone().into();
+                        }
+                    });
+                    return Ok(RepType::Subset(lv.clone(), ls.clone(), ln.clone()));
+                }
+            }
+        }
+
+        if l_indices.len() != r_indices.len() {
+            return Err(Signal::Error(Error::NonRecyclableLengths(
+                l_indices.len(),
+                r_indices.len(),
+            )));
+        }
+
         match (self, value) {
             (RepType::Subset(lv, ls, ln), RepType::Subset(rv, ..)) => {
                 lv.with_inner_mut(|lvb| {
@@ -614,7 +652,7 @@ impl<T: Clone + Default> RepType<T> {
                     }
                 });
 
-                RepType::Subset(lv.clone(), ls.clone(), ln.clone())
+                Ok(RepType::Subset(lv.clone(), ls.clone(), ln.clone()))
             }
         }
     }
@@ -777,6 +815,24 @@ impl<T: Clone + Default> RepType<T> {
                 vb.get(index).cloned()
             }
         }
+    }
+}
+
+pub struct ExactIterSubsetIndices {
+    iter: Box<dyn Iterator<Item = Option<usize>>>,
+    len: usize,
+}
+
+impl ExactSizeIterator for ExactIterSubsetIndices {
+    fn len(&self) -> usize {
+        self.len
+    }
+}
+
+impl Iterator for ExactIterSubsetIndices {
+    type Item = Option<usize>;
+    fn next(&mut self) -> Option<Self::Item> {
+        self.iter.next()
     }
 }
 

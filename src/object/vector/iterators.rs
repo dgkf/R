@@ -26,6 +26,21 @@ where
     l.cycle().zip(r.cycle()).take(n)
 }
 
+//pub fn try_zip_recycle<L, R, LItem, RItem>(l: L, r: R) -> impl Iterator<Item = Result<(LItem, RItem), usize>>
+//where
+    //L: ExactSizeIterator + Iterator<Item = LItem> + Clone,
+    //R: ExactSizeIterator + Iterator<Item = RItem> + Clone,
+//{
+//// I want the returned iterator to yield a Result<(LItem, RItem)>
+//// The Err variant should return the length of the iterator that was too short
+
+
+    //let l = l.into_iter();
+    //let r = r.into_iter();
+    //let n = std::cmp::max(l.len(), r.len());
+    //l.cycle().zip(r.cycle()).take(n)
+//}
+
 /// Map an iterator of pairs into a pair of common numeric types
 ///
 /// Accept an iterator of pairs of numeric (or numeric-coercible) values and
