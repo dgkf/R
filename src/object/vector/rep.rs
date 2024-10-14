@@ -768,62 +768,51 @@ impl<L, R, O, LNum, RNum> Pow<Rep<R>> for Rep<L>
 where
     L: AtomicMode + Default + Clone + MinimallyNumeric<As = LNum> + CoercibleInto<LNum>,
     R: AtomicMode + Default + Clone + MinimallyNumeric<As = RNum> + CoercibleInto<RNum>,
+    (LNum, RNum): CommonNum<Common = O>,
     LNum: Pow<RNum, Output = O>,
-    Rep<C>: From<Vec<O>>,
+    RepType<O>: From<Vec<O>>,
+    O: Default,
     L: Clone,
     R: Clone,
     O: Clone,
 {
-    type Output = Result<Rep<C>, Signal>;
+    type Output = Result<Rep<O>, Signal>;
     fn power(self, rhs: Rep<R>) -> Self::Output {
         todo!()
-        // try_binary_num_op(self, rhs, &|x, y| Pow::power(x, y))
+        // try_binary_num_op(self, rhs, &|x, y| Pow::power(self, rhs))
     }
 }
 
-impl<L, R, O> std::ops::BitOr<Rep<R>> for Rep<L>
+impl<L, R> std::ops::BitOr<Rep<R>> for Rep<L>
 where
     L: AtomicMode + Default + Clone + CoercibleInto<Logical>,
     R: AtomicMode + Default + Clone + CoercibleInto<Logical>,
-    Logical: std::ops::BitOr<Logical, Output = O>,
-    RepType<O>: From<Vec<O>>,
-    L: Clone,
-    R: Clone,
-    O: Clone,
 {
-    type Output = Rep<O>;
+    type Output = Result<Rep<Logical>, Signal>;
     fn bitor(self, rhs: Rep<R>) -> Self::Output {
-        let result: RepType<O> = (self.0.into_inner()) | (rhs.0.into_inner());
-        Rep(RefCell::new(result))
+        try_binary_lgl_op(self, rhs, |x, y| x | y)
     }
 }
 
-impl<L, R, O> std::ops::BitAnd<Rep<R>> for Rep<L>
+impl<L, R> std::ops::BitAnd<Rep<R>> for Rep<L>
 where
     L: AtomicMode + Default + Clone + CoercibleInto<Logical>,
     R: AtomicMode + Default + Clone + CoercibleInto<Logical>,
-    Logical: std::ops::BitAnd<Logical, Output = O>,
-    RepType<O>: From<Vec<O>>,
-    O: Clone,
 {
-    type Output = Rep<O>;
+    type Output = Result<Rep<Logical>, Signal>;
     fn bitand(self, rhs: Rep<R>) -> Self::Output {
-        let result: RepType<O> = (self.0.into_inner()) & (rhs.0.into_inner());
-        Rep(RefCell::new(result))
+        try_binary_lgl_op(self, rhs, |x, y| x & y)
     }
 }
 
-impl<L, O> std::ops::Not for Rep<L>
+impl<L> std::ops::Not for Rep<L>
 where
     L: AtomicMode + Default + Clone + CoercibleInto<Logical>,
-    Logical: std::ops::Not<Output = O>,
-    RepType<O>: From<Vec<O>>,
-    O: Clone,
 {
-    type Output = Rep<O>;
+    type Output = Result<Rep<Logical>, Signal>;
     fn not(self) -> Self::Output {
         let result: RepType<O> = !self.0.into_inner();
-        Rep(RefCell::new(result))
+        Ok(Rep(RefCell::new(result)))
     }
 }
 
@@ -834,98 +823,60 @@ where
     (L, R): CommonCmp<Common = C>,
     C: PartialOrd + Clone,
 {
-    type Output = Rep<Logical>;
+    type Output = Result<Rep<Logical>, Signal>;
 
     fn vec_gt(self, rhs: Rep<R>) -> Self::Output {
         use std::cmp::Ordering::*;
-        let x: Rep<Logical> = self
-            .vectorized_partial_cmp(rhs)
-            .into_iter()
-            .map(|i| match i {
-                Some(Greater) => OptionNA::Some(true),
-                Some(_) => OptionNA::Some(false),
-                None => OptionNA::NA,
-            })
-            .collect::<Vec<Logical>>()
-            .into();
-        x
+        try_binary_cmp_op(self, rhs, |i| match i {
+            Some(Greater | Equal) => OptionNA::Some(true),
+            Some(_) => OptionNA::Some(false),
+            None => OptionNA::NA,
+        })
     }
 
     fn vec_gte(self, rhs: Rep<R>) -> Self::Output {
         use std::cmp::Ordering::*;
-        let x: Rep<Logical> = self
-            .vectorized_partial_cmp(rhs)
-            .into_iter()
-            .map(|i| match i {
-                Some(Greater | Equal) => OptionNA::Some(true),
-                Some(_) => OptionNA::Some(false),
-                None => OptionNA::NA,
-            })
-            .collect::<Vec<Logical>>()
-            .into();
-
-        x
+        try_binary_cmp_op(self, rhs, |i| match i {
+            Some(Greater | Equal) => OptionNA::Some(true),
+            Some(_) => OptionNA::Some(false),
+            None => OptionNA::NA,
+        })
     }
 
     fn vec_lt(self, rhs: Rep<R>) -> Self::Output {
         use std::cmp::Ordering::*;
-        let x: Rep<Logical> = self
-            .vectorized_partial_cmp(rhs)
-            .into_iter()
-            .map(|i| match i {
-                Some(Less) => OptionNA::Some(true),
-                Some(_) => OptionNA::Some(false),
-                None => OptionNA::NA,
-            })
-            .collect::<Vec<Logical>>()
-            .into();
-        x
+        try_binary_cmp_op(self, rhs, |i| match i {
+            Some(Less) => OptionNA::Some(true),
+            Some(_) => OptionNA::Some(false),
+            None => OptionNA::NA,
+        })
     }
 
     fn vec_lte(self, rhs: Rep<R>) -> Self::Output {
         use std::cmp::Ordering::*;
-        let x: Rep<Logical> = self
-            .vectorized_partial_cmp(rhs)
-            .into_iter()
-            .map(|i| match i {
-                Some(Less | Equal) => OptionNA::Some(true),
-                Some(_) => OptionNA::Some(false),
-                None => OptionNA::NA,
-            })
-            .collect::<Vec<Logical>>()
-            .into();
-        x
+        try_binary_cmp_op(self, rhs, |i| match i {
+            Some(Less | Equal) => OptionNA::Some(true),
+            Some(_) => OptionNA::Some(false),
+            None => OptionNA::NA,
+        })
     }
 
     fn vec_eq(self, rhs: Rep<R>) -> Self::Output {
         use std::cmp::Ordering::*;
-        let x: Rep<Logical> = self
-            .vectorized_partial_cmp(rhs)
-            .into_iter()
-            .map(|i| match i {
-                Some(Equal) => OptionNA::Some(true),
-                Some(_) => OptionNA::Some(false),
-                None => OptionNA::NA,
-            })
-            .collect::<Vec<Logical>>()
-            .into();
-        x
+        try_binary_cmp_op(self, rhs, |i| match i {
+            Some(Equal) => OptionNA::Some(true),
+            Some(_) => OptionNA::Some(false),
+            None => OptionNA::NA,
+        })
     }
 
     fn vec_neq(self, rhs: Rep<R>) -> Self::Output {
         use std::cmp::Ordering::*;
-        let x: Rep<Logical> = self
-            .vectorized_partial_cmp(rhs)
-            .into_iter()
-            .map(|i| match i {
-                Some(Equal) => OptionNA::Some(false),
-                Some(_) => OptionNA::Some(true),
-                None => OptionNA::NA,
-            })
-            .collect::<Vec<Logical>>()
-            .into();
-
-        x
+        try_binary_cmp_op(self, rhs, |i| match i {
+            Some(Equal) => OptionNA::Some(false),
+            Some(_) => OptionNA::Some(true),
+            None => OptionNA::NA,
+        })
     }
 }
 
@@ -1242,21 +1193,6 @@ where
 
             Ok(Rep::from(result))
         }
-    }
-}
-
-impl<L, R, C, O, LNum, RNum> TrySub<Rep<R>> for Rep<L>
-where
-    L: AtomicMode + Default + Clone + MinimallyNumeric<As = LNum> + CoercibleInto<LNum>,
-    R: AtomicMode + Default + Clone + MinimallyNumeric<As = RNum> + CoercibleInto<RNum>,
-    (LNum, RNum): CommonNum<Common = C>,
-    C: Clone + std::ops::Sub<Output = O> + Default,
-    RepType<C>: From<Vec<O>>,
-    O: Clone,
-{
-    type Output = Rep<C>;
-    fn try_sub(self, rhs: Rep<R>) -> Self::Output {
-        try_binary_num_op(self, rhs, &|x, y| x - y)
     }
 }
 
