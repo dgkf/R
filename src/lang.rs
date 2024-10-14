@@ -4,7 +4,6 @@ use crate::cli::Experiment;
 use crate::context::Context;
 use crate::error::*;
 use crate::internal_err;
-use crate::object::operators::*;
 use crate::object::types::*;
 use crate::object::List;
 use crate::object::*;
@@ -449,7 +448,7 @@ impl std::ops::Neg for Obj {
 
     fn neg(self) -> Self::Output {
         match self {
-            Obj::Vector(x) => Ok(Obj::Vector(-x)),
+            Obj::Vector(x) => Ok(Obj::Vector((-x)?)),
             _ => internal_err!(),
         }
     }
@@ -459,8 +458,8 @@ impl std::ops::Not for Obj {
     type Output = EvalResult;
 
     fn not(self) -> Self::Output {
-        match self.as_logical()? {
-            Obj::Vector(x) => Ok(Obj::Vector(!x)),
+        match self {
+            Obj::Vector(x) => Ok(Obj::Vector((!x)?)),
             _ => internal_err!(),
         }
     }
@@ -470,8 +469,8 @@ impl std::ops::Mul for Obj {
     type Output = EvalResult;
 
     fn mul(self, rhs: Self) -> Self::Output {
-        match (self.as_double()?, rhs.as_double()?) {
-            (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector(l * r)),
+        match (self, rhs) {
+            (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector((l * r)?)),
             _ => internal_err!(),
         }
     }
@@ -482,7 +481,7 @@ impl std::ops::Div for Obj {
 
     fn div(self, rhs: Self) -> Self::Output {
         match (self.as_double()?, rhs.as_double()?) {
-            (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector(l / r)),
+            (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector((l / r)?)),
             _ => internal_err!(),
         }
     }
@@ -492,8 +491,8 @@ impl super::object::Pow<Obj> for Obj {
     type Output = EvalResult;
 
     fn power(self, rhs: Self) -> Self::Output {
-        match (self.as_double()?, rhs.as_double()?) {
-            (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector(l.power(r))),
+        match (self, rhs) {
+            (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector(l.power(r)?)),
             _ => internal_err!(),
         }
     }
@@ -503,8 +502,8 @@ impl std::ops::Rem for Obj {
     type Output = EvalResult;
 
     fn rem(self, rhs: Self) -> Self::Output {
-        match (self.as_double()?, rhs.as_double()?) {
-            (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector(l % r)),
+        match (self, rhs) {
+            (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector((l % r)?)),
             _ => internal_err!(),
         }
     }
@@ -514,8 +513,8 @@ impl std::ops::BitOr for Obj {
     type Output = EvalResult;
 
     fn bitor(self, rhs: Self) -> Self::Output {
-        match (self.as_logical()?, rhs.as_logical()?) {
-            (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector(l | r)),
+        match (self, rhs) {
+            (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector((l | r)?)),
             _ => internal_err!(),
         }
     }
@@ -526,7 +525,7 @@ impl std::ops::BitAnd for Obj {
 
     fn bitand(self, rhs: Self) -> Self::Output {
         match (self.as_logical()?, rhs.as_logical()?) {
-            (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector(l & r)),
+            (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector((l & r)?)),
             _ => internal_err!(),
         }
     }
@@ -536,28 +535,28 @@ impl VecPartialCmp<Obj> for Obj {
     type Output = EvalResult;
     fn vec_gt(self, rhs: Self) -> Self::Output {
         match (self.as_vector()?, rhs.as_vector()?) {
-            (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector(l.vec_gt(r))),
+            (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector(l.vec_gt(r)?)),
             _ => internal_err!(),
         }
     }
 
     fn vec_gte(self, rhs: Self) -> Self::Output {
         match (self.as_vector()?, rhs.as_vector()?) {
-            (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector(l.vec_gte(r))),
+            (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector(l.vec_gte(r)?)),
             _ => internal_err!(),
         }
     }
 
     fn vec_lt(self, rhs: Self) -> Self::Output {
         match (self.as_vector()?, rhs.as_vector()?) {
-            (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector(l.vec_lt(r))),
+            (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector(l.vec_lt(r)?)),
             _ => internal_err!(),
         }
     }
 
     fn vec_lte(self, rhs: Self) -> Self::Output {
         match (self.as_vector()?, rhs.as_vector()?) {
-            (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector(l.vec_lte(r))),
+            (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector(l.vec_lte(r)?)),
             _ => internal_err!(),
         }
     }
@@ -569,7 +568,7 @@ impl VecPartialCmp<Obj> for Obj {
             (lhs @ Obj::Function(..), rhs @ Obj::Function(..)) => Ok((lhs == rhs).into()),
             (lhs @ Obj::Environment(_), rhs @ Obj::Environment(_)) => Ok((lhs == rhs).into()),
             (lhs, rhs) => match (lhs.as_vector()?, rhs.as_vector()?) {
-                (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector(l.vec_eq(r))),
+                (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector(l.vec_eq(r)?)),
                 _ => internal_err!(),
             },
         }
@@ -582,7 +581,7 @@ impl VecPartialCmp<Obj> for Obj {
             (lhs @ Obj::Function(..), rhs @ Obj::Function(..)) => Ok((lhs != rhs).into()),
             (lhs @ Obj::Environment(_), rhs @ Obj::Environment(_)) => Ok((lhs != rhs).into()),
             (lhs, rhs) => match (lhs.as_vector()?, rhs.as_vector()?) {
-                (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector(l.vec_neq(r))),
+                (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector(l.vec_neq(r)?)),
                 _ => internal_err!(),
             },
         }

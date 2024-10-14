@@ -55,6 +55,7 @@ pub static BUILTIN: LazyLock<HashMap<&'static str, Box<dyn Builtin>>> = LazyLock
         ("runif", Box::new(PrimitiveRunif) as Box<dyn Builtin>),
         ("substitute", Box::new(PrimitiveSubstitute) as Box<dyn Builtin>),
         ("sum", Box::new(PrimitiveSum) as Box<dyn Builtin>),
+        ("typeof", Box::new(PrimitiveTypeOf) as Box<dyn Builtin>),
         // builtins end
     ])
 });

@@ -47,13 +47,3 @@ pub trait TryBitAnd<Rhs = Self> {
     type Output;
     fn try_bitand(self, rhs: Rhs) -> Result<Self::Output, Signal>;
 }
-
-pub trait TryVecPartialCmp<Rhs> {
-    type Output;
-    fn try_vec_gt(self, rhs: Rhs) -> Result<Self::Output, Signal>;
-    fn try_vec_gte(self, rhs: Rhs) -> Result<Self::Output, Signal>;
-    fn try_vec_lt(self, rhs: Rhs) -> Result<Self::Output, Signal>;
-    fn try_vec_lte(self, rhs: Rhs) -> Result<Self::Output, Signal>;
-    fn try_vec_eq(self, rhs: Rhs) -> Result<Self::Output, Signal>;
-    fn try_vec_neq(self, rhs: Rhs) -> Result<Self::Output, Signal>;
-}
