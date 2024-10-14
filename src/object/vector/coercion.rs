@@ -328,6 +328,8 @@ pub trait CommonCmp: Sized {
     fn into_common(self) -> (Self::Common, Self::Common);
 }
 
+use crate::object::vector::MaybeMissing;
+
 impl<T, U, V> CommonCmp for (OptionNA<U>, OptionNA<V>)
 where
     (U, V): CommonCmp<Common = OptionNA<T>>,

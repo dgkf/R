@@ -4,7 +4,7 @@ use std::fmt::Display;
 use crate::error::Error;
 use crate::lang::EvalResult;
 use crate::lang::Signal;
-use crate::object::try_math::TryAdd;
+use crate::object::operators::TryAdd;
 use crate::object::CowObj;
 use crate::object::Obj;
 
@@ -15,12 +15,16 @@ use super::reptype::RepType;
 use super::subset::Subset;
 use super::types::*;
 
+pub trait MaybeMissing {}
+
 #[derive(Default, Clone, PartialEq, Eq)]
 pub enum OptionNA<T> {
     #[default]
     NA,
     Some(T),
 }
+
+impl<T> MaybeMissing for OptionNA<T> {}
 
 impl<T> PartialOrd for OptionNA<T>
 where
@@ -694,9 +698,7 @@ impl TryAdd for Vector {
             (Logical(l), Integer(r)) => l.try_add(r).map(|x| x.into()),
             (Logical(l), Logical(r)) => l.try_add(r).map(|x| x.into()),
             // Add more combinations if necessary
-            _ => Err(Error::Other(
-                "Unsupported Vector types for addition".to_string(),
-            ).into()),
+            _ => Err(Error::Other("Unsupported Vector types for addition".to_string()).into()),
         }
     }
 }

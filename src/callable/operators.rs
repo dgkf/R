@@ -4,9 +4,9 @@ use super::core::*;
 use crate::context::Context;
 use crate::error::Error;
 use crate::lang::{CallStack, EvalResult};
+use crate::object::operators::TryAdd;
 use crate::object::types::*;
 use crate::object::*;
-use crate::object::try_math::TryAdd;
 
 #[derive(Debug, Clone, PartialEq)]
 #[builtin(sym = "<-", kind = Infix)]
