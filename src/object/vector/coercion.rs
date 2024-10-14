@@ -328,21 +328,19 @@ pub trait CommonCmp: Sized {
     fn into_common(self) -> (Self::Common, Self::Common);
 }
 
-use crate::object::vector::MaybeMissing;
-
-impl<T, U, V> CommonCmp for (OptionNA<U>, OptionNA<V>)
-where
-    (U, V): CommonCmp<Common = OptionNA<T>>,
-{
-    type Common = OptionNA<T>;
-    fn into_common(self) -> (OptionNA<T>, OptionNA<T>) {
-        use OptionNA::*;
-        match self {
-            (Some(l), Some(r)) => (l, r).into_common(),
-            _ => (NA, NA),
-        }
-    }
-}
+// impl<T, U, V> CommonCmp for (OptionNA<U>, OptionNA<V>)
+// where
+//     (U, V): CommonCmp<Common = T>,
+// {
+//     type Common = T;
+//     fn into_common(self) -> (OptionNA<T>, OptionNA<T>) {
+//         use OptionNA::*;
+//         match self {
+//             (Some(l), Some(r)) => (l, r).into_common(),
+//             _ => (NA, NA),
+//         }
+//     }
+// }
 
 #[macro_export]
 macro_rules! register {

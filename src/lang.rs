@@ -4,7 +4,7 @@ use crate::cli::Experiment;
 use crate::context::Context;
 use crate::error::*;
 use crate::internal_err;
-use crate::object::operators::TryAdd;
+use crate::object::operators::*;
 use crate::object::types::*;
 use crate::object::List;
 use crate::object::*;
@@ -422,23 +422,12 @@ fn display_list(x: &List, f: &mut fmt::Formatter<'_>, bc: Option<String>) -> fmt
 }
 
 // implement TryAdd for Obj
-impl TryAdd<Obj> for Obj {
-    type Output = Obj;
-
-    fn try_add(self, rhs: Self) -> Result<Self::Output, Signal> {
-        match (self.as_double()?, rhs.as_double()?) {
-            (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector(l.try_add(r)?)),
-            _ => internal_err!(),
-        }
-    }
-}
-
 impl std::ops::Add for Obj {
     type Output = EvalResult;
 
-    fn add(self, rhs: Self) -> Self::Output {
-        match (self.as_double()?, rhs.as_double()?) {
-            (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector(l + r)),
+    fn add(self, rhs: Self) -> EvalResult {
+        match (self, rhs) {
+            (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector((l + r)?)),
             _ => internal_err!(),
         }
     }
@@ -447,9 +436,9 @@ impl std::ops::Add for Obj {
 impl std::ops::Sub for Obj {
     type Output = EvalResult;
 
-    fn sub(self, rhs: Self) -> Self::Output {
-        match (self.as_double()?, rhs.as_double()?) {
-            (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector(l - r)),
+    fn sub(self, rhs: Self) -> EvalResult {
+        match (self, rhs) {
+            (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector((l - r)?)),
             _ => internal_err!(),
         }
     }
@@ -459,7 +448,7 @@ impl std::ops::Neg for Obj {
     type Output = EvalResult;
 
     fn neg(self) -> Self::Output {
-        match self.as_double()? {
+        match self {
             Obj::Vector(x) => Ok(Obj::Vector(-x)),
             _ => internal_err!(),
         }

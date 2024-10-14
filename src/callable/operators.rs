@@ -4,7 +4,7 @@ use super::core::*;
 use crate::context::Context;
 use crate::error::Error;
 use crate::lang::{CallStack, EvalResult};
-use crate::object::operators::TryAdd;
+use crate::object::operators::*;
 use crate::object::types::*;
 use crate::object::*;
 
@@ -26,7 +26,7 @@ impl CallableFormals for InfixAdd {}
 impl Callable for InfixAdd {
     fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
         let (lhs, rhs) = stack.eval_binary(args.unnamed_binary_args())?;
-        lhs.try_add(rhs)
+        lhs + rhs
     }
 }
 
