@@ -6,7 +6,6 @@
 ///
 pub mod coercion;
 pub mod iterators;
-pub mod operators;
 pub mod rep;
 pub mod reptype;
 pub mod types;

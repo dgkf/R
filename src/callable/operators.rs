@@ -4,7 +4,6 @@ use super::core::*;
 use crate::context::Context;
 use crate::error::Error;
 use crate::lang::{CallStack, EvalResult};
-use crate::object::operators::*;
 use crate::object::types::*;
 use crate::object::*;
 

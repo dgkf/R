@@ -4,7 +4,6 @@ use std::fmt::Display;
 use crate::error::Error;
 use crate::lang::EvalResult;
 use crate::lang::Signal;
-use crate::object::operators::*;
 use crate::object::CowObj;
 use crate::object::Obj;
 

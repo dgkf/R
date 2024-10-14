@@ -2,47 +2,6 @@ use std::ops::Deref;
 
 use super::coercion::{CoercibleInto, CommonNum, MinimallyNumeric};
 
-/// Zip iterators into recycling vectors, extending to longest length
-///
-/// This operation does not do any vector length matching, elements will be
-/// recycled even if they do not repeat an even number of times.
-///
-/// ```rust
-/// use r::object::iterators::zip_recycle;
-///
-/// let x = vec![1, 2, 3, 4];
-/// let y = vec![2, 4];
-/// let z: Vec<_> = zip_recycle(x.into_iter(), y.into_iter()).collect();
-/// ````
-///
-pub fn zip_recycle<L, R, LItem, RItem>(l: L, r: R) -> impl Iterator<Item = (LItem, RItem)>
-where
-    L: ExactSizeIterator + Iterator<Item = LItem> + Clone,
-    R: ExactSizeIterator + Iterator<Item = RItem> + Clone,
-{
-    let l = l.into_iter();
-    let r = r.into_iter();
-    let n = std::cmp::max(l.len(), r.len());
-    l.cycle().zip(r.cycle()).take(n)
-}
-
-//pub fn try_zip_recycle<L, R, LItem, RItem>(
-    //l: L,
-    //r: R,
-//) -> impl Iterator<Item = Result<(LItem, RItem), usize>>
-//where
-    //L: Iterator<Item = LItem> + Clone,
-    //R: Iterator<Item = RItem> + Clone,
-//{
-/// I want the returned iterator to yield a Result<(LItem, RItem)>
-/// The Err variant should return the length of the iterator that was too short
-
-    //let l = l.into_iter();
-    //let r = r.into_iter();
-    //let n = std::cmp::max(l.len(), r.len());
-    //l.cycle().zip(r.cycle()).take(n)
-//}
-
 /// Map an iterator of pairs into a pair of common numeric types
 ///
 /// Accept an iterator of pairs of numeric (or numeric-coercible) values and

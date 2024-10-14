@@ -3,8 +3,7 @@ use std::fmt::{Debug, Display};
 use std::iter::repeat;
 
 use super::coercion::{AtomicMode, CoercibleInto, CommonCmp, CommonNum, MinimallyNumeric};
-use super::iterators::{map_common_numeric, zip_recycle};
-use super::operators::*;
+use super::iterators::map_common_numeric;
 use super::reptype::{
     IntoIterableRefNames, IntoIterableRefPairs, IntoIterableRefValues, IterablePairs,
     IterableValues, Naming, RepType,
@@ -355,108 +354,6 @@ where
         T: CoercibleInto<Character> + AtomicMode,
     {
         self.as_mode::<Character>()
-    }
-
-    /// Apply over the vector contents to produce a vector of [std::cmp::Ordering]
-    ///
-    /// This function is used primarily in support of the implementation of
-    /// vectorized comparison operators and likely does not need to be used
-    /// outside of that context.
-    ///
-    /// See [crate::object::vector::VecPartialCmp] for vectorized comparison
-    /// operator implementations.
-    ///
-    pub fn vectorized_partial_cmp<R, C>(self, other: Rep<R>) -> Vec<Option<std::cmp::Ordering>>
-    where
-        T: AtomicMode + Default + Clone + CoercibleInto<C>,
-        R: AtomicMode + Default + Clone + CoercibleInto<C>,
-        (T, R): CommonCmp<Common = C>,
-        C: PartialOrd,
-    {
-        self.0
-            .into_inner()
-            .vectorized_partial_cmp(other.0.into_inner())
-    }
-
-    // TODO: This should return an iterator and not an allocated vector.
-    pub fn try_vectorized_partial_cmp<R, C, O, F, A>(
-        self,
-        other: Rep<R>,
-        f: F,
-    ) -> Result<Rep<A>, Signal>
-    where
-        T: AtomicMode + Default + Clone + CoercibleInto<C>,
-        R: AtomicMode + Default + Clone + CoercibleInto<C>,
-        (T, R): CommonCmp<Common = C>,
-        F: Fn(Option<std::cmp::Ordering>) -> A,
-        A: Clone + AtomicMode + Default,
-        C: PartialOrd,
-    {
-        match (self.as_scalar(), other.as_scalar()) {
-            (Some(l), Some(r)) => {
-                let lc = CoercibleInto::<C>::coerce_into(l.clone());
-                let rc = CoercibleInto::<C>::coerce_into(r.clone());
-                Ok(Rep::from(vec![f(lc.partial_cmp(&rc))]))
-            }
-            (Some(l), None) => {
-                let result: Vec<A> = repeat(l)
-                    .zip(other.iter_values())
-                    .map(|(l, r)| {
-                        let lc = CoercibleInto::<C>::coerce_into(l.clone());
-                        let rc = CoercibleInto::<C>::coerce_into(r.clone());
-                        f(lc.partial_cmp(&rc))
-                    })
-                    .collect();
-
-                Ok(Rep::from(result))
-            }
-            (None, Some(r)) => {
-                let result: Vec<A> = self
-                    .iter_values()
-                    .zip(repeat(r))
-                    .map(|(l, r)| {
-                        let lc = CoercibleInto::<C>::coerce_into(l.clone());
-                        let rc = CoercibleInto::<C>::coerce_into(r.clone());
-                        f(lc.partial_cmp(&rc))
-                    })
-                    .collect();
-                Ok(Rep::from(result))
-            }
-            (None, None) => {
-                let mut lc = self.iter_values();
-                let mut rc = other.iter_values();
-
-                let result: Vec<A> = lc
-                    .by_ref()
-                    .zip(rc.by_ref())
-                    .map(|(l, r)| {
-                        let lc = CoercibleInto::<C>::coerce_into(l.clone());
-                        let rc = CoercibleInto::<C>::coerce_into(r.clone());
-                        f(lc.partial_cmp(&rc))
-                    })
-                    .collect();
-
-                // We check whether they were recyclable after the fact
-                let l_extra = lc.count();
-                let r_extra = rc.count();
-
-                // we need to add one to the count because above we consumed more one than allocated
-                // in the result vector (for the iterator to stop yielding)
-                if l_extra != 0 {
-                    return Err(Signal::Error(Error::NonRecyclableLengths(
-                        l_extra + result.len() + 1,
-                        result.len(),
-                    )));
-                } else if r_extra != 0 {
-                    return Err(Signal::Error(Error::NonRecyclableLengths(
-                        result.len(),
-                        r_extra + result.len() + 1,
-                    )));
-                }
-
-                Ok(Rep::from(result))
-            }
-        }
     }
 }
 
@@ -1030,90 +927,6 @@ where
         f,
     )
     .into()
-}
-impl<L, R, C, O, LNum, RNum> TryMul<Rep<R>> for Rep<L>
-where
-    L: AtomicMode + Default + Clone + MinimallyNumeric<As = LNum> + CoercibleInto<LNum>,
-    R: AtomicMode + Default + Clone + MinimallyNumeric<As = RNum> + CoercibleInto<RNum>,
-    (LNum, RNum): CommonNum<Common = C>,
-    C: Clone + std::ops::Mul<Output = O> + Default,
-    RepType<C>: From<Vec<O>>,
-    O: Clone + Default,
-{
-    type Output = Rep<C>;
-    fn try_mul(self, rhs: Rep<R>) -> Result<Self::Output, Signal> {
-        try_binary_num_op(self, rhs, &|x, y| x * y)
-    }
-}
-
-impl<L, R, C, O, LNum, RNum> TryDiv<Rep<R>> for Rep<L>
-where
-    L: AtomicMode + Default + Clone + MinimallyNumeric<As = LNum> + CoercibleInto<LNum>,
-    R: AtomicMode + Default + Clone + MinimallyNumeric<As = RNum> + CoercibleInto<RNum>,
-    (LNum, RNum): CommonNum<Common = C>,
-    C: Clone + std::ops::Div<Output = O> + Default,
-    RepType<C>: From<Vec<O>>,
-    O: Clone + Default,
-{
-    type Output = Rep<C>;
-    fn try_div(self, rhs: Rep<R>) -> Result<Self::Output, Signal> {
-        try_binary_num_op(self, rhs, &|x, y| x / y)
-    }
-}
-
-impl<L, R, C, O, LNum, RNum> TryRem<Rep<R>> for Rep<L>
-where
-    L: AtomicMode + Default + Clone + MinimallyNumeric<As = LNum> + CoercibleInto<LNum>,
-    R: AtomicMode + Default + Clone + MinimallyNumeric<As = RNum> + CoercibleInto<RNum>,
-    (LNum, RNum): CommonNum<Common = C>,
-    C: Clone + std::ops::Rem<Output = O> + Default,
-    RepType<C>: From<Vec<O>>,
-    O: Clone + Default,
-{
-    type Output = Rep<C>;
-    fn try_rem(self, rhs: Rep<R>) -> Result<Self::Output, Signal> {
-        try_binary_num_op(self, rhs, &|x, y| x % y)
-    }
-}
-
-impl<L, R, C, O, LNum, RNum> TryPow<Rep<R>> for Rep<L>
-where
-    L: AtomicMode + Default + Clone + MinimallyNumeric<As = LNum> + CoercibleInto<LNum>,
-    R: AtomicMode + Default + Clone + MinimallyNumeric<As = RNum> + CoercibleInto<RNum>,
-    (LNum, RNum): CommonNum<Common = C>,
-    C: Clone + crate::object::vector::Pow<C, Output = O> + Default,
-    RepType<C>: From<Vec<O>>,
-    O: Clone + Default,
-{
-    type Output = Rep<C>;
-    fn try_pow(self, rhs: Rep<R>) -> Result<Self::Output, Signal> {
-        try_binary_num_op(self, rhs, &|x: C, y: C| -> O {
-            let result: O = x.power(y);
-            result
-        })
-    }
-}
-
-impl<L, R> TryBitAnd<Rep<R>> for Rep<L>
-where
-    L: AtomicMode + Default + Clone + CoercibleInto<Logical>,
-    R: AtomicMode + Default + Clone + CoercibleInto<Logical>,
-{
-    type Output = Rep<Logical>;
-    fn try_bitand(self, rhs: Rep<R>) -> Result<Self::Output, Signal> {
-        try_binary_lgl_op(self, rhs, |x, y| x & y)
-    }
-}
-
-impl<L, R> TryBitOr<Rep<R>> for Rep<L>
-where
-    L: AtomicMode + Default + Clone + CoercibleInto<Logical>,
-    R: AtomicMode + Default + Clone + CoercibleInto<Logical>,
-{
-    type Output = Rep<Logical>;
-    fn try_bitor(self, rhs: Rep<R>) -> Result<Self::Output, Signal> {
-        try_binary_lgl_op(self, rhs, |x, y| x | y)
-    }
 }
 
 #[cfg(test)]
