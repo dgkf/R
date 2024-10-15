@@ -3,7 +3,6 @@ use std::fmt::{Debug, Display};
 use std::iter::repeat;
 
 use super::coercion::{AtomicMode, CoercibleInto, CommonCmp, CommonNum, MinimallyNumeric};
-use super::iterators::map_common_numeric;
 use super::reptype::{
     IntoIterableRefNames, IntoIterableRefPairs, IntoIterableRefValues, IterablePairs,
     IterableValues, Naming, RepType,
@@ -70,7 +69,7 @@ where
         let mut into_iter = self.values_ref();
         let mut iter = into_iter.iter();
         if let Some(x) = iter.next() {
-            if let None = iter.next() {
+            if iter.next().is_none() {
                 return Some(x.clone());
             }
         };
@@ -579,10 +578,13 @@ where
     RepType<O>: From<Vec<O>>,
     O: Clone,
 {
-    type Output = Rep<O>;
+    type Output = Result<Rep<O>, Signal>;
     fn neg(self) -> Self::Output {
-        let result = -(self.0.into_inner());
-        Rep(RefCell::new(result))
+        let result: Vec<O> = self
+            .iter_values()
+            .map(|x| -(CoercibleInto::<LNum>::coerce_into(x)))
+            .collect();
+        Ok(Rep(RefCell::new(result.into())))
     }
 }
 
@@ -597,7 +599,7 @@ where
 {
     type Output = Result<Rep<C>, Signal>;
     fn add(self, rhs: Rep<R>) -> Self::Output {
-        try_binary_num_op(self, rhs, &|x, y| x + y)
+        try_binary_num_op(self, rhs, |x, y| x + y)
     }
 }
 
@@ -612,7 +614,7 @@ where
 {
     type Output = Result<Rep<C>, Signal>;
     fn sub(self, rhs: Rep<R>) -> Self::Output {
-        try_binary_num_op(self, rhs, &|x, y| x - y)
+        try_binary_num_op(self, rhs, |x, y| x - y)
     }
 }
 
@@ -627,7 +629,7 @@ where
 {
     type Output = Result<Rep<C>, Signal>;
     fn mul(self, rhs: Rep<R>) -> Self::Output {
-        try_binary_num_op(self, rhs, &|x, y| x * y)
+        try_binary_num_op(self, rhs, |x, y| x * y)
     }
 }
 
@@ -642,7 +644,7 @@ where
 {
     type Output = Result<Rep<C>, Signal>;
     fn div(self, rhs: Rep<R>) -> Self::Output {
-        try_binary_num_op(self, rhs, &|x, y| x / y)
+        try_binary_num_op(self, rhs, |x, y| x / y)
     }
 }
 
@@ -657,7 +659,7 @@ where
 {
     type Output = Result<Rep<C>, Signal>;
     fn rem(self, rhs: Rep<R>) -> Self::Output {
-        try_binary_num_op(self, rhs, &|x, y| x % y)
+        try_binary_num_op(self, rhs, |x, y| x % y)
     }
 }
 
@@ -675,7 +677,7 @@ where
 {
     type Output = Result<Rep<O>, Signal>;
     fn power(self, rhs: Rep<R>) -> Self::Output {
-        try_binary_num_op(self, rhs, &|x, y| Pow::power(x, y))
+        try_binary_num_op(self, rhs, |x, y| Pow::power(x, y))
     }
 }
 
@@ -707,8 +709,11 @@ where
 {
     type Output = Result<Rep<Logical>, Signal>;
     fn not(self) -> Self::Output {
-        let result: RepType<Logical> = !self.0.into_inner();
-        Ok(Rep(RefCell::new(result)))
+        let result: Vec<Logical> = self
+            .iter_values()
+            .map(|x| !(CoercibleInto::<Logical>::coerce_into(x)))
+            .collect();
+        Ok(Rep(RefCell::new(result.into())))
     }
 }
 
@@ -853,6 +858,7 @@ where
     }
 }
 
+// things like x + y
 fn try_binary_num_op<L, R, C, O, LNum, RNum, F>(
     lhs: Rep<L>,
     rhs: Rep<R>,
@@ -882,7 +888,7 @@ where
     )
 }
 
-// fixme equality with references for characters
+// FIXME(performance): equality with references for characters
 fn try_binary_cmp_op<L, R, C, F>(lhs: Rep<L>, rhs: Rep<R>, f: F) -> Result<Rep<Logical>, Signal>
 where
     L: AtomicMode + Default + Clone + CoercibleInto<C> + Clone,
@@ -906,7 +912,6 @@ where
         },
         f,
     )
-    .into()
 }
 
 pub fn try_binary_lgl_op<L, R, F>(lhs: Rep<L>, rhs: Rep<R>, f: F) -> Result<Rep<Logical>, Signal>
@@ -926,31 +931,4 @@ where
         },
         f,
     )
-    .into()
-}
-
-#[cfg(test)]
-mod tests {
-    // add tests for recycling checks
-    use crate::error::Error;
-    use crate::lang::Signal;
-    use crate::{r, r_expect};
-    #[test]
-    fn recycle_incompatible_errors() {
-        assert_eq!(
-            r! {{"
-              x = 1:10
-              x[1:3] = 1:2
-            "}},
-            Err(Signal::Error(Error::NonRecyclableLengths(3, 2)))
-        );
-    }
-    #[test]
-    fn recycle_length_one() {
-        r_expect! {{"
-          x = 1:10
-          x[1:2] = 99
-          x[1] == 99 & x[2] == 99
-        "}}
-    }
 }

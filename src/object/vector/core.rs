@@ -669,9 +669,9 @@ impl std::ops::Neg for Vector {
     fn neg(self) -> Self::Output {
         use Vector::*;
         match self {
-            Double(x) => Double(x.neg()).into(),
-            Integer(x) => Integer(x.neg()).into(),
-            Logical(x) => Integer(x.neg()).into(),
+            Double(x) => x.neg().map(|x| x.into()),
+            Integer(x) => x.neg().map(|x| x.into()),
+            Logical(x) => x.neg().map(|x| x.into()),
             _ => todo!(),
         }
     }
@@ -682,7 +682,7 @@ impl std::ops::Not for Vector {
     fn not(self) -> Self::Output {
         use Vector::*;
         match self {
-            Logical(x) => Logical((!x)?).into(),
+            Logical(x) => (!x).map(|x| x.into()),
             _ => todo!(),
         }
     }

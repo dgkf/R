@@ -1,11 +1,10 @@
 use std::fmt::Debug;
 
-use super::coercion::{AtomicMode, CoercibleInto, CommonCmp, CommonNum, MinimallyNumeric};
-use super::iterators::map_common_numeric;
+use super::coercion::{AtomicMode, CoercibleInto};
 use super::subset::Subset;
 use super::subsets::Subsets;
 use super::types::*;
-use super::{OptionNA, Pow, VecPartialCmp};
+use super::OptionNA;
 use crate::error::Error;
 use crate::lang::Signal;
 use crate::object::{CowObj, ViewMut};
@@ -928,6 +927,7 @@ where
 #[cfg(test)]
 mod test {
     use super::OptionNA::*;
+    use crate::object::rep::Rep;
     use crate::object::reptype::RepType;
     use crate::object::{types::*, OptionNA, VecPartialCmp};
     use crate::r;
@@ -935,11 +935,11 @@ mod test {
 
     #[test]
     fn vector_add() {
-        let x = RepType::from((1..=10).collect::<Vec<_>>());
-        let y = RepType::from(vec![2, 5, 6, 2, 3]);
+        let x = Rep::<Integer>::from((1..=5).collect::<Vec<_>>());
+        let y = Rep::<Integer>::from(vec![2, 5, 6, 2, 3]);
 
-        let z = x + y;
-        assert_eq!(z, RepType::from(vec![3, 7, 9, 6, 8, 8, 12, 14, 11, 13]));
+        let z = (x + y).unwrap();
+        assert_eq!(z, Rep::from(vec![3, 7, 9, 6, 8]));
 
         let expected_type = RepType::<Integer>::new();
         assert!(z.is_same_type_as(&expected_type));
@@ -948,25 +948,11 @@ mod test {
 
     #[test]
     fn vector_mul() {
-        let x = RepType::from((1..=10).collect::<Vec<_>>());
-        let y = RepType::from(vec![Some(2), NA, Some(6), NA, Some(3)]);
+        let x = Rep::<Integer>::from((1..=5).collect::<Vec<_>>());
+        let y = Rep::<Integer>::from(vec![Some(2), NA, Some(6), NA, Some(3)]);
 
-        let z = x * y;
-        assert_eq!(
-            z,
-            RepType::from(vec![
-                Some(2),
-                NA,
-                Some(18),
-                NA,
-                Some(15),
-                Some(12),
-                NA,
-                Some(48),
-                NA,
-                Some(30)
-            ])
-        );
+        let z = (x * y).unwrap();
+        assert_eq!(z, Rep::from(vec![Some(2), NA, Some(18), NA, Some(15),]));
 
         let expected_type = RepType::<Integer>::new();
         assert!(z.is_same_type_as(&expected_type));
@@ -978,10 +964,10 @@ mod test {
         // expect that f32's do not get coerced into an OptionNA:: instead
         // using std::f32::NAN as NA representation.
 
-        let x = RepType::from(vec![Some(0_f64), NA, Some(10_f64)]);
-        let y = RepType::from(vec![100, 10]);
+        let x = Rep::<Double>::from(vec![Some(0_f64), NA, Some(10_f64)]);
+        let y = Rep::<Integer>::from(vec![100, 10]);
 
-        let z = x * y;
+        let z = (x * y).unwrap();
         // assert_eq!(z, Vector::from(vec![0_f32, std::f32::NAN, 1_000_f32]));
         // comparing floats is error prone
 
@@ -995,11 +981,11 @@ mod test {
         // expect that f32's do not get coerced into an OptionNA:: instead
         // using std::f32::NAN as NA representation.
 
-        let x = RepType::from(vec![Some(0_f64), NA, Some(10_f64)]);
-        let y = RepType::from(vec![100, 10]);
+        let x = Rep::<Double>::from(vec![Some(0_f64), NA, Some(10_f64)]);
+        let y = Rep::<Integer>::from(vec![100, 10, 1]);
 
-        let z = x & y;
-        assert_eq!(z, RepType::from(vec![Some(false), NA, Some(true)]));
+        let z = (x & y).unwrap();
+        assert_eq!(z, Rep::from(vec![Some(false), NA, Some(true)]));
 
         let expected_type = RepType::<Logical>::new();
         assert!(z.is_same_type_as(&expected_type));
@@ -1011,11 +997,11 @@ mod test {
         // expect that f32's do not get coerced into an  instead
         // using std::f32::NAN as NA representation.
 
-        let x = RepType::from(vec![Some(0_f64), NA, Some(10000_f64)]);
-        let y = RepType::from(vec![100, 10]);
+        let x = Rep::from(vec![Some(0_f64), NA, Some(10000_f64)]);
+        let y = Rep::<Integer>::from(vec![100, 10, 1]);
 
-        let z = x.vec_gt(y);
-        assert_eq!(z, RepType::from(vec![Some(false), NA, Some(true)]));
+        let z = x.vec_gt(y).unwrap();
+        assert_eq!(z, Rep::from(vec![Some(false), NA, Some(true)]));
 
         let expected_type = RepType::<Logical>::new();
         assert!(z.is_same_type_as(&expected_type));
@@ -1218,5 +1204,28 @@ mod test {
             (&Character::Some("b".to_string()), &Double::Some(2.0))
         );
         assert_eq!(x.next(), None);
+    }
+
+    use crate::error::Error;
+    use crate::lang::Signal;
+
+    #[test]
+    fn assign_recycle_incompatible() {
+        let mut x = Rep::<Integer>::from(vec![1, 2, 3]);
+        let y = Rep::<Integer>::from(vec![99, 99]);
+        let result = x.assign(y);
+        assert_eq!(result.unwrap_err(), Signal::Error(Error::NonRecyclableLengths(3, 2)));
+    }
+    #[test]
+    fn assign_recycle_length_one() {
+        let x = Rep::<Integer>::from(vec![1, 2, 3]);
+        let y = Rep::<Integer>::from(vec![99]);
+        let mut xview = x.subset(vec![0, 1].into());
+        let _ = xview.assign(y).unwrap();
+        let result_vec: Vec<_> = x.iter_values().collect();
+        assert_eq!(
+            result_vec,
+            vec![Some(99), Some(99), Some(3)]
+        )
     }
 }
