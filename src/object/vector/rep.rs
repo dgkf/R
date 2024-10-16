@@ -784,7 +784,7 @@ where
     }
 }
 
-/// This function applies a function `g` two pairs from lhs and rhs.
+/// This function applies a function `g` to pairs from lhs and rhs.
 /// The function returns an error when the lengths are not compatible.
 fn try_recycle_then<L, R, O, F, A>(lhs: Rep<L>, rhs: Rep<R>, g: F) -> Result<Rep<A>, Signal>
 where
