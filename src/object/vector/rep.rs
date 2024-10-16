@@ -594,7 +594,7 @@ where
     R: AtomicMode + Default + Clone + MinimallyNumeric<As = RNum> + CoercibleInto<RNum>,
     (LNum, RNum): CommonNum<Common = C>,
     C: Clone + std::ops::Add<Output = O> + Default,
-    RepType<C>: From<Vec<O>>,
+    Rep<C>: From<Vec<O>>,
     O: Clone + Default,
 {
     type Output = Result<Rep<C>, Signal>;
@@ -609,7 +609,7 @@ where
     R: AtomicMode + Default + Clone + MinimallyNumeric<As = RNum> + CoercibleInto<RNum>,
     (LNum, RNum): CommonNum<Common = C>,
     C: Clone + std::ops::Sub<Output = O> + Default,
-    RepType<C>: From<Vec<O>>,
+    Rep<C>: From<Vec<O>>,
     O: Clone + Default,
 {
     type Output = Result<Rep<C>, Signal>;
@@ -624,7 +624,7 @@ where
     R: AtomicMode + Default + Clone + MinimallyNumeric<As = RNum> + CoercibleInto<RNum>,
     (LNum, RNum): CommonNum<Common = C>,
     C: Clone + std::ops::Mul<Output = O> + Default,
-    RepType<C>: From<Vec<O>>,
+    Rep<C>: From<Vec<O>>,
     O: Clone + Default,
 {
     type Output = Result<Rep<C>, Signal>;
@@ -639,7 +639,7 @@ where
     R: AtomicMode + Default + Clone + MinimallyNumeric<As = RNum> + CoercibleInto<RNum>,
     (LNum, RNum): CommonNum<Common = C>,
     C: Clone + std::ops::Div<Output = O> + Default,
-    RepType<C>: From<Vec<O>>,
+    Rep<C>: From<Vec<O>>,
     O: Clone + Default,
 {
     type Output = Result<Rep<C>, Signal>;
@@ -654,7 +654,7 @@ where
     R: AtomicMode + Default + Clone + MinimallyNumeric<As = RNum> + CoercibleInto<RNum>,
     (LNum, RNum): CommonNum<Common = C>,
     C: Clone + std::ops::Rem<Output = O> + Default,
-    RepType<C>: From<Vec<O>>,
+    Rep<C>: From<Vec<O>>,
     O: Clone + Default,
 {
     type Output = Result<Rep<C>, Signal>;
@@ -669,7 +669,7 @@ where
     R: AtomicMode + Default + Clone + MinimallyNumeric<As = RNum> + CoercibleInto<RNum>,
     (LNum, RNum): CommonNum<Common = O>,
     O: Pow<O, Output = O>,
-    RepType<O>: From<Vec<O>>,
+    Rep<O>: From<Vec<O>>,
     O: Default,
     L: Clone,
     R: Clone,
@@ -781,79 +781,78 @@ where
     }
 }
 
-fn try_recycle_coerce_then<L, R, O, C, F, A, Converter>(
+// New function: try_recycle_then
+fn try_recycle_then<L, R, O, F, A>(
     lhs: Rep<L>,
     rhs: Rep<R>,
-    converter: Converter,
-    f: F,
+    g: F,
 ) -> Result<Rep<A>, Signal>
 where
     L: Clone + Default,
-    RepType<A>: From<Vec<O>>,
-    O: Clone + Default,
-    F: Fn(C, C) -> O,
     R: Clone + Default,
-    C: Clone + Default,
-    A: Clone + Default,
-    Converter: Fn(L, R) -> (C, C),
+    Rep<A>: From<Vec<O>>,
+    O: Clone + Default,
+    A: Clone,
+    F: Fn(L, R) -> O,
 {
     match (lhs.as_scalar(), rhs.as_scalar()) {
         (Some(l), Some(r)) => {
-            let (lc, rc) = converter(l, r);
-            let result: Vec<O> = vec![f(lc, rc)];
-            Ok(Rep::from(RepType::from(result)))
+            let result: Vec<O> = vec![g(l, r)];
+            Ok(Rep::from(result))
         }
         (Some(l), None) => {
             let result: Vec<O> = repeat(l)
                 .zip(rhs.iter_values())
-                .map(|(l, r)| {
-                    let (lc, rc) = converter(l, r);
-                    f(lc, rc)
-                })
+                .map(|(l, r)| g(l, r))
                 .collect();
-            Ok(Rep::from(RepType::from(result)))
+            if result.is_empty() {
+                return Err(Signal::Error(Error::NonRecyclableLengths(
+                    1, 0
+                )));
+            }
+            Ok(Rep::from(result))
         }
         (None, Some(r)) => {
-            let result: Vec<O> = lhs
-                .iter_values()
+            let result: Vec<O> = lhs.iter_values()
                 .zip(repeat(r))
-                .map(|(l, r)| {
-                    let (lc, rc) = converter(l, r);
-                    f(lc, rc)
-                })
+                .map(|(l, r)| g(l, r))
                 .collect();
-            Ok(Rep::from(RepType::from(result)))
+            if result.is_empty() {
+                return Err(Signal::Error(Error::NonRecyclableLengths(
+                    0, 1
+                )));
+            }
+            Ok(Rep::from(result))
         }
         (None, None) => {
             let mut lc = lhs.iter_values();
             let mut rc = rhs.iter_values();
 
-            let result: Vec<O> = lc
-                .by_ref()
-                .zip(rc.by_ref())
-                .map(|(l, r)| {
-                    let (lc, rc) = converter(l, r);
-                    f(lc, rc)
-                })
-                .collect();
+            // get the maximum size hint of the two iterators lc and rc
+            let max_size = std::cmp::max(lc.size_hint().0, rc.size_hint().0);
 
-            // Check for recyclable lengths
-            let l_extra = lc.count();
-            let r_extra = rc.count();
+            let mut result: Vec<O> = Vec::with_capacity(max_size);
 
-            if l_extra != 0 {
-                return Err(Signal::Error(Error::NonRecyclableLengths(
-                    l_extra + result.len() + 1,
-                    r_extra + result.len(),
-                )));
-            } else if r_extra != 0 {
-                return Err(Signal::Error(Error::NonRecyclableLengths(
-                    l_extra + result.len(),
-                    r_extra + result.len() + 1,
-                )));
+            loop {
+                match (lc.next(), rc.next()) {
+                    (Some(l), Some(r)) => result.push(g(l, r)),
+                    (Some(_), None) => {
+                        return Err(Signal::Error(Error::NonRecyclableLengths(
+                            result.len() + 1 + lc.count(),
+                            result.len(),
+                        )));
+                    },
+                    (None, Some(_)) => {
+                        return Err(Signal::Error(Error::NonRecyclableLengths(
+                            result.len(),
+                            result.len() + 1 + rc.count(),
+                        )));
+                    }
+                    (None, None) => {
+                        return Ok(Rep::from(result))
+                    },
+                }
             }
-
-            Ok(Rep::from(RepType::from(result)))
         }
     }
 }
@@ -869,22 +868,22 @@ where
     R: Default + Clone + MinimallyNumeric<As = RNum> + CoercibleInto<RNum>,
     C: Default + Clone,
     (LNum, RNum): CommonNum<Common = C>,
-    RepType<C>: From<Vec<O>>,
+    Rep<C>: From<Vec<O>>,
     O: Clone + Default,
     F: Fn(C, C) -> O,
     C: Clone + Default,
 {
-    try_recycle_coerce_then(
+    try_recycle_then(
         lhs,
         rhs,
         |x, y| {
-            (
+            let (c1, c2) = (
                 CoercibleInto::<LNum>::coerce_into(x),
                 CoercibleInto::<RNum>::coerce_into(y),
             )
-                .into_common()
-        },
-        f,
+                .into_common();
+            f(c1, c2)
+        }
     )
 }
 
@@ -897,20 +896,15 @@ where
     C: PartialOrd + Clone + Default,
     F: Fn(Option<std::cmp::Ordering>) -> Logical,
 {
-    let f = |x: C, y: C| -> Logical {
-        let pc = x.partial_cmp(&y);
-        f(pc)
-    };
-    try_recycle_coerce_then(
+    try_recycle_then(
         lhs,
         rhs,
         |x, y| {
-            (
-                CoercibleInto::<C>::coerce_into(x),
-                CoercibleInto::<C>::coerce_into(y),
-            )
-        },
-        f,
+        let c1: C = x.coerce_into();
+        let c2: C = y.coerce_into();
+        let ordering = c1.partial_cmp(&c2);
+        f(ordering)
+        }
     )
 }
 
@@ -920,15 +914,15 @@ where
     R: AtomicMode + Default + Clone + CoercibleInto<Logical>,
     F: Fn(Logical, Logical) -> Logical,
 {
-    try_recycle_coerce_then(
+    try_recycle_then(
         lhs,
         rhs,
         |x, y| {
-            (
+            let (c1, c2) = (
                 CoercibleInto::<Logical>::coerce_into(x),
                 CoercibleInto::<Logical>::coerce_into(y),
-            )
-        },
-        f,
+            );
+            f(c1, c2)
+        }
     )
 }

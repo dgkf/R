@@ -1011,4 +1011,60 @@ mod tests {
             x[[1]] == 10 & x[[2]] == 2
         "}}
     }
+    #[test]
+    fn comparison_conversion() {
+        // double
+        r_expect!(2 == 2);
+        r_expect!(2 == 2L);
+        r_expect!(1 == true);
+        r_expect!(2 != false);
+        r_expect!(2 != true);
+        r_expect!(0 == false);
+        // integer
+        r_expect!(2L == 2L);
+        r_expect!(2L == 2);
+        r_expect!(2L != true);
+        r_expect!(0L == false);
+        r_expect!(1L == true);
+        // logical
+        r_expect!(true == 1);
+        r_expect!(true == 1L);
+        r_expect!(false == 0L);
+        r_expect!(false == 0);
+        r_expect! {{r#""true" == true"#}}
+        // character
+        r_expect!("a" == "a");
+        r_expect!("a" != "b");
+        r_expect!("1" == 1);
+        r_expect!("1" == 1L);
+        r_expect!("1" != 2L);
+        r_expect!("1" != 2);
+
+        // metaprogramming objects
+        r_expect!(environment() == environment());
+        r_expect!(quote(1) == quote(1));
+
+        // length > 1 also works
+        r_expect! {{"
+            x = [1L, 2L]
+            y = [1L, 2L]
+            z = x == y
+            z[1] && z[2]
+        "}}
+    }
+    #[test]
+    // test that types are as expected
+    fn type_stability_num_ops() {
+        r_expect! {{r#"
+            typeof(1L + 1L) == "integer"
+            typeof(1 + 1) == "double"
+            typeof(1L + 1) == "double"
+            typeof(1 + 1L) == "double"
+            typeof(true + true) == "integer"
+            typeof(true + false) == "integer"
+        "#}}
+    }
 }
+
+
+

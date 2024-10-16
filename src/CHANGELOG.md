@@ -5,6 +5,12 @@
 * Named vectors were added and can e.g. be constructed via `[a = 1, b = 2]`
 * The `is_null()` primitive was added
 * Setting a list value to `null` actually sets it to `null` and does not remove it.
+* Stricter recycling rule are enforced.
+  Vectorized operations on two vectors `v1` and `v2` now requires either of:
+  * One of the vectors has length 1 and the other vector's length is not zero.
+  * The vectors have the same length.
+
+  Otherwise an error is thrown.
 
 ## Internals
 

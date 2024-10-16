@@ -933,6 +933,9 @@ mod test {
     use crate::r;
     use crate::utils::SameType;
 
+
+
+
     #[test]
     fn vector_add() {
         let x = Rep::<Integer>::from((1..=5).collect::<Vec<_>>());
@@ -965,7 +968,7 @@ mod test {
         // using std::f32::NAN as NA representation.
 
         let x = Rep::<Double>::from(vec![Some(0_f64), NA, Some(10_f64)]);
-        let y = Rep::<Integer>::from(vec![100, 10]);
+        let y = Rep::<Integer>::from(vec![100, 10, 1]);
 
         let z = (x * y).unwrap();
         // assert_eq!(z, Vector::from(vec![0_f32, std::f32::NAN, 1_000_f32]));
@@ -1227,5 +1230,47 @@ mod test {
             result_vec,
             vec![Some(99), Some(99), Some(3)]
         )
+    }
+    #[test]
+    fn non_recyclable_lengths_3_2() {
+        let x = Rep::<Integer>::from(vec![1, 2, 3]);
+        let y = Rep::<Integer>::from(vec![99, 99]);
+        let result = x + y;
+        assert_eq!(result.unwrap_err(), Signal::Error(Error::NonRecyclableLengths(3, 2)));
+    }
+    #[test]
+    fn non_recyclable_lengths_4_2() {
+        let x = Rep::<Integer>::from(vec![1, 2, 3, 4]);
+        let y = Rep::<Integer>::from(vec![99, 99]);
+        let result = x + y;
+        assert_eq!(result.unwrap_err(), Signal::Error(Error::NonRecyclableLengths(4, 2)));
+    }
+    #[test]
+    fn non_recyclable_lengths_2_3() {
+        let x = Rep::<Integer>::from(vec![1, 2]);
+        let y = Rep::<Integer>::from(vec![99, 99, 99]);
+        let result = x + y;
+        assert_eq!(result.unwrap_err(), Signal::Error(Error::NonRecyclableLengths(2, 3)));
+    }
+    #[test]
+    fn non_recyclable_lengths_2_4() {
+        let x = Rep::<Integer>::from(vec![1, 2]);
+        let y = Rep::<Integer>::from(vec![99, 99, 99, 99]);
+        let result = x + y;
+        assert_eq!(result.unwrap_err(), Signal::Error(Error::NonRecyclableLengths(2, 4)));
+    }
+    #[test]
+    fn non_recyclable_lengths_0_1() {
+        let x = Rep::<Integer>::from(Vec::<Integer>::new());
+        let y = Rep::<Integer>::from(vec![99]);
+        let result = x + y;
+        assert_eq!(result.unwrap_err(), Signal::Error(Error::NonRecyclableLengths(0, 1)));
+    }
+    #[test]
+    fn non_recyclable_lengths_1_0() {
+        let x = Rep::<Integer>::from(vec![99]);
+        let y = Rep::<Integer>::from(Vec::<Integer>::new());
+        let result = x + y;
+        assert_eq!(result.unwrap_err(), Signal::Error(Error::NonRecyclableLengths(1, 0)));
     }
 }
