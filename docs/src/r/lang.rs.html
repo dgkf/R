@@ -1501,20 +1501,20 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
             Obj::List(<span class="kw-2">mut </span>l) =&gt; {
                 <span class="kw">match </span>value.clone() {
                     Obj::List(r) =&gt; {
-                        l.assign(r);
+                        l.assign(r)<span class="question-mark">?</span>;
                     }
                     Obj::Vector(r) =&gt; <span class="kw">match </span>r {
                         Vector::Integer(r) =&gt; {
-                            l.assign(r);
+                            l.assign(r)<span class="question-mark">?</span>;
                         }
                         Vector::Character(r) =&gt; {
-                            l.assign(r);
+                            l.assign(r)<span class="question-mark">?</span>;
                         }
                         Vector::Logical(r) =&gt; {
-                            l.assign(r);
+                            l.assign(r)<span class="question-mark">?</span>;
                         }
                         Vector::Double(r) =&gt; {
-                            l.assign(r);
+                            l.assign(r)<span class="question-mark">?</span>;
                         }
                     },
                     <span class="kw">_ </span>=&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(err.into()),
@@ -1821,9 +1821,9 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
 <span class="kw">impl </span>std::ops::Add <span class="kw">for </span>Obj {
     <span class="kw">type </span>Output = EvalResult;
 
-    <span class="kw">fn </span>add(<span class="self">self</span>, rhs: <span class="self">Self</span>) -&gt; <span class="self">Self</span>::Output {
-        <span class="kw">match </span>(<span class="self">self</span>.as_double()<span class="question-mark">?</span>, rhs.as_double()<span class="question-mark">?</span>) {
-            (Obj::Vector(l), Obj::Vector(r)) =&gt; <span class="prelude-val">Ok</span>(Obj::Vector(l + r)),
+    <span class="kw">fn </span>add(<span class="self">self</span>, rhs: <span class="self">Self</span>) -&gt; EvalResult {
+        <span class="kw">match </span>(<span class="self">self</span>, rhs) {
+            (Obj::Vector(l), Obj::Vector(r)) =&gt; <span class="prelude-val">Ok</span>(Obj::Vector((l + r)<span class="question-mark">?</span>)),
             <span class="kw">_ </span>=&gt; <span class="macro">internal_err!</span>(),
         }
     }
@@ -1832,9 +1832,9 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
 <span class="kw">impl </span>std::ops::Sub <span class="kw">for </span>Obj {
     <span class="kw">type </span>Output = EvalResult;
 
-    <span class="kw">fn </span>sub(<span class="self">self</span>, rhs: <span class="self">Self</span>) -&gt; <span class="self">Self</span>::Output {
-        <span class="kw">match </span>(<span class="self">self</span>.as_double()<span class="question-mark">?</span>, rhs.as_double()<span class="question-mark">?</span>) {
-            (Obj::Vector(l), Obj::Vector(r)) =&gt; <span class="prelude-val">Ok</span>(Obj::Vector(l - r)),
+    <span class="kw">fn </span>sub(<span class="self">self</span>, rhs: <span class="self">Self</span>) -&gt; EvalResult {
+        <span class="kw">match </span>(<span class="self">self</span>, rhs) {
+            (Obj::Vector(l), Obj::Vector(r)) =&gt; <span class="prelude-val">Ok</span>(Obj::Vector((l - r)<span class="question-mark">?</span>)),
             <span class="kw">_ </span>=&gt; <span class="macro">internal_err!</span>(),
         }
     }
@@ -1844,8 +1844,8 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
     <span class="kw">type </span>Output = EvalResult;
 
     <span class="kw">fn </span>neg(<span class="self">self</span>) -&gt; <span class="self">Self</span>::Output {
-        <span class="kw">match </span><span class="self">self</span>.as_double()<span class="question-mark">? </span>{
-            Obj::Vector(x) =&gt; <span class="prelude-val">Ok</span>(Obj::Vector(-x)),
+        <span class="kw">match </span><span class="self">self </span>{
+            Obj::Vector(x) =&gt; <span class="prelude-val">Ok</span>(Obj::Vector((-x)<span class="question-mark">?</span>)),
             <span class="kw">_ </span>=&gt; <span class="macro">internal_err!</span>(),
         }
     }
@@ -1855,8 +1855,8 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
     <span class="kw">type </span>Output = EvalResult;
 
     <span class="kw">fn </span>not(<span class="self">self</span>) -&gt; <span class="self">Self</span>::Output {
-        <span class="kw">match </span><span class="self">self</span>.as_logical()<span class="question-mark">? </span>{
-            Obj::Vector(x) =&gt; <span class="prelude-val">Ok</span>(Obj::Vector(!x)),
+        <span class="kw">match </span><span class="self">self </span>{
+            Obj::Vector(x) =&gt; <span class="prelude-val">Ok</span>(Obj::Vector((!x)<span class="question-mark">?</span>)),
             <span class="kw">_ </span>=&gt; <span class="macro">internal_err!</span>(),
         }
     }
@@ -1866,8 +1866,8 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
     <span class="kw">type </span>Output = EvalResult;
 
     <span class="kw">fn </span>mul(<span class="self">self</span>, rhs: <span class="self">Self</span>) -&gt; <span class="self">Self</span>::Output {
-        <span class="kw">match </span>(<span class="self">self</span>.as_double()<span class="question-mark">?</span>, rhs.as_double()<span class="question-mark">?</span>) {
-            (Obj::Vector(l), Obj::Vector(r)) =&gt; <span class="prelude-val">Ok</span>(Obj::Vector(l * r)),
+        <span class="kw">match </span>(<span class="self">self</span>, rhs) {
+            (Obj::Vector(l), Obj::Vector(r)) =&gt; <span class="prelude-val">Ok</span>(Obj::Vector((l * r)<span class="question-mark">?</span>)),
             <span class="kw">_ </span>=&gt; <span class="macro">internal_err!</span>(),
         }
     }
@@ -1877,8 +1877,8 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
     <span class="kw">type </span>Output = EvalResult;
 
     <span class="kw">fn </span>div(<span class="self">self</span>, rhs: <span class="self">Self</span>) -&gt; <span class="self">Self</span>::Output {
-        <span class="kw">match </span>(<span class="self">self</span>.as_double()<span class="question-mark">?</span>, rhs.as_double()<span class="question-mark">?</span>) {
-            (Obj::Vector(l), Obj::Vector(r)) =&gt; <span class="prelude-val">Ok</span>(Obj::Vector(l / r)),
+        <span class="kw">match </span>(<span class="self">self</span>, rhs) {
+            (Obj::Vector(l), Obj::Vector(r)) =&gt; <span class="prelude-val">Ok</span>(Obj::Vector((l / r)<span class="question-mark">?</span>)),
             <span class="kw">_ </span>=&gt; <span class="macro">internal_err!</span>(),
         }
     }
@@ -1888,8 +1888,8 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
     <span class="kw">type </span>Output = EvalResult;
 
     <span class="kw">fn </span>power(<span class="self">self</span>, rhs: <span class="self">Self</span>) -&gt; <span class="self">Self</span>::Output {
-        <span class="kw">match </span>(<span class="self">self</span>.as_double()<span class="question-mark">?</span>, rhs.as_double()<span class="question-mark">?</span>) {
-            (Obj::Vector(l), Obj::Vector(r)) =&gt; <span class="prelude-val">Ok</span>(Obj::Vector(l.power(r))),
+        <span class="kw">match </span>(<span class="self">self</span>, rhs) {
+            (Obj::Vector(l), Obj::Vector(r)) =&gt; <span class="prelude-val">Ok</span>(Obj::Vector(l.power(r)<span class="question-mark">?</span>)),
             <span class="kw">_ </span>=&gt; <span class="macro">internal_err!</span>(),
         }
     }
@@ -1899,8 +1899,8 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
     <span class="kw">type </span>Output = EvalResult;
 
     <span class="kw">fn </span>rem(<span class="self">self</span>, rhs: <span class="self">Self</span>) -&gt; <span class="self">Self</span>::Output {
-        <span class="kw">match </span>(<span class="self">self</span>.as_double()<span class="question-mark">?</span>, rhs.as_double()<span class="question-mark">?</span>) {
-            (Obj::Vector(l), Obj::Vector(r)) =&gt; <span class="prelude-val">Ok</span>(Obj::Vector(l % r)),
+        <span class="kw">match </span>(<span class="self">self</span>, rhs) {
+            (Obj::Vector(l), Obj::Vector(r)) =&gt; <span class="prelude-val">Ok</span>(Obj::Vector((l % r)<span class="question-mark">?</span>)),
             <span class="kw">_ </span>=&gt; <span class="macro">internal_err!</span>(),
         }
     }
@@ -1910,8 +1910,8 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
     <span class="kw">type </span>Output = EvalResult;
 
     <span class="kw">fn </span>bitor(<span class="self">self</span>, rhs: <span class="self">Self</span>) -&gt; <span class="self">Self</span>::Output {
-        <span class="kw">match </span>(<span class="self">self</span>.as_logical()<span class="question-mark">?</span>, rhs.as_logical()<span class="question-mark">?</span>) {
-            (Obj::Vector(l), Obj::Vector(r)) =&gt; <span class="prelude-val">Ok</span>(Obj::Vector(l | r)),
+        <span class="kw">match </span>(<span class="self">self</span>, rhs) {
+            (Obj::Vector(l), Obj::Vector(r)) =&gt; <span class="prelude-val">Ok</span>(Obj::Vector((l | r)<span class="question-mark">?</span>)),
             <span class="kw">_ </span>=&gt; <span class="macro">internal_err!</span>(),
         }
     }
@@ -1921,8 +1921,8 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
     <span class="kw">type </span>Output = EvalResult;
 
     <span class="kw">fn </span>bitand(<span class="self">self</span>, rhs: <span class="self">Self</span>) -&gt; <span class="self">Self</span>::Output {
-        <span class="kw">match </span>(<span class="self">self</span>.as_logical()<span class="question-mark">?</span>, rhs.as_logical()<span class="question-mark">?</span>) {
-            (Obj::Vector(l), Obj::Vector(r)) =&gt; <span class="prelude-val">Ok</span>(Obj::Vector(l &amp; r)),
+        <span class="kw">match </span>(<span class="self">self</span>, rhs) {
+            (Obj::Vector(l), Obj::Vector(r)) =&gt; <span class="prelude-val">Ok</span>(Obj::Vector((l &amp; r)<span class="question-mark">?</span>)),
             <span class="kw">_ </span>=&gt; <span class="macro">internal_err!</span>(),
         }
     }
@@ -1932,28 +1932,28 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
     <span class="kw">type </span>Output = EvalResult;
     <span class="kw">fn </span>vec_gt(<span class="self">self</span>, rhs: <span class="self">Self</span>) -&gt; <span class="self">Self</span>::Output {
         <span class="kw">match </span>(<span class="self">self</span>.as_vector()<span class="question-mark">?</span>, rhs.as_vector()<span class="question-mark">?</span>) {
-            (Obj::Vector(l), Obj::Vector(r)) =&gt; <span class="prelude-val">Ok</span>(Obj::Vector(l.vec_gt(r))),
+            (Obj::Vector(l), Obj::Vector(r)) =&gt; <span class="prelude-val">Ok</span>(Obj::Vector(l.vec_gt(r)<span class="question-mark">?</span>)),
             <span class="kw">_ </span>=&gt; <span class="macro">internal_err!</span>(),
         }
     }
 
     <span class="kw">fn </span>vec_gte(<span class="self">self</span>, rhs: <span class="self">Self</span>) -&gt; <span class="self">Self</span>::Output {
         <span class="kw">match </span>(<span class="self">self</span>.as_vector()<span class="question-mark">?</span>, rhs.as_vector()<span class="question-mark">?</span>) {
-            (Obj::Vector(l), Obj::Vector(r)) =&gt; <span class="prelude-val">Ok</span>(Obj::Vector(l.vec_gte(r))),
+            (Obj::Vector(l), Obj::Vector(r)) =&gt; <span class="prelude-val">Ok</span>(Obj::Vector(l.vec_gte(r)<span class="question-mark">?</span>)),
             <span class="kw">_ </span>=&gt; <span class="macro">internal_err!</span>(),
         }
     }
 
     <span class="kw">fn </span>vec_lt(<span class="self">self</span>, rhs: <span class="self">Self</span>) -&gt; <span class="self">Self</span>::Output {
         <span class="kw">match </span>(<span class="self">self</span>.as_vector()<span class="question-mark">?</span>, rhs.as_vector()<span class="question-mark">?</span>) {
-            (Obj::Vector(l), Obj::Vector(r)) =&gt; <span class="prelude-val">Ok</span>(Obj::Vector(l.vec_lt(r))),
+            (Obj::Vector(l), Obj::Vector(r)) =&gt; <span class="prelude-val">Ok</span>(Obj::Vector(l.vec_lt(r)<span class="question-mark">?</span>)),
             <span class="kw">_ </span>=&gt; <span class="macro">internal_err!</span>(),
         }
     }
 
     <span class="kw">fn </span>vec_lte(<span class="self">self</span>, rhs: <span class="self">Self</span>) -&gt; <span class="self">Self</span>::Output {
         <span class="kw">match </span>(<span class="self">self</span>.as_vector()<span class="question-mark">?</span>, rhs.as_vector()<span class="question-mark">?</span>) {
-            (Obj::Vector(l), Obj::Vector(r)) =&gt; <span class="prelude-val">Ok</span>(Obj::Vector(l.vec_lte(r))),
+            (Obj::Vector(l), Obj::Vector(r)) =&gt; <span class="prelude-val">Ok</span>(Obj::Vector(l.vec_lte(r)<span class="question-mark">?</span>)),
             <span class="kw">_ </span>=&gt; <span class="macro">internal_err!</span>(),
         }
     }
@@ -1965,7 +1965,7 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
             (lhs @ Obj::Function(..), rhs @ Obj::Function(..)) =&gt; <span class="prelude-val">Ok</span>((lhs == rhs).into()),
             (lhs @ Obj::Environment(<span class="kw">_</span>), rhs @ Obj::Environment(<span class="kw">_</span>)) =&gt; <span class="prelude-val">Ok</span>((lhs == rhs).into()),
             (lhs, rhs) =&gt; <span class="kw">match </span>(lhs.as_vector()<span class="question-mark">?</span>, rhs.as_vector()<span class="question-mark">?</span>) {
-                (Obj::Vector(l), Obj::Vector(r)) =&gt; <span class="prelude-val">Ok</span>(Obj::Vector(l.vec_eq(r))),
+                (Obj::Vector(l), Obj::Vector(r)) =&gt; <span class="prelude-val">Ok</span>(Obj::Vector(l.vec_eq(r)<span class="question-mark">?</span>)),
                 <span class="kw">_ </span>=&gt; <span class="macro">internal_err!</span>(),
             },
         }
@@ -1978,7 +1978,7 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
             (lhs @ Obj::Function(..), rhs @ Obj::Function(..)) =&gt; <span class="prelude-val">Ok</span>((lhs != rhs).into()),
             (lhs @ Obj::Environment(<span class="kw">_</span>), rhs @ Obj::Environment(<span class="kw">_</span>)) =&gt; <span class="prelude-val">Ok</span>((lhs != rhs).into()),
             (lhs, rhs) =&gt; <span class="kw">match </span>(lhs.as_vector()<span class="question-mark">?</span>, rhs.as_vector()<span class="question-mark">?</span>) {
-                (Obj::Vector(l), Obj::Vector(r)) =&gt; <span class="prelude-val">Ok</span>(Obj::Vector(l.vec_neq(r))),
+                (Obj::Vector(l), Obj::Vector(r)) =&gt; <span class="prelude-val">Ok</span>(Obj::Vector(l.vec_neq(r)<span class="question-mark">?</span>)),
                 <span class="kw">_ </span>=&gt; <span class="macro">internal_err!</span>(),
             },
         }
@@ -2664,7 +2664,7 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
         <span class="macro">r_expect!</span> {{<span class="string">"
             f = fn(x) x
             a = f((y = 2))
-            a == 2 
+            a == 2
         "</span>}}
     }
 
@@ -2673,7 +2673,7 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
         <span class="macro">r_expect!</span> {{<span class="string">"
             f = fn(x) x
             f((y = 2))
-            y == 2 
+            y == 2
         "</span>}}
     }
 

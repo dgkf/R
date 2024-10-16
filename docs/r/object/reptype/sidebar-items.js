@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":["RepType"],"struct":["IntoIterableRefNames","IntoIterableRefPairs","IntoIterableRefValues","IterablePairs","IterableRefPairs","IterableRefValues","IterableValues","Naming","RepTypeIterableNames"]};
+window.SIDEBAR_ITEMS = {"enum":["RepType"],"struct":["ExactIterSubsetIndices","IntoIterableRefNames","IntoIterableRefPairs","IntoIterableRefValues","IterablePairs","IterableRefPairs","IterableRefValues","IterableValues","Naming","RepTypeIterableNames"]};

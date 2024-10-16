@@ -895,11 +895,56 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
 <a href="#862" id="862">862</a>
 <a href="#863" id="863">863</a>
 <a href="#864" id="864">864</a>
+<a href="#865" id="865">865</a>
+<a href="#866" id="866">866</a>
+<a href="#867" id="867">867</a>
+<a href="#868" id="868">868</a>
+<a href="#869" id="869">869</a>
+<a href="#870" id="870">870</a>
+<a href="#871" id="871">871</a>
+<a href="#872" id="872">872</a>
+<a href="#873" id="873">873</a>
+<a href="#874" id="874">874</a>
+<a href="#875" id="875">875</a>
+<a href="#876" id="876">876</a>
+<a href="#877" id="877">877</a>
+<a href="#878" id="878">878</a>
+<a href="#879" id="879">879</a>
+<a href="#880" id="880">880</a>
+<a href="#881" id="881">881</a>
+<a href="#882" id="882">882</a>
+<a href="#883" id="883">883</a>
+<a href="#884" id="884">884</a>
+<a href="#885" id="885">885</a>
+<a href="#886" id="886">886</a>
+<a href="#887" id="887">887</a>
+<a href="#888" id="888">888</a>
+<a href="#889" id="889">889</a>
+<a href="#890" id="890">890</a>
+<a href="#891" id="891">891</a>
+<a href="#892" id="892">892</a>
+<a href="#893" id="893">893</a>
+<a href="#894" id="894">894</a>
+<a href="#895" id="895">895</a>
+<a href="#896" id="896">896</a>
+<a href="#897" id="897">897</a>
+<a href="#898" id="898">898</a>
+<a href="#899" id="899">899</a>
+<a href="#900" id="900">900</a>
+<a href="#901" id="901">901</a>
+<a href="#902" id="902">902</a>
+<a href="#903" id="903">903</a>
+<a href="#904" id="904">904</a>
+<a href="#905" id="905">905</a>
+<a href="#906" id="906">906</a>
+<a href="#907" id="907">907</a>
+<a href="#908" id="908">908</a>
+<a href="#909" id="909">909</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::cell::{Ref, RefCell, RefMut};
 <span class="kw">use </span>std::fmt::{Debug, Display};
+<span class="kw">use </span>std::iter::repeat;
 
 <span class="kw">use </span><span class="kw">super</span>::coercion::{AtomicMode, CoercibleInto, CommonCmp, CommonNum, MinimallyNumeric};
-<span class="kw">use </span><span class="kw">super</span>::iterators::{map_common_numeric, zip_recycle};
 <span class="kw">use </span><span class="kw">super</span>::reptype::{
     IntoIterableRefNames, IntoIterableRefPairs, IntoIterableRefValues, IterablePairs,
     IterableValues, Naming, RepType,
@@ -907,6 +952,7 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
 <span class="kw">use </span><span class="kw">super</span>::subset::Subset;
 <span class="kw">use </span><span class="kw">super</span>::types::<span class="kw-2">*</span>;
 <span class="kw">use super</span>::{OptionNA, Pow, VecPartialCmp};
+<span class="kw">use </span><span class="kw">crate</span>::error::Error;
 <span class="kw">use </span><span class="kw">crate</span>::lang::Signal;
 <span class="kw">use </span><span class="kw">crate</span>::object::{CowObj, Obj, Subsets, ViewMut};
 
@@ -961,6 +1007,18 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
 <span class="kw">where
     </span>T: Clone + Default,
 {
+    <span class="doccomment">/// Return the only value if the vector has length 1.
+    </span><span class="kw">pub fn </span>as_scalar(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;T&gt; {
+        <span class="kw">let </span><span class="kw-2">mut </span>into_iter = <span class="self">self</span>.values_ref();
+        <span class="kw">let </span><span class="kw-2">mut </span>iter = into_iter.iter();
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(x) = iter.next() {
+            <span class="kw">if </span>iter.next().is_none() {
+                <span class="kw">return </span><span class="prelude-val">Some</span>(x.clone());
+            }
+        };
+        <span class="prelude-val">None
+    </span>}
+
     <span class="kw">pub fn </span>borrow(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Ref&lt;RepType&lt;T&gt;&gt; {
         <span class="self">self</span>.<span class="number">0</span>.borrow()
     }
@@ -1133,12 +1191,17 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
         <span class="self">self</span>.borrow().push_named(name, value)
     }
 
-    <span class="kw">pub fn </span>assign&lt;R&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, value: Rep&lt;R&gt;) -&gt; <span class="self">Self
-    </span><span class="kw">where
+    <span class="doccomment">/// Assign to the vector, often with a view through a Subset.
+    /// An error is thrown if the lengths are not compatible.
+    </span><span class="kw">pub fn </span>assign&lt;R&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, value: Rep&lt;R&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Signal&gt;
+    <span class="kw">where
         </span>T: From&lt;R&gt; + Clone,
         R: Clone + Default,
     {
-        <span class="self">self</span>.<span class="number">0</span>.borrow_mut().assign(value.<span class="number">0</span>.into_inner()).into()
+        <span class="self">self</span>.<span class="number">0
+            </span>.borrow_mut()
+            .assign(value.<span class="number">0</span>.into_inner())
+            .map(|x| x.into())
     }
     <span class="doccomment">/// Test the mode of the internal vector type
     ///
@@ -1236,27 +1299,6 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
     {
         <span class="self">self</span>.as_mode::&lt;Character&gt;()
     }
-
-    <span class="doccomment">/// Apply over the vector contents to produce a vector of [std::cmp::Ordering]
-    ///
-    /// This function is used primarily in support of the implementation of
-    /// vectorized comparison operators and likely does not need to be used
-    /// outside of that context.
-    ///
-    /// See [crate::object::vector::VecPartialCmp] for vectorized comparison
-    /// operator implementations.
-    ///
-    </span><span class="kw">pub fn </span>vectorized_partial_cmp&lt;R, C&gt;(<span class="self">self</span>, other: Rep&lt;R&gt;) -&gt; Vec&lt;<span class="prelude-ty">Option</span>&lt;std::cmp::Ordering&gt;&gt;
-    <span class="kw">where
-        </span>T: AtomicMode + Default + Clone + CoercibleInto&lt;C&gt;,
-        R: AtomicMode + Default + Clone + CoercibleInto&lt;C&gt;,
-        (T, R): CommonCmp&lt;Common = C&gt;,
-        C: PartialOrd,
-    {
-        <span class="self">self</span>.<span class="number">0
-            </span>.into_inner()
-            .vectorized_partial_cmp(other.<span class="number">0</span>.into_inner())
-    }
 }
 
 <span class="kw">impl</span>&lt;T&gt; Default <span class="kw">for </span>Rep&lt;T&gt;
@@ -1265,6 +1307,15 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
 {
     <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
         Rep(RefCell::new(RepType::default()))
+    }
+}
+
+<span class="kw">impl</span>&lt;T&gt; From&lt;Vec&lt;T&gt;&gt; <span class="kw">for </span>Rep&lt;T&gt;
+<span class="kw">where
+    </span>T: Clone + Default,
+{
+    <span class="kw">fn </span>from(rep: Vec&lt;T&gt;) -&gt; <span class="self">Self </span>{
+        Rep(RefCell::new(RepType::from(CowObj::from(rep))))
     }
 }
 
@@ -1313,20 +1364,8 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
     }
 }
 
-<span class="kw">impl </span>From&lt;Vec&lt;OptionNA&lt;f64&gt;&gt;&gt; <span class="kw">for </span>Rep&lt;Double&gt; {
-    <span class="kw">fn </span>from(value: Vec&lt;OptionNA&lt;f64&gt;&gt;) -&gt; <span class="self">Self </span>{
-        Rep(RefCell::new(value.into()))
-    }
-}
-
 <span class="kw">impl </span>From&lt;Vec&lt;f64&gt;&gt; <span class="kw">for </span>Rep&lt;Double&gt; {
     <span class="kw">fn </span>from(value: Vec&lt;f64&gt;) -&gt; <span class="self">Self </span>{
-        Rep(RefCell::new(value.into()))
-    }
-}
-
-<span class="kw">impl </span>From&lt;Vec&lt;OptionNA&lt;i32&gt;&gt;&gt; <span class="kw">for </span>Rep&lt;Integer&gt; {
-    <span class="kw">fn </span>from(value: Vec&lt;OptionNA&lt;i32&gt;&gt;) -&gt; <span class="self">Self </span>{
         Rep(RefCell::new(value.into()))
     }
 }
@@ -1337,20 +1376,8 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
     }
 }
 
-<span class="kw">impl </span>From&lt;Vec&lt;OptionNA&lt;bool&gt;&gt;&gt; <span class="kw">for </span>Rep&lt;Logical&gt; {
-    <span class="kw">fn </span>from(value: Vec&lt;OptionNA&lt;bool&gt;&gt;) -&gt; <span class="self">Self </span>{
-        Rep(RefCell::new(value.into()))
-    }
-}
-
 <span class="kw">impl </span>From&lt;Vec&lt;bool&gt;&gt; <span class="kw">for </span>Rep&lt;Logical&gt; {
     <span class="kw">fn </span>from(value: Vec&lt;bool&gt;) -&gt; <span class="self">Self </span>{
-        Rep(RefCell::new(value.into()))
-    }
-}
-
-<span class="kw">impl </span>From&lt;Vec&lt;OptionNA&lt;String&gt;&gt;&gt; <span class="kw">for </span>Rep&lt;Character&gt; {
-    <span class="kw">fn </span>from(value: Vec&lt;OptionNA&lt;String&gt;&gt;) -&gt; <span class="self">Self </span>{
         Rep(RefCell::new(value.into()))
     }
 }
@@ -1496,10 +1523,13 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
     RepType&lt;O&gt;: From&lt;Vec&lt;O&gt;&gt;,
     O: Clone,
 {
-    <span class="kw">type </span>Output = Rep&lt;O&gt;;
+    <span class="kw">type </span>Output = <span class="prelude-ty">Result</span>&lt;Rep&lt;O&gt;, Signal&gt;;
     <span class="kw">fn </span>neg(<span class="self">self</span>) -&gt; <span class="self">Self</span>::Output {
-        <span class="kw">let </span>result = -(<span class="self">self</span>.<span class="number">0</span>.into_inner());
-        Rep(RefCell::new(result))
+        <span class="kw">let </span>result: Vec&lt;O&gt; = <span class="self">self
+            </span>.iter_values()
+            .map(|x| -(CoercibleInto::&lt;LNum&gt;::coerce_into(x)))
+            .collect();
+        <span class="prelude-val">Ok</span>(Rep(RefCell::new(result.into())))
     }
 }
 
@@ -1508,26 +1538,13 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
     </span>L: AtomicMode + Default + Clone + MinimallyNumeric&lt;As = LNum&gt; + CoercibleInto&lt;LNum&gt;,
     R: AtomicMode + Default + Clone + MinimallyNumeric&lt;As = RNum&gt; + CoercibleInto&lt;RNum&gt;,
     (LNum, RNum): CommonNum&lt;Common = C&gt;,
-    C: Clone + std::ops::Add&lt;Output = O&gt;,
-    RepType&lt;C&gt;: From&lt;Vec&lt;O&gt;&gt;,
+    C: Clone + std::ops::Add&lt;Output = O&gt; + Default,
+    Rep&lt;C&gt;: From&lt;Vec&lt;O&gt;&gt;,
+    O: Clone + Default,
 {
-    <span class="kw">type </span>Output = Rep&lt;C&gt;;
+    <span class="kw">type </span>Output = <span class="prelude-ty">Result</span>&lt;Rep&lt;C&gt;, Signal&gt;;
     <span class="kw">fn </span>add(<span class="self">self</span>, rhs: Rep&lt;R&gt;) -&gt; <span class="self">Self</span>::Output {
-        <span class="kw">let </span>lc = <span class="self">self</span>.inner().clone();
-        <span class="kw">let </span>lb = lc.borrow();
-        <span class="kw">let </span>lhs = lb.iter();
-
-        <span class="kw">let </span>rc = rhs.inner().clone();
-        <span class="kw">let </span>rb = rc.borrow();
-        <span class="kw">let </span>rhs = rb.iter();
-
-        <span class="kw">let </span>result = RepType::from(
-            map_common_numeric(zip_recycle(lhs, rhs))
-                .map(|(l, r)| l + r)
-                .collect::&lt;Vec&lt;O&gt;&gt;(),
-        );
-
-        Rep(RefCell::new(result))
+        try_binary_num_op(<span class="self">self</span>, rhs, |x, y| x + y)
     }
 }
 
@@ -1536,15 +1553,13 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
     </span>L: AtomicMode + Default + Clone + MinimallyNumeric&lt;As = LNum&gt; + CoercibleInto&lt;LNum&gt;,
     R: AtomicMode + Default + Clone + MinimallyNumeric&lt;As = RNum&gt; + CoercibleInto&lt;RNum&gt;,
     (LNum, RNum): CommonNum&lt;Common = C&gt;,
-    C: std::ops::Sub&lt;Output = O&gt;,
-    RepType&lt;C&gt;: From&lt;Vec&lt;O&gt;&gt;,
-    O: Clone,
-    C: Clone,
+    C: Clone + std::ops::Sub&lt;Output = O&gt; + Default,
+    Rep&lt;C&gt;: From&lt;Vec&lt;O&gt;&gt;,
+    O: Clone + Default,
 {
-    <span class="kw">type </span>Output = Rep&lt;C&gt;;
+    <span class="kw">type </span>Output = <span class="prelude-ty">Result</span>&lt;Rep&lt;C&gt;, Signal&gt;;
     <span class="kw">fn </span>sub(<span class="self">self</span>, rhs: Rep&lt;R&gt;) -&gt; <span class="self">Self</span>::Output {
-        <span class="kw">let </span>result = (<span class="self">self</span>.<span class="number">0</span>.into_inner()) - (rhs.<span class="number">0</span>.into_inner());
-        Rep(RefCell::new(result))
+        try_binary_num_op(<span class="self">self</span>, rhs, |x, y| x - y)
     }
 }
 
@@ -1553,17 +1568,13 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
     </span>L: AtomicMode + Default + Clone + MinimallyNumeric&lt;As = LNum&gt; + CoercibleInto&lt;LNum&gt;,
     R: AtomicMode + Default + Clone + MinimallyNumeric&lt;As = RNum&gt; + CoercibleInto&lt;RNum&gt;,
     (LNum, RNum): CommonNum&lt;Common = C&gt;,
-    C: std::ops::Mul&lt;Output = O&gt;,
-    RepType&lt;C&gt;: From&lt;Vec&lt;O&gt;&gt;,
-    O: Clone,
-    C: Clone,
+    C: Clone + std::ops::Mul&lt;Output = O&gt; + Default,
+    Rep&lt;C&gt;: From&lt;Vec&lt;O&gt;&gt;,
+    O: Clone + Default,
 {
-    <span class="kw">type </span>Output = Rep&lt;C&gt;;
+    <span class="kw">type </span>Output = <span class="prelude-ty">Result</span>&lt;Rep&lt;C&gt;, Signal&gt;;
     <span class="kw">fn </span>mul(<span class="self">self</span>, rhs: Rep&lt;R&gt;) -&gt; <span class="self">Self</span>::Output {
-        <span class="kw">use </span>std::ops::Mul;
-        <span class="kw">let </span>result = Mul::mul(<span class="self">self</span>.<span class="number">0</span>.into_inner(), rhs.<span class="number">0</span>.into_inner());
-
-        Rep(RefCell::new(result))
+        try_binary_num_op(<span class="self">self</span>, rhs, |x, y| x * y)
     }
 }
 
@@ -1572,15 +1583,13 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
     </span>L: AtomicMode + Default + Clone + MinimallyNumeric&lt;As = LNum&gt; + CoercibleInto&lt;LNum&gt;,
     R: AtomicMode + Default + Clone + MinimallyNumeric&lt;As = RNum&gt; + CoercibleInto&lt;RNum&gt;,
     (LNum, RNum): CommonNum&lt;Common = C&gt;,
-    C: std::ops::Div&lt;Output = O&gt;,
-    RepType&lt;C&gt;: From&lt;Vec&lt;O&gt;&gt;,
-    O: Clone,
-    C: Clone,
+    C: Clone + std::ops::Div&lt;Output = O&gt; + Default,
+    Rep&lt;C&gt;: From&lt;Vec&lt;O&gt;&gt;,
+    O: Clone + Default,
 {
-    <span class="kw">type </span>Output = Rep&lt;C&gt;;
+    <span class="kw">type </span>Output = <span class="prelude-ty">Result</span>&lt;Rep&lt;C&gt;, Signal&gt;;
     <span class="kw">fn </span>div(<span class="self">self</span>, rhs: Rep&lt;R&gt;) -&gt; <span class="self">Self</span>::Output {
-        <span class="kw">let </span>result = (<span class="self">self</span>.<span class="number">0</span>.into_inner()) / (rhs.<span class="number">0</span>.into_inner());
-        Rep(RefCell::new(result))
+        try_binary_num_op(<span class="self">self</span>, rhs, |x, y| x / y)
     }
 }
 
@@ -1589,18 +1598,13 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
     </span>L: AtomicMode + Default + Clone + MinimallyNumeric&lt;As = LNum&gt; + CoercibleInto&lt;LNum&gt;,
     R: AtomicMode + Default + Clone + MinimallyNumeric&lt;As = RNum&gt; + CoercibleInto&lt;RNum&gt;,
     (LNum, RNum): CommonNum&lt;Common = C&gt;,
-    C: std::ops::Rem&lt;Output = O&gt;,
-    RepType&lt;C&gt;: From&lt;Vec&lt;O&gt;&gt;,
-    L: Clone,
-    R: Clone,
-    C: Clone,
-    O: Clone,
+    C: Clone + std::ops::Rem&lt;Output = O&gt; + Default,
+    Rep&lt;C&gt;: From&lt;Vec&lt;O&gt;&gt;,
+    O: Clone + Default,
 {
-    <span class="kw">type </span>Output = Rep&lt;C&gt;;
+    <span class="kw">type </span>Output = <span class="prelude-ty">Result</span>&lt;Rep&lt;C&gt;, Signal&gt;;
     <span class="kw">fn </span>rem(<span class="self">self</span>, rhs: Rep&lt;R&gt;) -&gt; <span class="self">Self</span>::Output {
-        <span class="kw">pub use </span>std::ops::Rem;
-        <span class="kw">let </span>result = Rem::rem(<span class="self">self</span>.<span class="number">0</span>.into_inner(), rhs.<span class="number">0</span>.into_inner());
-        Rep(RefCell::new(result))
+        try_binary_num_op(<span class="self">self</span>, rhs, |x, y| x % y)
     }
 }
 
@@ -1608,155 +1612,241 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
 <span class="kw">where
     </span>L: AtomicMode + Default + Clone + MinimallyNumeric&lt;As = LNum&gt; + CoercibleInto&lt;LNum&gt;,
     R: AtomicMode + Default + Clone + MinimallyNumeric&lt;As = RNum&gt; + CoercibleInto&lt;RNum&gt;,
-    LNum: Pow&lt;RNum, Output = O&gt;,
-    RepType&lt;O&gt;: From&lt;Vec&lt;O&gt;&gt;,
+    (LNum, RNum): CommonNum&lt;Common = O&gt;,
+    O: Pow&lt;O, Output = O&gt;,
+    Rep&lt;O&gt;: From&lt;Vec&lt;O&gt;&gt;,
+    O: Default,
     L: Clone,
     R: Clone,
     O: Clone,
 {
-    <span class="kw">type </span>Output = Rep&lt;O&gt;;
+    <span class="kw">type </span>Output = <span class="prelude-ty">Result</span>&lt;Rep&lt;O&gt;, Signal&gt;;
     <span class="kw">fn </span>power(<span class="self">self</span>, rhs: Rep&lt;R&gt;) -&gt; <span class="self">Self</span>::Output {
-        <span class="kw">let </span>result = Pow::power(<span class="self">self</span>.<span class="number">0</span>.into_inner(), rhs.<span class="number">0</span>.into_inner());
-        Rep(RefCell::new(result))
+        try_binary_num_op(<span class="self">self</span>, rhs, |x, y| Pow::power(x, y))
     }
 }
 
-<span class="kw">impl</span>&lt;L, R, O&gt; std::ops::BitOr&lt;Rep&lt;R&gt;&gt; <span class="kw">for </span>Rep&lt;L&gt;
+<span class="kw">impl</span>&lt;L, R&gt; std::ops::BitOr&lt;Rep&lt;R&gt;&gt; <span class="kw">for </span>Rep&lt;L&gt;
 <span class="kw">where
     </span>L: AtomicMode + Default + Clone + CoercibleInto&lt;Logical&gt;,
     R: AtomicMode + Default + Clone + CoercibleInto&lt;Logical&gt;,
-    Logical: std::ops::BitOr&lt;Logical, Output = O&gt;,
-    RepType&lt;O&gt;: From&lt;Vec&lt;O&gt;&gt;,
-    L: Clone,
-    R: Clone,
-    O: Clone,
 {
-    <span class="kw">type </span>Output = Rep&lt;O&gt;;
+    <span class="kw">type </span>Output = <span class="prelude-ty">Result</span>&lt;Rep&lt;Logical&gt;, Signal&gt;;
     <span class="kw">fn </span>bitor(<span class="self">self</span>, rhs: Rep&lt;R&gt;) -&gt; <span class="self">Self</span>::Output {
-        <span class="kw">let </span>result: RepType&lt;O&gt; = (<span class="self">self</span>.<span class="number">0</span>.into_inner()) | (rhs.<span class="number">0</span>.into_inner());
-        Rep(RefCell::new(result))
+        try_binary_lgl_op(<span class="self">self</span>, rhs, |x, y| x | y)
     }
 }
 
-<span class="kw">impl</span>&lt;L, R, O&gt; std::ops::BitAnd&lt;Rep&lt;R&gt;&gt; <span class="kw">for </span>Rep&lt;L&gt;
+<span class="kw">impl</span>&lt;L, R&gt; std::ops::BitAnd&lt;Rep&lt;R&gt;&gt; <span class="kw">for </span>Rep&lt;L&gt;
 <span class="kw">where
     </span>L: AtomicMode + Default + Clone + CoercibleInto&lt;Logical&gt;,
     R: AtomicMode + Default + Clone + CoercibleInto&lt;Logical&gt;,
-    Logical: std::ops::BitAnd&lt;Logical, Output = O&gt;,
-    RepType&lt;O&gt;: From&lt;Vec&lt;O&gt;&gt;,
-    L: Clone,
-    R: Clone,
-    O: Clone,
 {
-    <span class="kw">type </span>Output = Rep&lt;O&gt;;
+    <span class="kw">type </span>Output = <span class="prelude-ty">Result</span>&lt;Rep&lt;Logical&gt;, Signal&gt;;
     <span class="kw">fn </span>bitand(<span class="self">self</span>, rhs: Rep&lt;R&gt;) -&gt; <span class="self">Self</span>::Output {
-        <span class="kw">let </span>result: RepType&lt;O&gt; = (<span class="self">self</span>.<span class="number">0</span>.into_inner()) &amp; (rhs.<span class="number">0</span>.into_inner());
-        Rep(RefCell::new(result))
+        try_binary_lgl_op(<span class="self">self</span>, rhs, |x, y| x &amp; y)
     }
 }
 
-<span class="kw">impl</span>&lt;L, O&gt; std::ops::Not <span class="kw">for </span>Rep&lt;L&gt;
+<span class="kw">impl</span>&lt;L&gt; std::ops::Not <span class="kw">for </span>Rep&lt;L&gt;
 <span class="kw">where
     </span>L: AtomicMode + Default + Clone + CoercibleInto&lt;Logical&gt;,
-    Logical: std::ops::Not&lt;Output = O&gt;,
-    RepType&lt;O&gt;: From&lt;Vec&lt;O&gt;&gt;,
-    O: Clone,
 {
-    <span class="kw">type </span>Output = Rep&lt;O&gt;;
+    <span class="kw">type </span>Output = <span class="prelude-ty">Result</span>&lt;Rep&lt;Logical&gt;, Signal&gt;;
     <span class="kw">fn </span>not(<span class="self">self</span>) -&gt; <span class="self">Self</span>::Output {
-        <span class="kw">let </span>result: RepType&lt;O&gt; = !<span class="self">self</span>.<span class="number">0</span>.into_inner();
-        Rep(RefCell::new(result))
+        <span class="kw">let </span>result: Vec&lt;Logical&gt; = <span class="self">self
+            </span>.iter_values()
+            .map(|x| !(CoercibleInto::&lt;Logical&gt;::coerce_into(x)))
+            .collect();
+        <span class="prelude-val">Ok</span>(Rep(RefCell::new(result.into())))
     }
 }
 
 <span class="kw">impl</span>&lt;L, R, C&gt; VecPartialCmp&lt;Rep&lt;R&gt;&gt; <span class="kw">for </span>Rep&lt;L&gt;
 <span class="kw">where
-    </span>L: AtomicMode + Default + Clone + CoercibleInto&lt;C&gt;,
-    R: AtomicMode + Default + Clone + CoercibleInto&lt;C&gt;,
+    </span>L: AtomicMode + Default + Clone + CoercibleInto&lt;C&gt; + Clone,
+    R: AtomicMode + Default + Clone + CoercibleInto&lt;C&gt; + Clone,
     (L, R): CommonCmp&lt;Common = C&gt;,
-    C: PartialOrd,
-    L: Clone,
-    R: Clone,
-    C: Clone,
+    C: PartialOrd + Clone + Default,
 {
-    <span class="kw">type </span>Output = Rep&lt;Logical&gt;;
+    <span class="kw">type </span>Output = <span class="prelude-ty">Result</span>&lt;Rep&lt;Logical&gt;, Signal&gt;;
 
     <span class="kw">fn </span>vec_gt(<span class="self">self</span>, rhs: Rep&lt;R&gt;) -&gt; <span class="self">Self</span>::Output {
         <span class="kw">use </span>std::cmp::Ordering::<span class="kw-2">*</span>;
-        <span class="self">self</span>.vectorized_partial_cmp(rhs)
-            .into_iter()
-            .map(|i| <span class="kw">match </span>i {
-                <span class="prelude-val">Some</span>(Greater) =&gt; OptionNA::Some(<span class="bool-val">true</span>),
-                <span class="prelude-val">Some</span>(<span class="kw">_</span>) =&gt; OptionNA::Some(<span class="bool-val">false</span>),
-                <span class="prelude-val">None </span>=&gt; OptionNA::NA,
-            })
-            .collect::&lt;Vec&lt;Logical&gt;&gt;()
-            .into()
+        try_binary_cmp_op(<span class="self">self</span>, rhs, |i| <span class="kw">match </span>i {
+            <span class="prelude-val">Some</span>(Greater) =&gt; OptionNA::Some(<span class="bool-val">true</span>),
+            <span class="prelude-val">Some</span>(<span class="kw">_</span>) =&gt; OptionNA::Some(<span class="bool-val">false</span>),
+            <span class="prelude-val">None </span>=&gt; OptionNA::NA,
+        })
     }
 
     <span class="kw">fn </span>vec_gte(<span class="self">self</span>, rhs: Rep&lt;R&gt;) -&gt; <span class="self">Self</span>::Output {
         <span class="kw">use </span>std::cmp::Ordering::<span class="kw-2">*</span>;
-        <span class="self">self</span>.vectorized_partial_cmp(rhs)
-            .into_iter()
-            .map(|i| <span class="kw">match </span>i {
-                <span class="prelude-val">Some</span>(Greater | Equal) =&gt; OptionNA::Some(<span class="bool-val">true</span>),
-                <span class="prelude-val">Some</span>(<span class="kw">_</span>) =&gt; OptionNA::Some(<span class="bool-val">false</span>),
-                <span class="prelude-val">None </span>=&gt; OptionNA::NA,
-            })
-            .collect::&lt;Vec&lt;Logical&gt;&gt;()
-            .into()
+        try_binary_cmp_op(<span class="self">self</span>, rhs, |i| <span class="kw">match </span>i {
+            <span class="prelude-val">Some</span>(Greater | Equal) =&gt; OptionNA::Some(<span class="bool-val">true</span>),
+            <span class="prelude-val">Some</span>(<span class="kw">_</span>) =&gt; OptionNA::Some(<span class="bool-val">false</span>),
+            <span class="prelude-val">None </span>=&gt; OptionNA::NA,
+        })
     }
 
     <span class="kw">fn </span>vec_lt(<span class="self">self</span>, rhs: Rep&lt;R&gt;) -&gt; <span class="self">Self</span>::Output {
         <span class="kw">use </span>std::cmp::Ordering::<span class="kw-2">*</span>;
-        <span class="self">self</span>.vectorized_partial_cmp(rhs)
-            .into_iter()
-            .map(|i| <span class="kw">match </span>i {
-                <span class="prelude-val">Some</span>(Less) =&gt; OptionNA::Some(<span class="bool-val">true</span>),
-                <span class="prelude-val">Some</span>(<span class="kw">_</span>) =&gt; OptionNA::Some(<span class="bool-val">false</span>),
-                <span class="prelude-val">None </span>=&gt; OptionNA::NA,
-            })
-            .collect::&lt;Vec&lt;Logical&gt;&gt;()
-            .into()
+        try_binary_cmp_op(<span class="self">self</span>, rhs, |i| <span class="kw">match </span>i {
+            <span class="prelude-val">Some</span>(Less) =&gt; OptionNA::Some(<span class="bool-val">true</span>),
+            <span class="prelude-val">Some</span>(<span class="kw">_</span>) =&gt; OptionNA::Some(<span class="bool-val">false</span>),
+            <span class="prelude-val">None </span>=&gt; OptionNA::NA,
+        })
     }
 
     <span class="kw">fn </span>vec_lte(<span class="self">self</span>, rhs: Rep&lt;R&gt;) -&gt; <span class="self">Self</span>::Output {
         <span class="kw">use </span>std::cmp::Ordering::<span class="kw-2">*</span>;
-        <span class="self">self</span>.vectorized_partial_cmp(rhs)
-            .into_iter()
-            .map(|i| <span class="kw">match </span>i {
-                <span class="prelude-val">Some</span>(Less | Equal) =&gt; OptionNA::Some(<span class="bool-val">true</span>),
-                <span class="prelude-val">Some</span>(<span class="kw">_</span>) =&gt; OptionNA::Some(<span class="bool-val">false</span>),
-                <span class="prelude-val">None </span>=&gt; OptionNA::NA,
-            })
-            .collect::&lt;Vec&lt;Logical&gt;&gt;()
-            .into()
+        try_binary_cmp_op(<span class="self">self</span>, rhs, |i| <span class="kw">match </span>i {
+            <span class="prelude-val">Some</span>(Less | Equal) =&gt; OptionNA::Some(<span class="bool-val">true</span>),
+            <span class="prelude-val">Some</span>(<span class="kw">_</span>) =&gt; OptionNA::Some(<span class="bool-val">false</span>),
+            <span class="prelude-val">None </span>=&gt; OptionNA::NA,
+        })
     }
 
     <span class="kw">fn </span>vec_eq(<span class="self">self</span>, rhs: Rep&lt;R&gt;) -&gt; <span class="self">Self</span>::Output {
         <span class="kw">use </span>std::cmp::Ordering::<span class="kw-2">*</span>;
-        <span class="self">self</span>.vectorized_partial_cmp(rhs)
-            .into_iter()
-            .map(|i| <span class="kw">match </span>i {
-                <span class="prelude-val">Some</span>(Equal) =&gt; OptionNA::Some(<span class="bool-val">true</span>),
-                <span class="prelude-val">Some</span>(<span class="kw">_</span>) =&gt; OptionNA::Some(<span class="bool-val">false</span>),
-                <span class="prelude-val">None </span>=&gt; OptionNA::NA,
-            })
-            .collect::&lt;Vec&lt;Logical&gt;&gt;()
-            .into()
+        try_binary_cmp_op(<span class="self">self</span>, rhs, |i| <span class="kw">match </span>i {
+            <span class="prelude-val">Some</span>(Equal) =&gt; OptionNA::Some(<span class="bool-val">true</span>),
+            <span class="prelude-val">Some</span>(<span class="kw">_</span>) =&gt; OptionNA::Some(<span class="bool-val">false</span>),
+            <span class="prelude-val">None </span>=&gt; OptionNA::NA,
+        })
     }
 
     <span class="kw">fn </span>vec_neq(<span class="self">self</span>, rhs: Rep&lt;R&gt;) -&gt; <span class="self">Self</span>::Output {
         <span class="kw">use </span>std::cmp::Ordering::<span class="kw-2">*</span>;
-        <span class="self">self</span>.vectorized_partial_cmp(rhs)
-            .into_iter()
-            .map(|i| <span class="kw">match </span>i {
-                <span class="prelude-val">Some</span>(Equal) =&gt; OptionNA::Some(<span class="bool-val">false</span>),
-                <span class="prelude-val">Some</span>(<span class="kw">_</span>) =&gt; OptionNA::Some(<span class="bool-val">true</span>),
-                <span class="prelude-val">None </span>=&gt; OptionNA::NA,
-            })
-            .collect::&lt;Vec&lt;Logical&gt;&gt;()
-            .into()
+        try_binary_cmp_op(<span class="self">self</span>, rhs, |i| <span class="kw">match </span>i {
+            <span class="prelude-val">Some</span>(Equal) =&gt; OptionNA::Some(<span class="bool-val">false</span>),
+            <span class="prelude-val">Some</span>(<span class="kw">_</span>) =&gt; OptionNA::Some(<span class="bool-val">true</span>),
+            <span class="prelude-val">None </span>=&gt; OptionNA::NA,
+        })
     }
+}
+
+<span class="doccomment">/// This function applies a function `g` to pairs from lhs and rhs.
+/// The function returns an error when the lengths are not compatible.
+</span><span class="kw">fn </span>try_recycle_then&lt;L, R, O, F, A&gt;(lhs: Rep&lt;L&gt;, rhs: Rep&lt;R&gt;, g: F) -&gt; <span class="prelude-ty">Result</span>&lt;Rep&lt;A&gt;, Signal&gt;
+<span class="kw">where
+    </span>L: Clone + Default,
+    R: Clone + Default,
+    Rep&lt;A&gt;: From&lt;Vec&lt;O&gt;&gt;,
+    O: Clone + Default,
+    A: Clone,
+    F: Fn(L, R) -&gt; O,
+{
+    <span class="kw">match </span>(lhs.as_scalar(), rhs.as_scalar()) {
+        (<span class="prelude-val">Some</span>(l), <span class="prelude-val">Some</span>(r)) =&gt; {
+            <span class="kw">let </span>result: Vec&lt;O&gt; = <span class="macro">vec!</span>[g(l, r)];
+            <span class="prelude-val">Ok</span>(Rep::from(result))
+        }
+        (<span class="prelude-val">Some</span>(l), <span class="prelude-val">None</span>) =&gt; {
+            <span class="kw">let </span>result: Vec&lt;O&gt; = repeat(l)
+                .zip(rhs.iter_values())
+                .map(|(l, r)| g(l, r))
+                .collect();
+            <span class="kw">if </span>result.is_empty() {
+                <span class="kw">return </span><span class="prelude-val">Err</span>(Signal::Error(Error::NonRecyclableLengths(<span class="number">1</span>, <span class="number">0</span>)));
+            }
+            <span class="prelude-val">Ok</span>(Rep::from(result))
+        }
+        (<span class="prelude-val">None</span>, <span class="prelude-val">Some</span>(r)) =&gt; {
+            <span class="kw">let </span>result: Vec&lt;O&gt; = lhs
+                .iter_values()
+                .zip(repeat(r))
+                .map(|(l, r)| g(l, r))
+                .collect();
+            <span class="kw">if </span>result.is_empty() {
+                <span class="kw">return </span><span class="prelude-val">Err</span>(Signal::Error(Error::NonRecyclableLengths(<span class="number">0</span>, <span class="number">1</span>)));
+            }
+            <span class="prelude-val">Ok</span>(Rep::from(result))
+        }
+        (<span class="prelude-val">None</span>, <span class="prelude-val">None</span>) =&gt; {
+            <span class="kw">let </span><span class="kw-2">mut </span>lc = lhs.iter_values();
+            <span class="kw">let </span><span class="kw-2">mut </span>rc = rhs.iter_values();
+
+            <span class="kw">let </span>max_size = std::cmp::max(lc.size_hint().<span class="number">0</span>, rc.size_hint().<span class="number">0</span>);
+
+            <span class="kw">let </span><span class="kw-2">mut </span>result: Vec&lt;O&gt; = Vec::with_capacity(max_size);
+
+            <span class="kw">loop </span>{
+                <span class="kw">match </span>(lc.next(), rc.next()) {
+                    (<span class="prelude-val">Some</span>(l), <span class="prelude-val">Some</span>(r)) =&gt; result.push(g(l, r)),
+                    (<span class="prelude-val">Some</span>(<span class="kw">_</span>), <span class="prelude-val">None</span>) =&gt; {
+                        <span class="kw">return </span><span class="prelude-val">Err</span>(Signal::Error(Error::NonRecyclableLengths(
+                            result.len() + <span class="number">1 </span>+ lc.count(),
+                            result.len(),
+                        )));
+                    }
+                    (<span class="prelude-val">None</span>, <span class="prelude-val">Some</span>(<span class="kw">_</span>)) =&gt; {
+                        <span class="kw">return </span><span class="prelude-val">Err</span>(Signal::Error(Error::NonRecyclableLengths(
+                            result.len(),
+                            result.len() + <span class="number">1 </span>+ rc.count(),
+                        )));
+                    }
+                    (<span class="prelude-val">None</span>, <span class="prelude-val">None</span>) =&gt; <span class="kw">return </span><span class="prelude-val">Ok</span>(Rep::from(result)),
+                }
+            }
+        }
+    }
+}
+
+<span class="kw">fn </span>try_binary_num_op&lt;L, R, C, O, LNum, RNum, F&gt;(
+    lhs: Rep&lt;L&gt;,
+    rhs: Rep&lt;R&gt;,
+    f: F,
+) -&gt; <span class="prelude-ty">Result</span>&lt;Rep&lt;C&gt;, Signal&gt;
+<span class="kw">where
+    </span>L: Default + Clone + MinimallyNumeric&lt;As = LNum&gt; + CoercibleInto&lt;LNum&gt;,
+    R: Default + Clone + MinimallyNumeric&lt;As = RNum&gt; + CoercibleInto&lt;RNum&gt;,
+    C: Default + Clone,
+    (LNum, RNum): CommonNum&lt;Common = C&gt;,
+    Rep&lt;C&gt;: From&lt;Vec&lt;O&gt;&gt;,
+    O: Clone + Default,
+    F: Fn(C, C) -&gt; O,
+    C: Clone + Default,
+{
+    try_recycle_then(lhs, rhs, |x, y| {
+        <span class="kw">let </span>(c1, c2) = (
+            CoercibleInto::&lt;LNum&gt;::coerce_into(x),
+            CoercibleInto::&lt;RNum&gt;::coerce_into(y),
+        )
+            .into_common();
+        f(c1, c2)
+    })
+}
+
+<span class="comment">// FIXME(performance): equality with references for characters
+</span><span class="kw">fn </span>try_binary_cmp_op&lt;L, R, C, F&gt;(lhs: Rep&lt;L&gt;, rhs: Rep&lt;R&gt;, f: F) -&gt; <span class="prelude-ty">Result</span>&lt;Rep&lt;Logical&gt;, Signal&gt;
+<span class="kw">where
+    </span>L: AtomicMode + Default + Clone + CoercibleInto&lt;C&gt; + Clone,
+    R: AtomicMode + Default + Clone + CoercibleInto&lt;C&gt; + Clone,
+    (L, R): CommonCmp&lt;Common = C&gt;,
+    C: PartialOrd + Clone + Default,
+    F: Fn(<span class="prelude-ty">Option</span>&lt;std::cmp::Ordering&gt;) -&gt; Logical,
+{
+    try_recycle_then(lhs, rhs, |x, y| {
+        <span class="kw">let </span>c1: C = x.coerce_into();
+        <span class="kw">let </span>c2: C = y.coerce_into();
+        <span class="kw">let </span>ordering = c1.partial_cmp(<span class="kw-2">&amp;</span>c2);
+        f(ordering)
+    })
+}
+
+<span class="kw">pub fn </span>try_binary_lgl_op&lt;L, R, F&gt;(lhs: Rep&lt;L&gt;, rhs: Rep&lt;R&gt;, f: F) -&gt; <span class="prelude-ty">Result</span>&lt;Rep&lt;Logical&gt;, Signal&gt;
+<span class="kw">where
+    </span>L: AtomicMode + Default + Clone + CoercibleInto&lt;Logical&gt;,
+    R: AtomicMode + Default + Clone + CoercibleInto&lt;Logical&gt;,
+    F: Fn(Logical, Logical) -&gt; Logical,
+{
+    try_recycle_then(lhs, rhs, |x, y| {
+        <span class="kw">let </span>(c1, c2) = (
+            CoercibleInto::&lt;Logical&gt;::coerce_into(x),
+            CoercibleInto::&lt;Logical&gt;::coerce_into(y),
+        );
+        f(c1, c2)
+    })
 }
 </code></pre></div></section></main></body></html>

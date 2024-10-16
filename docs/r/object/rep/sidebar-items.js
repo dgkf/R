@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":["Rep"]};
+window.SIDEBAR_ITEMS = {"fn":["try_binary_lgl_op"],"struct":["Rep"]};
