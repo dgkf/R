@@ -781,12 +781,7 @@ where
     }
 }
 
-// New function: try_recycle_then
-fn try_recycle_then<L, R, O, F, A>(
-    lhs: Rep<L>,
-    rhs: Rep<R>,
-    g: F,
-) -> Result<Rep<A>, Signal>
+fn try_recycle_then<L, R, O, F, A>(lhs: Rep<L>, rhs: Rep<R>, g: F) -> Result<Rep<A>, Signal>
 where
     L: Clone + Default,
     R: Clone + Default,
@@ -806,21 +801,18 @@ where
                 .map(|(l, r)| g(l, r))
                 .collect();
             if result.is_empty() {
-                return Err(Signal::Error(Error::NonRecyclableLengths(
-                    1, 0
-                )));
+                return Err(Signal::Error(Error::NonRecyclableLengths(1, 0)));
             }
             Ok(Rep::from(result))
         }
         (None, Some(r)) => {
-            let result: Vec<O> = lhs.iter_values()
+            let result: Vec<O> = lhs
+                .iter_values()
                 .zip(repeat(r))
                 .map(|(l, r)| g(l, r))
                 .collect();
             if result.is_empty() {
-                return Err(Signal::Error(Error::NonRecyclableLengths(
-                    0, 1
-                )));
+                return Err(Signal::Error(Error::NonRecyclableLengths(0, 1)));
             }
             Ok(Rep::from(result))
         }
@@ -828,7 +820,6 @@ where
             let mut lc = lhs.iter_values();
             let mut rc = rhs.iter_values();
 
-            // get the maximum size hint of the two iterators lc and rc
             let max_size = std::cmp::max(lc.size_hint().0, rc.size_hint().0);
 
             let mut result: Vec<O> = Vec::with_capacity(max_size);
@@ -841,23 +832,20 @@ where
                             result.len() + 1 + lc.count(),
                             result.len(),
                         )));
-                    },
+                    }
                     (None, Some(_)) => {
                         return Err(Signal::Error(Error::NonRecyclableLengths(
                             result.len(),
                             result.len() + 1 + rc.count(),
                         )));
                     }
-                    (None, None) => {
-                        return Ok(Rep::from(result))
-                    },
+                    (None, None) => return Ok(Rep::from(result)),
                 }
             }
         }
     }
 }
 
-// things like x + y
 fn try_binary_num_op<L, R, C, O, LNum, RNum, F>(
     lhs: Rep<L>,
     rhs: Rep<R>,
@@ -873,18 +861,14 @@ where
     F: Fn(C, C) -> O,
     C: Clone + Default,
 {
-    try_recycle_then(
-        lhs,
-        rhs,
-        |x, y| {
-            let (c1, c2) = (
-                CoercibleInto::<LNum>::coerce_into(x),
-                CoercibleInto::<RNum>::coerce_into(y),
-            )
-                .into_common();
-            f(c1, c2)
-        }
-    )
+    try_recycle_then(lhs, rhs, |x, y| {
+        let (c1, c2) = (
+            CoercibleInto::<LNum>::coerce_into(x),
+            CoercibleInto::<RNum>::coerce_into(y),
+        )
+            .into_common();
+        f(c1, c2)
+    })
 }
 
 // FIXME(performance): equality with references for characters
@@ -896,16 +880,12 @@ where
     C: PartialOrd + Clone + Default,
     F: Fn(Option<std::cmp::Ordering>) -> Logical,
 {
-    try_recycle_then(
-        lhs,
-        rhs,
-        |x, y| {
+    try_recycle_then(lhs, rhs, |x, y| {
         let c1: C = x.coerce_into();
         let c2: C = y.coerce_into();
         let ordering = c1.partial_cmp(&c2);
         f(ordering)
-        }
-    )
+    })
 }
 
 pub fn try_binary_lgl_op<L, R, F>(lhs: Rep<L>, rhs: Rep<R>, f: F) -> Result<Rep<Logical>, Signal>
@@ -914,15 +894,11 @@ where
     R: AtomicMode + Default + Clone + CoercibleInto<Logical>,
     F: Fn(Logical, Logical) -> Logical,
 {
-    try_recycle_then(
-        lhs,
-        rhs,
-        |x, y| {
-            let (c1, c2) = (
-                CoercibleInto::<Logical>::coerce_into(x),
-                CoercibleInto::<Logical>::coerce_into(y),
-            );
-            f(c1, c2)
-        }
-    )
+    try_recycle_then(lhs, rhs, |x, y| {
+        let (c1, c2) = (
+            CoercibleInto::<Logical>::coerce_into(x),
+            CoercibleInto::<Logical>::coerce_into(y),
+        );
+        f(c1, c2)
+    })
 }

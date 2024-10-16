@@ -14,16 +14,12 @@ use super::reptype::RepType;
 use super::subset::Subset;
 use super::types::*;
 
-pub trait MaybeMissing {}
-
 #[derive(Default, Clone, PartialEq, Eq)]
 pub enum OptionNA<T> {
     #[default]
     NA,
     Some(T),
 }
-
-impl<T> MaybeMissing for OptionNA<T> {}
 
 impl<T> PartialOrd for OptionNA<T>
 where
@@ -184,7 +180,6 @@ impl Vector {
     pub fn assign(&mut self, other: Obj) -> EvalResult {
         let err =
             Error::Other("Cannot assign to a vector from a different type".to_string()).into();
-        // convert the R
         match (self, other) {
             (Vector::Double(l), Obj::Vector(Vector::Double(r))) => {
                 Ok(Obj::Vector(Vector::from(l.assign(r)?)))
@@ -703,7 +698,7 @@ impl std::ops::Add for Vector {
             (Logical(l), Integer(r)) => (l + r).map(|x| x.into()),
             (Logical(l), Logical(r)) => (l + r).map(|x| x.into()),
             // Add more combinations if necessary
-            _ => Err(Error::Other("Unsupported Vector types for addition".to_string()).into()),
+            _ => todo!(),
         }
     }
 }
@@ -1065,6 +1060,3 @@ mod tests {
         "#}}
     }
 }
-
-
-

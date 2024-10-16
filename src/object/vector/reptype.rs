@@ -447,8 +447,9 @@ impl<T: Clone + Default> RepType<T> {
     }
 
     pub fn iter_subset_indices_exact(&self) -> ExactIterSubsetIndices {
+        // TODO(performance): Avoid the vector allocation
         let iter = self.iter_subset_indices();
-        let len = iter.map(|_| 1).sum();
+        let len = iter.count();
         let iter = self.iter_subset_indices();
         ExactIterSubsetIndices { iter, len }
     }
@@ -602,12 +603,13 @@ impl<T: Clone + Default> RepType<T> {
         T: Clone + Default + From<R>,
         R: Default + Clone,
     {
-        // TODO(feature): here we should also throw an error if the recycling rules are violated.
         let l_indices = self.iter_subset_indices_exact();
         let mut r_indices = value.iter_subset_indices_exact();
-        dbg!(l_indices.len());
-        dbg!(r_indices.len());
 
+        // TODO(performance): When we clone the interior data of self (to which we write)
+        // we don't have to perform recycling checks
+        // and just start iterating. We can always discard the result afterwards again
+        // Maybe implement filter_exact on (named)subsets
         if r_indices.len() == 1 {
             // get the element from reptype value
             let index = r_indices
@@ -933,9 +935,6 @@ mod test {
     use crate::r;
     use crate::utils::SameType;
 
-
-
-
     #[test]
     fn vector_add() {
         let x = Rep::<Integer>::from((1..=5).collect::<Vec<_>>());
@@ -1217,7 +1216,10 @@ mod test {
         let mut x = Rep::<Integer>::from(vec![1, 2, 3]);
         let y = Rep::<Integer>::from(vec![99, 99]);
         let result = x.assign(y);
-        assert_eq!(result.unwrap_err(), Signal::Error(Error::NonRecyclableLengths(3, 2)));
+        assert_eq!(
+            result.unwrap_err(),
+            Signal::Error(Error::NonRecyclableLengths(3, 2))
+        );
     }
     #[test]
     fn assign_recycle_length_one() {
@@ -1226,51 +1228,66 @@ mod test {
         let mut xview = x.subset(vec![0, 1].into());
         let _ = xview.assign(y).unwrap();
         let result_vec: Vec<_> = x.iter_values().collect();
-        assert_eq!(
-            result_vec,
-            vec![Some(99), Some(99), Some(3)]
-        )
+        assert_eq!(result_vec, vec![Some(99), Some(99), Some(3)])
     }
     #[test]
     fn non_recyclable_lengths_3_2() {
         let x = Rep::<Integer>::from(vec![1, 2, 3]);
         let y = Rep::<Integer>::from(vec![99, 99]);
         let result = x + y;
-        assert_eq!(result.unwrap_err(), Signal::Error(Error::NonRecyclableLengths(3, 2)));
+        assert_eq!(
+            result.unwrap_err(),
+            Signal::Error(Error::NonRecyclableLengths(3, 2))
+        );
     }
     #[test]
     fn non_recyclable_lengths_4_2() {
         let x = Rep::<Integer>::from(vec![1, 2, 3, 4]);
         let y = Rep::<Integer>::from(vec![99, 99]);
         let result = x + y;
-        assert_eq!(result.unwrap_err(), Signal::Error(Error::NonRecyclableLengths(4, 2)));
+        assert_eq!(
+            result.unwrap_err(),
+            Signal::Error(Error::NonRecyclableLengths(4, 2))
+        );
     }
     #[test]
     fn non_recyclable_lengths_2_3() {
         let x = Rep::<Integer>::from(vec![1, 2]);
         let y = Rep::<Integer>::from(vec![99, 99, 99]);
         let result = x + y;
-        assert_eq!(result.unwrap_err(), Signal::Error(Error::NonRecyclableLengths(2, 3)));
+        assert_eq!(
+            result.unwrap_err(),
+            Signal::Error(Error::NonRecyclableLengths(2, 3))
+        );
     }
     #[test]
     fn non_recyclable_lengths_2_4() {
         let x = Rep::<Integer>::from(vec![1, 2]);
         let y = Rep::<Integer>::from(vec![99, 99, 99, 99]);
         let result = x + y;
-        assert_eq!(result.unwrap_err(), Signal::Error(Error::NonRecyclableLengths(2, 4)));
+        assert_eq!(
+            result.unwrap_err(),
+            Signal::Error(Error::NonRecyclableLengths(2, 4))
+        );
     }
     #[test]
     fn non_recyclable_lengths_0_1() {
         let x = Rep::<Integer>::from(Vec::<Integer>::new());
         let y = Rep::<Integer>::from(vec![99]);
         let result = x + y;
-        assert_eq!(result.unwrap_err(), Signal::Error(Error::NonRecyclableLengths(0, 1)));
+        assert_eq!(
+            result.unwrap_err(),
+            Signal::Error(Error::NonRecyclableLengths(0, 1))
+        );
     }
     #[test]
     fn non_recyclable_lengths_1_0() {
         let x = Rep::<Integer>::from(vec![99]);
         let y = Rep::<Integer>::from(Vec::<Integer>::new());
         let result = x + y;
-        assert_eq!(result.unwrap_err(), Signal::Error(Error::NonRecyclableLengths(1, 0)));
+        assert_eq!(
+            result.unwrap_err(),
+            Signal::Error(Error::NonRecyclableLengths(1, 0))
+        );
     }
 }

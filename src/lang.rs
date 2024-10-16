@@ -420,7 +420,6 @@ fn display_list(x: &List, f: &mut fmt::Formatter<'_>, bc: Option<String>) -> fmt
     Ok(())
 }
 
-// implement TryAdd for Obj
 impl std::ops::Add for Obj {
     type Output = EvalResult;
 
@@ -524,7 +523,7 @@ impl std::ops::BitAnd for Obj {
     type Output = EvalResult;
 
     fn bitand(self, rhs: Self) -> Self::Output {
-        match (self.as_logical()?, rhs.as_logical()?) {
+        match (self, rhs) {
             (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector((l & r)?)),
             _ => internal_err!(),
         }
