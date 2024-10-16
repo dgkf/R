@@ -32,3 +32,5 @@ mod length;
 pub use length::PrimitiveLength;
 mod is_null;
 pub use is_null::PrimitiveIsNull;
+mod type_reflection;
+pub use type_reflection::PrimitiveTypeOf;

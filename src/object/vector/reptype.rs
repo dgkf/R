@@ -1,11 +1,10 @@
 use std::fmt::Debug;
 
-use super::coercion::{AtomicMode, CoercibleInto, CommonCmp, CommonNum, MinimallyNumeric};
-use super::iterators::{map_common_numeric, zip_recycle};
+use super::coercion::{AtomicMode, CoercibleInto};
 use super::subset::Subset;
 use super::subsets::Subsets;
 use super::types::*;
-use super::{OptionNA, Pow, VecPartialCmp};
+use super::OptionNA;
 use crate::error::Error;
 use crate::lang::Signal;
 use crate::object::{CowObj, ViewMut};
@@ -447,6 +446,14 @@ impl<T: Clone + Default> RepType<T> {
         }
     }
 
+    pub fn iter_subset_indices_exact(&self) -> ExactIterSubsetIndices {
+        // TODO(performance): Avoid the vector allocation
+        let iter = self.iter_subset_indices();
+        let len = iter.count();
+        let iter = self.iter_subset_indices();
+        ExactIterSubsetIndices { iter, len }
+    }
+
     pub fn iter_subset_indices(&self) -> Box<dyn Iterator<Item = Option<usize>>> {
         match self.clone() {
             RepType::Subset(vals, subsets, maybe_naming) => {
@@ -591,14 +598,44 @@ impl<T: Clone + Default> RepType<T> {
     /// Assignment to a vector from another. The aggregate subsetted indices
     /// are iterated over while performing the assignment.
     ///
-    pub fn assign<R>(&mut self, value: RepType<R>) -> Self
+    pub fn assign<R>(&mut self, value: RepType<R>) -> Result<Self, Signal>
     where
         T: Clone + Default + From<R>,
         R: Default + Clone,
     {
-        // TODO(feature): here we should also throw an error if the recycling rules are violated.
-        let l_indices = self.iter_subset_indices();
-        let r_indices = value.iter_subset_indices();
+        let l_indices = self.iter_subset_indices_exact();
+        let mut r_indices = value.iter_subset_indices_exact();
+
+        // TODO(performance): When we clone the interior data of self (to which we write)
+        // we don't have to perform recycling checks
+        // and just start iterating. We can always discard the result afterwards again
+        // Maybe implement filter_exact on (named)subsets
+        if r_indices.len() == 1 {
+            // get the element from reptype value
+            let index = r_indices
+                .next()
+                .expect("index should exist")
+                .expect("No NA for subsetting");
+            let elem = value.get_inner(index).expect("element should exist");
+            match (self, value) {
+                (RepType::Subset(lv, ls, ln), RepType::Subset(..)) => {
+                    lv.with_inner_mut(|lvb| {
+                        for li in l_indices {
+                            lvb[li.unwrap()] = elem.clone().into();
+                        }
+                    });
+                    return Ok(RepType::Subset(lv.clone(), ls.clone(), ln.clone()));
+                }
+            }
+        }
+
+        if l_indices.len() != r_indices.len() {
+            return Err(Signal::Error(Error::NonRecyclableLengths(
+                l_indices.len(),
+                r_indices.len(),
+            )));
+        }
+
         match (self, value) {
             (RepType::Subset(lv, ls, ln), RepType::Subset(rv, ..)) => {
                 lv.with_inner_mut(|lvb| {
@@ -614,7 +651,7 @@ impl<T: Clone + Default> RepType<T> {
                     }
                 });
 
-                RepType::Subset(lv.clone(), ls.clone(), ln.clone())
+                Ok(RepType::Subset(lv.clone(), ls.clone(), ln.clone()))
             }
         }
     }
@@ -741,30 +778,6 @@ impl<T: Clone + Default> RepType<T> {
         self.as_mode::<Character>()
     }
 
-    pub fn vectorized_partial_cmp<R, C>(self, other: RepType<R>) -> Vec<Option<std::cmp::Ordering>>
-    where
-        T: AtomicMode + Default + Clone + CoercibleInto<C>,
-        R: AtomicMode + Default + Clone + CoercibleInto<C>,
-        (T, R): CommonCmp<Common = C>,
-        C: PartialOrd,
-    {
-        let lc = self.inner().clone();
-        let lb = lc.borrow();
-        let lhs = lb.iter();
-
-        let rc = other.inner().clone();
-        let rb = rc.borrow();
-        let rhs = rb.iter();
-
-        zip_recycle(lhs, rhs)
-            .map(|(l, r)| {
-                let lc = CoercibleInto::<C>::coerce_into(l.clone());
-                let rc = CoercibleInto::<C>::coerce_into(r.clone());
-                lc.partial_cmp(&rc)
-            })
-            .collect()
-    }
-
     pub fn get_inner(&self, index: usize) -> Option<T> {
         match self {
             RepType::Subset(v, subsets, maybe_naming) => {
@@ -777,6 +790,24 @@ impl<T: Clone + Default> RepType<T> {
                 vb.get(index).cloned()
             }
         }
+    }
+}
+
+pub struct ExactIterSubsetIndices {
+    iter: Box<dyn Iterator<Item = Option<usize>>>,
+    len: usize,
+}
+
+impl ExactSizeIterator for ExactIterSubsetIndices {
+    fn len(&self) -> usize {
+        self.len
+    }
+}
+
+impl Iterator for ExactIterSubsetIndices {
+    type Item = Option<usize>;
+    fn next(&mut self) -> Option<Self::Item> {
+        self.iter.next()
     }
 }
 
@@ -893,344 +924,10 @@ where
     }
 }
 
-impl<L, LNum, O> std::ops::Neg for RepType<L>
-where
-    L: AtomicMode + Default + Clone + MinimallyNumeric<As = LNum> + CoercibleInto<LNum>,
-    LNum: std::ops::Neg<Output = O>,
-    RepType<O>: From<Vec<O>>,
-    O: Clone,
-{
-    type Output = RepType<O>;
-    fn neg(self) -> Self::Output {
-        RepType::from(
-            self.inner()
-                .iter()
-                .map(|l| CoercibleInto::<LNum>::coerce_into(l.clone()).neg())
-                .collect::<Vec<O>>(),
-        )
-    }
-}
-
-impl<L, R, C, O, LNum, RNum> std::ops::Add<RepType<R>> for RepType<L>
-where
-    L: AtomicMode + Default + Clone + MinimallyNumeric<As = LNum> + CoercibleInto<LNum>,
-    R: AtomicMode + Default + Clone + MinimallyNumeric<As = RNum> + CoercibleInto<RNum>,
-    (LNum, RNum): CommonNum<Common = C>,
-    C: Clone + std::ops::Add<Output = O>,
-    RepType<C>: From<Vec<O>>,
-{
-    type Output = RepType<C>;
-    fn add(self, rhs: RepType<R>) -> Self::Output {
-        let lc = self.inner().clone();
-        let lb = lc.borrow();
-        let lhs = lb.iter();
-
-        let rc = rhs.inner().clone();
-        let rb = rc.borrow();
-        let rhs = rb.iter();
-
-        RepType::from(
-            map_common_numeric(zip_recycle(lhs, rhs))
-                .map(|(l, r)| l + r)
-                .collect::<Vec<O>>(),
-        )
-    }
-}
-
-impl<L, R, C, O, LNum, RNum> std::ops::Sub<RepType<R>> for RepType<L>
-where
-    L: AtomicMode + Default + Clone + MinimallyNumeric<As = LNum> + CoercibleInto<LNum>,
-    R: AtomicMode + Default + Clone + MinimallyNumeric<As = RNum> + CoercibleInto<RNum>,
-    (LNum, RNum): CommonNum<Common = C>,
-    C: std::ops::Sub<Output = O> + Clone,
-    RepType<C>: From<Vec<O>>,
-    O: Clone,
-{
-    type Output = RepType<C>;
-    fn sub(self, rhs: RepType<R>) -> Self::Output {
-        let lc = self.inner().clone();
-        let lb = lc.borrow();
-        let lhs = lb.iter();
-
-        let rc = rhs.inner().clone();
-        let rb = rc.borrow();
-        let rhs = rb.iter();
-
-        RepType::from(
-            map_common_numeric(zip_recycle(lhs, rhs))
-                .map(|(l, r)| l - r)
-                .collect::<Vec<O>>(),
-        )
-    }
-}
-
-impl<L, R, C, O, LNum, RNum> std::ops::Mul<RepType<R>> for RepType<L>
-where
-    L: AtomicMode + Default + Clone + MinimallyNumeric<As = LNum> + CoercibleInto<LNum>,
-    R: AtomicMode + Default + Clone + MinimallyNumeric<As = RNum> + CoercibleInto<RNum>,
-    (LNum, RNum): CommonNum<Common = C>,
-    C: std::ops::Mul<Output = O> + Clone,
-    RepType<C>: From<Vec<O>>,
-{
-    type Output = RepType<C>;
-    fn mul(self, rhs: RepType<R>) -> Self::Output {
-        let lc = self.inner().clone();
-        let lb = lc.borrow();
-        let lhs = lb.iter();
-
-        let rc = rhs.inner().clone();
-        let rb = rc.borrow();
-        let rhs = rb.iter();
-
-        RepType::from(
-            map_common_numeric(zip_recycle(lhs, rhs))
-                .map(|(l, r)| l * r)
-                .collect::<Vec<O>>(),
-        )
-    }
-}
-
-impl<L, R, C, O, LNum, RNum> std::ops::Div<RepType<R>> for RepType<L>
-where
-    L: AtomicMode + Default + Clone + MinimallyNumeric<As = LNum> + CoercibleInto<LNum>,
-    R: AtomicMode + Default + Clone + MinimallyNumeric<As = RNum> + CoercibleInto<RNum>,
-    (LNum, RNum): CommonNum<Common = C>,
-    C: std::ops::Div<Output = O> + Clone,
-    RepType<C>: From<Vec<O>>,
-    O: Clone,
-{
-    type Output = RepType<C>;
-    fn div(self, rhs: RepType<R>) -> Self::Output {
-        let lc = self.inner().clone();
-        let lb = lc.borrow();
-        let lhs = lb.iter();
-
-        let rc = rhs.inner().clone();
-        let rb = rc.borrow();
-        let rhs = rb.iter();
-
-        RepType::from(
-            map_common_numeric(zip_recycle(lhs, rhs))
-                .map(|(l, r)| l / r)
-                .collect::<Vec<O>>(),
-        )
-    }
-}
-
-impl<L, R, C, O, LNum, RNum> std::ops::Rem<RepType<R>> for RepType<L>
-where
-    L: AtomicMode + Default + Clone + MinimallyNumeric<As = LNum> + CoercibleInto<LNum>,
-    R: AtomicMode + Default + Clone + MinimallyNumeric<As = RNum> + CoercibleInto<RNum>,
-    (LNum, RNum): CommonNum<Common = C>,
-    C: std::ops::Rem<Output = O> + Clone,
-    O: Clone,
-    RepType<C>: From<Vec<O>>,
-{
-    type Output = RepType<C>;
-    fn rem(self, rhs: RepType<R>) -> Self::Output {
-        let lc = self.inner().clone();
-        let lb = lc.borrow();
-        let lhs = lb.iter();
-
-        let rc = rhs.inner().clone();
-        let rb = rc.borrow();
-        let rhs = rb.iter();
-
-        RepType::from(
-            map_common_numeric(zip_recycle(lhs.into_iter(), rhs.into_iter()))
-                .map(|(l, r)| l.rem(r))
-                .collect::<Vec<O>>(),
-        )
-    }
-}
-
-impl<L, R, O, LNum, RNum> Pow<RepType<R>> for RepType<L>
-where
-    L: AtomicMode + Default + Clone + MinimallyNumeric<As = LNum> + CoercibleInto<LNum>,
-    R: AtomicMode + Default + Clone + MinimallyNumeric<As = RNum> + CoercibleInto<RNum>,
-    LNum: Pow<RNum, Output = O>,
-    RepType<O>: From<Vec<O>>,
-    O: Clone,
-{
-    type Output = RepType<O>;
-    fn power(self, rhs: RepType<R>) -> Self::Output {
-        let lc = self.inner().clone();
-        let lb = lc.borrow();
-        let lhs = lb.iter();
-
-        let rc = rhs.inner().clone();
-        let rb = rc.borrow();
-        let rhs = rb.iter();
-
-        RepType::from(
-            zip_recycle(lhs, rhs)
-                .map(|(l, r)| l.clone().coerce_into().power(r.clone().coerce_into()))
-                .collect::<Vec<O>>(),
-        )
-    }
-}
-
-impl<L, R, O> std::ops::BitOr<RepType<R>> for RepType<L>
-where
-    L: AtomicMode + Default + Clone + CoercibleInto<Logical>,
-    R: AtomicMode + Default + Clone + CoercibleInto<Logical>,
-    Logical: std::ops::BitOr<Logical, Output = O>,
-    RepType<O>: From<Vec<O>>,
-    O: Clone,
-{
-    type Output = RepType<O>;
-    fn bitor(self, rhs: RepType<R>) -> Self::Output {
-        let lc = self.inner().clone();
-        let lb = lc.borrow();
-        let lhs = lb.iter();
-
-        let rc = rhs.inner().clone();
-        let rb = rc.borrow();
-        let rhs = rb.iter();
-
-        RepType::from(
-            zip_recycle(lhs, rhs)
-                .map(|(l, r)| l.clone().coerce_into().bitor(r.clone().coerce_into()))
-                .collect::<Vec<O>>(),
-        )
-    }
-}
-
-impl<L, R, O> std::ops::BitAnd<RepType<R>> for RepType<L>
-where
-    L: AtomicMode + Default + Clone + CoercibleInto<Logical>,
-    R: AtomicMode + Default + Clone + CoercibleInto<Logical>,
-    Logical: std::ops::BitAnd<Logical, Output = O>,
-    RepType<O>: From<Vec<O>>,
-    O: Clone,
-{
-    type Output = RepType<O>;
-    fn bitand(self, rhs: RepType<R>) -> Self::Output {
-        let lc = self.inner().clone();
-        let lb = lc.borrow();
-        let lhs = lb.iter();
-
-        let rc = rhs.inner().clone();
-        let rb = rc.borrow();
-        let rhs = rb.iter();
-
-        RepType::from(
-            zip_recycle(lhs, rhs)
-                .map(|(l, r)| l.clone().coerce_into().bitand(r.clone().coerce_into()))
-                .collect::<Vec<O>>(),
-        )
-    }
-}
-
-impl<L, O> std::ops::Not for RepType<L>
-where
-    L: AtomicMode + Default + Clone + CoercibleInto<Logical>,
-    Logical: std::ops::Not<Output = O>,
-    RepType<O>: From<Vec<O>>,
-    O: Clone,
-{
-    type Output = RepType<O>;
-    fn not(self) -> Self::Output {
-        RepType::from(
-            self.inner()
-                .iter()
-                .map(|l| CoercibleInto::<Logical>::coerce_into(l.clone()).not())
-                .collect::<Vec<O>>(),
-        )
-    }
-}
-
-impl<L, R, C> VecPartialCmp<RepType<R>> for RepType<L>
-where
-    L: AtomicMode + Default + Clone + CoercibleInto<C>,
-    R: AtomicMode + Default + Clone + CoercibleInto<C>,
-    (L, R): CommonCmp<Common = C>,
-    C: PartialOrd,
-{
-    type Output = RepType<Logical>;
-
-    fn vec_gt(self, rhs: RepType<R>) -> Self::Output {
-        use std::cmp::Ordering::*;
-        self.vectorized_partial_cmp(rhs)
-            .into_iter()
-            .map(|i| match i {
-                Some(Greater) => OptionNA::Some(true),
-                Some(_) => OptionNA::Some(false),
-                None => OptionNA::NA,
-            })
-            .collect::<Vec<Logical>>()
-            .into()
-    }
-
-    fn vec_gte(self, rhs: RepType<R>) -> Self::Output {
-        use std::cmp::Ordering::*;
-        self.vectorized_partial_cmp(rhs)
-            .into_iter()
-            .map(|i| match i {
-                Some(Greater | Equal) => OptionNA::Some(true),
-                Some(_) => OptionNA::Some(false),
-                None => OptionNA::NA,
-            })
-            .collect::<Vec<Logical>>()
-            .into()
-    }
-
-    fn vec_lt(self, rhs: RepType<R>) -> Self::Output {
-        use std::cmp::Ordering::*;
-        self.vectorized_partial_cmp(rhs)
-            .into_iter()
-            .map(|i| match i {
-                Some(Less) => OptionNA::Some(true),
-                Some(_) => OptionNA::Some(false),
-                None => OptionNA::NA,
-            })
-            .collect::<Vec<Logical>>()
-            .into()
-    }
-
-    fn vec_lte(self, rhs: RepType<R>) -> Self::Output {
-        use std::cmp::Ordering::*;
-        self.vectorized_partial_cmp(rhs)
-            .into_iter()
-            .map(|i| match i {
-                Some(Less | Equal) => OptionNA::Some(true),
-                Some(_) => OptionNA::Some(false),
-                None => OptionNA::NA,
-            })
-            .collect::<Vec<Logical>>()
-            .into()
-    }
-
-    fn vec_eq(self, rhs: RepType<R>) -> Self::Output {
-        use std::cmp::Ordering::*;
-        self.vectorized_partial_cmp(rhs)
-            .into_iter()
-            .map(|i| match i {
-                Some(Equal) => OptionNA::Some(true),
-                Some(_) => OptionNA::Some(false),
-                None => OptionNA::NA,
-            })
-            .collect::<Vec<Logical>>()
-            .into()
-    }
-
-    fn vec_neq(self, rhs: RepType<R>) -> Self::Output {
-        use std::cmp::Ordering::*;
-        self.vectorized_partial_cmp(rhs)
-            .into_iter()
-            .map(|i| match i {
-                Some(Equal) => OptionNA::Some(false),
-                Some(_) => OptionNA::Some(true),
-                None => OptionNA::NA,
-            })
-            .collect::<Vec<Logical>>()
-            .into()
-    }
-}
-
 #[cfg(test)]
 mod test {
     use super::OptionNA::*;
+    use crate::object::rep::Rep;
     use crate::object::reptype::RepType;
     use crate::object::{types::*, OptionNA, VecPartialCmp};
     use crate::r;
@@ -1238,11 +935,11 @@ mod test {
 
     #[test]
     fn vector_add() {
-        let x = RepType::from((1..=10).collect::<Vec<_>>());
-        let y = RepType::from(vec![2, 5, 6, 2, 3]);
+        let x = Rep::<Integer>::from((1..=5).collect::<Vec<_>>());
+        let y = Rep::<Integer>::from(vec![2, 5, 6, 2, 3]);
 
-        let z = x + y;
-        assert_eq!(z, RepType::from(vec![3, 7, 9, 6, 8, 8, 12, 14, 11, 13]));
+        let z = (x + y).unwrap();
+        assert_eq!(z, Rep::from(vec![3, 7, 9, 6, 8]));
 
         let expected_type = RepType::<Integer>::new();
         assert!(z.is_same_type_as(&expected_type));
@@ -1251,25 +948,11 @@ mod test {
 
     #[test]
     fn vector_mul() {
-        let x = RepType::from((1..=10).collect::<Vec<_>>());
-        let y = RepType::from(vec![Some(2), NA, Some(6), NA, Some(3)]);
+        let x = Rep::<Integer>::from((1..=5).collect::<Vec<_>>());
+        let y = Rep::<Integer>::from(vec![Some(2), NA, Some(6), NA, Some(3)]);
 
-        let z = x * y;
-        assert_eq!(
-            z,
-            RepType::from(vec![
-                Some(2),
-                NA,
-                Some(18),
-                NA,
-                Some(15),
-                Some(12),
-                NA,
-                Some(48),
-                NA,
-                Some(30)
-            ])
-        );
+        let z = (x * y).unwrap();
+        assert_eq!(z, Rep::from(vec![Some(2), NA, Some(18), NA, Some(15),]));
 
         let expected_type = RepType::<Integer>::new();
         assert!(z.is_same_type_as(&expected_type));
@@ -1281,10 +964,10 @@ mod test {
         // expect that f32's do not get coerced into an OptionNA:: instead
         // using std::f32::NAN as NA representation.
 
-        let x = RepType::from(vec![Some(0_f64), NA, Some(10_f64)]);
-        let y = RepType::from(vec![100, 10]);
+        let x = Rep::<Double>::from(vec![Some(0_f64), NA, Some(10_f64)]);
+        let y = Rep::<Integer>::from(vec![100, 10, 1]);
 
-        let z = x * y;
+        let z = (x * y).unwrap();
         // assert_eq!(z, Vector::from(vec![0_f32, std::f32::NAN, 1_000_f32]));
         // comparing floats is error prone
 
@@ -1298,11 +981,11 @@ mod test {
         // expect that f32's do not get coerced into an OptionNA:: instead
         // using std::f32::NAN as NA representation.
 
-        let x = RepType::from(vec![Some(0_f64), NA, Some(10_f64)]);
-        let y = RepType::from(vec![100, 10]);
+        let x = Rep::<Double>::from(vec![Some(0_f64), NA, Some(10_f64)]);
+        let y = Rep::<Integer>::from(vec![100, 10, 1]);
 
-        let z = x & y;
-        assert_eq!(z, RepType::from(vec![Some(false), NA, Some(true)]));
+        let z = (x & y).unwrap();
+        assert_eq!(z, Rep::from(vec![Some(false), NA, Some(true)]));
 
         let expected_type = RepType::<Logical>::new();
         assert!(z.is_same_type_as(&expected_type));
@@ -1314,11 +997,11 @@ mod test {
         // expect that f32's do not get coerced into an  instead
         // using std::f32::NAN as NA representation.
 
-        let x = RepType::from(vec![Some(0_f64), NA, Some(10000_f64)]);
-        let y = RepType::from(vec![100, 10]);
+        let x = Rep::from(vec![Some(0_f64), NA, Some(10000_f64)]);
+        let y = Rep::<Integer>::from(vec![100, 10, 1]);
 
-        let z = x.vec_gt(y);
-        assert_eq!(z, RepType::from(vec![Some(false), NA, Some(true)]));
+        let z = x.vec_gt(y).unwrap();
+        assert_eq!(z, Rep::from(vec![Some(false), NA, Some(true)]));
 
         let expected_type = RepType::<Logical>::new();
         assert!(z.is_same_type_as(&expected_type));
@@ -1521,5 +1204,88 @@ mod test {
             (&Character::Some("b".to_string()), &Double::Some(2.0))
         );
         assert_eq!(x.next(), None);
+    }
+
+    use crate::error::Error;
+    use crate::lang::Signal;
+
+    #[test]
+    fn assign_recycle_incompatible() {
+        let mut x = Rep::<Integer>::from(vec![1, 2, 3]);
+        let y = Rep::<Integer>::from(vec![99, 99]);
+        let result = x.assign(y);
+        assert_eq!(
+            result.unwrap_err(),
+            Signal::Error(Error::NonRecyclableLengths(3, 2))
+        );
+    }
+    #[test]
+    fn assign_recycle_length_one() {
+        let x = Rep::<Integer>::from(vec![1, 2, 3]);
+        let y = Rep::<Integer>::from(vec![99]);
+        let mut xview = x.subset(vec![0, 1].into());
+        let _ = xview.assign(y).unwrap();
+        let result_vec: Vec<_> = x.iter_values().collect();
+        assert_eq!(result_vec, vec![Some(99), Some(99), Some(3)])
+    }
+    #[test]
+    fn non_recyclable_lengths_3_2() {
+        let x = Rep::<Integer>::from(vec![1, 2, 3]);
+        let y = Rep::<Integer>::from(vec![99, 99]);
+        let result = x + y;
+        assert_eq!(
+            result.unwrap_err(),
+            Signal::Error(Error::NonRecyclableLengths(3, 2))
+        );
+    }
+    #[test]
+    fn non_recyclable_lengths_4_2() {
+        let x = Rep::<Integer>::from(vec![1, 2, 3, 4]);
+        let y = Rep::<Integer>::from(vec![99, 99]);
+        let result = x + y;
+        assert_eq!(
+            result.unwrap_err(),
+            Signal::Error(Error::NonRecyclableLengths(4, 2))
+        );
+    }
+    #[test]
+    fn non_recyclable_lengths_2_3() {
+        let x = Rep::<Integer>::from(vec![1, 2]);
+        let y = Rep::<Integer>::from(vec![99, 99, 99]);
+        let result = x + y;
+        assert_eq!(
+            result.unwrap_err(),
+            Signal::Error(Error::NonRecyclableLengths(2, 3))
+        );
+    }
+    #[test]
+    fn non_recyclable_lengths_2_4() {
+        let x = Rep::<Integer>::from(vec![1, 2]);
+        let y = Rep::<Integer>::from(vec![99, 99, 99, 99]);
+        let result = x + y;
+        assert_eq!(
+            result.unwrap_err(),
+            Signal::Error(Error::NonRecyclableLengths(2, 4))
+        );
+    }
+    #[test]
+    fn non_recyclable_lengths_0_1() {
+        let x = Rep::<Integer>::from(Vec::<Integer>::new());
+        let y = Rep::<Integer>::from(vec![99]);
+        let result = x + y;
+        assert_eq!(
+            result.unwrap_err(),
+            Signal::Error(Error::NonRecyclableLengths(0, 1))
+        );
+    }
+    #[test]
+    fn non_recyclable_lengths_1_0() {
+        let x = Rep::<Integer>::from(vec![99]);
+        let y = Rep::<Integer>::from(Vec::<Integer>::new());
+        let result = x + y;
+        assert_eq!(
+            result.unwrap_err(),
+            Signal::Error(Error::NonRecyclableLengths(1, 0))
+        );
     }
 }

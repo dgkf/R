@@ -108,20 +108,20 @@ impl Obj {
             Obj::List(mut l) => {
                 match value.clone() {
                     Obj::List(r) => {
-                        l.assign(r);
+                        l.assign(r)?;
                     }
                     Obj::Vector(r) => match r {
                         Vector::Integer(r) => {
-                            l.assign(r);
+                            l.assign(r)?;
                         }
                         Vector::Character(r) => {
-                            l.assign(r);
+                            l.assign(r)?;
                         }
                         Vector::Logical(r) => {
-                            l.assign(r);
+                            l.assign(r)?;
                         }
                         Vector::Double(r) => {
-                            l.assign(r);
+                            l.assign(r)?;
                         }
                     },
                     _ => return Err(err.into()),
@@ -428,9 +428,9 @@ fn display_list(x: &List, f: &mut fmt::Formatter<'_>, bc: Option<String>) -> fmt
 impl std::ops::Add for Obj {
     type Output = EvalResult;
 
-    fn add(self, rhs: Self) -> Self::Output {
-        match (self.as_double()?, rhs.as_double()?) {
-            (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector(l + r)),
+    fn add(self, rhs: Self) -> EvalResult {
+        match (self, rhs) {
+            (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector((l + r)?)),
             _ => internal_err!(),
         }
     }
@@ -439,9 +439,9 @@ impl std::ops::Add for Obj {
 impl std::ops::Sub for Obj {
     type Output = EvalResult;
 
-    fn sub(self, rhs: Self) -> Self::Output {
-        match (self.as_double()?, rhs.as_double()?) {
-            (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector(l - r)),
+    fn sub(self, rhs: Self) -> EvalResult {
+        match (self, rhs) {
+            (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector((l - r)?)),
             _ => internal_err!(),
         }
     }
@@ -451,8 +451,8 @@ impl std::ops::Neg for Obj {
     type Output = EvalResult;
 
     fn neg(self) -> Self::Output {
-        match self.as_double()? {
-            Obj::Vector(x) => Ok(Obj::Vector(-x)),
+        match self {
+            Obj::Vector(x) => Ok(Obj::Vector((-x)?)),
             _ => internal_err!(),
         }
     }
@@ -462,8 +462,8 @@ impl std::ops::Not for Obj {
     type Output = EvalResult;
 
     fn not(self) -> Self::Output {
-        match self.as_logical()? {
-            Obj::Vector(x) => Ok(Obj::Vector(!x)),
+        match self {
+            Obj::Vector(x) => Ok(Obj::Vector((!x)?)),
             _ => internal_err!(),
         }
     }
@@ -473,8 +473,8 @@ impl std::ops::Mul for Obj {
     type Output = EvalResult;
 
     fn mul(self, rhs: Self) -> Self::Output {
-        match (self.as_double()?, rhs.as_double()?) {
-            (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector(l * r)),
+        match (self, rhs) {
+            (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector((l * r)?)),
             _ => internal_err!(),
         }
     }
@@ -484,8 +484,8 @@ impl std::ops::Div for Obj {
     type Output = EvalResult;
 
     fn div(self, rhs: Self) -> Self::Output {
-        match (self.as_double()?, rhs.as_double()?) {
-            (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector(l / r)),
+        match (self, rhs) {
+            (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector((l / r)?)),
             _ => internal_err!(),
         }
     }
@@ -495,8 +495,8 @@ impl super::object::Pow<Obj> for Obj {
     type Output = EvalResult;
 
     fn power(self, rhs: Self) -> Self::Output {
-        match (self.as_double()?, rhs.as_double()?) {
-            (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector(l.power(r))),
+        match (self, rhs) {
+            (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector(l.power(r)?)),
             _ => internal_err!(),
         }
     }
@@ -506,8 +506,8 @@ impl std::ops::Rem for Obj {
     type Output = EvalResult;
 
     fn rem(self, rhs: Self) -> Self::Output {
-        match (self.as_double()?, rhs.as_double()?) {
-            (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector(l % r)),
+        match (self, rhs) {
+            (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector((l % r)?)),
             _ => internal_err!(),
         }
     }
@@ -517,8 +517,8 @@ impl std::ops::BitOr for Obj {
     type Output = EvalResult;
 
     fn bitor(self, rhs: Self) -> Self::Output {
-        match (self.as_logical()?, rhs.as_logical()?) {
-            (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector(l | r)),
+        match (self, rhs) {
+            (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector((l | r)?)),
             _ => internal_err!(),
         }
     }
@@ -528,8 +528,8 @@ impl std::ops::BitAnd for Obj {
     type Output = EvalResult;
 
     fn bitand(self, rhs: Self) -> Self::Output {
-        match (self.as_logical()?, rhs.as_logical()?) {
-            (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector(l & r)),
+        match (self, rhs) {
+            (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector((l & r)?)),
             _ => internal_err!(),
         }
     }
@@ -539,28 +539,28 @@ impl VecPartialCmp<Obj> for Obj {
     type Output = EvalResult;
     fn vec_gt(self, rhs: Self) -> Self::Output {
         match (self.as_vector()?, rhs.as_vector()?) {
-            (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector(l.vec_gt(r))),
+            (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector(l.vec_gt(r)?)),
             _ => internal_err!(),
         }
     }
 
     fn vec_gte(self, rhs: Self) -> Self::Output {
         match (self.as_vector()?, rhs.as_vector()?) {
-            (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector(l.vec_gte(r))),
+            (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector(l.vec_gte(r)?)),
             _ => internal_err!(),
         }
     }
 
     fn vec_lt(self, rhs: Self) -> Self::Output {
         match (self.as_vector()?, rhs.as_vector()?) {
-            (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector(l.vec_lt(r))),
+            (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector(l.vec_lt(r)?)),
             _ => internal_err!(),
         }
     }
 
     fn vec_lte(self, rhs: Self) -> Self::Output {
         match (self.as_vector()?, rhs.as_vector()?) {
-            (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector(l.vec_lte(r))),
+            (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector(l.vec_lte(r)?)),
             _ => internal_err!(),
         }
     }
@@ -572,7 +572,7 @@ impl VecPartialCmp<Obj> for Obj {
             (lhs @ Obj::Function(..), rhs @ Obj::Function(..)) => Ok((lhs == rhs).into()),
             (lhs @ Obj::Environment(_), rhs @ Obj::Environment(_)) => Ok((lhs == rhs).into()),
             (lhs, rhs) => match (lhs.as_vector()?, rhs.as_vector()?) {
-                (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector(l.vec_eq(r))),
+                (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector(l.vec_eq(r)?)),
                 _ => internal_err!(),
             },
         }
@@ -585,7 +585,7 @@ impl VecPartialCmp<Obj> for Obj {
             (lhs @ Obj::Function(..), rhs @ Obj::Function(..)) => Ok((lhs != rhs).into()),
             (lhs @ Obj::Environment(_), rhs @ Obj::Environment(_)) => Ok((lhs != rhs).into()),
             (lhs, rhs) => match (lhs.as_vector()?, rhs.as_vector()?) {
-                (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector(l.vec_neq(r))),
+                (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector(l.vec_neq(r)?)),
                 _ => internal_err!(),
             },
         }
@@ -1271,7 +1271,7 @@ mod test {
         r_expect! {{"
             f = fn(x) x
             a = f((y = 2))
-            a == 2 
+            a == 2
         "}}
     }
 
@@ -1280,7 +1280,7 @@ mod test {
         r_expect! {{"
             f = fn(x) x
             f((y = 2))
-            y == 2 
+            y == 2
         "}}
     }
 

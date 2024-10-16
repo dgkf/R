@@ -182,16 +182,16 @@ impl Vector {
             Error::Other("Cannot assign to a vector from a different type".to_string()).into();
         match (self, other) {
             (Vector::Double(l), Obj::Vector(Vector::Double(r))) => {
-                Ok(Obj::Vector(Vector::from(l.assign(r))))
+                Ok(Obj::Vector(Vector::from(l.assign(r)?)))
             }
             (Vector::Integer(l), Obj::Vector(Vector::Integer(r))) => {
-                Ok(Obj::Vector(Vector::from(l.assign(r))))
+                Ok(Obj::Vector(Vector::from(l.assign(r)?)))
             }
             (Vector::Logical(l), Obj::Vector(Vector::Logical(r))) => {
-                Ok(Obj::Vector(Vector::from(l.assign(r))))
+                Ok(Obj::Vector(Vector::from(l.assign(r)?)))
             }
             (Vector::Character(l), Obj::Vector(Vector::Character(r))) => {
-                Ok(Obj::Vector(Vector::from(l.assign(r))))
+                Ok(Obj::Vector(Vector::from(l.assign(r)?)))
             }
             _ => Err(err),
         }
@@ -308,6 +308,12 @@ impl TryInto<bool> for Vector {
             Logical(i) => i.try_into(),
             Character(i) => i.try_into(),
         }
+    }
+}
+
+impl From<Vector> for Result<Vector, Signal> {
+    fn from(x: Vector) -> Self {
+        Ok(x)
     }
 }
 
@@ -654,119 +660,120 @@ impl std::ops::Not for Logical {
 }
 
 impl std::ops::Neg for Vector {
-    type Output = Vector;
+    type Output = Result<Vector, Signal>;
     fn neg(self) -> Self::Output {
         use Vector::*;
         match self {
-            Double(x) => Double(x.neg()),
-            Integer(x) => Integer(x.neg()),
-            Logical(x) => Integer(x.neg()),
+            Double(x) => x.neg().map(|x| x.into()),
+            Integer(x) => x.neg().map(|x| x.into()),
+            Logical(x) => x.neg().map(|x| x.into()),
             _ => todo!(),
         }
     }
 }
 
 impl std::ops::Not for Vector {
-    type Output = Vector;
+    type Output = Result<Vector, Signal>;
     fn not(self) -> Self::Output {
         use Vector::*;
         match self {
-            Logical(x) => (!x).into(),
+            Logical(x) => (!x).map(|x| x.into()),
             _ => todo!(),
         }
     }
 }
 
 impl std::ops::Add for Vector {
-    type Output = Vector;
-    fn add(self, rhs: Self) -> Self::Output {
+    type Output = Result<Self, Signal>;
+    fn add(self, other: Self) -> Self::Output {
         use Vector::*;
-        match (self, rhs) {
-            (Double(l), Double(r)) => (l + r).into(),
-            (Double(l), Integer(r)) => (l + r).into(),
-            (Double(l), Logical(r)) => (l + r).into(),
-            (Integer(l), Double(r)) => (l + r).into(),
-            (Integer(l), Integer(r)) => (l + r).into(),
-            (Integer(l), Logical(r)) => (l + r).into(),
-            (Logical(l), Double(r)) => (l + r).into(),
-            (Logical(l), Integer(r)) => (l + r).into(),
-            (Logical(l), Logical(r)) => (l + r).into(),
+        match (self, other) {
+            (Double(l), Double(r)) => (l + r).map(|x| x.into()),
+            (Double(l), Integer(r)) => (l + r).map(|x| x.into()),
+            (Double(l), Logical(r)) => (l + r).map(|x| x.into()),
+            (Integer(l), Double(r)) => (l + r).map(|x| x.into()),
+            (Integer(l), Integer(r)) => (l + r).map(|x| x.into()),
+            (Integer(l), Logical(r)) => (l + r).map(|x| x.into()),
+            (Logical(l), Double(r)) => (l + r).map(|x| x.into()),
+            (Logical(l), Integer(r)) => (l + r).map(|x| x.into()),
+            (Logical(l), Logical(r)) => (l + r).map(|x| x.into()),
+            // Add more combinations if necessary
             _ => todo!(),
         }
     }
 }
 
 impl std::ops::Sub for Vector {
-    type Output = Vector;
+    type Output = Result<Self, Signal>;
     fn sub(self, rhs: Self) -> Self::Output {
         use Vector::*;
         match (self, rhs) {
-            (Double(l), Double(r)) => (l - r).into(),
-            (Double(l), Integer(r)) => (l - r).into(),
-            (Double(l), Logical(r)) => (l - r).into(),
-            (Integer(l), Double(r)) => (l - r).into(),
-            (Integer(l), Integer(r)) => (l - r).into(),
-            (Integer(l), Logical(r)) => (l - r).into(),
-            (Logical(l), Double(r)) => (l - r).into(),
-            (Logical(l), Integer(r)) => (l - r).into(),
-            (Logical(l), Logical(r)) => (l - r).into(),
+            (Double(l), Double(r)) => (l - r).map(|x| x.into()),
+            (Double(l), Integer(r)) => (l - r).map(|x| x.into()),
+            (Double(l), Logical(r)) => (l - r).map(|x| x.into()),
+            (Integer(l), Double(r)) => (l - r).map(|x| x.into()),
+            (Integer(l), Integer(r)) => (l - r).map(|x| x.into()),
+            (Integer(l), Logical(r)) => (l - r).map(|x| x.into()),
+            (Logical(l), Double(r)) => (l - r).map(|x| x.into()),
+            (Logical(l), Integer(r)) => (l - r).map(|x| x.into()),
+            (Logical(l), Logical(r)) => (l - r).map(|x| x.into()),
             _ => todo!(),
         }
     }
 }
 
 impl std::ops::Mul for Vector {
-    type Output = Vector;
+    type Output = Result<Vector, Signal>;
     fn mul(self, rhs: Self) -> Self::Output {
         use Vector::*;
         match (self, rhs) {
-            (Double(l), Double(r)) => (l * r).into(),
-            (Double(l), Integer(r)) => (l * r).into(),
-            (Double(l), Logical(r)) => (l * r).into(),
-            (Integer(l), Double(r)) => (l * r).into(),
-            (Integer(l), Integer(r)) => (l * r).into(),
-            (Integer(l), Logical(r)) => (l * r).into(),
-            (Logical(l), Double(r)) => (l * r).into(),
-            (Logical(l), Integer(r)) => (l * r).into(),
-            (Logical(l), Logical(r)) => (l * r).into(),
+            (Double(l), Double(r)) => (l * r).map(|x| x.into()),
+            (Double(l), Integer(r)) => (l * r).map(|x| x.into()),
+            (Double(l), Logical(r)) => (l * r).map(|x| x.into()),
+            (Integer(l), Double(r)) => (l * r).map(|x| x.into()),
+            (Integer(l), Integer(r)) => (l * r).map(|x| x.into()),
+            (Integer(l), Logical(r)) => (l * r).map(|x| x.into()),
+            (Logical(l), Double(r)) => (l * r).map(|x| x.into()),
+            (Logical(l), Integer(r)) => (l * r).map(|x| x.into()),
+            (Logical(l), Logical(r)) => (l * r).map(|x| x.into()),
             _ => todo!(),
         }
     }
 }
 
 impl std::ops::Div for Vector {
-    type Output = Vector;
+    type Output = Result<Vector, Signal>;
     fn div(self, rhs: Self) -> Self::Output {
         use Vector::*;
         match (self, rhs) {
-            (Double(l), Double(r)) => (l / r).into(),
-            (Double(l), Integer(r)) => (l / r).into(),
-            (Double(l), Logical(r)) => (l / r).into(),
-            (Integer(l), Double(r)) => (l / r).into(),
-            (Integer(l), Integer(r)) => (l / r).into(),
-            (Integer(l), Logical(r)) => (l / r).into(),
-            (Logical(l), Double(r)) => (l / r).into(),
-            (Logical(l), Integer(r)) => (l / r).into(),
-            (Logical(l), Logical(r)) => (l / r).into(),
+            (Double(l), Double(r)) => (l / r).map(|x| x.into()),
+            (Double(l), Integer(r)) => (l / r).map(|x| x.into()),
+            (Double(l), Logical(r)) => (l / r).map(|x| x.into()),
+            (Integer(l), Double(r)) => (l / r).map(|x| x.into()),
+            (Integer(l), Integer(r)) => (l / r).map(|x| x.into()),
+            (Integer(l), Logical(r)) => (l / r).map(|x| x.into()),
+            (Logical(l), Double(r)) => (l / r).map(|x| x.into()),
+            (Logical(l), Integer(r)) => (l / r).map(|x| x.into()),
+            (Logical(l), Logical(r)) => (l / r).map(|x| x.into()),
             _ => todo!(),
         }
     }
 }
 
 impl Pow<Vector> for Vector {
-    type Output = Vector;
+    type Output = Result<Vector, Signal>;
     fn power(self, rhs: Self) -> Self::Output {
         use Vector::*;
         match (self, rhs) {
-            (Double(l), Double(r)) => l.power(r).into(),
-            (Double(l), Integer(r)) => l.power(r).into(),
-            (Double(l), Logical(r)) => l.power(r).into(),
-            (Integer(l), Double(r)) => l.power(r).into(),
-            (Integer(l), Integer(r)) => l.power(r).into(),
-            (Integer(l), Logical(r)) => l.power(r).into(),
-            (Logical(l), Double(r)) => l.power(r).into(),
-            (Logical(l), Integer(r)) => l.power(r).into(),
-            (Logical(l), Logical(r)) => l.power(r).into(),
+            (Double(l), Double(r)) => l.power(r).map(|x| x.into()),
+            (Double(l), Integer(r)) => l.power(r).map(|x| x.into()),
+            (Double(l), Logical(r)) => l.power(r).map(|x| x.into()),
+            (Integer(l), Double(r)) => l.power(r).map(|x| x.into()),
+            (Integer(l), Integer(r)) => l.power(r).map(|x| x.into()),
+            (Integer(l), Logical(r)) => l.power(r).map(|x| x.into()),
+            (Logical(l), Double(r)) => l.power(r).map(|x| x.into()),
+            (Logical(l), Integer(r)) => l.power(r).map(|x| x.into()),
+            (Logical(l), Logical(r)) => l.power(r).map(|x| x.into()),
             _ => todo!(),
         }
     }
@@ -783,205 +790,205 @@ pub trait VecPartialCmp<Rhs> {
 }
 
 impl VecPartialCmp<Vector> for Vector {
-    type Output = Vector;
+    type Output = Result<Vector, Signal>;
     fn vec_gt(self, rhs: Self) -> Self::Output {
         use Vector::*;
         match (self, rhs) {
-            (Double(l), Double(r)) => l.vec_gt(r).into(),
-            (Double(l), Integer(r)) => l.vec_gt(r).into(),
-            (Double(l), Logical(r)) => l.vec_gt(r).into(),
-            (Double(l), Character(r)) => l.vec_gt(r).into(),
-            (Integer(l), Double(r)) => l.vec_gt(r).into(),
-            (Integer(l), Integer(r)) => l.vec_gt(r).into(),
-            (Integer(l), Logical(r)) => l.vec_gt(r).into(),
-            (Integer(l), Character(r)) => l.vec_gt(r).into(),
-            (Logical(l), Double(r)) => l.vec_gt(r).into(),
-            (Logical(l), Integer(r)) => l.vec_gt(r).into(),
-            (Logical(l), Logical(r)) => l.vec_gt(r).into(),
-            (Logical(l), Character(r)) => l.vec_gt(r).into(),
-            (Character(l), Double(r)) => l.vec_gt(r).into(),
-            (Character(l), Integer(r)) => l.vec_gt(r).into(),
-            (Character(l), Logical(r)) => l.vec_gt(r).into(),
-            (Character(l), Character(r)) => l.vec_gt(r).into(),
+            (Double(l), Double(r)) => l.vec_gt(r).map(|x| x.into()),
+            (Double(l), Integer(r)) => l.vec_gt(r).map(|x| x.into()),
+            (Double(l), Logical(r)) => l.vec_gt(r).map(|x| x.into()),
+            (Double(l), Character(r)) => l.vec_gt(r).map(|x| x.into()),
+            (Integer(l), Double(r)) => l.vec_gt(r).map(|x| x.into()),
+            (Integer(l), Integer(r)) => l.vec_gt(r).map(|x| x.into()),
+            (Integer(l), Logical(r)) => l.vec_gt(r).map(|x| x.into()),
+            (Integer(l), Character(r)) => l.vec_gt(r).map(|x| x.into()),
+            (Logical(l), Double(r)) => l.vec_gt(r).map(|x| x.into()),
+            (Logical(l), Integer(r)) => l.vec_gt(r).map(|x| x.into()),
+            (Logical(l), Logical(r)) => l.vec_gt(r).map(|x| x.into()),
+            (Logical(l), Character(r)) => l.vec_gt(r).map(|x| x.into()),
+            (Character(l), Double(r)) => l.vec_gt(r).map(|x| x.into()),
+            (Character(l), Integer(r)) => l.vec_gt(r).map(|x| x.into()),
+            (Character(l), Logical(r)) => l.vec_gt(r).map(|x| x.into()),
+            (Character(l), Character(r)) => l.vec_gt(r).map(|x| x.into()),
         }
     }
 
     fn vec_gte(self, rhs: Self) -> Self::Output {
         use Vector::*;
         match (self, rhs) {
-            (Double(l), Double(r)) => l.vec_gte(r).into(),
-            (Double(l), Integer(r)) => l.vec_gte(r).into(),
-            (Double(l), Logical(r)) => l.vec_gte(r).into(),
-            (Double(l), Character(r)) => l.vec_gte(r).into(),
-            (Integer(l), Double(r)) => l.vec_gte(r).into(),
-            (Integer(l), Integer(r)) => l.vec_gte(r).into(),
-            (Integer(l), Logical(r)) => l.vec_gte(r).into(),
-            (Integer(l), Character(r)) => l.vec_gte(r).into(),
-            (Logical(l), Double(r)) => l.vec_gte(r).into(),
-            (Logical(l), Integer(r)) => l.vec_gte(r).into(),
-            (Logical(l), Logical(r)) => l.vec_gte(r).into(),
-            (Logical(l), Character(r)) => l.vec_gte(r).into(),
-            (Character(l), Double(r)) => l.vec_gte(r).into(),
-            (Character(l), Integer(r)) => l.vec_gte(r).into(),
-            (Character(l), Logical(r)) => l.vec_gte(r).into(),
-            (Character(l), Character(r)) => l.vec_gte(r).into(),
+            (Double(l), Double(r)) => l.vec_gte(r).map(|x| x.into()),
+            (Double(l), Integer(r)) => l.vec_gte(r).map(|x| x.into()),
+            (Double(l), Logical(r)) => l.vec_gte(r).map(|x| x.into()),
+            (Double(l), Character(r)) => l.vec_gte(r).map(|x| x.into()),
+            (Integer(l), Double(r)) => l.vec_gte(r).map(|x| x.into()),
+            (Integer(l), Integer(r)) => l.vec_gte(r).map(|x| x.into()),
+            (Integer(l), Logical(r)) => l.vec_gte(r).map(|x| x.into()),
+            (Integer(l), Character(r)) => l.vec_gte(r).map(|x| x.into()),
+            (Logical(l), Double(r)) => l.vec_gte(r).map(|x| x.into()),
+            (Logical(l), Integer(r)) => l.vec_gte(r).map(|x| x.into()),
+            (Logical(l), Logical(r)) => l.vec_gte(r).map(|x| x.into()),
+            (Logical(l), Character(r)) => l.vec_gte(r).map(|x| x.into()),
+            (Character(l), Double(r)) => l.vec_gte(r).map(|x| x.into()),
+            (Character(l), Integer(r)) => l.vec_gte(r).map(|x| x.into()),
+            (Character(l), Logical(r)) => l.vec_gte(r).map(|x| x.into()),
+            (Character(l), Character(r)) => l.vec_gte(r).map(|x| x.into()),
         }
     }
 
     fn vec_lt(self, rhs: Self) -> Self::Output {
         use Vector::*;
         match (self, rhs) {
-            (Double(l), Double(r)) => l.vec_lt(r).into(),
-            (Double(l), Integer(r)) => l.vec_lt(r).into(),
-            (Double(l), Logical(r)) => l.vec_lt(r).into(),
-            (Double(l), Character(r)) => l.vec_lt(r).into(),
-            (Integer(l), Double(r)) => l.vec_lt(r).into(),
-            (Integer(l), Integer(r)) => l.vec_lt(r).into(),
-            (Integer(l), Logical(r)) => l.vec_lt(r).into(),
-            (Integer(l), Character(r)) => l.vec_lt(r).into(),
-            (Logical(l), Double(r)) => l.vec_lt(r).into(),
-            (Logical(l), Integer(r)) => l.vec_lt(r).into(),
-            (Logical(l), Logical(r)) => l.vec_lt(r).into(),
-            (Logical(l), Character(r)) => l.vec_lt(r).into(),
-            (Character(l), Double(r)) => l.vec_lt(r).into(),
-            (Character(l), Integer(r)) => l.vec_lt(r).into(),
-            (Character(l), Logical(r)) => l.vec_lt(r).into(),
-            (Character(l), Character(r)) => l.vec_lt(r).into(),
+            (Double(l), Double(r)) => l.vec_lt(r).map(|x| x.into()),
+            (Double(l), Integer(r)) => l.vec_lt(r).map(|x| x.into()),
+            (Double(l), Logical(r)) => l.vec_lt(r).map(|x| x.into()),
+            (Double(l), Character(r)) => l.vec_lt(r).map(|x| x.into()),
+            (Integer(l), Double(r)) => l.vec_lt(r).map(|x| x.into()),
+            (Integer(l), Integer(r)) => l.vec_lt(r).map(|x| x.into()),
+            (Integer(l), Logical(r)) => l.vec_lt(r).map(|x| x.into()),
+            (Integer(l), Character(r)) => l.vec_lt(r).map(|x| x.into()),
+            (Logical(l), Double(r)) => l.vec_lt(r).map(|x| x.into()),
+            (Logical(l), Integer(r)) => l.vec_lt(r).map(|x| x.into()),
+            (Logical(l), Logical(r)) => l.vec_lt(r).map(|x| x.into()),
+            (Logical(l), Character(r)) => l.vec_lt(r).map(|x| x.into()),
+            (Character(l), Double(r)) => l.vec_lt(r).map(|x| x.into()),
+            (Character(l), Integer(r)) => l.vec_lt(r).map(|x| x.into()),
+            (Character(l), Logical(r)) => l.vec_lt(r).map(|x| x.into()),
+            (Character(l), Character(r)) => l.vec_lt(r).map(|x| x.into()),
         }
     }
 
     fn vec_lte(self, rhs: Self) -> Self::Output {
         use Vector::*;
         match (self, rhs) {
-            (Double(l), Double(r)) => l.vec_lte(r).into(),
-            (Double(l), Integer(r)) => l.vec_lte(r).into(),
-            (Double(l), Logical(r)) => l.vec_lte(r).into(),
-            (Double(l), Character(r)) => l.vec_lte(r).into(),
-            (Integer(l), Double(r)) => l.vec_lte(r).into(),
-            (Integer(l), Integer(r)) => l.vec_lte(r).into(),
-            (Integer(l), Logical(r)) => l.vec_lte(r).into(),
-            (Integer(l), Character(r)) => l.vec_lte(r).into(),
-            (Logical(l), Double(r)) => l.vec_lte(r).into(),
-            (Logical(l), Integer(r)) => l.vec_lte(r).into(),
-            (Logical(l), Logical(r)) => l.vec_lte(r).into(),
-            (Logical(l), Character(r)) => l.vec_lte(r).into(),
-            (Character(l), Double(r)) => l.vec_lte(r).into(),
-            (Character(l), Integer(r)) => l.vec_lte(r).into(),
-            (Character(l), Logical(r)) => l.vec_lte(r).into(),
-            (Character(l), Character(r)) => l.vec_lte(r).into(),
+            (Double(l), Double(r)) => l.vec_lte(r).map(|x| x.into()),
+            (Double(l), Integer(r)) => l.vec_lte(r).map(|x| x.into()),
+            (Double(l), Logical(r)) => l.vec_lte(r).map(|x| x.into()),
+            (Double(l), Character(r)) => l.vec_lte(r).map(|x| x.into()),
+            (Integer(l), Double(r)) => l.vec_lte(r).map(|x| x.into()),
+            (Integer(l), Integer(r)) => l.vec_lte(r).map(|x| x.into()),
+            (Integer(l), Logical(r)) => l.vec_lte(r).map(|x| x.into()),
+            (Integer(l), Character(r)) => l.vec_lte(r).map(|x| x.into()),
+            (Logical(l), Double(r)) => l.vec_lte(r).map(|x| x.into()),
+            (Logical(l), Integer(r)) => l.vec_lte(r).map(|x| x.into()),
+            (Logical(l), Logical(r)) => l.vec_lte(r).map(|x| x.into()),
+            (Logical(l), Character(r)) => l.vec_lte(r).map(|x| x.into()),
+            (Character(l), Double(r)) => l.vec_lte(r).map(|x| x.into()),
+            (Character(l), Integer(r)) => l.vec_lte(r).map(|x| x.into()),
+            (Character(l), Logical(r)) => l.vec_lte(r).map(|x| x.into()),
+            (Character(l), Character(r)) => l.vec_lte(r).map(|x| x.into()),
         }
     }
 
     fn vec_eq(self, rhs: Self) -> Self::Output {
         use Vector::*;
         match (self, rhs) {
-            (Double(l), Double(r)) => l.vec_eq(r).into(),
-            (Double(l), Integer(r)) => l.vec_eq(r).into(),
-            (Double(l), Logical(r)) => l.vec_eq(r).into(),
-            (Double(l), Character(r)) => l.vec_eq(r).into(),
-            (Integer(l), Double(r)) => l.vec_eq(r).into(),
-            (Integer(l), Integer(r)) => l.vec_eq(r).into(),
-            (Integer(l), Logical(r)) => l.vec_eq(r).into(),
-            (Integer(l), Character(r)) => l.vec_eq(r).into(),
-            (Logical(l), Double(r)) => l.vec_eq(r).into(),
-            (Logical(l), Integer(r)) => l.vec_eq(r).into(),
-            (Logical(l), Logical(r)) => l.vec_eq(r).into(),
-            (Logical(l), Character(r)) => l.vec_eq(r).into(),
-            (Character(l), Double(r)) => l.vec_eq(r).into(),
-            (Character(l), Integer(r)) => l.vec_eq(r).into(),
-            (Character(l), Logical(r)) => l.vec_eq(r).into(),
-            (Character(l), Character(r)) => l.vec_eq(r).into(),
+            (Double(l), Double(r)) => l.vec_eq(r).map(|x| x.into()),
+            (Double(l), Integer(r)) => l.vec_eq(r).map(|x| x.into()),
+            (Double(l), Logical(r)) => l.vec_eq(r).map(|x| x.into()),
+            (Double(l), Character(r)) => l.vec_eq(r).map(|x| x.into()),
+            (Integer(l), Double(r)) => l.vec_eq(r).map(|x| x.into()),
+            (Integer(l), Integer(r)) => l.vec_eq(r).map(|x| x.into()),
+            (Integer(l), Logical(r)) => l.vec_eq(r).map(|x| x.into()),
+            (Integer(l), Character(r)) => l.vec_eq(r).map(|x| x.into()),
+            (Logical(l), Double(r)) => l.vec_eq(r).map(|x| x.into()),
+            (Logical(l), Integer(r)) => l.vec_eq(r).map(|x| x.into()),
+            (Logical(l), Logical(r)) => l.vec_eq(r).map(|x| x.into()),
+            (Logical(l), Character(r)) => l.vec_eq(r).map(|x| x.into()),
+            (Character(l), Double(r)) => l.vec_eq(r).map(|x| x.into()),
+            (Character(l), Integer(r)) => l.vec_eq(r).map(|x| x.into()),
+            (Character(l), Logical(r)) => l.vec_eq(r).map(|x| x.into()),
+            (Character(l), Character(r)) => l.vec_eq(r).map(|x| x.into()),
         }
     }
 
     fn vec_neq(self, rhs: Self) -> Self::Output {
         use Vector::*;
         match (self, rhs) {
-            (Double(l), Double(r)) => l.vec_neq(r).into(),
-            (Double(l), Integer(r)) => l.vec_neq(r).into(),
-            (Double(l), Logical(r)) => l.vec_neq(r).into(),
-            (Double(l), Character(r)) => l.vec_neq(r).into(),
-            (Integer(l), Double(r)) => l.vec_neq(r).into(),
-            (Integer(l), Integer(r)) => l.vec_neq(r).into(),
-            (Integer(l), Logical(r)) => l.vec_neq(r).into(),
-            (Integer(l), Character(r)) => l.vec_neq(r).into(),
-            (Logical(l), Double(r)) => l.vec_neq(r).into(),
-            (Logical(l), Integer(r)) => l.vec_neq(r).into(),
-            (Logical(l), Logical(r)) => l.vec_neq(r).into(),
-            (Logical(l), Character(r)) => l.vec_neq(r).into(),
-            (Character(l), Double(r)) => l.vec_neq(r).into(),
-            (Character(l), Integer(r)) => l.vec_neq(r).into(),
-            (Character(l), Logical(r)) => l.vec_neq(r).into(),
-            (Character(l), Character(r)) => l.vec_neq(r).into(),
+            (Double(l), Double(r)) => l.vec_neq(r).map(|x| x.into()),
+            (Double(l), Integer(r)) => l.vec_neq(r).map(|x| x.into()),
+            (Double(l), Logical(r)) => l.vec_neq(r).map(|x| x.into()),
+            (Double(l), Character(r)) => l.vec_neq(r).map(|x| x.into()),
+            (Integer(l), Double(r)) => l.vec_neq(r).map(|x| x.into()),
+            (Integer(l), Integer(r)) => l.vec_neq(r).map(|x| x.into()),
+            (Integer(l), Logical(r)) => l.vec_neq(r).map(|x| x.into()),
+            (Integer(l), Character(r)) => l.vec_neq(r).map(|x| x.into()),
+            (Logical(l), Double(r)) => l.vec_neq(r).map(|x| x.into()),
+            (Logical(l), Integer(r)) => l.vec_neq(r).map(|x| x.into()),
+            (Logical(l), Logical(r)) => l.vec_neq(r).map(|x| x.into()),
+            (Logical(l), Character(r)) => l.vec_neq(r).map(|x| x.into()),
+            (Character(l), Double(r)) => l.vec_neq(r).map(|x| x.into()),
+            (Character(l), Integer(r)) => l.vec_neq(r).map(|x| x.into()),
+            (Character(l), Logical(r)) => l.vec_neq(r).map(|x| x.into()),
+            (Character(l), Character(r)) => l.vec_neq(r).map(|x| x.into()),
         }
     }
 }
 
 impl std::ops::Rem for Vector {
-    type Output = Vector;
+    type Output = Result<Vector, Signal>;
     fn rem(self, rhs: Self) -> Self::Output {
         use Vector::*;
         match (self, rhs) {
-            (Double(l), Double(r)) => l.rem(r).into(),
-            (Double(l), Integer(r)) => l.rem(r).into(),
-            (Double(l), Logical(r)) => l.rem(r).into(),
-            (Integer(l), Double(r)) => l.rem(r).into(),
-            (Integer(l), Integer(r)) => l.rem(r).into(),
-            (Integer(l), Logical(r)) => l.rem(r).into(),
-            (Logical(l), Double(r)) => l.rem(r).into(),
-            (Logical(l), Integer(r)) => l.rem(r).into(),
-            (Logical(l), Logical(r)) => l.rem(r).into(),
+            (Double(l), Double(r)) => l.rem(r).map(|x| x.into()),
+            (Double(l), Integer(r)) => l.rem(r).map(|x| x.into()),
+            (Double(l), Logical(r)) => l.rem(r).map(|x| x.into()),
+            (Integer(l), Double(r)) => l.rem(r).map(|x| x.into()),
+            (Integer(l), Integer(r)) => l.rem(r).map(|x| x.into()),
+            (Integer(l), Logical(r)) => l.rem(r).map(|x| x.into()),
+            (Logical(l), Double(r)) => l.rem(r).map(|x| x.into()),
+            (Logical(l), Integer(r)) => l.rem(r).map(|x| x.into()),
+            (Logical(l), Logical(r)) => l.rem(r).map(|x| x.into()),
             _ => todo!(),
         }
     }
 }
 
 impl std::ops::BitOr for Vector {
-    type Output = Vector;
+    type Output = Result<Vector, Signal>;
     fn bitor(self, rhs: Self) -> Self::Output {
         use Vector::*;
         match (self, rhs) {
-            (Double(l), Double(r)) => l.bitor(r).into(),
-            (Double(l), Integer(r)) => l.bitor(r).into(),
-            (Double(l), Logical(r)) => l.bitor(r).into(),
-            (Double(l), Character(r)) => l.bitor(r).into(),
-            (Integer(l), Double(r)) => l.bitor(r).into(),
-            (Integer(l), Integer(r)) => l.bitor(r).into(),
-            (Integer(l), Logical(r)) => l.bitor(r).into(),
-            (Integer(l), Character(r)) => l.bitor(r).into(),
-            (Logical(l), Double(r)) => l.bitor(r).into(),
-            (Logical(l), Integer(r)) => l.bitor(r).into(),
-            (Logical(l), Logical(r)) => l.bitor(r).into(),
-            (Logical(l), Character(r)) => l.bitor(r).into(),
-            (Character(l), Double(r)) => l.bitor(r).into(),
-            (Character(l), Integer(r)) => l.bitor(r).into(),
-            (Character(l), Logical(r)) => l.bitor(r).into(),
-            (Character(l), Character(r)) => l.bitor(r).into(),
+            (Double(l), Double(r)) => l.bitor(r).map(|x| x.into()),
+            (Double(l), Integer(r)) => l.bitor(r).map(|x| x.into()),
+            (Double(l), Logical(r)) => l.bitor(r).map(|x| x.into()),
+            (Double(l), Character(r)) => l.bitor(r).map(|x| x.into()),
+            (Integer(l), Double(r)) => l.bitor(r).map(|x| x.into()),
+            (Integer(l), Integer(r)) => l.bitor(r).map(|x| x.into()),
+            (Integer(l), Logical(r)) => l.bitor(r).map(|x| x.into()),
+            (Integer(l), Character(r)) => l.bitor(r).map(|x| x.into()),
+            (Logical(l), Double(r)) => l.bitor(r).map(|x| x.into()),
+            (Logical(l), Integer(r)) => l.bitor(r).map(|x| x.into()),
+            (Logical(l), Logical(r)) => l.bitor(r).map(|x| x.into()),
+            (Logical(l), Character(r)) => l.bitor(r).map(|x| x.into()),
+            (Character(l), Double(r)) => l.bitor(r).map(|x| x.into()),
+            (Character(l), Integer(r)) => l.bitor(r).map(|x| x.into()),
+            (Character(l), Logical(r)) => l.bitor(r).map(|x| x.into()),
+            (Character(l), Character(r)) => l.bitor(r).map(|x| x.into()),
         }
     }
 }
 
 impl std::ops::BitAnd for Vector {
-    type Output = Vector;
+    type Output = Result<Vector, Signal>;
     fn bitand(self, rhs: Self) -> Self::Output {
         use Vector::*;
         match (self, rhs) {
-            (Double(l), Double(r)) => l.bitand(r).into(),
-            (Double(l), Integer(r)) => l.bitand(r).into(),
-            (Double(l), Logical(r)) => l.bitand(r).into(),
-            (Double(l), Character(r)) => l.bitand(r).into(),
-            (Integer(l), Double(r)) => l.bitand(r).into(),
-            (Integer(l), Integer(r)) => l.bitand(r).into(),
-            (Integer(l), Logical(r)) => l.bitand(r).into(),
-            (Integer(l), Character(r)) => l.bitand(r).into(),
-            (Logical(l), Double(r)) => l.bitand(r).into(),
-            (Logical(l), Integer(r)) => l.bitand(r).into(),
-            (Logical(l), Logical(r)) => l.bitand(r).into(),
-            (Logical(l), Character(r)) => l.bitand(r).into(),
-            (Character(l), Double(r)) => l.bitand(r).into(),
-            (Character(l), Integer(r)) => l.bitand(r).into(),
-            (Character(l), Logical(r)) => l.bitand(r).into(),
-            (Character(l), Character(r)) => l.bitand(r).into(),
+            (Double(l), Double(r)) => l.bitand(r).map(|x| x.into()),
+            (Double(l), Integer(r)) => l.bitand(r).map(|x| x.into()),
+            (Double(l), Logical(r)) => l.bitand(r).map(|x| x.into()),
+            (Double(l), Character(r)) => l.bitand(r).map(|x| x.into()),
+            (Integer(l), Double(r)) => l.bitand(r).map(|x| x.into()),
+            (Integer(l), Integer(r)) => l.bitand(r).map(|x| x.into()),
+            (Integer(l), Logical(r)) => l.bitand(r).map(|x| x.into()),
+            (Integer(l), Character(r)) => l.bitand(r).map(|x| x.into()),
+            (Logical(l), Double(r)) => l.bitand(r).map(|x| x.into()),
+            (Logical(l), Integer(r)) => l.bitand(r).map(|x| x.into()),
+            (Logical(l), Logical(r)) => l.bitand(r).map(|x| x.into()),
+            (Logical(l), Character(r)) => l.bitand(r).map(|x| x.into()),
+            (Character(l), Double(r)) => l.bitand(r).map(|x| x.into()),
+            (Character(l), Integer(r)) => l.bitand(r).map(|x| x.into()),
+            (Character(l), Logical(r)) => l.bitand(r).map(|x| x.into()),
+            (Character(l), Character(r)) => l.bitand(r).map(|x| x.into()),
         }
     }
 }
@@ -998,5 +1005,58 @@ mod tests {
             x[[1]] = 10
             x[[1]] == 10 & x[[2]] == 2
         "}}
+    }
+    #[test]
+    fn comparison_conversion() {
+        // double
+        r_expect!(2 == 2);
+        r_expect!(2 == 2L);
+        r_expect!(1 == true);
+        r_expect!(2 != false);
+        r_expect!(2 != true);
+        r_expect!(0 == false);
+        // integer
+        r_expect!(2L == 2L);
+        r_expect!(2L == 2);
+        r_expect!(2L != true);
+        r_expect!(0L == false);
+        r_expect!(1L == true);
+        // logical
+        r_expect!(true == 1);
+        r_expect!(true == 1L);
+        r_expect!(false == 0L);
+        r_expect!(false == 0);
+        r_expect! {{r#""true" == true"#}}
+        // character
+        r_expect!("a" == "a");
+        r_expect!("a" != "b");
+        r_expect!("1" == 1);
+        r_expect!("1" == 1L);
+        r_expect!("1" != 2L);
+        r_expect!("1" != 2);
+
+        // metaprogramming objects
+        r_expect!(environment() == environment());
+        r_expect!(quote(1) == quote(1));
+
+        // length > 1 also works
+        r_expect! {{"
+            x = [1L, 2L]
+            y = [1L, 2L]
+            z = x == y
+            z[1] && z[2]
+        "}}
+    }
+    #[test]
+    // test that types are as expected
+    fn type_stability_num_ops() {
+        r_expect! {{r#"
+            typeof(1L + 1L) == "integer"
+            typeof(1 + 1) == "double"
+            typeof(1L + 1) == "double"
+            typeof(1 + 1L) == "double"
+            typeof(true + true) == "integer"
+            typeof(true + false) == "integer"
+        "#}}
     }
 }
