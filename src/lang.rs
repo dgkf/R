@@ -479,7 +479,7 @@ impl std::ops::Div for Obj {
     type Output = EvalResult;
 
     fn div(self, rhs: Self) -> Self::Output {
-        match (self.as_double()?, rhs.as_double()?) {
+        match (self, rhs) {
             (Obj::Vector(l), Obj::Vector(r)) => Ok(Obj::Vector((l / r)?)),
             _ => internal_err!(),
         }

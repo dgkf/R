@@ -65,6 +65,7 @@ impl<T> Rep<T>
 where
     T: Clone + Default,
 {
+    /// Return the only value if the vector has length 1.
     pub fn as_scalar(&self) -> Option<T> {
         let mut into_iter = self.values_ref();
         let mut iter = into_iter.iter();
@@ -248,6 +249,8 @@ where
         self.borrow().push_named(name, value)
     }
 
+    /// Assign to the vector, often with a view through a Subset.
+    /// An error is thrown if the lengths are not compatible.
     pub fn assign<R>(&mut self, value: Rep<R>) -> Result<Self, Signal>
     where
         T: From<R> + Clone,
@@ -729,7 +732,7 @@ where
     fn vec_gt(self, rhs: Rep<R>) -> Self::Output {
         use std::cmp::Ordering::*;
         try_binary_cmp_op(self, rhs, |i| match i {
-            Some(Greater | Equal) => OptionNA::Some(true),
+            Some(Greater) => OptionNA::Some(true),
             Some(_) => OptionNA::Some(false),
             None => OptionNA::NA,
         })
@@ -781,6 +784,8 @@ where
     }
 }
 
+/// This function applies a function `g` two pairs from lhs and rhs.
+/// The function returns an error when the lengths are not compatible.
 fn try_recycle_then<L, R, O, F, A>(lhs: Rep<L>, rhs: Rep<R>, g: F) -> Result<Rep<A>, Signal>
 where
     L: Clone + Default,

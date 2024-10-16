@@ -617,8 +617,6 @@ impl<T: Clone + Default> RepType<T> {
                 .expect("index should exist")
                 .expect("No NA for subsetting");
             let elem = value.get_inner(index).expect("element should exist");
-            // assign this element to all the indices in l_indices
-            // update the code from below to do this
             match (self, value) {
                 (RepType::Subset(lv, ls, ln), RepType::Subset(..)) => {
                     lv.with_inner_mut(|lvb| {

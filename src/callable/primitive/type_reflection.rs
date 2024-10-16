@@ -34,3 +34,13 @@ impl Callable for PrimitiveTypeOf {
         EvalResult::Ok(Obj::Vector(Vector::Character(vec![t.to_string()].into())))
     }
 }
+
+#[cfg(test)]
+
+mod tests {
+    use crate::{r, r_expect};
+    #[test]
+    fn character() {
+        r_expect!(typeof("a") == "character")
+    }
+}
