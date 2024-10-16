@@ -54,10 +54,10 @@ impl<T> OptionNA<T> {
 
 #[derive(Debug, PartialEq)]
 pub enum Vector {
-    Double(Rep<Double>),
-    Integer(Rep<Integer>),
-    Logical(Rep<Logical>),
-    Character(Rep<Character>),
+    Double(RepType<Double>),
+    Integer(RepType<Integer>),
+    Logical(RepType<Logical>),
+    Character(RepType<Character>),
     // Complex(Complex),
     // Raw(Raw),
 }
@@ -96,16 +96,16 @@ impl Vector {
         match self {
             Double(x) => x
                 .set_subset(subset, value.try_into()?)
-                .map(|x| Double(Rep::from(vec![x]))),
+                .map(|x| Double(RepType::from(vec![x]))),
             Integer(x) => x
                 .set_subset(subset, value.try_into()?)
-                .map(|x| Integer(Rep::from(vec![x]))),
+                .map(|x| Integer(RepType::from(vec![x]))),
             Character(x) => x
                 .set_subset(subset, value.try_into()?)
-                .map(|x| Character(Rep::from(vec![x]))),
+                .map(|x| Character(RepType::from(vec![x]))),
             Logical(x) => x
                 .set_subset(subset, value.try_into()?)
-                .map(|x| Logical(Rep::from(vec![x]))),
+                .map(|x| Logical(RepType::from(vec![x]))),
         }
     }
 
@@ -139,13 +139,14 @@ impl Vector {
         }
     }
 
-    pub fn set_names(&self, names: CowObj<Vec<Character>>) {
+    pub fn set_names(&self, names: CowObj<Vec<Character>>) -> Self {
+        use super::Vector::*;
         match self {
-            Vector::Character(x) => x.set_names(names),
-            Vector::Logical(x) => x.set_names(names),
-            Vector::Integer(x) => x.set_names(names),
-            Vector::Double(x) => x.set_names(names),
-        };
+            Character(x) => Character(x.set_names(names)),
+            Logical(x) => Logical(x.set_names(names)),
+            Integer(x) => Integer(x.set_names(names)),
+            Double(x) => Double(x.set_names(names)),
+        }
     }
 
     pub fn try_get(&self, index: Obj) -> EvalResult {
@@ -347,29 +348,29 @@ impl From<RepType<Character>> for Vector {
     }
 }
 
-impl From<Rep<Double>> for Vector {
-    fn from(x: Rep<Double>) -> Self {
-        Vector::Double(x)
-    }
-}
+// impl From<RepType<Double>> for Vector {
+//     fn from(x: Rep<Double>) -> Self {
+//         Vector::Double(x)
+//     }
+// }
 
-impl From<Rep<Integer>> for Vector {
-    fn from(x: Rep<Integer>) -> Self {
-        Vector::Integer(x)
-    }
-}
+// impl From<Rep<Integer>> for Vector {
+//     fn from(x: Rep<Integer>) -> Self {
+//         Vector::Integer(x)
+//     }
+// }
 
-impl From<Rep<Logical>> for Vector {
-    fn from(x: Rep<Logical>) -> Self {
-        Vector::Logical(x)
-    }
-}
+// impl From<Rep<Logical>> for Vector {
+//     fn from(x: Rep<Logical>) -> Self {
+//         Vector::Logical(x)
+//     }
+// }
 
-impl From<Rep<Character>> for Vector {
-    fn from(x: Rep<Character>) -> Self {
-        Vector::Character(x)
-    }
-}
+// impl From<Rep<Character>> for Vector {
+//     fn from(x: Rep<Character>) -> Self {
+//         Vector::Character(x)
+//     }
+// }
 
 impl From<Vec<f64>> for Vector {
     fn from(x: Vec<f64>) -> Self {

@@ -213,7 +213,7 @@ impl Callable for PrimitiveC {
         };
 
         if let Some(names) = names {
-            v.set_names(names.into())
+            v.set_names(names.into());
         }
         Ok(Obj::Vector(v))
     }
