@@ -154,16 +154,16 @@ pub struct IntoIterableRefNames {
     iter: Box<dyn Iterator<Item = Option<usize>>>,
 }
 
-pub struct RepIterableNames<'a> {
+pub struct IterableNames<'a> {
     names: &'a [Character],
     na_name: &'a Character,
     iter: &'a mut Box<dyn Iterator<Item = Option<usize>>>,
 }
 
 impl IntoIterableRefNames {
-    pub fn iter(&mut self) -> RepIterableNames<'_> {
+    pub fn iter(&mut self) -> IterableNames<'_> {
         let names = &self.names[..];
-        RepIterableNames {
+        IterableNames {
             names,
             na_name: &self.na_name,
             iter: &mut self.iter,
@@ -171,7 +171,7 @@ impl IntoIterableRefNames {
     }
 }
 
-impl<'a> Iterator for RepIterableNames<'a> {
+impl<'a> Iterator for IterableNames<'a> {
     type Item = &'a Character;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -390,9 +390,9 @@ impl<T: Clone + Default> Rep<T> {
         }
     }
 
-    /// Get an `Option<RepTypeIntoIterableValues<T>>` which in turn can be converted into an iterator over
-    /// references to the values.
-    /// The `None` variant is returned if the `Rep<T>` is not named.
+    /// Get an `IntoIterableRefValues<T>` which in turn can be converted into an iterator over
+    /// references to the values (`T`).
+    /// None is returned if no names exist.
     ///
     /// Directly getting an iterator is not possible due to lifetime issues.
     pub fn values_ref(&self) -> IntoIterableRefValues<T> {
@@ -406,8 +406,9 @@ impl<T: Clone + Default> Rep<T> {
         }
     }
 
-    /// Get an `RepTypeIntoIterableValues<T>` which in turn can be converted into an iterator over
-    /// references to the names.
+    /// Get an `Option<IntoIterableRefNames>` which in turn can be converted into an iterator over
+    /// references to the names (`&String`).
+    /// None is returned if no names exist.
     ///
     /// Directly getting an iterator is not possible due to lifetime issues.
     pub fn names_ref(&self) -> Option<IntoIterableRefNames> {
@@ -422,8 +423,9 @@ impl<T: Clone + Default> Rep<T> {
         }
     }
 
-    /// Get an `RepTypeIntoIterablePairs<T>` which in turn can be converted into an iterator over
-    /// pairs of references (&name, &value).
+    /// Get an `IntoIterableRefPairs<T>` which in turn can be converted into an iterator over
+    /// pairs of references (`(&String, &T)`).
+    /// None is returned if no names exist.
     ///
     /// Directly getting an iterator is not possible due to lifetime issues.
     pub fn pairs_ref(&self) -> IntoIterableRefPairs<T> {
@@ -444,6 +446,7 @@ impl<T: Clone + Default> Rep<T> {
         }
     }
 
+    /// Iterate over the (owned) names and values of the vector (`(&String, &T)`).
     pub fn iter_pairs(&self) -> IterablePairs<T> {
         match self.clone() {
             Rep::Subset(values, _, maybe_naming) => {
@@ -478,6 +481,7 @@ impl<T: Clone + Default> Rep<T> {
         }
     }
 
+    /// Push an unnamed value onto the vector.
     pub fn push_value(&self, value: T) {
         self.push_named(Character::NA, value);
     }
@@ -497,14 +501,18 @@ impl<T: Clone + Default> Rep<T> {
         }
     }
 
+    /// Get an `ExactSizeIterator` over the indices defines by the `Subsets`.
+    /// This is e.g. used when assigning to a vector as the recycling checks
+    /// need to be performed before modifying a vector.
     pub fn iter_subset_indices_exact(&self) -> ExactIterSubsetIndices {
-        // TODO(performance): Avoid the vector allocation
+        // TODO(performance): In some cases this can be made much faster (indices, range).
         let iter = self.iter_subset_indices();
         let len = iter.count();
         let iter = self.iter_subset_indices();
         ExactIterSubsetIndices { iter, len }
     }
 
+    /// Get an `Iterator` over the indices defines by the `Subsets`.
     pub fn iter_subset_indices(&self) -> Box<dyn Iterator<Item = Option<usize>>> {
         match self.clone() {
             Rep::Subset(vals, subsets, maybe_naming) => {
@@ -586,7 +594,9 @@ impl<T: Clone + Default> Rep<T> {
         }
     }
 
+    /// Replace the names
     pub fn set_names(&self, names: CowObj<Vec<Character>>) -> Self {
+        // TODO(length checks)
         match self {
             Rep::Subset(v, s, _) => Rep::Subset(v.clone(), s.clone(), Option::Some(names.into())),
         }
