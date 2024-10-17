@@ -79,6 +79,23 @@ impl ViewMut for Obj {
 }
 
 impl Obj {
+    pub fn type_of(&self) -> String {
+        match self {
+            Obj::Null => "null",
+            Obj::Vector(v) => match v {
+                Vector::Character(_) => "character",
+                Vector::Integer(_) => "integer",
+                Vector::Double(_) => "double",
+                Vector::Logical(_) => "logical",
+            },
+            Obj::List(_) => "list",
+            Obj::Expr(_) => "expression",
+            Obj::Promise(..) => "promise",
+            Obj::Function(..) => "function",
+            Obj::Environment(..) => "environment",
+        }
+        .to_string()
+    }
     pub fn with_visibility(self, visibility: bool) -> EvalResult {
         Signal::Return(self, visibility).into()
     }

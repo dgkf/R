@@ -88,7 +88,7 @@ pub trait Context: std::fmt::Debug + std::fmt::Display {
                             internal_err!()
                         }
                     }
-                    // Avoid creating a new closure just to point to another, just reuse it
+                    // Avoid creating a new promise just to point to another, just reuse it
                     (k, Expr::Symbol(s)) => match self.env().get(s.clone()) {
                         Ok(c @ Obj::Promise(..)) => {
                             let k = k.map_or(OptionNA::NA, OptionNA::Some);
@@ -109,12 +109,12 @@ pub trait Context: std::fmt::Debug + std::fmt::Display {
                         Ok(List::from(elem).iter_pairs())
                     }
                     (k, v) => {
-                        let k = k.map_or(OptionNA::NA, OptionNA::Some);
-                        if let Ok(elem) = self.eval(v) {
-                            Ok(List::from(vec![(k, elem)]).iter_pairs())
-                        } else {
-                            internal_err!()
-                        }
+                        // let k = k.map_or(OptionNA::NA, OptionNA::Some);
+                        Ok(List::from(vec![(k, Obj::Promise(None, v, self.env()))]).iter_pairs())
+                        // if let Ok(elem) = self.eval(v) {
+                        // } else {
+                        //     internal_err!()
+                        // }
                     }
                 })
                 .collect::<Result<Vec<_>, _>>()?
