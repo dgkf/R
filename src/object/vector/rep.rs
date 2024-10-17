@@ -27,7 +27,7 @@ impl Naming {
         Naming::default()
     }
 
-    /// See [Self::is_double] for more information
+    // Allocates a new Naming with a capacity for `capacity` elements.
     pub fn with_capacity(capacity: usize) -> Self {
         Self {
             map: HashMap::<String, Vec<usize>>::with_capacity(capacity).into(),
