@@ -47,7 +47,7 @@ pub trait Callable: CallableFormals {
 
         for (i, (maybe_name, value)) in args.pairs_ref().iter().enumerate() {
             if let Character::Some(name) = maybe_name {
-                if let Some((Some(_), _)) = formals.remove_named(&name) {
+                if let Some((Some(_), _)) = formals.remove_named(name) {
                     matched_args.push_named(Character::Some(name.clone()), value.clone());
                     continue;
                 }

@@ -325,25 +325,25 @@ impl From<CowObj<Vec<Character>>> for Vector {
 
 impl From<Rep<Double>> for Vector {
     fn from(x: Rep<Double>) -> Self {
-        Vector::Double(x.into())
+        Vector::Double(x)
     }
 }
 
 impl From<Rep<Integer>> for Vector {
     fn from(x: Rep<Integer>) -> Self {
-        Vector::Integer(x.into())
+        Vector::Integer(x)
     }
 }
 
 impl From<Rep<Logical>> for Vector {
     fn from(x: Rep<Logical>) -> Self {
-        Vector::Logical(x.into())
+        Vector::Logical(x)
     }
 }
 
 impl From<Rep<Character>> for Vector {
     fn from(x: Rep<Character>) -> Self {
-        Vector::Character(x.into())
+        Vector::Character(x)
     }
 }
 
