@@ -279,7 +279,7 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
 <span class="kw">use </span><span class="kw">crate</span>::formals;
 <span class="kw">use </span><span class="kw">crate</span>::internal_err;
 <span class="kw">use </span><span class="kw">crate</span>::lang::<span class="kw-2">*</span>;
-<span class="kw">use </span><span class="kw">crate</span>::object::reptype::RepType;
+<span class="kw">use </span><span class="kw">crate</span>::object::rep::Rep;
 <span class="kw">use </span><span class="kw">crate</span>::object::<span class="kw-2">*</span>;
 
 <span class="doccomment">/// Calculate a Sum of Elements
@@ -314,7 +314,7 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
         <span class="kw">let </span>(<span class="kw">_</span>, ellipsis) = <span class="self">self</span>.match_arg_exprs(args, stack)<span class="question-mark">?</span>;
 
         <span class="kw">if </span>ellipsis.is_empty() {
-            <span class="kw">return </span>EvalResult::Ok(Obj::Vector(Vector::from(RepType::from(<span class="macro">vec!</span>[<span class="number">0.0</span>]))));
+            <span class="kw">return </span>EvalResult::Ok(Obj::Vector(Vector::from(Rep::from(<span class="macro">vec!</span>[<span class="number">0.0</span>]))));
         }
 
         <span class="kw">let </span>objects: Vec&lt;Obj&gt; = force_promises(ellipsis, stack)<span class="question-mark">?
@@ -352,8 +352,8 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
                                 <span class="kw">for </span>x <span class="kw">in </span>repr.inner().borrow().iter() {
                                     <span class="kw">match </span><span class="kw-2">*</span>x {
                                         OptionNA::NA =&gt; {
-                                            <span class="kw">let </span>rep: RepType&lt;OptionNA&lt;f64&gt;&gt; =
-                                                RepType::from(<span class="macro">vec!</span>[OptionNA::NA]);
+                                            <span class="kw">let </span>rep: Rep&lt;OptionNA&lt;f64&gt;&gt; =
+                                                Rep::from(<span class="macro">vec!</span>[OptionNA::NA]);
                                             <span class="kw">return </span>EvalResult::Ok(Obj::Vector(Vector::from(rep)));
                                         }
                                         OptionNA::Some(x) =&gt; sum += x <span class="kw">as </span>i32 <span class="kw">as </span>f64,
@@ -364,8 +364,8 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
                                 <span class="kw">for </span>x <span class="kw">in </span>repr.inner().borrow().iter() {
                                     <span class="kw">match </span><span class="kw-2">*</span>x {
                                         OptionNA::NA =&gt; {
-                                            <span class="kw">let </span>rep: RepType&lt;OptionNA&lt;f64&gt;&gt; =
-                                                RepType::from(<span class="macro">vec!</span>[OptionNA::NA]);
+                                            <span class="kw">let </span>rep: Rep&lt;OptionNA&lt;f64&gt;&gt; =
+                                                Rep::from(<span class="macro">vec!</span>[OptionNA::NA]);
                                             <span class="kw">return </span>EvalResult::Ok(Obj::Vector(Vector::from(rep)));
                                         }
                                         OptionNA::Some(x) =&gt; sum += x <span class="kw">as </span>f64,
@@ -376,8 +376,8 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
                                 <span class="kw">for </span>x <span class="kw">in </span>repr.inner().borrow().iter() {
                                     <span class="kw">match </span><span class="kw-2">*</span>x {
                                         OptionNA::NA =&gt; {
-                                            <span class="kw">let </span>rep: RepType&lt;OptionNA&lt;f64&gt;&gt; =
-                                                RepType::from(<span class="macro">vec!</span>[OptionNA::NA]);
+                                            <span class="kw">let </span>rep: Rep&lt;OptionNA&lt;f64&gt;&gt; =
+                                                Rep::from(<span class="macro">vec!</span>[OptionNA::NA]);
                                             <span class="kw">return </span>EvalResult::Ok(Obj::Vector(Vector::from(rep)));
                                         }
                                         OptionNA::Some(x) =&gt; sum += x,
@@ -390,7 +390,7 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
                     <span class="kw">_ </span>=&gt; <span class="kw">return </span><span class="macro">internal_err!</span>(),
                 }
             }
-            EvalResult::Ok(Obj::Vector(Vector::from(RepType::from(<span class="macro">vec!</span>[sum]))))
+            EvalResult::Ok(Obj::Vector(Vector::from(Rep::from(<span class="macro">vec!</span>[sum]))))
         } <span class="kw">else </span>{
             <span class="kw">let </span><span class="kw-2">mut </span>sum: i32 = <span class="number">0</span>;
 
@@ -402,8 +402,8 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
                                 <span class="kw">for </span>x <span class="kw">in </span>repr.inner().borrow().iter() {
                                     <span class="kw">match </span><span class="kw-2">*</span>x {
                                         OptionNA::NA =&gt; {
-                                            <span class="kw">let </span>rep: RepType&lt;OptionNA&lt;i32&gt;&gt; =
-                                                RepType::from(<span class="macro">vec!</span>[OptionNA::NA]);
+                                            <span class="kw">let </span>rep: Rep&lt;OptionNA&lt;i32&gt;&gt; =
+                                                Rep::from(<span class="macro">vec!</span>[OptionNA::NA]);
                                             <span class="kw">return </span>EvalResult::Ok(Obj::Vector(Vector::from(rep)));
                                         }
                                         OptionNA::Some(x) =&gt; sum += x <span class="kw">as </span>i32,
@@ -414,8 +414,8 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
                                 <span class="kw">for </span>x <span class="kw">in </span>repr.inner().borrow().iter() {
                                     <span class="kw">match </span><span class="kw-2">*</span>x {
                                         OptionNA::NA =&gt; {
-                                            <span class="kw">let </span>rep: RepType&lt;OptionNA&lt;i32&gt;&gt; =
-                                                RepType::from(<span class="macro">vec!</span>[OptionNA::NA]);
+                                            <span class="kw">let </span>rep: Rep&lt;OptionNA&lt;i32&gt;&gt; =
+                                                Rep::from(<span class="macro">vec!</span>[OptionNA::NA]);
                                             <span class="kw">return </span>EvalResult::Ok(Obj::Vector(Vector::from(rep)));
                                         }
                                         OptionNA::Some(x) =&gt; sum += x,
@@ -428,7 +428,7 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
                     <span class="kw">_ </span>=&gt; <span class="kw">return </span><span class="macro">internal_err!</span>(),
                 }
             }
-            EvalResult::Ok(Obj::Vector(Vector::from(RepType::from(<span class="macro">vec!</span>[sum]))))
+            EvalResult::Ok(Obj::Vector(Vector::from(Rep::from(<span class="macro">vec!</span>[sum]))))
         }
     }
 }

@@ -286,11 +286,6 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
 <a href="#253" id="253">253</a>
 <a href="#254" id="254">254</a>
 <a href="#255" id="255">255</a>
-<a href="#256" id="256">256</a>
-<a href="#257" id="257">257</a>
-<a href="#258" id="258">258</a>
-<a href="#259" id="259">259</a>
-<a href="#260" id="260">260</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::cell::RefCell;
 <span class="kw">use </span>std::ops::Range;
 <span class="kw">use </span>std::rc::Rc;
@@ -456,18 +451,13 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
                 }
             }
             Subset::Mask(mask) =&gt; {
-                Box::new(
-                    (<span class="kw-2">**</span>mask.borrow())
-                        .clone()
-                        .into_iter()
-                        .cycle()
-                        .zip(iter)
-                        .filter_map(|(mask, i @ (i_orig, <span class="kw">_</span>))| <span class="kw">match </span>mask {
-                            OptionNA::Some(<span class="bool-val">true</span>) =&gt; <span class="prelude-val">Some</span>(i),      <span class="comment">// accept index
-                            </span>OptionNA::NA =&gt; <span class="prelude-val">Some</span>((i_orig, <span class="prelude-val">None</span>)), <span class="comment">// accept, but NA
-                            </span><span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,                            <span class="comment">// filter falses
-                        </span>}),
-                )
+                Box::new((<span class="kw-2">**</span>mask.borrow()).clone().into_iter().zip(iter).filter_map(
+                    |(mask, i @ (i_orig, <span class="kw">_</span>))| <span class="kw">match </span>mask {
+                        OptionNA::Some(<span class="bool-val">true</span>) =&gt; <span class="prelude-val">Some</span>(i),      <span class="comment">// accept index
+                        </span>OptionNA::NA =&gt; <span class="prelude-val">Some</span>((i_orig, <span class="prelude-val">None</span>)), <span class="comment">// accept, but NA
+                        </span><span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,                            <span class="comment">// filter falses
+                    </span>},
+                ))
             }
             Subset::Range(range) =&gt; Box::new(
                 iter.skip(range.start)

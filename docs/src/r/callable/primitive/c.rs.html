@@ -315,6 +315,7 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
 <a href="#282" id="282">282</a>
 <a href="#283" id="283">283</a>
 <a href="#284" id="284">284</a>
+<a href="#285" id="285">285</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>r_derive::<span class="kw-2">*</span>;
 
 <span class="kw">use </span><span class="kw">crate</span>::callable::core::<span class="kw-2">*</span>;
@@ -530,9 +531,10 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
         };
 
         <span class="kw">if let </span><span class="prelude-val">Some</span>(names) = names {
-            v.set_names(names.into())
+            <span class="prelude-val">Ok</span>(Obj::Vector(v.set_names(names.into())))
+        } <span class="kw">else </span>{
+            <span class="prelude-val">Ok</span>(Obj::Vector(v))
         }
-        <span class="prelude-val">Ok</span>(Obj::Vector(v))
     }
 }
 
