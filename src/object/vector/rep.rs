@@ -1857,7 +1857,6 @@ mod test {
         assert_eq!(x1, x2);
     }
     #[test]
-    // now with names
     fn materialize_after_subset_named() {
         let x = Rep::<Integer>::from(vec![10, 20, 30]);
         x.set_names(
