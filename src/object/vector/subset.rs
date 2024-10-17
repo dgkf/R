@@ -163,18 +163,13 @@ impl Subset {
                 }
             }
             Subset::Mask(mask) => {
-                Box::new(
-                    (**mask.borrow())
-                        .clone()
-                        .into_iter()
-                        .cycle()
-                        .zip(iter)
-                        .filter_map(|(mask, i @ (i_orig, _))| match mask {
-                            OptionNA::Some(true) => Some(i),      // accept index
-                            OptionNA::NA => Some((i_orig, None)), // accept, but NA
-                            _ => None,                            // filter falses
-                        }),
-                )
+                Box::new((**mask.borrow()).clone().into_iter().zip(iter).filter_map(
+                    |(mask, i @ (i_orig, _))| match mask {
+                        OptionNA::Some(true) => Some(i),      // accept index
+                        OptionNA::NA => Some((i_orig, None)), // accept, but NA
+                        _ => None,                            // filter falses
+                    },
+                ))
             }
             Subset::Range(range) => Box::new(
                 iter.skip(range.start)
