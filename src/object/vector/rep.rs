@@ -27,7 +27,7 @@ impl Naming {
         Naming::default()
     }
 
-    /// Create a naming with the given `capacity`.
+    /// See [Self::is_double] for more information
     pub fn with_capacity(capacity: usize) -> Self {
         Self {
             map: HashMap::<String, Vec<usize>>::with_capacity(capacity).into(),
@@ -362,14 +362,8 @@ impl<T: Clone + Default> Rep<T> {
         }
     }
 
-    // fn materialize_inplace(&self) -> &Self {
-    //     // TODO: Rewrite this to avoid copying unnecessarily
-    //     let new_repr = { self.borrow().materialize() };
-    //     self.0.replace(new_repr);
-
-    //     self
-    // }
-
+    /// Change a value at the location given by `subset` to the provided `value`.
+    /// If the `subset` does not have length `1`, an error is returned.
     pub fn set_subset(&mut self, subset: Subset, value: T) -> Result<T, Signal> {
         match &self {
             Rep::Subset(..) => {
@@ -396,6 +390,11 @@ impl<T: Clone + Default> Rep<T> {
         }
     }
 
+    /// Get an `Option<RepTypeIntoIterableValues<T>>` which in turn can be converted into an iterator over
+    /// references to the values.
+    /// The `None` variant is returned if the `Rep<T>` is not named.
+    ///
+    /// Directly getting an iterator is not possible due to lifetime issues.
     pub fn values_ref(&self) -> IntoIterableRefValues<T> {
         match self.clone() {
             Rep::Subset(values, ..) => {
@@ -407,6 +406,10 @@ impl<T: Clone + Default> Rep<T> {
         }
     }
 
+    /// Get an `RepTypeIntoIterableValues<T>` which in turn can be converted into an iterator over
+    /// references to the names.
+    ///
+    /// Directly getting an iterator is not possible due to lifetime issues.
     pub fn names_ref(&self) -> Option<IntoIterableRefNames> {
         match self.clone() {
             Rep::Subset(.., naming) => {
@@ -419,6 +422,10 @@ impl<T: Clone + Default> Rep<T> {
         }
     }
 
+    /// Get an `RepTypeIntoIterablePairs<T>` which in turn can be converted into an iterator over
+    /// pairs of references (&name, &value).
+    ///
+    /// Directly getting an iterator is not possible due to lifetime issues.
     pub fn pairs_ref(&self) -> IntoIterableRefPairs<T> {
         match self.clone() {
             Rep::Subset(values, _, maybe_naming) => {
@@ -449,6 +456,7 @@ impl<T: Clone + Default> Rep<T> {
         }
     }
 
+    /// Iterate over the (owned) values of the vector.
     pub fn iter_values(&self) -> IterableValues<T> {
         match self.clone() {
             Rep::Subset(values, ..) => {
@@ -458,6 +466,7 @@ impl<T: Clone + Default> Rep<T> {
         }
     }
 
+    /// Iterate over the names of the vector (if they exist).
     pub fn iter_names(&self) -> Option<IterableValues<Character>> {
         match self.clone() {
             Rep::Subset(.., maybe_naming) => {
@@ -473,6 +482,7 @@ impl<T: Clone + Default> Rep<T> {
         self.push_named(Character::NA, value);
     }
 
+    /// Push a named `value` with a given `name` onto the `Rep<T>`.
     pub fn push_named(&self, name: OptionNA<String>, value: T) {
         match self {
             Rep::Subset(values, Subsets(subsets), maybe_naming) => match subsets.as_slice() {
@@ -527,6 +537,21 @@ impl<T: Clone + Default> Rep<T> {
                 }
             })
         }
+    }
+
+    /// Constructs a new, empty `Rep<T>` with at least the specified `capacity`.
+    /// Names are only include if `names` is true.
+    pub fn with_capacity(capacity: usize, names: bool) -> Self {
+        let naming = if names {
+            Some(Naming::with_capacity(capacity))
+        } else {
+            None
+        };
+        Rep::Subset(
+            CowObj::from(Vec::with_capacity(capacity)),
+            Subsets::default(),
+            naming,
+        )
     }
 
     pub fn dedup_last(self) -> Self {
@@ -597,6 +622,7 @@ impl<T: Clone + Default> Rep<T> {
         }
     }
 
+    /// The length of the vector.
     pub fn len(&self) -> usize {
         match self {
             Rep::Subset(v, Subsets(s), _) => match s.as_slice() {
@@ -605,6 +631,8 @@ impl<T: Clone + Default> Rep<T> {
             },
         }
     }
+
+    /// Whether the vector has length 0.
     #[must_use]
     pub fn is_empty(&self) -> bool {
         self.len() == 0
@@ -756,6 +784,11 @@ impl<T: Clone + Default> Rep<T> {
         }
     }
 
+    /// Test the mode of the internal vector type
+    ///
+    /// Internally, this is defined by the [crate::object::coercion::AtomicMode]
+    /// implementation of the vector's element type.
+    ///
     pub fn is_double(&self) -> bool
     where
         T: AtomicMode,
@@ -763,6 +796,7 @@ impl<T: Clone + Default> Rep<T> {
         T::is_double()
     }
 
+    /// See [Self::is_double] for more information
     pub fn is_logical(&self) -> bool
     where
         T: AtomicMode,
@@ -770,6 +804,7 @@ impl<T: Clone + Default> Rep<T> {
         T::is_logical()
     }
 
+    /// See [Self::is_double] for more information
     pub fn is_integer(&self) -> bool
     where
         T: AtomicMode,
@@ -777,6 +812,7 @@ impl<T: Clone + Default> Rep<T> {
         T::is_integer()
     }
 
+    /// See [Self::is_double] for more information
     pub fn is_character(&self) -> bool
     where
         T: AtomicMode,
@@ -784,6 +820,30 @@ impl<T: Clone + Default> Rep<T> {
         T::is_character()
     }
 
+    /// Convert a Vector into a vector of a specific class of internal type
+    ///
+    /// The internal type only needs to satisfy
+    /// [crate::object::coercion::CoercibleInto] for the `Mode`, and for the `Mode`
+    /// type to implement [crate::object::coercion::AtomicMode]. Generally,
+    /// this is used more directly via [Self::as_logical], [Self::as_integer],
+    /// [Self::as_double] and [Self::as_character], which predefine the output
+    /// type of the mode.
+    ///
+    /// ```
+    /// use r::object::Vector;
+    /// use r::object::OptionNA;
+    ///
+    /// let x = Vector::from(vec![false, true, true, false]);
+    /// let n = x.as_double();
+    ///
+    /// assert_eq!(n, Vector::from(vec![
+    ///    OptionNA::Some(0_f64),
+    ///    OptionNA::Some(1_f64),
+    ///    OptionNA::Some(1_f64),
+    ///    OptionNA::Some(0_f64)
+    /// ]))
+    /// ```
+    ///
     pub fn as_mode<Mode>(&self) -> Rep<Mode>
     where
         T: CoercibleInto<Mode>,
@@ -801,6 +861,7 @@ impl<T: Clone + Default> Rep<T> {
         }
     }
 
+    /// See [Self::as_mode] for more information
     pub fn as_logical(&self) -> Rep<Logical>
     where
         T: CoercibleInto<Logical>,
@@ -808,6 +869,7 @@ impl<T: Clone + Default> Rep<T> {
         self.as_mode::<Logical>()
     }
 
+    /// See [Self::as_mode] for more information
     pub fn as_integer(&self) -> Rep<Integer>
     where
         T: CoercibleInto<Integer>,
@@ -815,6 +877,7 @@ impl<T: Clone + Default> Rep<T> {
         self.as_mode::<Integer>()
     }
 
+    /// See [Self::as_mode] for more information
     pub fn as_double(&self) -> Rep<Double>
     where
         T: CoercibleInto<Double>,
@@ -822,6 +885,7 @@ impl<T: Clone + Default> Rep<T> {
         self.as_mode::<Double>()
     }
 
+    /// See [Self::as_mode] for more information
     pub fn as_character(&self) -> Rep<Character>
     where
         T: CoercibleInto<Character>,
