@@ -432,6 +432,12 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
 <a href="#399" id="399">399</a>
 <a href="#400" id="400">400</a>
 <a href="#401" id="401">401</a>
+<a href="#402" id="402">402</a>
+<a href="#403" id="403">403</a>
+<a href="#404" id="404">404</a>
+<a href="#405" id="405">405</a>
+<a href="#406" id="406">406</a>
+<a href="#407" id="407">407</a>
 </pre></div><pre class="rust"><code><span class="kw">extern crate </span>r_derive;
 
 <span class="kw">use </span><span class="kw">crate</span>::callable::dyncompare::<span class="kw-2">*</span>;
@@ -472,8 +478,8 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
 <span class="kw">pub trait </span>Callable: CallableFormals {
     <span class="kw">fn </span>match_args(<span class="kw-2">&amp;</span><span class="self">self</span>, args: List, stack: <span class="kw-2">&amp;mut </span>CallStack) -&gt; <span class="prelude-ty">Result</span>&lt;(List, List), Signal&gt; {
         <span class="kw">let </span><span class="kw-2">mut </span>formals = <span class="self">self</span>.formals();
-        <span class="kw">let </span>ellipsis: List = List::new();
-        <span class="kw">let </span>matched_args: List = List::new();
+        <span class="kw">let </span><span class="kw-2">mut </span>ellipsis: List = List::new();
+        <span class="kw">let </span><span class="kw-2">mut </span>matched_args: List = List::new();
 
         <span class="comment">// assign named args to corresponding formals
 
@@ -491,7 +497,7 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
 
         <span class="kw">let </span>indices: Vec&lt;Integer&gt; = indices.into_iter().map(Integer::Some).collect();
         <span class="kw">let </span>subset = Subset::Indices(indices.into());
-        <span class="kw">let </span>args = args.subset(subset).materialize();
+        <span class="kw">let </span>args = args.subset(subset);
 
         <span class="comment">// TODO(bug): need to evaluate trailing unassigned params that have
         // a default value before popping off remaining trailing params
@@ -831,6 +837,12 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
         <span class="macro">assert_eq!</span>(<span class="macro">r!</span> { f &lt;- function(a, b = a) { b }; f(<span class="number">3</span>) }, <span class="macro">r!</span> { <span class="number">3 </span>});
 
         <span class="macro">assert_eq!</span>(<span class="macro">r!</span> { f &lt;- function(a, b = a) { b }; f(a = <span class="number">3</span>) }, <span class="macro">r!</span> { <span class="number">3 </span>});
+    }
+
+    <span class="kw">use </span><span class="kw">crate</span>::error::Error;
+    <span class="attr">#[test]
+    </span><span class="kw">fn </span>wrong_argument() {
+        <span class="macro">assert_eq!</span>(<span class="macro">r!</span>((<span class="kw">fn</span>(x) x)(y = <span class="number">1</span>)), Error::Missing.into())
     }
 }
 </code></pre></div></section></main></body></html>

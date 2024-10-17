@@ -1892,6 +1892,26 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
 <a href="#1859" id="1859">1859</a>
 <a href="#1860" id="1860">1860</a>
 <a href="#1861" id="1861">1861</a>
+<a href="#1862" id="1862">1862</a>
+<a href="#1863" id="1863">1863</a>
+<a href="#1864" id="1864">1864</a>
+<a href="#1865" id="1865">1865</a>
+<a href="#1866" id="1866">1866</a>
+<a href="#1867" id="1867">1867</a>
+<a href="#1868" id="1868">1868</a>
+<a href="#1869" id="1869">1869</a>
+<a href="#1870" id="1870">1870</a>
+<a href="#1871" id="1871">1871</a>
+<a href="#1872" id="1872">1872</a>
+<a href="#1873" id="1873">1873</a>
+<a href="#1874" id="1874">1874</a>
+<a href="#1875" id="1875">1875</a>
+<a href="#1876" id="1876">1876</a>
+<a href="#1877" id="1877">1877</a>
+<a href="#1878" id="1878">1878</a>
+<a href="#1879" id="1879">1879</a>
+<a href="#1880" id="1880">1880</a>
+<a href="#1881" id="1881">1881</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::fmt::Debug;
 <span class="kw">use </span>std::fmt::Display;
 <span class="kw">use </span>std::iter::repeat;
@@ -1930,7 +1950,7 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
     }
 
     <span class="doccomment">/// Push a new name onto the `Naming`.
-    </span><span class="kw">pub fn </span>push_name(<span class="kw-2">&amp;</span><span class="self">self</span>, name: OptionNA&lt;String&gt;) {
+    </span><span class="kw">pub fn </span>push(<span class="kw-2">&amp;mut </span><span class="self">self</span>, name: OptionNA&lt;String&gt;) {
         <span class="self">self</span>.names.with_inner_mut(|v| v.push(name.clone()));
         <span class="kw">if let </span>OptionNA::Some(name) = name {
             <span class="kw">let </span>n = <span class="self">self</span>.names.len() - <span class="number">1</span>;
@@ -2373,18 +2393,18 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
         }
     }
 
-    <span class="kw">pub fn </span>push_value(<span class="kw-2">&amp;</span><span class="self">self</span>, value: T) {
+    <span class="kw">pub fn </span>push_value(<span class="kw-2">&amp;mut </span><span class="self">self</span>, value: T) {
         <span class="self">self</span>.push_named(Character::NA, value);
     }
 
     <span class="doccomment">/// Push a named `value` with a given `name` onto the `Rep&lt;T&gt;`.
-    </span><span class="kw">pub fn </span>push_named(<span class="kw-2">&amp;</span><span class="self">self</span>, name: OptionNA&lt;String&gt;, value: T) {
+    </span><span class="kw">pub fn </span>push_named(<span class="kw-2">&amp;mut </span><span class="self">self</span>, name: OptionNA&lt;String&gt;, value: T) {
         <span class="kw">match </span><span class="self">self </span>{
             Rep::Subset(values, Subsets(subsets), maybe_naming) =&gt; <span class="kw">match </span>subsets.as_slice() {
                 [] =&gt; {
                     values.with_inner_mut(|values| values.push(value));
                     <span class="kw">if let </span><span class="prelude-val">Some</span>(naming) = maybe_naming {
-                        naming.push_name(name)
+                        naming.push(name)
                     }
                 }
                 <span class="kw">_ </span>=&gt; <span class="macro">unimplemented!</span>(),
@@ -2648,33 +2668,23 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
                     }
                 }
 
-                <span class="kw">let </span>vc = v.clone();
-                <span class="kw">let </span>vb = vc.borrow();
-                <span class="kw">let </span><span class="kw-2">mut </span>res: Vec&lt;T&gt; = <span class="macro">vec!</span>[];
-                <span class="kw">let </span>vb_len = vb.len();
-
-                <span class="kw">let </span>new_naming = Naming::new();
-
-                <span class="kw">let </span>iter = subsets.clone().into_iter().take_while(|(i, <span class="kw">_</span>)| i &lt; <span class="kw-2">&amp;</span>vb_len);
-
-                <span class="kw">for </span>(<span class="kw">_</span>, i) <span class="kw">in </span>iter {
-                    <span class="kw">match </span>i {
-                        <span class="prelude-val">Some</span>(i) =&gt; {
-                            res.push(vb[i].clone());
-                            <span class="kw">if let </span>Option::Some(n) = naming {
-                                new_naming.push_name(n.names.borrow()[i].clone())
-                            };
-                        }
-                        <span class="comment">// default is NA
-                        </span><span class="prelude-val">None </span>=&gt; {
-                            res.push(T::default());
-                            <span class="comment">// When we subset with NA, there is no name for this entry;
-                            </span>new_naming.push_name(OptionNA::NA);
-                        }
+                <span class="kw">if let </span><span class="prelude-val">Some</span>(naming) = naming {
+                    <span class="kw">let </span>vc = v.clone();
+                    <span class="kw">let </span>vb = <span class="kw-2">&amp;**</span>vc.borrow();
+                    <span class="kw">let </span>iter = <span class="self">self</span>.iter_subset_indices();
+                    <span class="comment">// TODO(performance): use size hints
+                    </span><span class="kw">let </span><span class="kw-2">mut </span>values: Vec&lt;T&gt; = Vec::new();
+                    <span class="kw">let </span>names = <span class="kw-2">&amp;**</span>naming.names.borrow();
+                    <span class="kw">let </span><span class="kw-2">mut </span>new_naming = Naming::new();
+                    <span class="kw">for </span>i <span class="kw">in </span>iter {
+                        values.push(vb[i.unwrap()].clone());
+                        new_naming.push(names[i.unwrap()].clone())
                     }
+                    Rep::Subset(values.into(), Subsets(<span class="macro">vec!</span>[]), <span class="prelude-val">Some</span>(new_naming))
+                } <span class="kw">else </span>{
+                    <span class="kw">let </span>values: Vec&lt;T&gt; = <span class="self">self</span>.iter_values().collect();
+                    Rep::Subset(values.into(), Subsets(<span class="macro">vec!</span>[]), Option::None)
                 }
-
-                Rep::Subset(res.into(), Subsets(<span class="macro">vec!</span>[]), Option::None)
             }
         }
     }
@@ -2839,9 +2849,9 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
 
 <span class="kw">impl </span>From&lt;Vec&lt;Character&gt;&gt; <span class="kw">for </span>Naming {
     <span class="kw">fn </span>from(value: Vec&lt;Character&gt;) -&gt; <span class="self">Self </span>{
-        <span class="kw">let </span>naming = Naming::new();
+        <span class="kw">let </span><span class="kw-2">mut </span>naming = Naming::new();
         <span class="kw">for </span>k <span class="kw">in </span>value {
-            naming.push_name(k);
+            naming.push(k);
         }
         naming
     }
@@ -3751,6 +3761,36 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
             result.unwrap_err(),
             Signal::Error(Error::NonRecyclableLengths(<span class="number">1</span>, <span class="number">0</span>))
         );
+    }
+
+    <span class="attr">#[test]
+    </span><span class="kw">fn </span>materialize_after_subset() {
+        <span class="kw">let </span>x = Rep::&lt;Integer&gt;::from(<span class="macro">vec!</span>[<span class="number">10</span>, <span class="number">20</span>, <span class="number">30</span>]);
+        <span class="kw">let </span>x1 = x.subset(<span class="macro">vec!</span>[<span class="number">0</span>, <span class="number">2</span>].into()).materialize();
+        <span class="kw">let </span>x2 = Rep::&lt;Integer&gt;::from(<span class="macro">vec!</span>[<span class="number">10</span>, <span class="number">30</span>]);
+        <span class="macro">assert_eq!</span>(x1, x2);
+    }
+    <span class="attr">#[test]
+    </span><span class="kw">fn </span>materialize_after_subset_named() {
+        <span class="kw">let </span>x = Rep::&lt;Integer&gt;::from(<span class="macro">vec!</span>[<span class="number">10</span>, <span class="number">20</span>, <span class="number">30</span>]);
+        x.set_names(
+            <span class="macro">vec!</span>[
+                Character::Some(<span class="string">"a"</span>.to_string()),
+                Character::Some(<span class="string">"b"</span>.to_string()),
+                Character::Some(<span class="string">"c"</span>.to_string()),
+            ]
+            .into(),
+        );
+        <span class="kw">let </span>x1 = x.subset(<span class="macro">vec!</span>[<span class="number">0</span>, <span class="number">2</span>].into()).materialize();
+        <span class="kw">let </span>x2 = Rep::&lt;Integer&gt;::from(<span class="macro">vec!</span>[<span class="number">10</span>, <span class="number">30</span>]);
+        x.set_names(
+            <span class="macro">vec!</span>[
+                Character::Some(<span class="string">"a"</span>.to_string()),
+                Character::Some(<span class="string">"c"</span>.to_string()),
+            ]
+            .into(),
+        );
+        <span class="macro">assert_eq!</span>(x1, x2);
     }
 }
 </code></pre></div></section></main></body></html>

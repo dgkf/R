@@ -403,7 +403,7 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
         <span class="comment">// most complex type was List
         </span><span class="kw">if </span>ty == <span class="number">2 </span>{
             <span class="comment">// TODO: We should use size hints here.
-            </span><span class="kw">let </span>list = List::new();
+            </span><span class="kw">let </span><span class="kw-2">mut </span>list = List::new();
             <span class="kw">for </span>(name1, value1) <span class="kw">in </span>vals.iter_pairs() {
                 <span class="kw">match </span>value1 {
                     Obj::List(x) =&gt; {
