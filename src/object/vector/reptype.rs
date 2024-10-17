@@ -400,9 +400,9 @@ impl<T: Clone + Default> RepType<T> {
         match self.clone() {
             RepType::Subset(values, ..) => {
                 let iter = Box::new(self.iter_subset_indices());
-                for x in iter {
-                    dbg!(&x);
-                }
+                // for x in iter {
+                //     dbg!(&x);
+                // }
                 let iter = Box::new(self.iter_subset_indices());
                 let values = values.inner_rc();
 
@@ -607,12 +607,7 @@ impl<T: Clone + Default> RepType<T> {
         match self {
             RepType::Subset(v, Subsets(s), _) => match s.as_slice() {
                 [] => v.borrow().len(),
-                _ => {
-                    dbg!(&s[0]);
-                    self.values_ref().iter().count(); // _ => self.materialize_inplace().len(),
-                    println!("Wupsie");
-                    todo!()
-                }
+                _ => self.values_ref().iter().count(),
             },
         }
     }
