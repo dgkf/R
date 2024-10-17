@@ -36,7 +36,7 @@ impl Naming {
     }
 
     /// Push a new name onto the `Naming`.
-    pub fn push_name(&self, name: OptionNA<String>) {
+    pub fn push(&mut self, name: OptionNA<String>) {
         self.names.with_inner_mut(|v| v.push(name.clone()));
         if let OptionNA::Some(name) = name {
             let n = self.names.len() - 1;
@@ -479,18 +479,18 @@ impl<T: Clone + Default> Rep<T> {
         }
     }
 
-    pub fn push_value(&self, value: T) {
+    pub fn push_value(&mut self, value: T) {
         self.push_named(Character::NA, value);
     }
 
     /// Push a named `value` with a given `name` onto the `Rep<T>`.
-    pub fn push_named(&self, name: OptionNA<String>, value: T) {
+    pub fn push_named(&mut self, name: OptionNA<String>, value: T) {
         match self {
             Rep::Subset(values, Subsets(subsets), maybe_naming) => match subsets.as_slice() {
                 [] => {
                     values.with_inner_mut(|values| values.push(value));
                     if let Some(naming) = maybe_naming {
-                        naming.push_name(name)
+                        naming.push(name)
                     }
                 }
                 _ => unimplemented!(),
@@ -754,33 +754,23 @@ impl<T: Clone + Default> Rep<T> {
                     }
                 }
 
-                let vc = v.clone();
-                let vb = vc.borrow();
-                let mut res: Vec<T> = vec![];
-                let vb_len = vb.len();
-
-                let new_naming = Naming::new();
-
-                let iter = subsets.clone().into_iter().take_while(|(i, _)| i < &vb_len);
-
-                for (_, i) in iter {
-                    match i {
-                        Some(i) => {
-                            res.push(vb[i].clone());
-                            if let Option::Some(n) = naming {
-                                new_naming.push_name(n.names.borrow()[i].clone())
-                            };
-                        }
-                        // default is NA
-                        None => {
-                            res.push(T::default());
-                            // When we subset with NA, there is no name for this entry;
-                            new_naming.push_name(OptionNA::NA);
-                        }
+                if let Some(naming) = naming {
+                    let vc = v.clone();
+                    let vb = &**vc.borrow();
+                    let iter = self.iter_subset_indices();
+                    // TODO(performance): use size hints
+                    let mut values: Vec<T> = Vec::new();
+                    let names = &**naming.names.borrow();
+                    let mut new_naming = Naming::new();
+                    for i in iter {
+                        values.push(vb[i.unwrap()].clone());
+                        new_naming.push(names[i.unwrap()].clone())
                     }
+                    Rep::Subset(values.into(), Subsets(vec![]), Some(new_naming))
+                } else {
+                    let values: Vec<T> = self.iter_values().collect();
+                    Rep::Subset(values.into(), Subsets(vec![]), Option::None)
                 }
-
-                Rep::Subset(res.into(), Subsets(vec![]), Option::None)
             }
         }
     }
@@ -945,9 +935,9 @@ where
 
 impl From<Vec<Character>> for Naming {
     fn from(value: Vec<Character>) -> Self {
-        let naming = Naming::new();
+        let mut naming = Naming::new();
         for k in value {
-            naming.push_name(k);
+            naming.push(k);
         }
         naming
     }
@@ -1857,5 +1847,35 @@ mod test {
             result.unwrap_err(),
             Signal::Error(Error::NonRecyclableLengths(1, 0))
         );
+    }
+
+    #[test]
+    fn materialize_after_subset() {
+        let x = Rep::<Integer>::from(vec![10, 20, 30]);
+        let x1 = x.subset(vec![0, 2].into()).materialize();
+        let x2 = Rep::<Integer>::from(vec![10, 30]);
+        assert_eq!(x1, x2);
+    }
+    #[test]
+    fn materialize_after_subset_named() {
+        let x = Rep::<Integer>::from(vec![10, 20, 30]);
+        x.set_names(
+            vec![
+                Character::Some("a".to_string()),
+                Character::Some("b".to_string()),
+                Character::Some("c".to_string()),
+            ]
+            .into(),
+        );
+        let x1 = x.subset(vec![0, 2].into()).materialize();
+        let x2 = Rep::<Integer>::from(vec![10, 30]);
+        x.set_names(
+            vec![
+                Character::Some("a".to_string()),
+                Character::Some("c".to_string()),
+            ]
+            .into(),
+        );
+        assert_eq!(x1, x2);
     }
 }
