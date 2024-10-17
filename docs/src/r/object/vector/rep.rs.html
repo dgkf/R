@@ -1891,6 +1891,7 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
 <a href="#1858" id="1858">1858</a>
 <a href="#1859" id="1859">1859</a>
 <a href="#1860" id="1860">1860</a>
+<a href="#1861" id="1861">1861</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::fmt::Debug;
 <span class="kw">use </span>std::fmt::Display;
 <span class="kw">use </span>std::iter::repeat;
@@ -2047,16 +2048,16 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
     iter: Box&lt;<span class="kw">dyn </span>Iterator&lt;Item = <span class="prelude-ty">Option</span>&lt;usize&gt;&gt;&gt;,
 }
 
-<span class="kw">pub struct </span>RepIterableNames&lt;<span class="lifetime">'a</span>&gt; {
+<span class="kw">pub struct </span>IterableNames&lt;<span class="lifetime">'a</span>&gt; {
     names: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>[Character],
     na_name: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>Character,
     iter: <span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>Box&lt;<span class="kw">dyn </span>Iterator&lt;Item = <span class="prelude-ty">Option</span>&lt;usize&gt;&gt;&gt;,
 }
 
 <span class="kw">impl </span>IntoIterableRefNames {
-    <span class="kw">pub fn </span>iter(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; RepIterableNames&lt;<span class="lifetime">'_</span>&gt; {
+    <span class="kw">pub fn </span>iter(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; IterableNames&lt;<span class="lifetime">'_</span>&gt; {
         <span class="kw">let </span>names = <span class="kw-2">&amp;</span><span class="self">self</span>.names[..];
-        RepIterableNames {
+        IterableNames {
             names,
             na_name: <span class="kw-2">&amp;</span><span class="self">self</span>.na_name,
             iter: <span class="kw-2">&amp;mut </span><span class="self">self</span>.iter,
@@ -2064,7 +2065,7 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; Iterator <span class="kw">for </span>RepIterableNames&lt;<span class="lifetime">'a</span>&gt; {
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; Iterator <span class="kw">for </span>IterableNames&lt;<span class="lifetime">'a</span>&gt; {
     <span class="kw">type </span>Item = <span class="kw-2">&amp;</span><span class="lifetime">'a </span>Character;
 
     <span class="kw">fn </span>next(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Item&gt; {
@@ -2283,9 +2284,8 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
         }
     }
 
-    <span class="doccomment">/// Get an `Option&lt;RepTypeIntoIterableValues&lt;T&gt;&gt;` which in turn can be converted into an iterator over
-    /// references to the values.
-    /// The `None` variant is returned if the `Rep&lt;T&gt;` is not named.
+    <span class="doccomment">/// Get an `IntoIterableValues&lt;T&gt;` which in turn can be converted into an iterator over
+    /// references to the values (`&amp;T`).
     ///
     /// Directly getting an iterator is not possible due to lifetime issues.
     </span><span class="kw">pub fn </span>values_ref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; IntoIterableRefValues&lt;T&gt; {
@@ -2299,8 +2299,9 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
         }
     }
 
-    <span class="doccomment">/// Get an `RepTypeIntoIterableValues&lt;T&gt;` which in turn can be converted into an iterator over
-    /// references to the names.
+    <span class="doccomment">/// Get an `Option&lt;IntoIterableRefNames&gt;` which in turn can be converted into an iterator over
+    /// references to the names (`&amp;String`).
+    /// None is returned when no names exist.
     ///
     /// Directly getting an iterator is not possible due to lifetime issues.
     </span><span class="kw">pub fn </span>names_ref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;IntoIterableRefNames&gt; {
@@ -2315,8 +2316,8 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
         }
     }
 
-    <span class="doccomment">/// Get an `RepTypeIntoIterablePairs&lt;T&gt;` which in turn can be converted into an iterator over
-    /// pairs of references (&amp;name, &amp;value).
+    <span class="doccomment">/// Get an `IntoIterablePairs&lt;T&gt;` which in turn can be converted into an iterator over
+    /// pairs of references (`(&amp;String, &amp;T)`).
     ///
     /// Directly getting an iterator is not possible due to lifetime issues.
     </span><span class="kw">pub fn </span>pairs_ref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; IntoIterableRefPairs&lt;T&gt; {
@@ -2337,7 +2338,8 @@ data-use_system_theme="false"></script><meta name="rustdoc-vars" data-root-path=
         }
     }
 
-    <span class="kw">pub fn </span>iter_pairs(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; IterablePairs&lt;T&gt; {
+    <span class="doccomment">/// Iterate over (owned) pairs of names and values (`(String, T)`).
+    </span><span class="kw">pub fn </span>iter_pairs(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; IterablePairs&lt;T&gt; {
         <span class="kw">match </span><span class="self">self</span>.clone() {
             Rep::Subset(values, <span class="kw">_</span>, maybe_naming) =&gt; {
                 <span class="kw">let </span>iter = Box::new(<span class="self">self</span>.iter_subset_indices());
