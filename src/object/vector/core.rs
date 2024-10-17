@@ -8,9 +8,8 @@ use crate::object::CowObj;
 use crate::object::Obj;
 
 use super::coercion::CoercibleInto;
+use super::rep::IterableValues;
 use super::rep::Rep;
-use super::reptype::IterableValues;
-use super::reptype::RepType;
 use super::subset::Subset;
 use super::types::*;
 
@@ -54,10 +53,10 @@ impl<T> OptionNA<T> {
 
 #[derive(Debug, PartialEq)]
 pub enum Vector {
-    Double(RepType<Double>),
-    Integer(RepType<Integer>),
-    Logical(RepType<Logical>),
-    Character(RepType<Character>),
+    Double(Rep<Double>),
+    Integer(Rep<Integer>),
+    Logical(Rep<Logical>),
+    Character(Rep<Character>),
     // Complex(Complex),
     // Raw(Raw),
 }
@@ -96,16 +95,16 @@ impl Vector {
         match self {
             Double(x) => x
                 .set_subset(subset, value.try_into()?)
-                .map(|x| Double(RepType::from(vec![x]))),
+                .map(|x| Double(Rep::from(vec![x]))),
             Integer(x) => x
                 .set_subset(subset, value.try_into()?)
-                .map(|x| Integer(RepType::from(vec![x]))),
+                .map(|x| Integer(Rep::from(vec![x]))),
             Character(x) => x
                 .set_subset(subset, value.try_into()?)
-                .map(|x| Character(RepType::from(vec![x]))),
+                .map(|x| Character(Rep::from(vec![x]))),
             Logical(x) => x
                 .set_subset(subset, value.try_into()?)
-                .map(|x| Logical(RepType::from(vec![x]))),
+                .map(|x| Logical(Rep::from(vec![x]))),
         }
     }
 
@@ -324,53 +323,29 @@ impl From<CowObj<Vec<Character>>> for Vector {
     }
 }
 
-impl From<RepType<Double>> for Vector {
-    fn from(x: RepType<Double>) -> Self {
+impl From<Rep<Double>> for Vector {
+    fn from(x: Rep<Double>) -> Self {
         Vector::Double(x.into())
     }
 }
 
-impl From<RepType<Integer>> for Vector {
-    fn from(x: RepType<Integer>) -> Self {
+impl From<Rep<Integer>> for Vector {
+    fn from(x: Rep<Integer>) -> Self {
         Vector::Integer(x.into())
     }
 }
 
-impl From<RepType<Logical>> for Vector {
-    fn from(x: RepType<Logical>) -> Self {
+impl From<Rep<Logical>> for Vector {
+    fn from(x: Rep<Logical>) -> Self {
         Vector::Logical(x.into())
     }
 }
 
-impl From<RepType<Character>> for Vector {
-    fn from(x: RepType<Character>) -> Self {
+impl From<Rep<Character>> for Vector {
+    fn from(x: Rep<Character>) -> Self {
         Vector::Character(x.into())
     }
 }
-
-// impl From<RepType<Double>> for Vector {
-//     fn from(x: Rep<Double>) -> Self {
-//         Vector::Double(x)
-//     }
-// }
-
-// impl From<Rep<Integer>> for Vector {
-//     fn from(x: Rep<Integer>) -> Self {
-//         Vector::Integer(x)
-//     }
-// }
-
-// impl From<Rep<Logical>> for Vector {
-//     fn from(x: Rep<Logical>) -> Self {
-//         Vector::Logical(x)
-//     }
-// }
-
-// impl From<Rep<Character>> for Vector {
-//     fn from(x: Rep<Character>) -> Self {
-//         Vector::Character(x)
-//     }
-// }
 
 impl From<Vec<f64>> for Vector {
     fn from(x: Vec<f64>) -> Self {

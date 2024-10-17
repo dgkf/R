@@ -1,7 +1,7 @@
-use crate::object::reptype::RepType;
+use crate::object::rep::Rep;
 use crate::object::Obj;
 
-pub type List = RepType<Obj>;
+pub type List = Rep<Obj>;
 
 #[cfg(test)]
 mod tests {
