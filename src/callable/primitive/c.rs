@@ -85,7 +85,7 @@ impl Callable for PrimitiveC {
         // most complex type was List
         if ty == 2 {
             // TODO: We should use size hints here.
-            let list = List::new();
+            let mut list = List::new();
             for (name1, value1) in vals.iter_pairs() {
                 match value1 {
                     Obj::List(x) => {
