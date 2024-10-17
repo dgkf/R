@@ -8,9 +8,8 @@ use crate::object::CowObj;
 use crate::object::Obj;
 
 use super::coercion::CoercibleInto;
+use super::rep::IterableValues;
 use super::rep::Rep;
-use super::reptype::IterableValues;
-use super::reptype::RepType;
 use super::subset::Subset;
 use super::types::*;
 
@@ -139,13 +138,14 @@ impl Vector {
         }
     }
 
-    pub fn set_names(&self, names: CowObj<Vec<Character>>) {
+    pub fn set_names(&self, names: CowObj<Vec<Character>>) -> Self {
+        use super::Vector::*;
         match self {
-            Vector::Character(x) => x.set_names(names),
-            Vector::Logical(x) => x.set_names(names),
-            Vector::Integer(x) => x.set_names(names),
-            Vector::Double(x) => x.set_names(names),
-        };
+            Character(x) => Character(x.set_names(names)),
+            Logical(x) => Logical(x.set_names(names)),
+            Integer(x) => Integer(x.set_names(names)),
+            Double(x) => Double(x.set_names(names)),
+        }
     }
 
     pub fn try_get(&self, index: Obj) -> EvalResult {
@@ -319,30 +319,6 @@ impl From<Vector> for Result<Vector, Signal> {
 
 impl From<CowObj<Vec<Character>>> for Vector {
     fn from(x: CowObj<Vec<Character>>) -> Self {
-        Vector::Character(x.into())
-    }
-}
-
-impl From<RepType<Double>> for Vector {
-    fn from(x: RepType<Double>) -> Self {
-        Vector::Double(x.into())
-    }
-}
-
-impl From<RepType<Integer>> for Vector {
-    fn from(x: RepType<Integer>) -> Self {
-        Vector::Integer(x.into())
-    }
-}
-
-impl From<RepType<Logical>> for Vector {
-    fn from(x: RepType<Logical>) -> Self {
-        Vector::Logical(x.into())
-    }
-}
-
-impl From<RepType<Character>> for Vector {
-    fn from(x: RepType<Character>) -> Self {
         Vector::Character(x.into())
     }
 }

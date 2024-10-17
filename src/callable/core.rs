@@ -38,8 +38,8 @@ pub trait CallableFormals {
 pub trait Callable: CallableFormals {
     fn match_args(&self, args: List, stack: &mut CallStack) -> Result<(List, List), Signal> {
         let mut formals = self.formals();
-        let ellipsis: List = List::new();
-        let matched_args: List = List::new();
+        let mut ellipsis: List = List::new();
+        let mut matched_args: List = List::new();
 
         // assign named args to corresponding formals
 
@@ -57,7 +57,7 @@ pub trait Callable: CallableFormals {
 
         let indices: Vec<Integer> = indices.into_iter().map(Integer::Some).collect();
         let subset = Subset::Indices(indices.into());
-        let args = args.subset(subset).materialize();
+        let args = args.subset(subset);
 
         // TODO(bug): need to evaluate trailing unassigned params that have
         // a default value before popping off remaining trailing params
@@ -397,5 +397,11 @@ mod test {
         assert_eq!(r! { f <- function(a, b = a) { b }; f(3) }, r! { 3 });
 
         assert_eq!(r! { f <- function(a, b = a) { b }; f(a = 3) }, r! { 3 });
+    }
+
+    use crate::error::Error;
+    #[test]
+    fn wrong_argument() {
+        assert_eq!(r!((fn(x) x)(y = 1)), Error::Missing.into())
     }
 }

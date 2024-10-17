@@ -5,7 +5,7 @@ use crate::error::*;
 use crate::formals;
 use crate::internal_err;
 use crate::lang::*;
-use crate::object::reptype::RepType;
+use crate::object::rep::Rep;
 use crate::object::*;
 
 /// Calculate a Sum of Elements
@@ -40,7 +40,7 @@ impl Callable for PrimitiveSum {
         let (_, ellipsis) = self.match_arg_exprs(args, stack)?;
 
         if ellipsis.is_empty() {
-            return EvalResult::Ok(Obj::Vector(Vector::from(RepType::from(vec![0.0]))));
+            return EvalResult::Ok(Obj::Vector(Vector::from(Rep::from(vec![0.0]))));
         }
 
         let objects: Vec<Obj> = force_promises(ellipsis, stack)?
@@ -78,8 +78,8 @@ impl Callable for PrimitiveSum {
                                 for x in repr.inner().borrow().iter() {
                                     match *x {
                                         OptionNA::NA => {
-                                            let rep: RepType<OptionNA<f64>> =
-                                                RepType::from(vec![OptionNA::NA]);
+                                            let rep: Rep<OptionNA<f64>> =
+                                                Rep::from(vec![OptionNA::NA]);
                                             return EvalResult::Ok(Obj::Vector(Vector::from(rep)));
                                         }
                                         OptionNA::Some(x) => sum += x as i32 as f64,
@@ -90,8 +90,8 @@ impl Callable for PrimitiveSum {
                                 for x in repr.inner().borrow().iter() {
                                     match *x {
                                         OptionNA::NA => {
-                                            let rep: RepType<OptionNA<f64>> =
-                                                RepType::from(vec![OptionNA::NA]);
+                                            let rep: Rep<OptionNA<f64>> =
+                                                Rep::from(vec![OptionNA::NA]);
                                             return EvalResult::Ok(Obj::Vector(Vector::from(rep)));
                                         }
                                         OptionNA::Some(x) => sum += x as f64,
@@ -102,8 +102,8 @@ impl Callable for PrimitiveSum {
                                 for x in repr.inner().borrow().iter() {
                                     match *x {
                                         OptionNA::NA => {
-                                            let rep: RepType<OptionNA<f64>> =
-                                                RepType::from(vec![OptionNA::NA]);
+                                            let rep: Rep<OptionNA<f64>> =
+                                                Rep::from(vec![OptionNA::NA]);
                                             return EvalResult::Ok(Obj::Vector(Vector::from(rep)));
                                         }
                                         OptionNA::Some(x) => sum += x,
@@ -116,7 +116,7 @@ impl Callable for PrimitiveSum {
                     _ => return internal_err!(),
                 }
             }
-            EvalResult::Ok(Obj::Vector(Vector::from(RepType::from(vec![sum]))))
+            EvalResult::Ok(Obj::Vector(Vector::from(Rep::from(vec![sum]))))
         } else {
             let mut sum: i32 = 0;
 
@@ -128,8 +128,8 @@ impl Callable for PrimitiveSum {
                                 for x in repr.inner().borrow().iter() {
                                     match *x {
                                         OptionNA::NA => {
-                                            let rep: RepType<OptionNA<i32>> =
-                                                RepType::from(vec![OptionNA::NA]);
+                                            let rep: Rep<OptionNA<i32>> =
+                                                Rep::from(vec![OptionNA::NA]);
                                             return EvalResult::Ok(Obj::Vector(Vector::from(rep)));
                                         }
                                         OptionNA::Some(x) => sum += x as i32,
@@ -140,8 +140,8 @@ impl Callable for PrimitiveSum {
                                 for x in repr.inner().borrow().iter() {
                                     match *x {
                                         OptionNA::NA => {
-                                            let rep: RepType<OptionNA<i32>> =
-                                                RepType::from(vec![OptionNA::NA]);
+                                            let rep: Rep<OptionNA<i32>> =
+                                                Rep::from(vec![OptionNA::NA]);
                                             return EvalResult::Ok(Obj::Vector(Vector::from(rep)));
                                         }
                                         OptionNA::Some(x) => sum += x,
@@ -154,7 +154,7 @@ impl Callable for PrimitiveSum {
                     _ => return internal_err!(),
                 }
             }
-            EvalResult::Ok(Obj::Vector(Vector::from(RepType::from(vec![sum]))))
+            EvalResult::Ok(Obj::Vector(Vector::from(Rep::from(vec![sum]))))
         }
     }
 }

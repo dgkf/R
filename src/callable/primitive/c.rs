@@ -85,7 +85,7 @@ impl Callable for PrimitiveC {
         // most complex type was List
         if ty == 2 {
             // TODO: We should use size hints here.
-            let list = List::new();
+            let mut list = List::new();
             for (name1, value1) in vals.iter_pairs() {
                 match value1 {
                     Obj::List(x) => {
@@ -213,9 +213,10 @@ impl Callable for PrimitiveC {
         };
 
         if let Some(names) = names {
-            v.set_names(names.into())
+            Ok(Obj::Vector(v.set_names(names.into())))
+        } else {
+            Ok(Obj::Vector(v))
         }
-        Ok(Obj::Vector(v))
     }
 }
 
