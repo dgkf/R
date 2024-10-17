@@ -20,7 +20,7 @@
   This included a considerable refactor.
 * Iterating over references of a `Rep<T>` was made much simpler and new methods were added
   and unused ones removed.
-* The `RepType` struct that was introduced in 0.4.0 was removed again.
+* The `RepType` struct that was introduced in 0.4.0 was removed again (#189).
 
 ## Notable Bugs Addressed
 
