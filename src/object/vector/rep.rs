@@ -423,7 +423,7 @@ impl<T: Clone + Default> Rep<T> {
     }
 
     /// Get an `IntoIterablePairs<T>` which in turn can be converted into an iterator over
-    /// pairs of references (`(&name, &value)`).
+    /// pairs of references (`(&String, &T)`).
     ///
     /// Directly getting an iterator is not possible due to lifetime issues.
     pub fn pairs_ref(&self) -> IntoIterableRefPairs<T> {
