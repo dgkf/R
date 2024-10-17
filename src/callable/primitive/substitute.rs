@@ -55,6 +55,12 @@ impl Callable for PrimitiveSubstitute {
             return internal_err!();
         };
 
+        // let x = args.try_get_named("expr")?;
+
+        // let Obj::Promise(_, expr, _) = x else {
+        //     return Ok(x);
+        // };
+
         let Obj::Promise(_, expr, _) = args.try_get_named("expr")? else {
             return internal_err!();
         };
