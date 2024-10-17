@@ -154,16 +154,16 @@ pub struct IntoIterableRefNames {
     iter: Box<dyn Iterator<Item = Option<usize>>>,
 }
 
-pub struct RepIterableNames<'a> {
+pub struct IterableNames<'a> {
     names: &'a [Character],
     na_name: &'a Character,
     iter: &'a mut Box<dyn Iterator<Item = Option<usize>>>,
 }
 
 impl IntoIterableRefNames {
-    pub fn iter(&mut self) -> RepIterableNames<'_> {
+    pub fn iter(&mut self) -> IterableNames<'_> {
         let names = &self.names[..];
-        RepIterableNames {
+        IterableNames {
             names,
             na_name: &self.na_name,
             iter: &mut self.iter,
@@ -171,7 +171,7 @@ impl IntoIterableRefNames {
     }
 }
 
-impl<'a> Iterator for RepIterableNames<'a> {
+impl<'a> Iterator for IterableNames<'a> {
     type Item = &'a Character;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -390,9 +390,8 @@ impl<T: Clone + Default> Rep<T> {
         }
     }
 
-    /// Get an `Option<RepTypeIntoIterableValues<T>>` which in turn can be converted into an iterator over
-    /// references to the values.
-    /// The `None` variant is returned if the `Rep<T>` is not named.
+    /// Get an `IntoIterableValues<T>` which in turn can be converted into an iterator over
+    /// references to the values (`&T`).
     ///
     /// Directly getting an iterator is not possible due to lifetime issues.
     pub fn values_ref(&self) -> IntoIterableRefValues<T> {
@@ -406,8 +405,9 @@ impl<T: Clone + Default> Rep<T> {
         }
     }
 
-    /// Get an `RepTypeIntoIterableValues<T>` which in turn can be converted into an iterator over
-    /// references to the names.
+    /// Get an `Option<IntoIterableRefNames>` which in turn can be converted into an iterator over
+    /// references to the names (`&String`).
+    /// None is returned when no names exist.
     ///
     /// Directly getting an iterator is not possible due to lifetime issues.
     pub fn names_ref(&self) -> Option<IntoIterableRefNames> {
@@ -422,8 +422,8 @@ impl<T: Clone + Default> Rep<T> {
         }
     }
 
-    /// Get an `RepTypeIntoIterablePairs<T>` which in turn can be converted into an iterator over
-    /// pairs of references (&name, &value).
+    /// Get an `IntoIterablePairs<T>` which in turn can be converted into an iterator over
+    /// pairs of references (`(&name, &value)`).
     ///
     /// Directly getting an iterator is not possible due to lifetime issues.
     pub fn pairs_ref(&self) -> IntoIterableRefPairs<T> {
@@ -444,6 +444,7 @@ impl<T: Clone + Default> Rep<T> {
         }
     }
 
+    /// Iterate over (owned) pairs of names and values (`(String, T)`).
     pub fn iter_pairs(&self) -> IterablePairs<T> {
         match self.clone() {
             Rep::Subset(values, _, maybe_naming) => {

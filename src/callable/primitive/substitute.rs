@@ -55,12 +55,9 @@ impl Callable for PrimitiveSubstitute {
             return internal_err!();
         };
 
-        dbg!(&args);
-
         let Obj::Promise(_, expr, _) = args.try_get_named("expr")? else {
             return internal_err!();
         };
-        println!("Wupsie");
 
         fn recurse(exprs: ExprList, env: &Environment, paren: bool) -> ExprList {
             exprs
@@ -114,10 +111,7 @@ impl Callable for PrimitiveSubstitute {
                         recurse(exprs, env, false),
                     ),
                 },
-                other => {
-                    println!("HALLO");
-                    other
-                }
+                other => other,
             }
         }
 
