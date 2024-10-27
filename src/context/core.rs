@@ -109,12 +109,6 @@ pub trait Context: std::fmt::Debug + std::fmt::Display {
                     }
                     (k, v) => {
                         Ok(List::from(vec![(k, Obj::Promise(None, v, self.env()))]).iter_pairs())
-                        // let k = k.map_or(OptionNA::NA, OptionNA::Some);
-                        // if let Ok(elem) = self.eval(v) {
-                        //     Ok(List::from(vec![(k, elem)]).iter_pairs())
-                        // } else {
-                        //     internal_err!()
-                        // }
                     }
                 })
                 .collect::<Result<Vec<_>, _>>()?

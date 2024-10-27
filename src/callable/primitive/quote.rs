@@ -43,3 +43,14 @@ impl Callable for PrimitiveQuote {
         Ok(Obj::Expr(args.get(0).unwrap_or(Expr::Null)))
     }
 }
+
+#[cfg(test)]
+
+mod tests {
+    use crate::{r, r_expect};
+
+    #[test]
+    fn literals_dont_evaluate() {
+        r_expect!(typeof(quote(1)) == "expression")
+    }
+}
