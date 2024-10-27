@@ -79,6 +79,23 @@ impl ViewMut for Obj {
 }
 
 impl Obj {
+    pub fn type_of(&self) -> String {
+        match self {
+            Obj::Null => "null",
+            Obj::Vector(v) => match v {
+                Vector::Character(_) => "character",
+                Vector::Integer(_) => "integer",
+                Vector::Double(_) => "double",
+                Vector::Logical(_) => "logical",
+            },
+            Obj::List(_) => "list",
+            Obj::Expr(_) => "expression",
+            Obj::Promise(..) => "promise",
+            Obj::Function(..) => "function",
+            Obj::Environment(..) => "environment",
+        }
+        .to_string()
+    }
     pub fn with_visibility(self, visibility: bool) -> EvalResult {
         Signal::Return(self, visibility).into()
     }
@@ -633,6 +650,50 @@ pub struct CallStack {
 }
 
 impl CallStack {
+    pub fn eval_list_eager(&mut self, l: ExprList) -> EvalResult {
+        Ok(Obj::List(List::from(
+            l.into_iter()
+                .map(|pair| match pair {
+                    (_, Expr::Ellipsis(None)) => {
+                        if let Ok(Obj::List(ellipsis)) = self.get_ellipsis() {
+                            // Each iterator yields a ()
+                            let x = ellipsis
+                                .iter_pairs()
+                                .map(|(k, v)| match v {
+                                    Obj::Promise(_, expr, _) => {
+                                        Ok((k, self.eval_and_finalize(expr)?))
+                                    }
+                                    _ => Ok((k, v)),
+                                })
+                                .collect::<Result<Vec<(Character, Obj)>, Signal>>()?;
+                            let l = List::from(x);
+                            Ok(l.iter_pairs())
+                        } else {
+                            Ok(List::from(Vec::<(Character, Obj)>::new()).iter_pairs())
+                        }
+                    }
+                    (_, Expr::Ellipsis(Some(name))) => {
+                        if let Ok(Obj::List(more)) = self.get(name) {
+                            Ok(more.iter_pairs())
+                        } else {
+                            Ok(List::from(Vec::<(Character, Obj)>::new()).iter_pairs())
+                        }
+                    }
+                    (k, v) => match self.eval_and_finalize(v) {
+                        Ok(elem) => {
+                            let k = k.map_or(OptionNA::NA, OptionNA::Some);
+                            Ok(List::from(vec![(k, elem)]).iter_pairs())
+                        }
+                        Err(e) => Err(e),
+                    },
+                })
+                .collect::<Result<Vec<_>, _>>()?
+                .into_iter()
+                .flatten()
+                .collect::<Vec<_>>(),
+        )))
+    }
+
     pub fn parse(&self, input: &str) -> ParseResult {
         let config: SessionParserConfig = self.session.clone().into();
         config.parse_input(input)
@@ -1217,6 +1278,21 @@ mod test {
                     ",
                 ),
             r! { list(1, 2, 3) }
+        )
+    }
+
+    #[test]
+    fn accessing_ellipsis_forces_evaluation() {
+        assert_eq!(
+            CallStack::default()
+                .map_session(|s| s.with_experiments(vec![Experiment::RestArgs]))
+                .parse_and_eval(
+                    "
+                    f = fn(...) { . }
+                    f(sum(1))
+                    ",
+                ),
+            r! { list(1) }
         )
     }
 

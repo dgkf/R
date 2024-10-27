@@ -83,6 +83,30 @@ pub trait Callable: CallableFormals {
             }
         }
 
+        let mut ellipsis_expr = ExprList::new();
+
+        for (k, v) in ellipsis.iter_pairs() {
+            if let Obj::Promise(_, e, _) = v {
+                ellipsis_expr.push_named(k.as_option(), e)
+            } else {
+                // all arguments must be boxed in promises to allow for NSE
+                unreachable!()
+            }
+        }
+
+        let list = crate::callable::builtins::BUILTIN
+            .get("list")
+            .cloned()
+            .unwrap();
+
+        // convert the expr_ellipsis to an Obj::Promise where the expression is a call into List
+
+        let ellipsis_promise = Obj::Promise(
+            None,
+            Expr::Call(Box::new(Expr::Primitive(list)), ellipsis_expr),
+            stack.last_frame().env().clone(),
+        );
+
         // add back in parameter defaults that weren't filled with args
         for (param, default) in formals.into_iter() {
             matched_args.push_named(
@@ -92,7 +116,7 @@ pub trait Callable: CallableFormals {
         }
 
         if let Some(Expr::Ellipsis(Some(name))) = remainder.get(0) {
-            matched_args.push_named(Character::Some(name), Obj::List(ellipsis.clone()));
+            matched_args.push_named(Character::Some(name), ellipsis_promise);
         } else if !remainder.is_empty() {
             matched_args.push_named(
                 Character::Some("...".to_string()),

@@ -126,7 +126,7 @@ impl Callable for PrimitiveSubstitute {
 
 #[cfg(test)]
 mod test {
-    use crate::r;
+    use crate::{r, r_expect};
 
     #[test]
     fn function_param_promises() {
@@ -190,5 +190,20 @@ mod test {
             "}},
             r! { quote(3 + 4) }
         );
+    }
+
+    #[test]
+    fn literals_evaluate_to_themselves() {
+        r_expect!(substitute(1) == 1);
+        r_expect!(substitute("a") == "a");
+        r_expect!(substitute(true) == true);
+        r_expect!(substitute(1L) == 1L);
+    }
+
+    #[test]
+    fn calls_work() {
+        r_expect! {{"
+            eval(substitute(fn(x) x))(1) == 1
+        "}}
     }
 }
