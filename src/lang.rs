@@ -1027,7 +1027,6 @@ fn eval_call(callstack: &mut CallStack, expr: Expr, mutable: bool) -> EvalResult
             callstack.pop_frame_and_return(result)
         }
         Expr::String(name) | Expr::Symbol(name) => {
-            println!("calling {name}");
             if mutable {
                 // currently, things like names(x) = "a" is anyway not supported
                 return internal_err!();
