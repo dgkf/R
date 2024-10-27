@@ -38,10 +38,9 @@ pub trait CallableFormals {
 pub trait Callable: CallableFormals {
     fn match_args(&self, args: List, stack: &mut CallStack) -> Result<(List, List), Signal> {
         let mut formals = self.formals();
-        // instead of using a List for ellipsis I want an ExprList
 
+        // this collects the expressions
         let mut expr_ellipsis: ExprList = ExprList::new();
-
         let mut ellipsis: List = List::new();
         let mut matched_args: List = List::new();
 

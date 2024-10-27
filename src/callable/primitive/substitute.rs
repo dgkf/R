@@ -199,4 +199,11 @@ mod test {
         r_expect!(substitute(true) == true);
         r_expect!(substitute(1L) == 1L);
     }
+
+    #[test]
+    fn calls_work() {
+        r_expect! {{"
+            eval(substitute(fn(x) x))(1) == 1
+        "}}
+    }
 }

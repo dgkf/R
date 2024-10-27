@@ -58,17 +58,6 @@ formals!(PrimitiveList, "(...)");
 
 impl Callable for PrimitiveList {
     fn call(&self, args: ExprList, stack: &mut CallStack) -> EvalResult {
-        for (name, arg) in args.clone() {
-            dbg!(&name);
-            dbg!(&arg);
-            //dbg!(stack.eval(arg)?);
-        }
-        // args.iter_pairs()
-        //     .map(|(k, v)| match (k, v.force(stack)) {
-        //         (k, Ok(v)) => Ok((k, v)),
-        //         (_, Err(e)) => Err(e),
-        //     })
-        //     .collect()
         stack.eval_list_eager(args)
     }
 

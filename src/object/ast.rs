@@ -107,7 +107,6 @@ impl ExprList {
     }
 }
 
-
 impl fmt::Display for ExprList {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let pairs: Vec<String> = self

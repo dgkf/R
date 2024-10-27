@@ -663,7 +663,6 @@ impl CallStack {
                                     Obj::Promise(_, expr, _) => {
                                         Ok((k, self.eval_and_finalize(expr)?))
                                     }
-                                    // todo: evaluated promise(?)
                                     _ => Ok((k, v)),
                                 })
                                 .collect::<Result<Vec<(Character, Obj)>, Signal>>()?;
@@ -1270,16 +1269,6 @@ mod test {
 
     #[test]
     fn fn_rest_arg_ellipsis() {
-        let x = CallStack::default()
-            .map_session(|s| s.with_experiments(vec![Experiment::RestArgs]))
-            .parse_and_eval(
-                "
-                    f <- fn(...) { . }
-                    f(1, 2, 3)
-                    ",
-            );
-        println!("{:?}", x);
-        // dbg!(&x);
         assert_eq!(
             CallStack::default()
                 .map_session(|s| s.with_experiments(vec![Experiment::RestArgs]))
@@ -1290,6 +1279,21 @@ mod test {
                     ",
                 ),
             r! { list(1, 2, 3) }
+        )
+    }
+
+    #[test]
+    fn accessing_ellipsis_forces_evaluation() {
+        assert_eq!(
+            CallStack::default()
+                .map_session(|s| s.with_experiments(vec![Experiment::RestArgs]))
+                .parse_and_eval(
+                    "
+                    f = fn(...) { . }
+                    f(sum(1))
+                    ",
+                ),
+            r! { list(1) }
         )
     }
 

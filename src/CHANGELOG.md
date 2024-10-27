@@ -14,6 +14,10 @@
 * The `typeof()` primitive was added
 * Type stability for numeric operations (@69)
 
+## Noteable Bugs Addressed:
+
+* `substitute()` now works on datatypes such as literals or calls.
+
 ## Internals
 
 * The `List` is now represented as a `Rep<Obj>`, unifying heterogenous and atomic vectors.
@@ -21,6 +25,10 @@
 * Iterating over references of a `Rep<T>` was made much simpler and new methods were added
   and unused ones removed.
 * The `RepType` struct that was introduced in 0.4.0 was removed again (#189).
+* `eval_list_eager()` was removed from the `Context` trait and added as a member method for `CallStack`.
+* `eval_list_lazy()` now boxes all expressions in promises (including literals)
+  This is necessary to box `..a`-style ellipsis arguments in a list-call promise, which requires
+  access to the underlying expression.
 
 ## Notable Bugs Addressed
 
