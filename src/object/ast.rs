@@ -100,6 +100,14 @@ pub struct ExprList {
     pub values: Vec<Expr>,
 }
 
+impl ExprList {
+    pub fn push_named(&mut self, key: Option<String>, value: Expr) {
+        self.keys.push(key);
+        self.values.push(value);
+    }
+}
+
+
 impl fmt::Display for ExprList {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let pairs: Vec<String> = self

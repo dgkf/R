@@ -1,7 +1,6 @@
 use std::rc::Rc;
 
 use crate::lang::{EvalResult, Signal};
-use crate::object::types::Character;
 use crate::object::*;
 use crate::{error::*, internal_err};
 

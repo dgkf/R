@@ -25,8 +25,12 @@ use crate::object::*;
 ///
 /// ```custom,{class=r-repl}
 /// quote(x + y)
+/// quote(1)
 /// ```
-///
+/// ## Differentes to the R implementation
+/// While R treats literals as expressions this implementation of `quote` differentiates between
+/// the literal `1` and the length-1 vector "`c(1)`".
+/// Thereby the return type of `quote()` can be expected to be an object of type `Expression`.
 #[doc(alias = "quote")]
 #[builtin(sym = "quote")]
 #[derive(Debug, Clone, PartialEq)]
