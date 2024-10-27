@@ -38,9 +38,6 @@ pub trait CallableFormals {
 pub trait Callable: CallableFormals {
     fn match_args(&self, args: List, stack: &mut CallStack) -> Result<(List, List), Signal> {
         let mut formals = self.formals();
-
-        // this collects the expressions
-        let mut expr_ellipsis: ExprList = ExprList::new();
         let mut ellipsis: List = List::new();
         let mut matched_args: List = List::new();
 
@@ -70,29 +67,45 @@ pub trait Callable: CallableFormals {
 
         // backfill unnamed args, populating ellipsis with overflow
         for (key, value) in args.iter_pairs() {
-            match (key, value.clone()) {
+            match key {
                 // named args go directly to ellipsis, they did not match a formal
-                (Character::Some(arg), Obj::Promise(_, e, _)) => {
-                    expr_ellipsis.push_named(Character::Some(arg.clone()).as_option(), e);
-                    ellipsis.push_named(Character::Some(arg), value);
-                }
+                Character::Some(arg) => ellipsis.push_named(Character::Some(arg), value),
 
                 // unnamed args populate next formal, or ellipsis if formals exhausted
-                (Character::NA, value) => {
+                Character::NA => {
                     let next_unassigned_formal = formals.remove(0);
                     if let Some((Some(param), _)) = next_unassigned_formal {
                         matched_args.push_named(Character::Some(param), value);
                     } else {
-                        let Obj::Promise(_, e, _) = value.clone() else {
-                            unreachable!()
-                        };
-                        expr_ellipsis.push_named(Character::NA.as_option(), e);
                         ellipsis.push_named(Character::NA, value);
                     }
                 }
-                _ => unreachable!(),
             }
         }
+
+        let mut ellipsis_expr = ExprList::new();
+
+        for (k, v) in ellipsis.iter_pairs() {
+            if let Obj::Promise(_, e, _) = v {
+                ellipsis_expr.push_named(k.as_option(), e)
+            } else {
+                // all arguments must be boxed in promises to allow for NSE
+                unreachable!()
+            }
+        }
+
+        let list = crate::callable::builtins::BUILTIN
+            .get("list")
+            .cloned()
+            .unwrap();
+
+        // convert the expr_ellipsis to an Obj::Promise where the expression is a call into List
+
+        let ellipsis_promise = Obj::Promise(
+            None,
+            Expr::Call(Box::new(Expr::Primitive(list)), ellipsis_expr),
+            stack.last_frame().env().clone(),
+        );
 
         // add back in parameter defaults that weren't filled with args
         for (param, default) in formals.into_iter() {
@@ -102,20 +115,8 @@ pub trait Callable: CallableFormals {
             )
         }
 
-        use crate::callable::builtins::BUILTIN;
-
-        let list = BUILTIN.get("list").cloned().unwrap();
-
-        // convert the expr_ellipsis to an Obj::Promise where the expression is a call into List
-
-        let a = Obj::Promise(
-            None,
-            Expr::Call(Box::new(Expr::Primitive(list)), expr_ellipsis),
-            stack.last_frame().env().clone(),
-        );
-
         if let Some(Expr::Ellipsis(Some(name))) = remainder.get(0) {
-            matched_args.push_named(Character::Some(name), a);
+            matched_args.push_named(Character::Some(name), ellipsis_promise);
         } else if !remainder.is_empty() {
             matched_args.push_named(
                 Character::Some("...".to_string()),

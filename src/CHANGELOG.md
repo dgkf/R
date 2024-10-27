@@ -16,7 +16,12 @@
 
 ## Noteable Bugs Addressed:
 
+<<<<<<< Updated upstream
 * `substitute()` now works on datatypes such as literals or calls.
+=======
+* `substitute()` now works on datatypes such as literals or calls (#199).
+* accessing variable collected via 'rest-args' does now force evaluation of calls (#216).
+>>>>>>> Stashed changes
 
 ## Internals
 
@@ -26,9 +31,15 @@
   and unused ones removed.
 * The `RepType` struct that was introduced in 0.4.0 was removed again (#189).
 * `eval_list_eager()` was removed from the `Context` trait and added as a member method for `CallStack`.
+<<<<<<< Updated upstream
 * `eval_list_lazy()` now boxes all expressions in promises (including literals)
   This is necessary to box `..a`-style ellipsis arguments in a list-call promise, which requires
   access to the underlying expression.
+=======
+* `eval_list_lazy()` now boxes all expressions in promises (including literals).
+  This is necessary to box `..a`-style ellipsis arguments in a list-call promise, which requires
+  access to the underlying expression (needed to solve #216).
+>>>>>>> Stashed changes
 
 ## Notable Bugs Addressed
 
